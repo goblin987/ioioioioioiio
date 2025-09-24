@@ -711,7 +711,7 @@ async def handle_vip_level_name_message(update: Update, context: ContextTypes.DE
     
     keyboard = []
     for emoji, name in emoji_options:
-        keyboard.append([InlineKeyboardButton(f"{emoji} {name}", callback_data=f"vip_select_emoji_{emoji}")])
+        keyboard.append([InlineKeyboardButton(f"{emoji} {name}", callback_data=f"vip_select_emoji|{emoji}")])
     
     keyboard.append([InlineKeyboardButton("🔤 Custom Emoji", callback_data="vip_custom_emoji")])
     keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="vip_manage_levels")])
@@ -752,6 +752,76 @@ async def handle_vip_select_emoji(update: Update, context: ContextTypes.DEFAULT_
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
     await query.answer("Enter minimum purchases")
+
+async def handle_vip_custom_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle custom emoji input for VIP level"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    context.user_data['state'] = 'awaiting_vip_custom_emoji'
+    
+    level_name = context.user_data.get('vip_creation_data', {}).get('level_name', 'Unknown')
+    
+    msg = f"🔤 **Custom Emoji for {level_name}**\n\n"
+    msg += "Enter a custom emoji for this VIP level:\n\n"
+    msg += "💡 **Tips:**\n"
+    msg += "• Use any single emoji\n"
+    msg += "• Avoid text or multiple characters\n"
+    msg += "• Make it unique and memorable\n\n"
+    msg += "📝 Send your custom emoji:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="vip_create_level")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.answer("Send custom emoji")
+
+async def handle_vip_custom_emoji_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle custom emoji input message"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get("state") != "awaiting_vip_custom_emoji":
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, "❌ Please enter a valid emoji.", parse_mode=None)
+        return
+    
+    emoji = update.message.text.strip()
+    
+    if len(emoji) > 4:  # Allow for multi-byte emojis
+        await send_message_with_retry(context.bot, chat_id, "❌ Please enter only a single emoji.", parse_mode=None)
+        return
+    
+    if not emoji:
+        await send_message_with_retry(context.bot, chat_id, "❌ Emoji cannot be empty.", parse_mode=None)
+        return
+    
+    # Continue with the emoji selection process
+    context.user_data['state'] = 'awaiting_vip_min_purchases'
+    context.user_data['vip_creation_data']['level_emoji'] = emoji
+    
+    level_name = context.user_data['vip_creation_data']['level_name']
+    
+    msg = f"✅ **{emoji} {level_name}**\n\n"
+    msg += "Enter the **minimum number of purchases** required for this level:\n\n"
+    msg += "💡 **Examples:**\n"
+    msg += "• 0 = New customers\n"
+    msg += "• 5 = Regular customers\n"
+    msg += "• 15 = VIP customers\n"
+    msg += "• 50 = Diamond customers\n\n"
+    msg += "📝 Enter minimum purchases:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="vip_manage_levels")]]
+    
+    await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_vip_min_purchases_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle minimum purchases input"""

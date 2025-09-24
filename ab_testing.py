@@ -449,4 +449,65 @@ async def create_sample_tests():
         if conn:
             conn.close()
 
+async def handle_ab_create_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create a new A/B test"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    msg = "➕ **Create New A/B Test**\n\n"
+    msg += "Coming soon! Create custom A/B tests including:\n\n"
+    msg += "• Button text variations\n"
+    msg += "• Layout experiments\n"
+    msg += "• Color scheme tests\n"
+    msg += "• Message format tests\n"
+    msg += "• Pricing display tests\n"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back to A/B Testing", callback_data="ab_testing_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_test_templates(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show A/B test templates"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    msg = "📋 **A/B Test Templates**\n\n"
+    msg += "Pre-built test templates for common scenarios:\n\n"
+    msg += "🔘 **Button Text Test**\n"
+    msg += "   Compare 'Buy Now' vs 'Add to Cart'\n\n"
+    msg += "🎨 **Layout Test**\n"
+    msg += "   Grid vs List product display\n\n"
+    msg += "💰 **Price Display Test**\n"
+    msg += "   Show/hide stock numbers\n\n"
+    msg += "📱 **Mobile Optimization**\n"
+    msg += "   Different mobile layouts\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔘 Use Button Text Template", callback_data="ab_template_button_text")],
+        [InlineKeyboardButton("🎨 Use Layout Template", callback_data="ab_template_layout")],
+        [InlineKeyboardButton("⬅️ Back to A/B Testing", callback_data="ab_testing_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_test_results(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show A/B test results"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    # Use existing handle_ab_view_tests for now
+    await handle_ab_view_tests(update, context, params)
+
 # --- END OF FILE ab_testing.py ---

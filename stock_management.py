@@ -347,4 +347,110 @@ async def handle_stock_detailed_report(update: Update, context: ContextTypes.DEF
         if conn:
             conn.close()
 
+async def handle_stock_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show stock analytics and insights"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    msg = "📊 **Stock Analytics**\n\n"
+    msg += "Coming soon! Advanced stock analytics including:\n\n"
+    msg += "• Turnover rates by product type\n"
+    msg += "• Stock movement trends\n"
+    msg += "• Reorder recommendations\n"
+    msg += "• Seasonal patterns\n"
+    msg += "• Profit margins by category\n"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_stock_configure_thresholds(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Configure stock alert thresholds"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    msg = "⚙️ **Configure Stock Thresholds**\n\n"
+    msg += "Set custom alert thresholds for different product categories:\n\n"
+    msg += "• Default threshold: 5 units\n"
+    msg += "• Critical threshold: 2 units\n\n"
+    msg += "Coming soon: Per-product threshold configuration!"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_stock_view_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """View stock alert history"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get recent stock alerts
+        c.execute("""
+            SELECT sa.alert_type, sa.alert_message, sa.created_at,
+                   p.city, p.district, p.product_type, p.size, p.available
+            FROM stock_alerts sa
+            JOIN products p ON sa.product_id = p.id
+            ORDER BY sa.created_at DESC
+            LIMIT 20
+        """)
+        
+        alerts = c.fetchall()
+        
+        msg = "🚨 **Stock Alert History**\n\n"
+        
+        if not alerts:
+            msg += "No stock alerts found.\n\n"
+            msg += "Alerts are generated when:\n"
+            msg += "• Products fall below threshold\n"
+            msg += "• Critical stock levels reached\n"
+            msg += "• Items go out of stock\n"
+        else:
+            for alert in alerts[:10]:
+                try:
+                    date_str = datetime.fromisoformat(alert['created_at'].replace('Z', '+00:00')).strftime('%m-%d %H:%M')
+                except:
+                    date_str = "Recent"
+                
+                alert_icon = "🔴" if alert['alert_type'] == 'critical' else "🟡"
+                msg += f"{alert_icon} **{alert['alert_type'].title()} Alert** ({date_str})\n"
+                msg += f"   📍 {alert['city']} → {alert['product_type']} {alert['size']}\n"
+                msg += f"   📦 Stock: {alert['available']} units\n"
+                msg += f"   💬 {alert['alert_message']}\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 Run Stock Check", callback_data="stock_check_now")],
+            [InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error viewing stock alerts: {e}")
+        await query.edit_message_text(
+            "❌ Error loading stock alerts.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")
+            ]])
+        )
+    finally:
+        if conn:
+            conn.close()
+
 # --- END OF FILE stock_management.py ---

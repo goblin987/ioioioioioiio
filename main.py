@@ -127,6 +127,7 @@ try:
     import stock_management
     from stock_management import (
         handle_stock_management_menu, handle_stock_check_now, handle_stock_detailed_report,
+        handle_stock_analytics, handle_stock_configure_thresholds, handle_stock_view_alerts,
         check_low_stock_alerts
     )
 except ImportError:
@@ -138,13 +139,20 @@ except ImportError:
         await update.callback_query.edit_message_text("Stock check not available")
     async def handle_stock_detailed_report(update, context, params=None):
         await update.callback_query.edit_message_text("Stock report not available")
+    async def handle_stock_analytics(update, context, params=None):
+        await update.callback_query.edit_message_text("Stock analytics not available")
+    async def handle_stock_configure_thresholds(update, context, params=None):
+        await update.callback_query.edit_message_text("Stock configuration not available")
+    async def handle_stock_view_alerts(update, context, params=None):
+        await update.callback_query.edit_message_text("Stock alerts not available")
     async def check_low_stock_alerts():
         pass
 
 try:
     import ab_testing
     from ab_testing import (
-        handle_ab_testing_menu, handle_ab_view_tests, ABTestManager,
+        handle_ab_testing_menu, handle_ab_view_tests, handle_ab_create_test,
+        handle_ab_test_templates, handle_ab_test_results, ABTestManager,
         create_sample_tests
     )
 except ImportError:
@@ -153,6 +161,12 @@ except ImportError:
     async def handle_ab_testing_menu(update, context, params=None):
         await update.callback_query.edit_message_text("A/B testing not available")
     async def handle_ab_view_tests(update, context, params=None):
+        await update.callback_query.edit_message_text("A/B testing not available")
+    async def handle_ab_create_test(update, context, params=None):
+        await update.callback_query.edit_message_text("A/B testing not available")
+    async def handle_ab_test_templates(update, context, params=None):
+        await update.callback_query.edit_message_text("A/B testing not available")
+    async def handle_ab_test_results(update, context, params=None):
         await update.callback_query.edit_message_text("A/B testing not available")
     class ABTestManager:
         @staticmethod
@@ -219,7 +233,8 @@ try:
     from vip_system import (
         handle_vip_management_menu, handle_vip_manage_levels, handle_vip_create_level,
         handle_vip_select_emoji, handle_vip_level_name_message, handle_vip_min_purchases_message,
-        handle_vip_status_menu, handle_vip_perks_info, process_vip_level_up, VIPManager
+        handle_vip_status_menu, handle_vip_perks_info, handle_vip_custom_emoji,
+        handle_vip_custom_emoji_message, process_vip_level_up, VIPManager
     )
 except ImportError:
     logger.error("Could not import vip_system module")
@@ -235,6 +250,10 @@ except ImportError:
     async def handle_vip_level_name_message(update, context):
         pass
     async def handle_vip_min_purchases_message(update, context):
+        pass
+    async def handle_vip_custom_emoji(update, context, params=None):
+        await update.callback_query.edit_message_text("VIP system not available")
+    async def handle_vip_custom_emoji_message(update, context):
         pass
     async def process_vip_level_up(user_id, purchases, bot): return None
     class VIPManager:
@@ -484,6 +503,17 @@ def callback_query_router(func):
                 "vip_select_emoji": handle_vip_select_emoji,
                 "vip_status_menu": handle_vip_status_menu,
                 "vip_perks_info": handle_vip_perks_info,
+                "vip_custom_emoji": handle_vip_custom_emoji,
+                
+                # Missing stock management handlers
+                "stock_analytics": handle_stock_analytics,
+                "stock_configure_thresholds": handle_stock_configure_thresholds,
+                "stock_view_alerts": handle_stock_view_alerts,
+                
+                # Missing A/B test handlers  
+                "ab_create_test": handle_ab_create_test,
+                "ab_test_templates": handle_ab_test_templates,
+                "ab_test_results": handle_ab_test_results,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -563,6 +593,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # VIP system message handlers
         'awaiting_vip_level_name': handle_vip_level_name_message,
         'awaiting_vip_min_purchases': handle_vip_min_purchases_message,
+        'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,
