@@ -79,7 +79,7 @@ from admin import (
     handle_adm_remove_district, handle_adm_manage_products, handle_adm_manage_products_city,
     handle_adm_manage_products_dist, handle_adm_manage_products_type, handle_adm_delete_prod,
     handle_adm_manage_types, handle_adm_add_type, handle_adm_delete_type,
-    handle_adm_edit_type_menu, handle_adm_change_type_emoji, handle_adm_change_type_name, handle_adm_confirm_type_name_change,
+    handle_adm_edit_type_menu, handle_adm_change_type_emoji, handle_adm_change_type_name,
     handle_adm_reassign_type_start, handle_adm_reassign_select_old, handle_adm_reassign_confirm,
     handle_adm_manage_discounts, handle_adm_toggle_discount, handle_adm_delete_discount,
     handle_adm_add_discount_start, handle_adm_use_generated_code, handle_adm_set_discount_type,
@@ -102,7 +102,7 @@ from admin import (
     handle_adm_edit_district_message, handle_adm_custom_size_message,
     handle_adm_drop_details_message, handle_adm_price_message,
     # Product type message handlers
-    handle_adm_new_type_name_message, handle_adm_new_type_emoji_message, handle_adm_edit_type_name_message,
+    handle_adm_new_type_name_message, handle_adm_new_type_emoji_message,
     handle_adm_new_type_description_message, handle_adm_edit_type_emoji_message,
     # User search handlers
     handle_adm_search_user_start, handle_adm_search_username_message,
@@ -366,7 +366,6 @@ def callback_query_router(func):
                 "adm_edit_type_menu": admin.handle_adm_edit_type_menu,
                 "adm_change_type_emoji": admin.handle_adm_change_type_emoji,
                 "adm_change_type_name": admin.handle_adm_change_type_name,
-                "adm_confirm_type_name_change": admin.handle_adm_confirm_type_name_change,
                 "adm_add_type": admin.handle_adm_add_type,
                 "adm_delete_type": admin.handle_adm_delete_type,
                 "adm_reassign_type_start": admin.handle_adm_reassign_type_start,
@@ -579,7 +578,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_discount_value': admin.handle_adm_discount_value_message,
         # Product type message handlers
         'awaiting_new_type_name': admin.handle_adm_new_type_name_message,
-        'awaiting_edit_type_name': admin.handle_adm_edit_type_name_message,
         'awaiting_new_type_emoji': admin.handle_adm_new_type_emoji_message,
         'awaiting_new_type_description': admin.handle_adm_new_type_description_message,
         'awaiting_edit_type_emoji': admin.handle_adm_edit_type_emoji_message,
