@@ -442,7 +442,6 @@ def callback_query_router(func):
     "adm_debug_reseller_discount": admin.handle_adm_debug_reseller_discount,
     "adm_recent_purchases": admin.handle_adm_recent_purchases,
                 "adm_user_overview": admin.handle_adm_user_overview,
-                "adm_analyze_logs_start": admin.handle_adm_analyze_logs_start,
                 
                 # New organized admin menu handlers
                 "admin_analytics_menu": admin.handle_admin_analytics_menu,
@@ -613,8 +612,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_welcome_description_edit': admin.handle_adm_welcome_description_message,
         
         
-        # Log Analysis States (from admin.py)
-        'awaiting_render_logs': admin.handle_adm_render_logs_message,
         
     }
 
