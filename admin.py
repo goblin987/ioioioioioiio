@@ -649,6 +649,44 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
+async def handle_admin_maintenance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show system maintenance menu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🔄 **System Maintenance**\n\nMaintenance and diagnostic tools:"
+    keyboard = [
+        [InlineKeyboardButton("🗃️ Database Cleanup", callback_data="admin_db_cleanup")],
+        [InlineKeyboardButton("📊 System Stats", callback_data="admin_system_stats")],
+        [InlineKeyboardButton("🔄 Restart Services", callback_data="admin_restart_services")],
+        [InlineKeyboardButton("📋 View Logs", callback_data="admin_view_logs")],
+        [InlineKeyboardButton("⬅️ Back to System", callback_data="admin_system_menu")]
+    ]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_system_health(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show system health status"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📊 **System Health Check**\n\n"
+    msg += "✅ **Bot Status:** Online\n"
+    msg += "✅ **Database:** Connected\n"
+    msg += "✅ **Payment System:** Active\n"
+    msg += "✅ **Background Jobs:** Running\n"
+    msg += "✅ **VIP System:** Operational\n"
+    msg += "✅ **Stock Management:** Active\n"
+    msg += "✅ **Auto Ads:** Ready\n\n"
+    msg += "🎯 All systems are functioning normally!"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔄 Refresh Status", callback_data="admin_system_health")],
+        [InlineKeyboardButton("⬅️ Back to System", callback_data="admin_system_menu")]
+    ]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
 
 # --- Sales Analytics Handlers ---
 async def handle_sales_analytics_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):

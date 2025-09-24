@@ -233,8 +233,10 @@ try:
     from vip_system import (
         handle_vip_management_menu, handle_vip_manage_levels, handle_vip_create_level,
         handle_vip_select_emoji, handle_vip_level_name_message, handle_vip_min_purchases_message,
-        handle_vip_status_menu, handle_vip_perks_info, handle_vip_custom_emoji,
-        handle_vip_custom_emoji_message, process_vip_level_up, VIPManager
+        handle_vip_max_purchases_message, handle_vip_status_menu, handle_vip_perks_info, 
+        handle_vip_custom_emoji, handle_vip_custom_emoji_message, handle_vip_edit_level,
+        handle_vip_analytics, handle_vip_manage_benefits, handle_vip_list_customers,
+        process_vip_level_up, VIPManager
     )
 except ImportError:
     logger.error("Could not import vip_system module")
@@ -469,6 +471,8 @@ def callback_query_router(func):
                 "admin_users_menu": admin.handle_admin_users_menu,
                 "admin_marketing_menu": admin.handle_admin_marketing_menu,
                 "admin_system_menu": admin.handle_admin_system_menu,
+                "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
+                "admin_system_health": admin.handle_admin_system_health,
                 
                 # Stock management handlers
                 "stock_management_menu": handle_stock_management_menu,
@@ -504,6 +508,10 @@ def callback_query_router(func):
                 "vip_status_menu": handle_vip_status_menu,
                 "vip_perks_info": handle_vip_perks_info,
                 "vip_custom_emoji": handle_vip_custom_emoji,
+                "vip_edit_level": handle_vip_edit_level,
+                "vip_analytics": handle_vip_analytics,
+                "vip_manage_benefits": handle_vip_manage_benefits,
+                "vip_list_customers": handle_vip_list_customers,
                 
                 # Missing stock management handlers
                 "stock_analytics": handle_stock_analytics,
@@ -593,6 +601,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # VIP system message handlers
         'awaiting_vip_level_name': handle_vip_level_name_message,
         'awaiting_vip_min_purchases': handle_vip_min_purchases_message,
+        'awaiting_vip_max_purchases': handle_vip_max_purchases_message,
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
 
         # Admin Message Handlers (from admin.py)
@@ -792,6 +801,7 @@ async def auto_ads_execution_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
     """Wrapper for executing pending auto ads campaigns."""
     logger.debug("Running background job: auto_ads_execution")
     try:
+        from auto_ads_system import get_campaign_executor
         executor = get_campaign_executor()
         if executor:
             pending_campaigns = executor.get_pending_executions()

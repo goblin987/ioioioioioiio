@@ -823,6 +823,77 @@ async def handle_vip_custom_emoji_message(update: Update, context: ContextTypes.
     
     await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
+async def handle_vip_max_purchases_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle maximum purchases input"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get("state") != "awaiting_vip_max_purchases":
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, "❌ Please enter a valid number or 'unlimited'.", parse_mode=None)
+        return
+    
+    max_input = update.message.text.strip().lower()
+    
+    if max_input in ['unlimited', 'infinite', '∞', 'no limit']:
+        max_purchases = None
+    else:
+        try:
+            max_purchases = int(max_input)
+            if max_purchases < 0:
+                await send_message_with_retry(context.bot, chat_id, "❌ Maximum purchases cannot be negative.", parse_mode=None)
+                return
+            
+            min_purchases = context.user_data['vip_creation_data']['min_purchases']
+            if max_purchases <= min_purchases:
+                await send_message_with_retry(context.bot, chat_id, f"❌ Maximum purchases ({max_purchases}) must be greater than minimum ({min_purchases}).", parse_mode=None)
+                return
+        except ValueError:
+            await send_message_with_retry(context.bot, chat_id, "❌ Please enter a valid number or 'unlimited'.", parse_mode=None)
+            return
+    
+    # Store and finalize level creation
+    context.user_data['vip_creation_data']['max_purchases'] = max_purchases
+    context.user_data['vip_creation_data']['level_order'] = 999  # Will be adjusted
+    context.user_data['vip_creation_data']['benefits'] = ['Custom VIP level']
+    context.user_data['vip_creation_data']['discount_percentage'] = 0.0
+    
+    # Create the level
+    success = VIPManager.create_vip_level(context.user_data['vip_creation_data'])
+    
+    # Clear context
+    context.user_data.pop('state', None)
+    context.user_data.pop('vip_creation_data', None)
+    
+    if success:
+        level_name = context.user_data.get('vip_creation_data', {}).get('level_name', 'New Level')
+        emoji = context.user_data.get('vip_creation_data', {}).get('level_emoji', '✨')
+        
+        msg = f"✅ **VIP Level Created Successfully!**\n\n"
+        msg += f"**Level:** {emoji} {level_name}\n"
+        msg += f"**Requirements:** {min_purchases} - {max_purchases or '∞'} purchases\n\n"
+        msg += "The new VIP level is now active and will be applied to users automatically!"
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 Manage Levels", callback_data="vip_manage_levels")],
+            [InlineKeyboardButton("👑 VIP Menu", callback_data="vip_management_menu")]
+        ]
+        
+        await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    else:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ Error creating VIP level. Please try again.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔄 Try Again", callback_data="vip_create_level")
+            ]]),
+            parse_mode='Markdown'
+        )
+
 async def handle_vip_min_purchases_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle minimum purchases input"""
     user_id = update.effective_user.id
@@ -1079,5 +1150,188 @@ async def handle_vip_perks_info(update: Update, context: ContextTypes.DEFAULT_TY
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_edit_level(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle VIP level editing"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    max_purchases = level['max_purchases'] if level['max_purchases'] else "∞"
+    
+    msg = f"✏️ **Edit VIP Level**\n\n"
+    msg += f"**{level['level_emoji']} {level['level_name']}**\n\n"
+    msg += f"📊 **Current Settings:**\n"
+    msg += f"• Purchases: {level['min_purchases']} - {max_purchases}\n"
+    msg += f"• Discount: {level['discount_percentage']}%\n"
+    msg += f"• Benefits: {len(level['benefits'])}\n"
+    msg += f"• Status: {'✅ Active' if level['is_active'] else '❌ Inactive'}\n\n"
+    msg += "Choose what to edit:"
+    
+    keyboard = [
+        [InlineKeyboardButton("📝 Edit Name", callback_data=f"vip_edit_name|{level_id}")],
+        [InlineKeyboardButton("😀 Edit Emoji", callback_data=f"vip_edit_emoji|{level_id}")],
+        [InlineKeyboardButton("🔢 Edit Requirements", callback_data=f"vip_edit_requirements|{level_id}")],
+        [InlineKeyboardButton("💰 Edit Discount", callback_data=f"vip_edit_discount|{level_id}")],
+        [InlineKeyboardButton("🎁 Edit Benefits", callback_data=f"vip_edit_benefits|{level_id}")],
+        [InlineKeyboardButton("🔄 Toggle Active", callback_data=f"vip_toggle_active|{level_id}")],
+        [InlineKeyboardButton("🗑️ Delete Level", callback_data=f"vip_delete_level|{level_id}")],
+        [InlineKeyboardButton("⬅️ Back to Levels", callback_data="vip_manage_levels")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show VIP analytics dashboard"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    stats = VIPManager.get_vip_statistics()
+    
+    msg = "📊 **VIP Analytics Dashboard**\n\n"
+    
+    if stats['total_users'] > 0:
+        msg += f"👥 **Total Customers:** {stats['total_users']}\n\n"
+        
+        msg += f"📈 **Level Distribution:**\n"
+        for level in stats['level_distribution']:
+            percentage = (level['user_count'] / stats['total_users'] * 100) if stats['total_users'] > 0 else 0
+            msg += f"• {level['level_emoji']} {level['level_name']}: {level['user_count']} ({percentage:.1f}%)\n"
+        
+        if stats['recent_levelups']:
+            msg += f"\n🎉 **Recent Level Ups:**\n"
+            for levelup in stats['recent_levelups'][:5]:
+                try:
+                    date_str = datetime.fromisoformat(levelup['date'].replace('Z', '+00:00')).strftime('%m-%d')
+                except:
+                    date_str = "Recent"
+                msg += f"• @{levelup['username']}: {levelup['new_level']} ({date_str})\n"
+    else:
+        msg += "No customer data available yet."
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Export Data", callback_data="vip_export_analytics")],
+        [InlineKeyboardButton("🔄 Refresh", callback_data="vip_analytics")],
+        [InlineKeyboardButton("⬅️ Back to VIP Menu", callback_data="vip_management_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_manage_benefits(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Manage VIP benefits system"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    msg = "🎁 **VIP Benefits Management**\n\n"
+    msg += "Configure benefits for each VIP level:\n\n"
+    msg += "💡 **Available Benefit Types:**\n"
+    msg += "• Discount percentages\n"
+    msg += "• Priority support\n"
+    msg += "• Early access to products\n"
+    msg += "• Exclusive product access\n"
+    msg += "• Free shipping\n"
+    msg += "• Custom rewards\n\n"
+    msg += "Select a VIP level to configure its benefits:"
+    
+    levels = VIPManager.get_all_vip_levels()
+    keyboard = []
+    
+    for level in levels:
+        if level['is_active']:
+            keyboard.append([InlineKeyboardButton(
+                f"{level['level_emoji']} {level['level_name']} ({len(level['benefits'])} benefits)",
+                callback_data=f"vip_configure_benefits|{level['id']}"
+            )])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to VIP Menu", callback_data="vip_management_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_list_customers(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """List VIP customers"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get top customers by purchase count
+        c.execute("""
+            SELECT user_id, username, total_purchases, balance
+            FROM users 
+            WHERE total_purchases > 0
+            ORDER BY total_purchases DESC
+            LIMIT 20
+        """)
+        
+        customers = c.fetchall()
+        
+        msg = "👑 **VIP Customer List**\n\n"
+        
+        if not customers:
+            msg += "No customers with purchases found."
+        else:
+            msg += f"Top {len(customers)} customers by purchase count:\n\n"
+            
+            for i, customer in enumerate(customers, 1):
+                username = customer['username'] or f"ID_{customer['user_id']}"
+                purchases = customer['total_purchases']
+                balance = format_currency(customer['balance'])
+                
+                # Get VIP level
+                level_info = VIPManager.get_user_vip_level(purchases)
+                
+                msg += f"{i}. {level_info['level_emoji']} @{username}\n"
+                msg += f"   Purchases: {purchases} | Balance: {balance}\n"
+                msg += f"   Level: {level_info['level_name']}\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 Refresh List", callback_data="vip_list_customers")],
+            [InlineKeyboardButton("📊 Analytics", callback_data="vip_analytics")],
+            [InlineKeyboardButton("⬅️ Back to VIP Menu", callback_data="vip_management_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error listing VIP customers: {e}")
+        await query.edit_message_text(
+            "❌ Error loading customer list.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Back to VIP Menu", callback_data="vip_management_menu")
+            ]])
+        )
+    finally:
+        if conn:
+            conn.close()
 
 # --- END OF FILE vip_system.py ---
