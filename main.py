@@ -599,26 +599,6 @@ def callback_query_router(func):
                 "enhanced_upload_session": handle_enhanced_upload_session,
                 "enhanced_manage_channels": handle_enhanced_manage_channels,
                 "enhanced_quick_add_channel": handle_enhanced_quick_add_channel,
-                "auto_ads_settings": handle_auto_ads_settings,
-                "auto_ads_manage_channels": handle_auto_ads_manage_channels,
-                "auto_ads_type_promotional": handle_auto_ads_type_promotional,
-                "auto_ads_type_product_launch": handle_auto_ads_type_product_launch,
-                "auto_ads_type_discount": handle_auto_ads_type_discount,
-                "auto_ads_type_announcement": handle_auto_ads_type_announcement,
-                "auto_ads_type_custom": handle_auto_ads_type_custom,
-                "auto_ads_schedule_hourly": handle_auto_ads_schedule_hourly,
-                "auto_ads_schedule_daily": handle_auto_ads_schedule_daily,
-                "auto_ads_schedule_every_3_hours": handle_auto_ads_schedule_every_3_hours,
-                "auto_ads_schedule_every_6_hours": handle_auto_ads_schedule_every_6_hours,
-                "auto_ads_schedule_custom": handle_auto_ads_schedule_custom,
-                "auto_ads_schedule_once": handle_auto_ads_schedule_once,
-                "auto_ads_add_channel": handle_auto_ads_add_channel,
-                "auto_ads_remove_channel": handle_auto_ads_remove_channel,
-                "auto_ads_test_channels": handle_auto_ads_test_channels,
-                "auto_ads_finalize_campaign": handle_auto_ads_finalize_campaign,
-                "auto_ads_campaign_type": handle_auto_ads_campaign_type,
-                "auto_ads_schedule_selection": handle_auto_ads_schedule_selection,
-                "auto_ads_toggle_channel": handle_auto_ads_toggle_channel,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -792,9 +772,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_vip_max_purchases': handle_vip_max_purchases_message,
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
         'awaiting_vip_name_edit': handle_vip_name_edit_message,
-        'awaiting_auto_ads_campaign_name': handle_auto_ads_campaign_name_message,
-        'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
-        'awaiting_channel_info': handle_channel_info_message,
         'awaiting_welcome_text': handle_welcome_text_message,
         'interactive_text_editing': handle_interactive_text_editing,
         'awaiting_price_search': handle_price_search_message,
@@ -1572,19 +1549,14 @@ def main() -> None:
             # Stock management: Low stock alerts (runs every hour)
             job_queue.run_repeating(stock_alerts_job_wrapper, interval=timedelta(hours=1), first=timedelta(minutes=10), name="stock_alerts")
             
-            # Auto ads: Process pending campaign executions (runs every 2 minutes)
-            job_queue.run_repeating(auto_ads_execution_job_wrapper, interval=timedelta(minutes=2), first=timedelta(minutes=5), name="auto_ads_execution")
+            # Enhanced auto ads: No background job needed (campaigns run on-demand)
             
             logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + auto ads).")
         else: logger.warning("Job Queue is not available. Background jobs skipped.")
     else: logger.warning("BASKET_TIMEOUT is not positive. Skipping background job setup.")
 
-    # Initialize auto ads system
-    try:
-        initialize_auto_ads_system(application.bot)
-        logger.info("Auto ads system initialized successfully")
-    except Exception as e:
-        logger.error(f"Error initializing auto ads system: {e}")
+    # Enhanced auto ads system is initialized via database init
+    logger.info("Enhanced auto ads system tables initialized via database init")
 
     async def setup_webhooks_and_run():
         nonlocal application
