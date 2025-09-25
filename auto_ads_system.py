@@ -26,6 +26,7 @@ from telegram.constants import ParseMode
 from config_testforwarder import Config
 from database_testforwarder import Database
 from telethon_manager_testforwarder import TelethonManager
+from bump_service_testforwarder import BumpService
 
 # Configure professional logging
 logging.basicConfig(
@@ -65,6 +66,7 @@ class TgcfBot:
     def __init__(self):
         self.db = Database()
         self.telethon_manager = TelethonManager()
+        self.bump_service = None  # Will be initialized after bot is created
         self.user_sessions = {}  # Store user session data
     
     def validate_input(self, text: str, max_length: int = 1000, allowed_chars: str = None) -> tuple[bool, str]:

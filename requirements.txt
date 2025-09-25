@@ -5,3 +5,5 @@ nest-asyncio>=1.5.0
 pytz
 telethon==1.34.0
 python-dotenv==1.0.0
+schedule==1.2.0
+aiohttp==3.9.1
