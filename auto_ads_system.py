@@ -4113,17 +4113,15 @@ Send the session file now, or click Cancel to go back.
         user_id = query.from_user.id
         self.user_sessions[user_id] = {"step": "account_name", "account_data": {}}
         
-        text = """
- **Manual Account Setup**
+        text = """**Manual Account Setup**
 
 **Step 1/5: Account Name**
 
 Please send me a name for this work account (e.g., "Marketing Account", "Sales Account", "Support Account").
 
-This name will help you identify the account when managing campaigns.
-        """
+This name will help you identify the account when managing campaigns."""
         
-        keyboard = [[InlineKeyboardButton(" Cancel", callback_data="manage_accounts")]]
+        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="manage_accounts")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(

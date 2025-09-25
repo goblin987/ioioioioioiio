@@ -921,7 +921,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if handler_func:
         await handler_func(update, context)
     else:
-        logger.debug(f"No handler found for user {user_id} in state: {state}")
+        # Fallback: Route to testforwarder bot if no specific state handler
+        try:
+            from auto_ads_system import get_bot_instance
+            bot = get_bot_instance()
+            await bot.handle_message(update, context)
+        except Exception as e:
+            logger.debug(f"No handler found for user {user_id} in state: {state}, testforwarder fallback failed: {e}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
