@@ -1279,6 +1279,13 @@ def init_db():
                 VIPManager.init_vip_tables()
             except ImportError:
                 logger.warning("VIP system not available, skipping VIP table initialization")
+            
+            # Initialize welcome editor tables
+            try:
+                from welcome_editor import init_welcome_tables
+                init_welcome_tables()
+            except ImportError:
+                logger.warning("Welcome editor not available, skipping welcome table initialization")
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (

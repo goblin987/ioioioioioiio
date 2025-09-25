@@ -151,6 +151,35 @@ except ImportError:
         pass
 
 try:
+    import welcome_editor
+    from welcome_editor import (
+        handle_welcome_editor_menu, handle_welcome_edit_text, handle_welcome_edit_buttons,
+        handle_welcome_rearrange_buttons, handle_welcome_text_message, handle_welcome_preview,
+        handle_welcome_templates, handle_welcome_template_friendly, handle_welcome_template_professional,
+        handle_welcome_template_ecommerce, handle_welcome_template_gaming, handle_welcome_add_button,
+        handle_button_info_message, handle_welcome_auto_arrange, handle_welcome_preview_buttons,
+        init_welcome_tables, get_active_welcome_message, get_start_menu_buttons
+    )
+except ImportError:
+    logger.error("Could not import welcome_editor module")
+    # Create dummy handlers
+    async def handle_welcome_editor_menu(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_edit_text(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_edit_buttons(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_rearrange_buttons(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_text_message(update, context):
+        pass
+    async def handle_welcome_preview(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    def init_welcome_tables(): pass
+    def get_active_welcome_message(): return "Welcome!"
+    def get_start_menu_buttons(): return []
+
+try:
     import ab_testing
     from ab_testing import (
         handle_ab_testing_menu, handle_ab_view_tests, handle_ab_create_test,
@@ -610,6 +639,21 @@ def callback_query_router(func):
                 "ab_create_ui_test": handle_ab_create_ui_test,
                 "ab_detailed_analysis": handle_ab_detailed_analysis,
                 "ab_export_results": handle_ab_export_results,
+                
+                # Welcome editor handlers
+                "welcome_editor_menu": handle_welcome_editor_menu,
+                "welcome_edit_text": handle_welcome_edit_text,
+                "welcome_edit_buttons": handle_welcome_edit_buttons,
+                "welcome_rearrange_buttons": handle_welcome_rearrange_buttons,
+                "welcome_preview": handle_welcome_preview,
+                "welcome_templates": handle_welcome_templates,
+                "welcome_template_friendly": handle_welcome_template_friendly,
+                "welcome_template_professional": handle_welcome_template_professional,
+                "welcome_template_ecommerce": handle_welcome_template_ecommerce,
+                "welcome_template_gaming": handle_welcome_template_gaming,
+                "welcome_add_button": handle_welcome_add_button,
+                "welcome_auto_arrange": handle_welcome_auto_arrange,
+                "welcome_preview_buttons": handle_welcome_preview_buttons,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -696,6 +740,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
         'awaiting_channel_info': handle_channel_info_message,
         'awaiting_ab_test_name': handle_ab_test_name_message,
+        'awaiting_welcome_text': handle_welcome_text_message,
+        'awaiting_button_info': handle_button_info_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,

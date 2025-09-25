@@ -629,7 +629,7 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("🎁 Referral Program", callback_data="referral_admin_menu")],
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
         [InlineKeyboardButton("📢 Broadcast Message", callback_data="adm_broadcast_start")],
-        [InlineKeyboardButton("👋 Welcome Message", callback_data="adm_manage_welcome|0")],
+        [InlineKeyboardButton("👋 Welcome Message Editor", callback_data="welcome_editor_menu")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -640,11 +640,9 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "⚙️ **System Settings**\n\nConfigure bot settings and maintenance:"
+    msg = "⚙️ **System Settings**\n\nConfigure bot settings:"
     keyboard = [
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
-        [InlineKeyboardButton("🔄 System Maintenance", callback_data="admin_maintenance_menu")],
-        [InlineKeyboardButton("📊 System Health", callback_data="admin_system_health")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
