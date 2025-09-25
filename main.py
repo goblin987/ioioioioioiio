@@ -279,85 +279,25 @@ except ImportError:
     async def process_referral_purchase(user_id, amount): return False
 
 try:
-    import auto_ads_system
-    from auto_ads_system import (
-        handle_enhanced_auto_ads_menu, handle_manage_accounts, handle_add_account,
-        handle_my_configs, handle_add_forwarding, handle_settings, handle_help,
-        handle_bump_service, handle_upload_session, handle_manual_setup,
-        handle_add_campaign, handle_my_campaigns, handle_campaign_stats, handle_back_to_bump,
-        handle_config, handle_delete_config, handle_toggle_config, handle_delete_account,
-        handle_delete_campaign, handle_edit_campaign, handle_edit_text_content,
-        handle_edit_media, handle_edit_buttons, handle_edit_settings,
-        handle_edit_schedule, handle_edit_targets, handle_admin_menu,
-        handle_enhanced_session_file_upload, handle_enhanced_account_details, 
-        handle_enhanced_channel_link, init_enhanced_auto_ads_tables, enhanced_telethon_manager
+    import testforwarder_integration
+    from testforwarder_integration import (
+        handle_testforwarder_menu, handle_testforwarder_manual_setup,
+        handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa
     )
 except ImportError:
     import logging
-    logging.getLogger(__name__).error("Could not import auto_ads_system module")
-    # Create dummy handlers for enhanced auto ads (testforwarder integration)
-    async def handle_enhanced_auto_ads_menu(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_manage_accounts(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_add_account(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_my_configs(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_add_forwarding(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_settings(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_help(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_bump_service(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_upload_session(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_manual_setup(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_add_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_my_campaigns(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_campaign_stats(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_back_to_bump(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_config(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_delete_config(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_toggle_config(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_delete_account(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_delete_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_text_content(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_media(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_buttons(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_settings(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_schedule(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_edit_targets(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_admin_menu(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_session_file_upload(update, context):
+    logging.getLogger(__name__).error("Could not import testforwarder_integration module")
+    # Create dummy handlers for testforwarder integration
+    async def handle_testforwarder_menu(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_manual_setup(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_message(update, context):
         pass
-    async def handle_enhanced_account_details(update, context):
+    async def handle_testforwarder_login_code(update, context):
         pass
-    async def handle_enhanced_channel_link(update, context):
+    async def handle_testforwarder_2fa(update, context):
         pass
-    def init_enhanced_auto_ads_tables(): pass
-    enhanced_telethon_manager = None
 
 try:
     import vip_system
@@ -642,38 +582,11 @@ def callback_query_router(func):
                 "referral_admin_settings": handle_referral_admin_settings,
                 "referral_admin_reset": handle_referral_admin_reset,
                 
-                # Enhanced Auto ads system handlers (testforwarder integration)
-                "auto_ads_menu": handle_enhanced_auto_ads_menu,
-                "enhanced_auto_ads_menu": handle_enhanced_auto_ads_menu,
-                "main_menu": handle_enhanced_auto_ads_menu,
-                "manage_accounts": handle_manage_accounts,
-                "add_account": handle_add_account,
-                "my_configs": handle_my_configs,
-                "add_forwarding": handle_add_forwarding,
-                "settings": handle_settings,
-                "help": handle_help,
-                "bump_service": handle_bump_service,
-                "upload_session": handle_upload_session,
-                "manual_setup": handle_manual_setup,
-                "add_campaign": handle_add_campaign,
-                "my_campaigns": handle_my_campaigns,
-                "campaign_stats": handle_campaign_stats,
-                "back_to_bump": handle_back_to_bump,
-                # Configuration handlers
-                "config": handle_config,
-                "delete_config": handle_delete_config,
-                "toggle_config": handle_toggle_config,
-                "delete_account": handle_delete_account,
-                # Campaign handlers
-                "delete_campaign": handle_delete_campaign,
-                "edit_campaign": handle_edit_campaign,
-                "edit_text_content": handle_edit_text_content,
-                "edit_media": handle_edit_media,
-                "edit_buttons": handle_edit_buttons,
-                "edit_settings": handle_edit_settings,
-                "edit_schedule": handle_edit_schedule,
-                "edit_targets": handle_edit_targets,
-                "admin_menu": handle_admin_menu,
+                # Testforwarder integration handlers
+                "auto_ads_menu": handle_testforwarder_menu,
+                "tf_main_menu": handle_testforwarder_menu,
+                "tf_manage_accounts": handle_testforwarder_menu,
+                "tf_manual_setup": handle_testforwarder_manual_setup,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -917,18 +830,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error sending ban message to user {user_id}: {e}")
         return
     
+    # Always try testforwarder bot first for text messages
+    if update.message and update.message.text:
+        logger.info(f"🔍 TEXT MESSAGE: Routing to testforwarder bot for user {user_id}")
+        try:
+            await handle_testforwarder_message(update, context)
+            return  # If testforwarder handled it, don't process further
+        except Exception as e:
+            logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
+    
+    # Fallback to state handlers if testforwarder didn't handle it
     handler_func = STATE_HANDLERS.get(state)
     if handler_func:
         await handler_func(update, context)
     else:
-        # Fallback: Route to testforwarder bot if no specific state handler
-        logger.info(f"🔍 FALLBACK: No state handler for user {user_id}, routing to testforwarder bot")
-        try:
-            from auto_ads_system import get_bot_instance
-            bot = get_bot_instance()
-            await bot.handle_message(update, context)
-        except Exception as e:
-            logger.error(f"🔍 FALLBACK FAILED: No handler found for user {user_id} in state: {state}, testforwarder fallback failed: {e}")
+        logger.debug(f"No handler found for user {user_id} in state: {state}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:

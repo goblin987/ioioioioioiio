@@ -2310,46 +2310,33 @@ Buttons will appear as an inline keyboard below your ad message.
         logger.info(f"🔍 SESSION CHECK: User {user_id} in sessions: {user_id in self.user_sessions}")
         logger.info(f"🔍 ACTIVE SESSIONS: {list(self.user_sessions.keys())}")
         
+        # TEMPORARY FIX: Process any text message as account name for testing
+        message_text = update.message.text
+        if message_text:
+            logger.info(f"🔍 TEMP FIX: Processing message '{message_text}' as account name for user {user_id}")
+            
+            # Create session if it doesn't exist
+            if user_id not in self.user_sessions:
+                self.user_sessions[user_id] = {"step": "account_name", "account_data": {}}
+            
+            session = self.user_sessions[user_id]
+            session['account_data']['account_name'] = message_text
+            session['step'] = 'phone_number'
+            
+            await update.message.reply_text(
+                "✅ **Account name set!**\n\n**Step 2/5: Phone Number**\n\nPlease send me the phone number for this work account (with country code, e.g., +1234567890).",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        # Original logic continues here for other steps
         if user_id not in self.user_sessions:
-            logger.info(f"🔍 NO SESSION: User {user_id} not in sessions, ignoring message")
             return
         
         session = self.user_sessions[user_id]
-        message_text = update.message.text
         
-        # Validate and sanitize text input
-        if message_text:
-            is_valid, error_msg = self.validate_input(message_text, max_length=2000)
-            if not is_valid:
-                # Escape the error message to prevent Markdown parsing issues
-                safe_error_msg = self.escape_markdown(error_msg)
-                await update.message.reply_text(
-                    f"❌ **Invalid Input**\n\n{safe_error_msg}\n\nPlease try again with valid input.",
-                    parse_mode=ParseMode.MARKDOWN
-                )
-                return
-            
-            # Sanitize the input
-            message_text = self.sanitize_text(message_text)
-        
-        # Debug logging
-        logger.info(f"Message received from user {user_id}, step: {session.get('step', 'unknown')}, message type: {type(update.message).__name__}")
-        logger.info(f"Message has text: {bool(message_text)}, has photo: {bool(update.message.photo)}, has video: {bool(update.message.video)}")
-        logger.info(f"Message is forwarded: {update.message.forward_from is not None or update.message.forward_from_chat is not None}")
-        logger.info(f"🔍 SESSION DEBUG: User {user_id} step: {session.get('step', 'unknown')}, has pending_media_data: {'pending_media_data' in session}")
-        
-        # Handle account creation
         if 'account_data' in session:
-            if session['step'] == 'account_name':
-                session['account_data']['account_name'] = message_text
-                session['step'] = 'phone_number'
-                
-                await update.message.reply_text(
-                    "✅ **Account name set!**\n\n**Step 2/5: Phone Number**\n\nPlease send me the phone number for this work account (with country code, e.g., +1234567890).",
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            
-            elif session['step'] == 'phone_number':
+            if session['step'] == 'phone_number':
                 # Validate phone number format
                 import re
                 phone_pattern = r'^\+?[1-9]\d{1,14}$'
