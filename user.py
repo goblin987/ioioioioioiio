@@ -170,6 +170,9 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         # Format using the raw username and placeholders
         full_welcome = welcome_template_to_use.format(
             username=username,
+            user_name=username,  # Add user_name for template compatibility
+            user_id=user_id,     # Add user_id for template compatibility
+            bot_name="Bot",      # Add bot_name for template compatibility
             status=status,
             progress_bar=progress_bar_str,
             balance_str=balance_str,

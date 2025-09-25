@@ -199,9 +199,12 @@ async def handle_welcome_editor_menu(update: Update, context: ContextTypes.DEFAU
     msg += "**Easy-to-use editor for your bot's welcome experience!**\n\n"
     
     if active_msg:
-        preview = active_msg['template_text'][:100] + "..." if len(active_msg['template_text']) > 100 else active_msg['template_text']
+        # Escape markdown characters in preview to prevent parsing errors
+        preview_text = active_msg['template_text'][:100] + "..." if len(active_msg['template_text']) > 100 else active_msg['template_text']
+        # Escape markdown special characters
+        preview_text = preview_text.replace('*', '\\*').replace('_', '\\_').replace('`', '\\`').replace('[', '\\[').replace(']', '\\]')
         msg += f"📝 **Current Message:** {active_msg['name']}\n"
-        msg += f"📄 **Preview:** {preview}\n\n"
+        msg += f"📄 **Preview:** {preview_text}\n\n"
     else:
         msg += f"📝 **Current Message:** Default\n\n"
     
