@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes
 
 from utils import (
     get_db_connection, send_message_with_retry, is_primary_admin,
-    get_language_data, format_currency
+    format_currency
 )
 
 logger = logging.getLogger(__name__)

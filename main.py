@@ -133,7 +133,8 @@ try:
         check_low_stock_alerts
     )
 except ImportError:
-    logger.error("Could not import stock_management module")
+    import logging
+    logging.getLogger(__name__).error("Could not import stock_management module")
     # Create dummy handlers
     async def handle_stock_management_menu(update, context, params=None):
         await update.callback_query.edit_message_text("Stock management not available")
@@ -161,7 +162,8 @@ try:
         init_welcome_tables, get_active_welcome_message, get_start_menu_buttons
     )
 except ImportError:
-    logger.error("Could not import welcome_editor module")
+    import logging
+    logging.getLogger(__name__).error("Could not import welcome_editor module")
     # Create dummy handlers
     async def handle_welcome_editor_menu(update, context, params=None):
         await update.callback_query.edit_message_text("Welcome editor not available")
@@ -190,7 +192,8 @@ try:
         handle_ab_detailed_analysis, handle_ab_export_results
     )
 except ImportError:
-    logger.error("Could not import ab_testing module")
+    import logging
+    logging.getLogger(__name__).error("Could not import ab_testing module")
     # Create dummy handlers
     async def handle_ab_testing_menu(update, context, params=None):
         await update.callback_query.edit_message_text("A/B testing not available")
@@ -219,7 +222,8 @@ try:
         handle_referral_admin_settings, handle_referral_admin_reset
     )
 except ImportError:
-    logger.error("Could not import referral_system module")
+    import logging
+    logging.getLogger(__name__).error("Could not import referral_system module")
     # Create dummy handlers
     async def handle_referral_menu(update, context, params=None):
         await update.callback_query.edit_message_text("Referral system not available")
@@ -252,7 +256,8 @@ try:
         initialize_auto_ads_system
     )
 except ImportError:
-    logger.error("Could not import auto_ads_system module")
+    import logging
+    logging.getLogger(__name__).error("Could not import auto_ads_system module")
     # Create dummy handlers
     async def handle_auto_ads_menu(update, context, params=None):
         await update.callback_query.edit_message_text("Auto ads system not available")
@@ -293,7 +298,8 @@ try:
         process_vip_level_up, VIPManager
     )
 except ImportError:
-    logger.error("Could not import vip_system module")
+    import logging
+    logging.getLogger(__name__).error("Could not import vip_system module")
     # Create dummy handlers
     async def handle_vip_management_menu(update, context, params=None):
         await update.callback_query.edit_message_text("VIP system not available")
