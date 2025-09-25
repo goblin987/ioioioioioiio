@@ -152,6 +152,42 @@ except ImportError:
         pass
 
 try:
+    import product_price_editor
+    from product_price_editor import (
+        handle_product_price_editor_menu, handle_price_search_products, handle_price_edit_by_city,
+        handle_price_edit_by_category, handle_price_search_message, handle_price_edit_product,
+        handle_price_new_price_message, handle_price_set_quick, handle_price_show_all_products,
+        handle_price_change_history, handle_price_bulk_updates, handle_price_bulk_increase,
+        handle_price_bulk_decrease, handle_price_bulk_apply, handle_price_city_products,
+        handle_price_category_products, init_price_editor_tables
+    )
+except ImportError:
+    import logging
+    logging.getLogger(__name__).error("Could not import product_price_editor module")
+    # Create dummy handlers
+    async def handle_product_price_editor_menu(update, context, params=None):
+        await update.callback_query.edit_message_text("Product price editor not available")
+    async def handle_price_search_products(update, context, params=None):
+        await update.callback_query.edit_message_text("Price search not available")
+    async def handle_price_edit_by_city(update, context, params=None):
+        await update.callback_query.edit_message_text("Price editing not available")
+    async def handle_price_edit_by_category(update, context, params=None):
+        await update.callback_query.edit_message_text("Price editing not available")
+    async def handle_price_search_message(update, context):
+        pass
+    async def handle_price_edit_product(update, context, params=None):
+        await update.callback_query.edit_message_text("Price editing not available")
+    async def handle_price_new_price_message(update, context):
+        pass
+    async def handle_price_set_quick(update, context, params=None):
+        await update.callback_query.edit_message_text("Price editing not available")
+    async def handle_price_show_all_products(update, context, params=None):
+        await update.callback_query.edit_message_text("Price editing not available")
+    async def handle_price_change_history(update, context, params=None):
+        await update.callback_query.edit_message_text("Price history not available")
+    def init_price_editor_tables(): pass
+
+try:
     import welcome_editor
     from welcome_editor import (
         handle_welcome_editor_menu, handle_welcome_edit_text, handle_welcome_edit_buttons,
@@ -666,6 +702,22 @@ def callback_query_router(func):
                 "welcome_use_template": handle_welcome_use_template,
                 "welcome_toggle_button": handle_welcome_toggle_button,
                 "welcome_set_position": handle_welcome_set_position,
+                
+                # Product price editor handlers
+                "product_price_editor_menu": handle_product_price_editor_menu,
+                "price_search_products": handle_price_search_products,
+                "price_edit_by_city": handle_price_edit_by_city,
+                "price_edit_by_category": handle_price_edit_by_category,
+                "price_edit_product": handle_price_edit_product,
+                "price_set_quick": handle_price_set_quick,
+                "price_show_all_products": handle_price_show_all_products,
+                "price_change_history": handle_price_change_history,
+                "price_bulk_updates": handle_price_bulk_updates,
+                "price_bulk_increase": handle_price_bulk_increase,
+                "price_bulk_decrease": handle_price_bulk_decrease,
+                "price_bulk_apply": handle_price_bulk_apply,
+                "price_city_products": handle_price_city_products,
+                "price_category_products": handle_price_category_products,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -753,6 +805,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_channel_info': handle_channel_info_message,
         'awaiting_ab_test_name': handle_ab_test_name_message,
         'awaiting_welcome_text': handle_welcome_text_message,
+        'awaiting_price_search': handle_price_search_message,
+        'awaiting_new_price': handle_price_new_price_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,

@@ -576,6 +576,7 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
     keyboard = [
         [InlineKeyboardButton("➕ Add Products", callback_data="adm_city")],
         [InlineKeyboardButton("📦 Bulk Add Products", callback_data="adm_bulk_city")],
+        [InlineKeyboardButton("💰 Edit Product Prices", callback_data="product_price_editor_menu")],
         [InlineKeyboardButton("🗑️ Manage Products", callback_data="adm_manage_products")],
         [InlineKeyboardButton("📦 View Bot Stock", callback_data="view_stock")],
         [InlineKeyboardButton("🧩 Manage Product Types", callback_data="adm_manage_types")],
