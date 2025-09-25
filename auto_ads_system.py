@@ -4186,8 +4186,8 @@ async def handle_enhanced_auto_ads_menu(update: Update, context: ContextTypes.DE
     if not query:
         return
     
-    # Create bot instance and show main menu
-    bot = TgcfBot()
+    # Use global bot instance to maintain user sessions
+    bot = get_bot_instance()
     await bot.show_main_menu(query)
 
 # All callback handlers from testforwarder
@@ -4196,7 +4196,7 @@ async def handle_manage_accounts(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.show_manage_accounts(query)
 
 async def handle_add_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4204,7 +4204,7 @@ async def handle_add_account(update: Update, context: ContextTypes.DEFAULT_TYPE,
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.start_add_account(query)
 
 async def handle_my_configs(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4212,7 +4212,7 @@ async def handle_my_configs(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.show_my_configs(query)
 
 async def handle_add_forwarding(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4220,7 +4220,7 @@ async def handle_add_forwarding(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.start_add_forwarding(query)
 
 async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4228,7 +4228,7 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, pa
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.show_settings(query)
 
 async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4236,7 +4236,7 @@ async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE, params
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.show_help(query)
 
 async def handle_bump_service(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4244,7 +4244,7 @@ async def handle_bump_service(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.show_bump_service(query)
 
 async def handle_upload_session(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4252,7 +4252,7 @@ async def handle_upload_session(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.start_session_upload(query)
 
 async def handle_manual_setup(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -4260,23 +4260,33 @@ async def handle_manual_setup(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     if not query:
         return
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.start_manual_setup(query)
+
+# Global bot instance to maintain user sessions
+_global_bot = None
+
+def get_bot_instance():
+    """Get or create the global bot instance"""
+    global _global_bot
+    if _global_bot is None:
+        _global_bot = TgcfBot()
+    return _global_bot
 
 # Message handlers
 async def handle_enhanced_session_file_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle session file upload"""
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.handle_document(update, context)
 
 async def handle_enhanced_account_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle account details input"""
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.handle_message(update, context)
 
 async def handle_enhanced_channel_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle channel link input"""
-    bot = TgcfBot()
+    bot = get_bot_instance()
     await bot.handle_message(update, context)
 
 # Initialize database tables
@@ -4294,5 +4304,5 @@ def init_enhanced_auto_ads_tables():
 enhanced_telethon_manager = None
 
 if __name__ == "__main__":
-    bot = TgcfBot()
+    bot = get_bot_instance()
     bot.run()
