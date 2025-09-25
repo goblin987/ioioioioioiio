@@ -281,69 +281,41 @@ except ImportError:
 try:
     import auto_ads_system
     from auto_ads_system import (
-        handle_enhanced_auto_ads_menu, handle_enhanced_manage_accounts, handle_enhanced_upload_session,
-        handle_enhanced_manage_channels, handle_enhanced_quick_add_channel, handle_enhanced_session_file_upload,
-        handle_enhanced_account_details, handle_enhanced_channel_link, init_enhanced_auto_ads_tables,
-        enhanced_telethon_manager, handle_enhanced_add_account, handle_enhanced_manual_setup_start,
-        handle_enhanced_manual_account_details, handle_enhanced_login_code, handle_enhanced_2fa_password,
-        handle_enhanced_ads_analytics, handle_enhanced_test_system, handle_enhanced_manage_campaigns, 
-        handle_enhanced_add_channel, handle_enhanced_channel_details, handle_enhanced_ads_settings, 
-        handle_enhanced_create_campaign, handle_enhanced_test_accounts, handle_enhanced_test_channels, 
-        handle_enhanced_test_connections, handle_enhanced_test_database, handle_enhanced_test_all
+        handle_enhanced_auto_ads_menu, handle_manage_accounts, handle_add_account,
+        handle_my_configs, handle_add_forwarding, handle_settings, handle_help,
+        handle_bump_service, handle_upload_session, handle_manual_setup,
+        handle_enhanced_session_file_upload, handle_enhanced_account_details, 
+        handle_enhanced_channel_link, init_enhanced_auto_ads_tables, enhanced_telethon_manager
     )
 except ImportError:
     import logging
     logging.getLogger(__name__).error("Could not import auto_ads_system module")
-    # Create dummy handlers for enhanced auto ads
+    # Create dummy handlers for enhanced auto ads (testforwarder integration)
     async def handle_enhanced_auto_ads_menu(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_manage_accounts(update, context, params=None):
+    async def handle_manage_accounts(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_upload_session(update, context, params=None):
+    async def handle_add_account(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_manage_channels(update, context, params=None):
+    async def handle_my_configs(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_quick_add_channel(update, context, params=None):
+    async def handle_add_forwarding(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_add_account(update, context, params=None):
+    async def handle_settings(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_manual_setup_start(update, context, params=None):
+    async def handle_help(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_ads_analytics(update, context, params=None):
+    async def handle_bump_service(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_test_system(update, context, params=None):
+    async def handle_upload_session(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_manage_campaigns(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_add_channel(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_ads_settings(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_create_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_test_accounts(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_test_channels(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_test_connections(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_test_database(update, context, params=None):
-        await update.callback_query.edit_message_text("Enhanced auto ads not available")
-    async def handle_enhanced_test_all(update, context, params=None):
+    async def handle_manual_setup(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
     async def handle_enhanced_session_file_upload(update, context):
         pass
     async def handle_enhanced_account_details(update, context):
         pass
-    async def handle_enhanced_manual_account_details(update, context):
-        pass
-    async def handle_enhanced_login_code(update, context):
-        pass
-    async def handle_enhanced_2fa_password(update, context):
-        pass
     async def handle_enhanced_channel_link(update, context):
-        pass
-    async def handle_enhanced_channel_details(update, context):
         pass
     def init_enhanced_auto_ads_tables(): pass
     enhanced_telethon_manager = None
@@ -631,26 +603,19 @@ def callback_query_router(func):
                 "referral_admin_settings": handle_referral_admin_settings,
                 "referral_admin_reset": handle_referral_admin_reset,
                 
-                # Enhanced Auto ads system handlers
+                # Enhanced Auto ads system handlers (testforwarder integration)
                 "auto_ads_menu": handle_enhanced_auto_ads_menu,
                 "enhanced_auto_ads_menu": handle_enhanced_auto_ads_menu,
-                "enhanced_manage_accounts": handle_enhanced_manage_accounts,
-                "enhanced_upload_session": handle_enhanced_upload_session,
-                "enhanced_manage_channels": handle_enhanced_manage_channels,
-                "enhanced_quick_add_channel": handle_enhanced_quick_add_channel,
-                "enhanced_add_account": handle_enhanced_add_account,
-                "enhanced_manual_setup_start": handle_enhanced_manual_setup_start,
-                "enhanced_ads_analytics": handle_enhanced_ads_analytics,
-                "enhanced_test_system": handle_enhanced_test_system,
-                "enhanced_manage_campaigns": handle_enhanced_manage_campaigns,
-                "enhanced_add_channel": handle_enhanced_add_channel,
-                "enhanced_ads_settings": handle_enhanced_ads_settings,
-                "enhanced_create_campaign": handle_enhanced_create_campaign,
-                "enhanced_test_accounts": handle_enhanced_test_accounts,
-                "enhanced_test_channels": handle_enhanced_test_channels,
-                "enhanced_test_connections": handle_enhanced_test_connections,
-                "enhanced_test_database": handle_enhanced_test_database,
-                "enhanced_test_all": handle_enhanced_test_all,
+                "main_menu": handle_enhanced_auto_ads_menu,
+                "manage_accounts": handle_manage_accounts,
+                "add_account": handle_add_account,
+                "my_configs": handle_my_configs,
+                "add_forwarding": handle_add_forwarding,
+                "settings": handle_settings,
+                "help": handle_help,
+                "bump_service": handle_bump_service,
+                "upload_session": handle_upload_session,
+                "manual_setup": handle_manual_setup,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -829,14 +794,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
         
-        # Enhanced auto ads message handlers
+        # Enhanced auto ads message handlers (testforwarder integration)
         'awaiting_session_file': handle_enhanced_session_file_upload,
         'awaiting_account_details': handle_enhanced_account_details,
-        'awaiting_manual_account_details': handle_enhanced_manual_account_details,
-        'awaiting_login_code': handle_enhanced_login_code,
-        'awaiting_2fa_password': handle_enhanced_2fa_password,
         'awaiting_channel_link': handle_enhanced_channel_link,
-        'awaiting_channel_details': handle_enhanced_channel_details,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,
