@@ -693,8 +693,111 @@ async def handle_admin_user_stats(update: Update, context: ContextTypes.DEFAULT_
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "📊 **User Statistics**\n\nDetailed user analytics and insights coming soon!"
-    keyboard = [[InlineKeyboardButton("⬅️ Back to Analytics", callback_data="admin_analytics_menu")]]
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get comprehensive user statistics
+        c.execute("""
+            SELECT 
+                COUNT(*) as total_users,
+                COUNT(CASE WHEN total_purchases > 0 THEN 1 END) as active_customers,
+                COUNT(CASE WHEN total_purchases = 0 THEN 1 END) as new_users,
+                AVG(total_purchases) as avg_purchases,
+                SUM(total_purchases) as total_purchases,
+                AVG(balance) as avg_balance,
+                SUM(balance) as total_balance
+            FROM users
+        """)
+        user_stats = c.fetchone()
+        
+        # Get user registration trends (last 30 days)
+        c.execute("""
+            SELECT DATE(first_interaction) as date, COUNT(*) as registrations
+            FROM users 
+            WHERE first_interaction >= datetime('now', '-30 days')
+            GROUP BY DATE(first_interaction)
+            ORDER BY date DESC
+            LIMIT 7
+        """)
+        recent_registrations = c.fetchall()
+        
+        # Get top customers
+        c.execute("""
+            SELECT user_id, total_purchases, balance
+            FROM users 
+            WHERE total_purchases > 0
+            ORDER BY total_purchases DESC
+            LIMIT 5
+        """)
+        top_customers = c.fetchall()
+        
+        # Get user activity by VIP level
+        c.execute("""
+            SELECT 
+                CASE 
+                    WHEN total_purchases >= 10 THEN 'VIP'
+                    WHEN total_purchases >= 5 THEN 'Regular'
+                    ELSE 'New'
+                END as user_type,
+                COUNT(*) as count,
+                AVG(balance) as avg_balance
+            FROM users
+            GROUP BY user_type
+        """)
+        user_segments = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error getting user statistics: {e}")
+        await query.answer("Error loading statistics", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "📊 **User Statistics Dashboard**\n\n"
+    
+    # Overall statistics
+    msg += f"👥 **User Overview:**\n"
+    msg += f"• Total Users: {user_stats['total_users']:,}\n"
+    msg += f"• Active Customers: {user_stats['active_customers']:,}\n"
+    msg += f"• New Users: {user_stats['new_users']:,}\n"
+    msg += f"• Avg Purchases per User: {user_stats['avg_purchases']:.1f}\n\n"
+    
+    # Financial overview
+    msg += f"💰 **Financial Overview:**\n"
+    msg += f"• Total User Balance: ${user_stats['total_balance']:,.2f}\n"
+    msg += f"• Average Balance: ${user_stats['avg_balance']:.2f}\n"
+    msg += f"• Total Purchases Made: {user_stats['total_purchases']:,}\n\n"
+    
+    # User segments
+    if user_segments:
+        msg += f"🎯 **User Segments:**\n"
+        for segment in user_segments:
+            msg += f"• {segment['user_type']}: {segment['count']} users (avg ${segment['avg_balance']:.2f})\n"
+        msg += "\n"
+    
+    # Top customers
+    if top_customers:
+        msg += f"🏆 **Top Customers:**\n"
+        for i, customer in enumerate(top_customers, 1):
+            msg += f"{i}. User {customer['user_id']}: {customer['total_purchases']} purchases (${customer['balance']:.2f})\n"
+        msg += "\n"
+    
+    # Recent activity
+    if recent_registrations:
+        msg += f"📈 **Recent Activity (Last 7 days):**\n"
+        total_recent = sum(reg['registrations'] for reg in recent_registrations)
+        msg += f"• New Registrations: {total_recent}\n"
+        msg += f"• Daily Average: {total_recent/7:.1f} users/day"
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Export Report", callback_data="admin_export_user_stats")],
+        [InlineKeyboardButton("🔄 Refresh Data", callback_data="admin_user_stats")],
+        [InlineKeyboardButton("⬅️ Back to Analytics", callback_data="admin_analytics_menu")]
+    ]
+    
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_admin_financial_reports(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -703,8 +806,119 @@ async def handle_admin_financial_reports(update: Update, context: ContextTypes.D
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "💰 **Financial Reports**\n\nAdvanced financial analytics coming soon!"
-    keyboard = [[InlineKeyboardButton("⬅️ Back to Analytics", callback_data="admin_analytics_menu")]]
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get financial overview
+        c.execute("""
+            SELECT 
+                SUM(amount) as total_revenue,
+                COUNT(*) as total_transactions,
+                AVG(amount) as avg_transaction,
+                COUNT(DISTINCT user_id) as unique_customers
+            FROM payments 
+            WHERE status = 'completed'
+        """)
+        revenue_stats = c.fetchone()
+        
+        # Get revenue by payment method
+        c.execute("""
+            SELECT payment_method, 
+                   COUNT(*) as transactions,
+                   SUM(amount) as revenue
+            FROM payments 
+            WHERE status = 'completed'
+            GROUP BY payment_method
+            ORDER BY revenue DESC
+        """)
+        payment_methods = c.fetchall()
+        
+        # Get daily revenue (last 7 days)
+        c.execute("""
+            SELECT DATE(created_at) as date, 
+                   SUM(amount) as daily_revenue,
+                   COUNT(*) as daily_transactions
+            FROM payments 
+            WHERE status = 'completed' 
+            AND created_at >= datetime('now', '-7 days')
+            GROUP BY DATE(created_at)
+            ORDER BY date DESC
+        """)
+        daily_revenue = c.fetchall()
+        
+        # Get pending payments
+        c.execute("""
+            SELECT COUNT(*) as pending_count,
+                   SUM(amount) as pending_amount
+            FROM payments 
+            WHERE status = 'pending'
+        """)
+        pending_stats = c.fetchone()
+        
+        # Get user balance statistics
+        c.execute("""
+            SELECT SUM(balance) as total_user_balance,
+                   AVG(balance) as avg_user_balance,
+                   COUNT(CASE WHEN balance > 0 THEN 1 END) as users_with_balance
+            FROM users
+        """)
+        balance_stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error getting financial reports: {e}")
+        await query.answer("Error loading reports", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "💰 **Financial Reports Dashboard**\n\n"
+    
+    # Revenue overview
+    msg += f"📊 **Revenue Overview:**\n"
+    msg += f"• Total Revenue: ${revenue_stats['total_revenue']:,.2f}\n"
+    msg += f"• Total Transactions: {revenue_stats['total_transactions']:,}\n"
+    msg += f"• Average Transaction: ${revenue_stats['avg_transaction']:.2f}\n"
+    msg += f"• Unique Customers: {revenue_stats['unique_customers']:,}\n\n"
+    
+    # Payment methods breakdown
+    if payment_methods:
+        msg += f"💳 **Revenue by Payment Method:**\n"
+        for method in payment_methods:
+            percentage = (method['revenue'] / revenue_stats['total_revenue'] * 100) if revenue_stats['total_revenue'] > 0 else 0
+            msg += f"• {method['payment_method']}: ${method['revenue']:,.2f} ({percentage:.1f}%)\n"
+        msg += "\n"
+    
+    # User balances
+    msg += f"👥 **User Balance Overview:**\n"
+    msg += f"• Total User Balance: ${balance_stats['total_user_balance']:,.2f}\n"
+    msg += f"• Average Balance: ${balance_stats['avg_user_balance']:.2f}\n"
+    msg += f"• Users with Balance: {balance_stats['users_with_balance']:,}\n\n"
+    
+    # Pending payments
+    if pending_stats['pending_count'] > 0:
+        msg += f"⏳ **Pending Payments:**\n"
+        msg += f"• Count: {pending_stats['pending_count']}\n"
+        msg += f"• Amount: ${pending_stats['pending_amount']:,.2f}\n\n"
+    
+    # Recent performance
+    if daily_revenue:
+        msg += f"📈 **Recent Performance (Last 7 days):**\n"
+        total_week_revenue = sum(day['daily_revenue'] for day in daily_revenue)
+        total_week_transactions = sum(day['daily_transactions'] for day in daily_revenue)
+        msg += f"• Weekly Revenue: ${total_week_revenue:,.2f}\n"
+        msg += f"• Daily Average: ${total_week_revenue/7:.2f}\n"
+        msg += f"• Weekly Transactions: {total_week_transactions}"
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Export Financial Report", callback_data="admin_export_financial")],
+        [InlineKeyboardButton("📊 Revenue Trends", callback_data="admin_revenue_trends")],
+        [InlineKeyboardButton("🔄 Refresh Data", callback_data="admin_financial_reports")],
+        [InlineKeyboardButton("⬅️ Back to Analytics", callback_data="admin_analytics_menu")]
+    ]
+    
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 # --- Missing Admin System Handlers ---

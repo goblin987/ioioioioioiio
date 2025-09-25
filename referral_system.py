@@ -545,10 +545,86 @@ async def handle_referral_how_it_works(update: Update, context: ContextTypes.DEF
 async def handle_referral_view_details(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """View referral details and stats"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    await query.answer("Detailed stats coming soon!", show_alert=False)
-    await query.edit_message_text("📊 Detailed referral statistics coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_menu")]]))
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get user's referral stats
+        c.execute("""
+            SELECT referral_code, total_referrals, total_earnings
+            FROM users 
+            WHERE user_id = ?
+        """, (user_id,))
+        user_stats = c.fetchone()
+        
+        if not user_stats or not user_stats['referral_code']:
+            await query.answer("No referral code found", show_alert=True)
+            return
+        
+        # Get detailed referral activity
+        c.execute("""
+            SELECT referred_user_id, created_at, commission_earned, status
+            FROM referrals 
+            WHERE referrer_user_id = ?
+            ORDER BY created_at DESC
+            LIMIT 10
+        """, (user_id,))
+        referral_activity = c.fetchall()
+        
+        # Get referral performance (last 30 days)
+        c.execute("""
+            SELECT 
+                COUNT(*) as recent_referrals,
+                SUM(commission_earned) as recent_earnings
+            FROM referrals 
+            WHERE referrer_user_id = ? 
+            AND created_at >= datetime('now', '-30 days')
+        """, (user_id,))
+        recent_stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error getting referral details: {e}")
+        await query.answer("Error loading details", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = f"📊 **Your Referral Statistics**\n\n"
+    msg += f"🔗 **Your Code:** `{user_stats['referral_code']}`\n\n"
+    
+    # Overall stats
+    msg += f"📈 **Overall Performance:**\n"
+    msg += f"• Total Referrals: {user_stats['total_referrals']}\n"
+    msg += f"• Total Earnings: ${user_stats['total_earnings']:.2f}\n"
+    msg += f"• Average per Referral: ${(user_stats['total_earnings'] / user_stats['total_referrals']):.2f if user_stats['total_referrals'] > 0 else 0}\n\n"
+    
+    # Recent performance
+    msg += f"📅 **Last 30 Days:**\n"
+    msg += f"• New Referrals: {recent_stats['recent_referrals']}\n"
+    msg += f"• Recent Earnings: ${recent_stats['recent_earnings'] or 0:.2f}\n\n"
+    
+    # Recent activity
+    if referral_activity:
+        msg += f"🎯 **Recent Activity:**\n"
+        for activity in referral_activity[:5]:
+            date_str = activity['created_at'][:10] if activity['created_at'] else "Unknown"
+            status_emoji = "✅" if activity['status'] == 'active' else "⏳"
+            msg += f"{status_emoji} User {activity['referred_user_id']} - ${activity['commission_earned']:.2f} ({date_str})\n"
+    else:
+        msg += f"📝 **No referral activity yet.**\n"
+        msg += f"Share your code to start earning commissions!"
+    
+    keyboard = [
+        [InlineKeyboardButton("📤 Share Code", callback_data="referral_share_code")],
+        [InlineKeyboardButton("💡 Tips & Tricks", callback_data="referral_tips")],
+        [InlineKeyboardButton("⬅️ Back to Referrals", callback_data="referral_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_referral_tips(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show referral tips and tricks"""
@@ -575,9 +651,101 @@ async def handle_referral_admin_stats(update: Update, context: ContextTypes.DEFA
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("Admin stats coming soon!", show_alert=False)
-    await query.edit_message_text("📊 Admin referral statistics coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get overall referral statistics
+        c.execute("""
+            SELECT 
+                COUNT(*) as total_referrals,
+                COUNT(DISTINCT referrer_user_id) as active_referrers,
+                SUM(commission_earned) as total_commissions,
+                AVG(commission_earned) as avg_commission
+            FROM referrals
+        """)
+        overall_stats = c.fetchone()
+        
+        # Get recent referral activity (last 30 days)
+        c.execute("""
+            SELECT 
+                COUNT(*) as recent_referrals,
+                SUM(commission_earned) as recent_commissions
+            FROM referrals 
+            WHERE created_at >= datetime('now', '-30 days')
+        """)
+        recent_stats = c.fetchone()
+        
+        # Get top referrers
+        c.execute("""
+            SELECT u.user_id, u.referral_code, 
+                   COUNT(r.id) as referral_count,
+                   SUM(r.commission_earned) as total_earned
+            FROM users u
+            LEFT JOIN referrals r ON u.user_id = r.referrer_user_id
+            WHERE u.referral_code IS NOT NULL
+            GROUP BY u.user_id
+            HAVING referral_count > 0
+            ORDER BY total_earned DESC
+            LIMIT 10
+        """)
+        top_referrers = c.fetchall()
+        
+        # Get referral conversion rates
+        c.execute("""
+            SELECT 
+                COUNT(CASE WHEN u.total_purchases > 0 THEN 1 END) as converted_referrals,
+                COUNT(*) as total_referred_users
+            FROM referrals r
+            JOIN users u ON r.referred_user_id = u.user_id
+        """)
+        conversion_stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error getting referral admin stats: {e}")
+        await query.answer("Error loading statistics", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "📊 **Referral Program Statistics**\n\n"
+    
+    # Overall performance
+    msg += f"🎯 **Overall Performance:**\n"
+    msg += f"• Total Referrals: {overall_stats['total_referrals']:,}\n"
+    msg += f"• Active Referrers: {overall_stats['active_referrers']:,}\n"
+    msg += f"• Total Commissions Paid: ${overall_stats['total_commissions']:.2f}\n"
+    msg += f"• Average Commission: ${overall_stats['avg_commission']:.2f}\n\n"
+    
+    # Recent activity
+    msg += f"📅 **Last 30 Days:**\n"
+    msg += f"• New Referrals: {recent_stats['recent_referrals']:,}\n"
+    msg += f"• Recent Commissions: ${recent_stats['recent_commissions'] or 0:.2f}\n\n"
+    
+    # Conversion metrics
+    if conversion_stats['total_referred_users'] > 0:
+        conversion_rate = (conversion_stats['converted_referrals'] / conversion_stats['total_referred_users']) * 100
+        msg += f"📈 **Conversion Metrics:**\n"
+        msg += f"• Referred Users: {conversion_stats['total_referred_users']:,}\n"
+        msg += f"• Converted to Customers: {conversion_stats['converted_referrals']:,}\n"
+        msg += f"• Conversion Rate: {conversion_rate:.1f}%\n\n"
+    
+    # Top performers
+    if top_referrers:
+        msg += f"🏆 **Top Referrers:**\n"
+        for i, referrer in enumerate(top_referrers[:5], 1):
+            msg += f"{i}. User {referrer['user_id']}: {referrer['referral_count']} referrals (${referrer['total_earned']:.2f})\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("👥 Top Referrers", callback_data="referral_admin_top_referrers")],
+        [InlineKeyboardButton("⚙️ Program Settings", callback_data="referral_admin_settings")],
+        [InlineKeyboardButton("📋 Export Report", callback_data="referral_admin_export")],
+        [InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="referral_admin_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_referral_admin_top_referrers(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show top referrers"""

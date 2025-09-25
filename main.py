@@ -155,7 +155,10 @@ try:
     from ab_testing import (
         handle_ab_testing_menu, handle_ab_view_tests, handle_ab_create_test,
         handle_ab_test_templates, handle_ab_test_results, ABTestManager,
-        create_sample_tests, handle_ab_template_button_text, handle_ab_template_layout
+        create_sample_tests, handle_ab_template_button_text, handle_ab_template_layout,
+        handle_ab_create_button_test, handle_ab_create_layout_test, handle_ab_create_feature_test,
+        handle_ab_create_pricing_test, handle_ab_create_ui_test, handle_ab_test_name_message,
+        handle_ab_detailed_analysis, handle_ab_export_results
     )
 except ImportError:
     logger.error("Could not import ab_testing module")
@@ -594,6 +597,13 @@ def callback_query_router(func):
                 "ab_test_results": handle_ab_test_results,
                 "ab_template_button_text": handle_ab_template_button_text,
                 "ab_template_layout": handle_ab_template_layout,
+                "ab_create_button_test": handle_ab_create_button_test,
+                "ab_create_layout_test": handle_ab_create_layout_test,
+                "ab_create_feature_test": handle_ab_create_feature_test,
+                "ab_create_pricing_test": handle_ab_create_pricing_test,
+                "ab_create_ui_test": handle_ab_create_ui_test,
+                "ab_detailed_analysis": handle_ab_detailed_analysis,
+                "ab_export_results": handle_ab_export_results,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -679,6 +689,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_auto_ads_campaign_name': handle_auto_ads_campaign_name_message,
         'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
         'awaiting_channel_info': handle_channel_info_message,
+        'awaiting_ab_test_name': handle_ab_test_name_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,

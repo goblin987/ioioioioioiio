@@ -459,14 +459,22 @@ async def handle_ab_create_test(update: Update, context: ContextTypes.DEFAULT_TY
         return
     
     msg = "➕ **Create New A/B Test**\n\n"
-    msg += "Coming soon! Create custom A/B tests including:\n\n"
-    msg += "• Button text variations\n"
-    msg += "• Layout experiments\n"
-    msg += "• Color scheme tests\n"
-    msg += "• Message format tests\n"
-    msg += "• Pricing display tests\n"
+    msg += "Choose the type of A/B test you want to create:\n\n"
+    msg += "🔘 **Button Text Test** - Compare different button labels\n"
+    msg += "📱 **Message Layout Test** - Test message formats\n"
+    msg += "🎯 **Feature Toggle Test** - Test new features\n"
+    msg += "💰 **Pricing Test** - Test different price displays\n"
+    msg += "🎨 **UI Element Test** - Test interface changes\n\n"
+    msg += "Select a test type to get started:"
     
-    keyboard = [[InlineKeyboardButton("⬅️ Back to A/B Testing", callback_data="ab_testing_menu")]]
+    keyboard = [
+        [InlineKeyboardButton("🔘 Button Text Test", callback_data="ab_create_button_test")],
+        [InlineKeyboardButton("📱 Message Layout Test", callback_data="ab_create_layout_test")],
+        [InlineKeyboardButton("🎯 Feature Toggle Test", callback_data="ab_create_feature_test")],
+        [InlineKeyboardButton("💰 Pricing Test", callback_data="ab_create_pricing_test")],
+        [InlineKeyboardButton("🎨 UI Element Test", callback_data="ab_create_ui_test")],
+        [InlineKeyboardButton("⬅️ Back to A/B Testing", callback_data="ab_testing_menu")]
+    ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -507,8 +515,71 @@ async def handle_ab_test_results(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("Access denied.", show_alert=True)
         return
     
-    # Use existing handle_ab_view_tests for now
-    await handle_ab_view_tests(update, context, params)
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get test results
+        c.execute("""
+            SELECT test_name, variant_a, variant_b, participants_a, participants_b, 
+                   conversions_a, conversions_b, status, created_at, ended_at
+            FROM ab_tests 
+            WHERE status IN ('completed', 'active')
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+        tests = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error getting A/B test results: {e}")
+        tests = []
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "📊 **A/B Test Results Dashboard**\n\n"
+    
+    if not tests:
+        msg += "❌ **No Test Results Found**\n\n"
+        msg += "Create and run A/B tests to see results here.\n"
+        msg += "Results will show conversion rates, statistical significance, and recommendations."
+        
+        keyboard = [
+            [InlineKeyboardButton("➕ Create First Test", callback_data="ab_create_test")],
+            [InlineKeyboardButton("⬅️ Back to A/B Testing", callback_data="ab_testing_menu")]
+        ]
+    else:
+        msg += f"Found {len(tests)} test results:\n\n"
+        
+        for test in tests[:5]:  # Show top 5 results
+            # Calculate conversion rates
+            conv_rate_a = (test['conversions_a'] / test['participants_a'] * 100) if test['participants_a'] > 0 else 0
+            conv_rate_b = (test['conversions_b'] / test['participants_b'] * 100) if test['participants_b'] > 0 else 0
+            
+            # Determine winner
+            if conv_rate_b > conv_rate_a:
+                winner = f"🏆 Variant B (+{conv_rate_b - conv_rate_a:.1f}%)"
+            elif conv_rate_a > conv_rate_b:
+                winner = f"🏆 Variant A (+{conv_rate_a - conv_rate_b:.1f}%)"
+            else:
+                winner = "🤝 Tie"
+            
+            status_emoji = "✅" if test['status'] == 'completed' else "🔄"
+            
+            msg += f"{status_emoji} **{test['test_name'][:25]}**\n"
+            msg += f"   A: {conv_rate_a:.1f}% ({test['participants_a']} users)\n"
+            msg += f"   B: {conv_rate_b:.1f}% ({test['participants_b']} users)\n"
+            msg += f"   {winner}\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("📈 Detailed Analysis", callback_data="ab_detailed_analysis")],
+            [InlineKeyboardButton("📋 Export Results", callback_data="ab_export_results")],
+            [InlineKeyboardButton("🔄 Refresh Data", callback_data="ab_test_results")],
+            [InlineKeyboardButton("⬅️ Back to A/B Testing", callback_data="ab_testing_menu")]
+        ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 # --- Missing A/B Test Template Handlers ---
 
@@ -531,5 +602,271 @@ async def handle_ab_template_layout(update: Update, context: ContextTypes.DEFAUL
     await query.answer("Layout template coming soon!", show_alert=False)
     await query.edit_message_text("🎨 Layout A/B test template coming soon!", 
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="ab_test_templates")]]))
+
+# --- Additional A/B Test Creation Handlers ---
+
+async def handle_ab_create_button_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create button text A/B test"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Set up test creation state
+    context.user_data['ab_test_creation'] = {
+        'type': 'button_text',
+        'step': 'name'
+    }
+    context.user_data['state'] = 'awaiting_ab_test_name'
+    
+    msg = "🔘 **Create Button Text A/B Test**\n\n"
+    msg += "This test will compare two different button labels to see which gets more clicks.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• 'Buy Now' vs 'Add to Cart'\n"
+    msg += "• 'Get Started' vs 'Try Free'\n"
+    msg += "• 'Learn More' vs 'Discover'\n\n"
+    msg += "Please enter a name for this test:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="ab_create_test")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_create_layout_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create layout A/B test"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['ab_test_creation'] = {
+        'type': 'layout',
+        'step': 'name'
+    }
+    context.user_data['state'] = 'awaiting_ab_test_name'
+    
+    msg = "📱 **Create Message Layout A/B Test**\n\n"
+    msg += "This test will compare two different message layouts or formats.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• Long detailed description vs short summary\n"
+    msg += "• Text with emojis vs plain text\n"
+    msg += "• Bullet points vs paragraphs\n\n"
+    msg += "Please enter a name for this test:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="ab_create_test")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_create_feature_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create feature toggle A/B test"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['ab_test_creation'] = {
+        'type': 'feature_toggle',
+        'step': 'name'
+    }
+    context.user_data['state'] = 'awaiting_ab_test_name'
+    
+    msg = "🎯 **Create Feature Toggle A/B Test**\n\n"
+    msg += "This test will show/hide a feature for different user groups.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• Show/hide referral program button\n"
+    msg += "• Enable/disable VIP badges\n"
+    msg += "• Show/hide stock quantities\n\n"
+    msg += "Please enter a name for this test:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="ab_create_test")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_create_pricing_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create pricing A/B test"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['ab_test_creation'] = {
+        'type': 'pricing',
+        'step': 'name'
+    }
+    context.user_data['state'] = 'awaiting_ab_test_name'
+    
+    msg = "💰 **Create Pricing Display A/B Test**\n\n"
+    msg += "This test will compare different ways of displaying prices.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• Show/hide original price with discount\n"
+    msg += "• Display price per unit vs total price\n"
+    msg += "• Show/hide 'Save X%' labels\n\n"
+    msg += "Please enter a name for this test:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="ab_create_test")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_create_ui_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create UI element A/B test"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['ab_test_creation'] = {
+        'type': 'ui_element',
+        'step': 'name'
+    }
+    context.user_data['state'] = 'awaiting_ab_test_name'
+    
+    msg = "🎨 **Create UI Element A/B Test**\n\n"
+    msg += "This test will compare different user interface elements.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• Different button colors or styles\n"
+    msg += "• Icon vs text navigation\n"
+    msg += "• Grid vs list product layout\n\n"
+    msg += "Please enter a name for this test:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="ab_create_test")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_test_name_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle A/B test name input"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get("state") != "awaiting_ab_test_name":
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, "❌ Please enter a valid test name.", parse_mode=None)
+        return
+    
+    test_name = update.message.text.strip()
+    
+    if len(test_name) < 3:
+        await send_message_with_retry(context.bot, chat_id, "❌ Test name must be at least 3 characters long.", parse_mode=None)
+        return
+    
+    # Store test name and create the test
+    test_data = context.user_data.get('ab_test_creation', {})
+    test_type = test_data.get('type', 'unknown')
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Create the A/B test
+        c.execute("""
+            INSERT INTO ab_tests 
+            (test_name, test_type, variant_a, variant_b, status, participants_a, participants_b,
+             conversions_a, conversions_b, created_at, target_audience)
+            VALUES (?, ?, ?, ?, 'draft', 0, 0, 0, 0, ?, 'all_users')
+        """, (
+            test_name,
+            test_type,
+            f"Variant A ({test_type})",
+            f"Variant B ({test_type})",
+            datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        
+        # Clear state
+        context.user_data.pop('state', None)
+        context.user_data.pop('ab_test_creation', None)
+        
+        msg = f"✅ **A/B Test Created Successfully!**\n\n"
+        msg += f"**Test Name:** {test_name}\n"
+        msg += f"**Type:** {test_type.replace('_', ' ').title()}\n"
+        msg += f"**Status:** Draft\n\n"
+        msg += "Your A/B test has been created! You can now configure variants and start the test."
+        
+        keyboard = [
+            [InlineKeyboardButton("⚙️ Configure Test", callback_data="ab_configure_test")],
+            [InlineKeyboardButton("📊 View Tests", callback_data="ab_view_tests")],
+            [InlineKeyboardButton("🏠 A/B Testing Menu", callback_data="ab_testing_menu")]
+        ]
+        
+        await send_message_with_retry(context.bot, chat_id, msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error creating A/B test: {e}")
+        await send_message_with_retry(context.bot, chat_id, "❌ Error creating test. Please try again.", parse_mode=None)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_ab_detailed_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show detailed A/B test analysis"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📈 **Detailed A/B Test Analysis**\n\n"
+    msg += "Advanced statistical analysis of your A/B tests:\n\n"
+    msg += "📊 **Statistical Significance**\n"
+    msg += "• Confidence intervals\n"
+    msg += "• P-values and significance levels\n"
+    msg += "• Sample size recommendations\n\n"
+    msg += "📈 **Performance Metrics**\n"
+    msg += "• Conversion rate trends\n"
+    msg += "• User engagement patterns\n"
+    msg += "• Revenue impact analysis\n\n"
+    msg += "🎯 **Recommendations**\n"
+    msg += "• When to end tests\n"
+    msg += "• Implementation suggestions\n"
+    msg += "• Next test ideas"
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Generate Report", callback_data="ab_generate_report")],
+        [InlineKeyboardButton("⬅️ Back to Results", callback_data="ab_test_results")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_ab_export_results(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Export A/B test results"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all test data for export
+        c.execute("""
+            SELECT test_name, test_type, variant_a, variant_b, 
+                   participants_a, participants_b, conversions_a, conversions_b,
+                   status, created_at, ended_at
+            FROM ab_tests
+            ORDER BY created_at DESC
+        """)
+        tests = c.fetchall()
+        
+        if not tests:
+            await query.answer("No tests to export", show_alert=True)
+            return
+        
+        # Create export summary
+        export_data = f"📋 **A/B Test Results Export**\n"
+        export_data += f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        export_data += f"Total Tests: {len(tests)}\n\n"
+        
+        for test in tests[:10]:  # Export top 10 tests
+            conv_rate_a = (test['conversions_a'] / test['participants_a'] * 100) if test['participants_a'] > 0 else 0
+            conv_rate_b = (test['conversions_b'] / test['participants_b'] * 100) if test['participants_b'] > 0 else 0
+            
+            export_data += f"**{test['test_name']}** ({test['test_type']})\n"
+            export_data += f"• Variant A: {conv_rate_a:.1f}% ({test['participants_a']} users)\n"
+            export_data += f"• Variant B: {conv_rate_b:.1f}% ({test['participants_b']} users)\n"
+            export_data += f"• Status: {test['status']}\n\n"
+        
+        keyboard = [[InlineKeyboardButton("⬅️ Back to Results", callback_data="ab_test_results")]]
+        await query.edit_message_text(export_data, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error exporting A/B test results: {e}")
+        await query.answer("Export failed", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 # --- END OF FILE ab_testing.py ---
