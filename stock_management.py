@@ -117,7 +117,7 @@ async def check_low_stock_alerts():
             """, (
                 product['id'],
                 'critical' if product['available'] <= CRITICAL_STOCK_THRESHOLD else 'low',
-                f"Stock level: {product['available']} (Grouped total: {grouped_products.get(f\"{product['city']}|{product['district']}|{product['product_type']}|{product['size']}|{product['price']}\", {}).get('total_stock', product['available'])})",
+                f"Stock level: {product['available']} (Grouped total: {grouped_products.get(product['city'] + '|' + product['district'] + '|' + product['product_type'] + '|' + product['size'] + '|' + str(product['price']), {}).get('total_stock', product['available'])})",
                 now.isoformat(),
                 str(ADMIN_ID)
             ))
