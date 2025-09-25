@@ -4263,6 +4263,142 @@ async def handle_manual_setup(update: Update, context: ContextTypes.DEFAULT_TYPE
     bot = get_bot_instance()
     await bot.start_manual_setup(query)
 
+async def handle_add_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle add campaign callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.start_add_campaign(query)
+
+async def handle_my_campaigns(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle my campaigns callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.show_my_campaigns(query)
+
+async def handle_campaign_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle campaign stats callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.show_campaign_stats(query)
+
+async def handle_back_to_bump(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle back to bump service callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.show_bump_service(query)
+
+# Configuration handlers
+async def handle_config(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle config callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    config_id = query.data.split('_')[1]
+    await bot.show_config_details(query, config_id)
+
+async def handle_delete_config(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete config callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    config_id = query.data.split('_')[2]
+    await bot.delete_config(query, config_id)
+
+async def handle_toggle_config(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle toggle config callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    config_id = query.data.split('_')[2]
+    await bot.toggle_config_status(query, config_id)
+
+async def handle_delete_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete account callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    account_id = query.data.split('_')[2]
+    await bot.delete_account(query, account_id)
+
+# Campaign handlers
+async def handle_delete_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete campaign callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    campaign_id = query.data.split('_')[2]
+    await bot.delete_campaign(query, campaign_id)
+
+async def handle_edit_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit campaign callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    campaign_id = query.data.split('_')[2]
+    await bot.show_edit_campaign_menu(query, campaign_id)
+
+async def handle_edit_text_content(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit text content callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.edit_text_content(query)
+
+async def handle_edit_media(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit media callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.edit_media(query)
+
+async def handle_edit_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit buttons callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.edit_buttons(query)
+
+async def handle_edit_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit settings callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.edit_settings(query)
+
+async def handle_edit_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit schedule callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.edit_schedule(query)
+
+async def handle_edit_targets(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit targets callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.edit_targets(query)
+
 # Global bot instance to maintain user sessions
 _global_bot = None
 

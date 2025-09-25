@@ -284,6 +284,11 @@ try:
         handle_enhanced_auto_ads_menu, handle_manage_accounts, handle_add_account,
         handle_my_configs, handle_add_forwarding, handle_settings, handle_help,
         handle_bump_service, handle_upload_session, handle_manual_setup,
+        handle_add_campaign, handle_my_campaigns, handle_campaign_stats, handle_back_to_bump,
+        handle_config, handle_delete_config, handle_toggle_config, handle_delete_account,
+        handle_delete_campaign, handle_edit_campaign, handle_edit_text_content,
+        handle_edit_media, handle_edit_buttons, handle_edit_settings,
+        handle_edit_schedule, handle_edit_targets,
         handle_enhanced_session_file_upload, handle_enhanced_account_details, 
         handle_enhanced_channel_link, init_enhanced_auto_ads_tables, enhanced_telethon_manager
     )
@@ -310,6 +315,38 @@ except ImportError:
     async def handle_upload_session(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
     async def handle_manual_setup(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_add_campaign(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_my_campaigns(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_campaign_stats(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_back_to_bump(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_config(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_delete_config(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_toggle_config(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_delete_account(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_delete_campaign(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_campaign(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_text_content(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_media(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_buttons(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_settings(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_schedule(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_edit_targets(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
     async def handle_enhanced_session_file_upload(update, context):
         pass
@@ -616,6 +653,24 @@ def callback_query_router(func):
                 "bump_service": handle_bump_service,
                 "upload_session": handle_upload_session,
                 "manual_setup": handle_manual_setup,
+                "add_campaign": handle_add_campaign,
+                "my_campaigns": handle_my_campaigns,
+                "campaign_stats": handle_campaign_stats,
+                "back_to_bump": handle_back_to_bump,
+                # Configuration handlers
+                "config": handle_config,
+                "delete_config": handle_delete_config,
+                "toggle_config": handle_toggle_config,
+                "delete_account": handle_delete_account,
+                # Campaign handlers
+                "delete_campaign": handle_delete_campaign,
+                "edit_campaign": handle_edit_campaign,
+                "edit_text_content": handle_edit_text_content,
+                "edit_media": handle_edit_media,
+                "edit_buttons": handle_edit_buttons,
+                "edit_settings": handle_edit_settings,
+                "edit_schedule": handle_edit_schedule,
+                "edit_targets": handle_edit_targets,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
