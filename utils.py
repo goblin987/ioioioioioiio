@@ -1301,12 +1301,19 @@ def init_db():
             except ImportError:
                 logger.warning("Interactive welcome editor not available, skipping interactive welcome table initialization")
             
-            # Initialize enhanced auto ads tables
-            try:
-                from auto_ads_system import init_enhanced_auto_ads_tables
-                init_enhanced_auto_ads_tables()
-            except ImportError:
-                logger.warning("Enhanced auto ads system not available, skipping enhanced auto ads table initialization")
+    # Initialize enhanced auto ads tables
+    try:
+        from auto_ads_system import init_enhanced_auto_ads_tables
+        init_enhanced_auto_ads_tables()
+    except ImportError:
+        logger.warning("Enhanced auto ads system not available, skipping enhanced auto ads table initialization")
+    
+    # Initialize referral system tables
+    try:
+        from referral_system import init_referral_tables
+        init_referral_tables()
+    except ImportError:
+        logger.warning("Referral system not available, skipping referral table initialization")
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (

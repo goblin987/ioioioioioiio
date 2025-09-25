@@ -18,6 +18,51 @@ from utils import (
 
 logger = logging.getLogger(__name__)
 
+def init_referral_tables():
+    """Initialize referral system database tables."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # referral_codes table - for referral program
+        c.execute('''CREATE TABLE IF NOT EXISTS referral_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            referral_code TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            total_referrals INTEGER DEFAULT 0,
+            total_rewards_earned REAL DEFAULT 0.0,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        )''')
+        
+        # referrals table - tracks successful referrals
+        c.execute('''CREATE TABLE IF NOT EXISTS referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referrer_user_id INTEGER NOT NULL,
+            referred_user_id INTEGER NOT NULL,
+            referral_code TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            first_purchase_at TEXT,
+            referred_reward REAL DEFAULT 0.0,
+            referrer_reward REAL DEFAULT 0.0,
+            status TEXT DEFAULT 'active',
+            FOREIGN KEY (referrer_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+            FOREIGN KEY (referred_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        )''')
+        
+        conn.commit()
+        logger.info("Referral system database tables initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Error initializing referral tables: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
 # Referral program settings
 REFERRER_REWARD_PERCENTAGE = Decimal('5.0')  # 5% of referred user's first purchase
 REFERRED_USER_BONUS = Decimal('2.0')  # 2 EUR bonus for new users
