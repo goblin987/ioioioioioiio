@@ -601,6 +601,12 @@ def callback_query_router(func):
     "tf_my_configs": handle_testforwarder_my_configs,
     "tf_add_forwarding": handle_testforwarder_add_forwarding,
     "tf_help": handle_testforwarder_help,
+    # Original testforwarder callback data
+    "manage_accounts": handle_testforwarder_menu,
+    "bump_service": handle_testforwarder_bump_service,
+    "my_configs": handle_testforwarder_my_configs,
+    "add_forwarding": handle_testforwarder_add_forwarding,
+    "help": handle_testforwarder_help,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
