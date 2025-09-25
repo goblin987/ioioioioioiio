@@ -427,3 +427,26 @@ class Database:
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"Error updating campaign storage message ID: {e}")
                 return False
+    
+    def add_campaign(self, user_id: int, account_id: int, campaign_name: str, 
+                    ad_content: str, target_chats: list, schedule_type: str, 
+                    schedule_time: str, target_mode: str = 'specific') -> int:
+        """Add a new campaign to the database"""
+        import json
+        from datetime import datetime
+        
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO ad_campaigns 
+                (user_id, account_id, campaign_name, ad_content, target_chats, 
+                 schedule_type, schedule_time, target_mode, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id, account_id, campaign_name, ad_content, 
+                json.dumps(target_chats), schedule_type, schedule_time, 
+                target_mode, 1, datetime.now().isoformat()
+            ))
+            campaign_id = cursor.lastrowid
+            conn.commit()
+            return campaign_id

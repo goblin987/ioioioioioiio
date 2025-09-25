@@ -280,16 +280,19 @@ except ImportError:
 
 try:
     import testforwarder_integration
-    from testforwarder_integration import (
-        handle_testforwarder_menu, handle_testforwarder_manual_setup,
-        handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
-        handle_testforwarder_bump_service, handle_testforwarder_my_configs,
-        handle_testforwarder_add_forwarding, handle_testforwarder_help,
-        handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
-        handle_testforwarder_edit_config, handle_testforwarder_delete_config,
-        handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
-        handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign
-    )
+                from testforwarder_integration import (
+                    handle_testforwarder_menu, handle_testforwarder_manual_setup,
+                    handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
+                    handle_testforwarder_bump_service, handle_testforwarder_my_configs,
+                    handle_testforwarder_add_forwarding, handle_testforwarder_help,
+                    handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
+                    handle_testforwarder_edit_config, handle_testforwarder_delete_config,
+                    handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
+                    handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign,
+                    handle_testforwarder_select_account, handle_testforwarder_run_campaign,
+                    handle_testforwarder_select_forwarding_account, handle_testforwarder_upload_session,
+                    get_testforwarder_bot
+                )
 except ImportError:
     import logging
     logging.getLogger(__name__).error("Could not import testforwarder_integration module")
@@ -330,6 +333,16 @@ except ImportError:
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_delete_campaign(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_select_account(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_run_campaign(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_select_forwarding_account(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_upload_session(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    def get_testforwarder_bot():
+        return None
 
 try:
     import vip_system
@@ -636,9 +649,13 @@ def callback_query_router(func):
     "edit_config": handle_testforwarder_edit_config,
     "delete_config": handle_testforwarder_delete_config,
     "add_campaign": handle_testforwarder_add_campaign,
-    "my_campaigns": handle_testforwarder_my_campaigns,
-    "edit_campaign": handle_testforwarder_edit_campaign,
-    "delete_campaign": handle_testforwarder_delete_campaign,
+            "my_campaigns": handle_testforwarder_my_campaigns,
+            "edit_campaign": handle_testforwarder_edit_campaign,
+            "delete_campaign": handle_testforwarder_delete_campaign,
+            "select_account": handle_testforwarder_select_account,
+            "run_campaign": handle_testforwarder_run_campaign,
+            "select_forwarding_account": handle_testforwarder_select_forwarding_account,
+            "upload_session": handle_testforwarder_upload_session,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -882,14 +899,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error sending ban message to user {user_id}: {e}")
         return
     
-    # Always try testforwarder bot first for text messages
-    if update.message and update.message.text:
-        logger.info(f"🔍 TEXT MESSAGE: Routing to testforwarder bot for user {user_id}")
-        try:
-            await handle_testforwarder_message(update, context)
-            return  # If testforwarder handled it, don't process further
-        except Exception as e:
-            logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
+                # Always try testforwarder bot first for text messages and documents
+                if update.message and (update.message.text or update.message.document):
+                    logger.info(f"🔍 MESSAGE: Routing to testforwarder bot for user {user_id}")
+                    try:
+                        if update.message.document:
+                            # Handle document uploads
+                            bot = get_testforwarder_bot()
+                            await bot.handle_document(update, context)
+                        else:
+                            await handle_testforwarder_message(update, context)
+                        return  # If testforwarder handled it, don't process further
+                    except Exception as e:
+                        logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
     # Fallback to state handlers if testforwarder didn't handle it
     handler_func = STATE_HANDLERS.get(state)
