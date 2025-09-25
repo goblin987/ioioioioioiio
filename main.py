@@ -288,7 +288,7 @@ try:
         handle_config, handle_delete_config, handle_toggle_config, handle_delete_account,
         handle_delete_campaign, handle_edit_campaign, handle_edit_text_content,
         handle_edit_media, handle_edit_buttons, handle_edit_settings,
-        handle_edit_schedule, handle_edit_targets,
+        handle_edit_schedule, handle_edit_targets, handle_admin_menu,
         handle_enhanced_session_file_upload, handle_enhanced_account_details, 
         handle_enhanced_channel_link, init_enhanced_auto_ads_tables, enhanced_telethon_manager
     )
@@ -347,6 +347,8 @@ except ImportError:
     async def handle_edit_schedule(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
     async def handle_edit_targets(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_admin_menu(update, context, params=None):
         await update.callback_query.edit_message_text("Enhanced auto ads not available")
     async def handle_enhanced_session_file_upload(update, context):
         pass
@@ -671,6 +673,7 @@ def callback_query_router(func):
                 "edit_settings": handle_edit_settings,
                 "edit_schedule": handle_edit_schedule,
                 "edit_targets": handle_edit_targets,
+                "admin_menu": handle_admin_menu,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,

@@ -507,8 +507,8 @@ class TgcfBot:
             [InlineKeyboardButton("📢 Bump Service", callback_data="bump_service")],
             [InlineKeyboardButton("📋 My Configurations", callback_data="my_configs")],
             [InlineKeyboardButton("➕ Add New Forwarding", callback_data="add_forwarding")],
-            [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
-            [InlineKeyboardButton("❓ Help", callback_data="help")]
+            [InlineKeyboardButton("❓ Help", callback_data="help")],
+            [InlineKeyboardButton("⬅️ Back to Main Bot", callback_data="admin_menu")]
         ]
         return InlineKeyboardMarkup(keyboard)
 
@@ -517,7 +517,7 @@ class TgcfBot:
         reply_markup = self.get_main_menu_keyboard()
         
         await query.edit_message_text(
-            "🤖 **TgCF Bot - Main Menu**\n\nChoose an option:",
+            "Choose an option:",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=reply_markup
         )
@@ -4398,6 +4398,19 @@ async def handle_edit_targets(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     bot = get_bot_instance()
     await bot.edit_targets(query)
+
+async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle back to admin menu callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    # Import admin handler from main bot
+    try:
+        from admin import handle_admin_menu as main_admin_menu
+        await main_admin_menu(update, context, params)
+    except ImportError:
+        await query.edit_message_text("❌ Could not return to admin menu")
 
 # Global bot instance to maintain user sessions
 _global_bot = None
