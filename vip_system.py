@@ -627,8 +627,8 @@ async def handle_vip_manage_levels(update: Update, context: ContextTypes.DEFAULT
         msg += f"   Benefits: {len(level['benefits'])}\n\n"
         
         keyboard.append([
-            InlineKeyboardButton(f"✏️ {level['level_name']}", callback_data=f"vip_edit_level_{level['id']}"),
-            InlineKeyboardButton("🗑️", callback_data=f"vip_delete_level_{level['id']}")
+            InlineKeyboardButton(f"✏️ {level['level_name']}", callback_data=f"vip_edit_level|{level['id']}"),
+            InlineKeyboardButton("🗑️", callback_data=f"vip_delete_level|{level['id']}")
         ])
     
     keyboard.append([InlineKeyboardButton("➕ Add New Level", callback_data="vip_create_level")])
@@ -1333,5 +1333,222 @@ async def handle_vip_list_customers(update: Update, context: ContextTypes.DEFAUL
     finally:
         if conn:
             conn.close()
+
+async def handle_vip_configure_benefits(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Configure benefits for a specific VIP level"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    msg = f"🎁 **Configure Benefits**\n\n"
+    msg += f"**{level['level_emoji']} {level['level_name']}**\n\n"
+    msg += f"📋 **Current Benefits:**\n"
+    
+    if level['benefits']:
+        for i, benefit in enumerate(level['benefits'], 1):
+            msg += f"{i}. {benefit}\n"
+    else:
+        msg += "No benefits configured yet.\n"
+    
+    msg += f"\n💰 **Current Discount:** {level['discount_percentage']}%\n\n"
+    msg += "Choose an action:"
+    
+    keyboard = [
+        [InlineKeyboardButton("➕ Add Benefit", callback_data=f"vip_add_benefit|{level_id}")],
+        [InlineKeyboardButton("🗑️ Remove Benefit", callback_data=f"vip_remove_benefit|{level_id}")],
+        [InlineKeyboardButton("💰 Edit Discount", callback_data=f"vip_edit_discount|{level_id}")],
+        [InlineKeyboardButton("⬅️ Back to Benefits", callback_data="vip_manage_benefits")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_delete_level(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle VIP level deletion"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    msg = f"⚠️ **Confirm Deletion**\n\n"
+    msg += f"Are you sure you want to delete the VIP level:\n"
+    msg += f"**{level['level_emoji']} {level['level_name']}**?\n\n"
+    msg += f"This will:\n"
+    msg += f"• Remove the level configuration\n"
+    msg += f"• Affect users currently at this level\n"
+    msg += f"• Cannot be undone\n\n"
+    msg += f"🚨 **This action is irreversible!**"
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Yes, Delete Level", callback_data=f"vip_confirm_delete|{level_id}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="vip_manage_levels")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_reset_defaults(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Reset VIP levels to default configuration"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied.", show_alert=True)
+        return
+    
+    msg = f"🔄 **Reset to Default VIP Levels**\n\n"
+    msg += f"This will:\n"
+    msg += f"• Delete all custom VIP levels\n"
+    msg += f"• Restore default 4-tier system\n"
+    msg += f"• Reset all level configurations\n"
+    msg += f"• Affect all current VIP customers\n\n"
+    msg += f"🚨 **This action cannot be undone!**\n\n"
+    msg += f"Are you sure you want to proceed?"
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Yes, Reset to Defaults", callback_data="vip_confirm_reset")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="vip_manage_levels")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# --- Missing VIP Edit Handlers ---
+
+async def handle_vip_edit_name(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit VIP level name"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP name editing coming soon!", show_alert=False)
+    await query.edit_message_text("🔧 VIP name editing feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_edit_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit VIP level emoji"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP emoji editing coming soon!", show_alert=False)
+    await query.edit_message_text("😀 VIP emoji editing feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_edit_requirements(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit VIP level requirements"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP requirements editing coming soon!", show_alert=False)
+    await query.edit_message_text("🔢 VIP requirements editing feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_edit_discount(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit VIP level discount"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP discount editing coming soon!", show_alert=False)
+    await query.edit_message_text("💰 VIP discount editing feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_edit_benefits(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit VIP level benefits"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP benefits editing coming soon!", show_alert=False)
+    await query.edit_message_text("🎁 VIP benefits editing feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_toggle_active(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle VIP level active status"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP toggle coming soon!", show_alert=False)
+    await query.edit_message_text("🔄 VIP toggle feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_add_benefit(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Add benefit to VIP level"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Add VIP benefit coming soon!", show_alert=False)
+    await query.edit_message_text("➕ Add VIP benefit feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_benefits")]]))
+
+async def handle_vip_remove_benefit(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Remove benefit from VIP level"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Remove VIP benefit coming soon!", show_alert=False)
+    await query.edit_message_text("🗑️ Remove VIP benefit feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_benefits")]]))
+
+async def handle_vip_confirm_delete(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm VIP level deletion"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP deletion coming soon!", show_alert=False)
+    await query.edit_message_text("✅ VIP level deletion feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_confirm_reset(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm VIP system reset"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP reset coming soon!", show_alert=False)
+    await query.edit_message_text("🔄 VIP system reset feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+
+async def handle_vip_export_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Export VIP analytics data"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("VIP export coming soon!", show_alert=False)
+    await query.edit_message_text("📋 VIP analytics export feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_analytics")]]))
 
 # --- END OF FILE vip_system.py ---

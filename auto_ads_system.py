@@ -1040,4 +1040,206 @@ def initialize_auto_ads_system(bot: Bot):
     else:
         logger.info("Auto ads system initialized with no active campaigns")
 
+# --- Missing Auto Ads Handlers ---
+
+async def handle_auto_ads_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Campaign analytics dashboard"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Analytics coming soon!", show_alert=False)
+    await query.edit_message_text("📊 Campaign analytics coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_menu")]]))
+
+async def handle_auto_ads_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Auto ads system settings"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Settings coming soon!", show_alert=False)
+    await query.edit_message_text("⚙️ System settings coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_menu")]]))
+
+async def handle_auto_ads_type_promotional(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle promotional campaign type"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data'] = {'type': 'promotional'}
+    context.user_data['state'] = 'awaiting_auto_ads_campaign_name'
+    
+    await query.edit_message_text(
+        "🎯 **Promotional Campaign**\n\nPlease enter a name for this campaign:",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]),
+        parse_mode='Markdown'
+    )
+
+async def handle_auto_ads_type_product_launch(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle product launch campaign type"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data'] = {'type': 'product_launch'}
+    context.user_data['state'] = 'awaiting_auto_ads_campaign_name'
+    
+    await query.edit_message_text(
+        "🚀 **Product Launch Campaign**\n\nPlease enter a name for this campaign:",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]),
+        parse_mode='Markdown'
+    )
+
+async def handle_auto_ads_type_discount(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle discount campaign type"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data'] = {'type': 'discount'}
+    context.user_data['state'] = 'awaiting_auto_ads_campaign_name'
+    
+    await query.edit_message_text(
+        "💰 **Discount/Sale Campaign**\n\nPlease enter a name for this campaign:",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]),
+        parse_mode='Markdown'
+    )
+
+async def handle_auto_ads_type_announcement(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle announcement campaign type"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data'] = {'type': 'announcement'}
+    context.user_data['state'] = 'awaiting_auto_ads_campaign_name'
+    
+    await query.edit_message_text(
+        "📢 **Announcement Campaign**\n\nPlease enter a name for this campaign:",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]),
+        parse_mode='Markdown'
+    )
+
+async def handle_auto_ads_type_custom(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle custom campaign type"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data'] = {'type': 'custom'}
+    context.user_data['state'] = 'awaiting_auto_ads_campaign_name'
+    
+    await query.edit_message_text(
+        "🔧 **Custom Campaign**\n\nPlease enter a name for this campaign:",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]),
+        parse_mode='Markdown'
+    )
+
+async def handle_auto_ads_schedule_hourly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle hourly schedule"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data']['schedule'] = 'hourly'
+    await query.answer("Hourly schedule selected!", show_alert=False)
+    # Continue to channel selection
+    await handle_auto_ads_select_channels(update, context, params)
+
+async def handle_auto_ads_schedule_daily(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle daily schedule"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data']['schedule'] = 'daily'
+    await query.answer("Daily schedule selected!", show_alert=False)
+    # Continue to channel selection
+    await handle_auto_ads_select_channels(update, context, params)
+
+async def handle_auto_ads_schedule_every_3_hours(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle 3-hour schedule"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data']['schedule'] = 'every_3_hours'
+    await query.answer("3-hour schedule selected!", show_alert=False)
+    # Continue to channel selection
+    await handle_auto_ads_select_channels(update, context, params)
+
+async def handle_auto_ads_schedule_every_6_hours(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle 6-hour schedule"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data']['schedule'] = 'every_6_hours'
+    await query.answer("6-hour schedule selected!", show_alert=False)
+    # Continue to channel selection
+    await handle_auto_ads_select_channels(update, context, params)
+
+async def handle_auto_ads_schedule_custom(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle custom schedule"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Custom scheduling coming soon!", show_alert=False)
+    await query.edit_message_text("⏰ Custom scheduling feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]))
+
+async def handle_auto_ads_schedule_once(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle run once schedule"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['auto_ads_campaign_data']['schedule'] = 'once'
+    await query.answer("One-time execution selected!", show_alert=False)
+    # Continue to channel selection
+    await handle_auto_ads_select_channels(update, context, params)
+
+async def handle_auto_ads_select_channels(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show channel selection for campaign"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📺 **Select Channels**\n\nChannel selection coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_create_campaign")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_auto_ads_add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Add new channel"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Add channel coming soon!", show_alert=False)
+    await query.edit_message_text("➕ Add channel feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_manage_channels")]]))
+
+async def handle_auto_ads_remove_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Remove channel"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Remove channel coming soon!", show_alert=False)
+    await query.edit_message_text("🗑️ Remove channel feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_manage_channels")]]))
+
+async def handle_auto_ads_test_channels(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Test channels"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Test channels coming soon!", show_alert=False)
+    await query.edit_message_text("🔄 Test channels feature coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="auto_ads_manage_channels")]]))
+
 # --- END OF FILE auto_ads_system.py ---

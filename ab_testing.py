@@ -510,4 +510,26 @@ async def handle_ab_test_results(update: Update, context: ContextTypes.DEFAULT_T
     # Use existing handle_ab_view_tests for now
     await handle_ab_view_tests(update, context, params)
 
+# --- Missing A/B Test Template Handlers ---
+
+async def handle_ab_template_button_text(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Use button text A/B test template"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Button text template coming soon!", show_alert=False)
+    await query.edit_message_text("🔘 Button text A/B test template coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="ab_test_templates")]]))
+
+async def handle_ab_template_layout(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Use layout A/B test template"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Layout template coming soon!", show_alert=False)
+    await query.edit_message_text("🎨 Layout A/B test template coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="ab_test_templates")]]))
+
 # --- END OF FILE ab_testing.py ---

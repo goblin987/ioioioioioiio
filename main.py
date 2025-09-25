@@ -153,7 +153,7 @@ try:
     from ab_testing import (
         handle_ab_testing_menu, handle_ab_view_tests, handle_ab_create_test,
         handle_ab_test_templates, handle_ab_test_results, ABTestManager,
-        create_sample_tests
+        create_sample_tests, handle_ab_template_button_text, handle_ab_template_layout
     )
 except ImportError:
     logger.error("Could not import ab_testing module")
@@ -179,7 +179,10 @@ try:
     import referral_system
     from referral_system import (
         handle_referral_menu, handle_referral_create_code, handle_referral_share_code,
-        handle_referral_copy_code, handle_referral_admin_menu, process_referral_purchase
+        handle_referral_copy_code, handle_referral_admin_menu, process_referral_purchase,
+        handle_referral_how_it_works, handle_referral_view_details, handle_referral_tips,
+        handle_referral_admin_stats, handle_referral_admin_top_referrers,
+        handle_referral_admin_settings, handle_referral_admin_reset
     )
 except ImportError:
     logger.error("Could not import referral_system module")
@@ -203,6 +206,14 @@ try:
         handle_auto_ads_campaign_type, handle_auto_ads_campaign_name_message,
         handle_auto_ads_campaign_message_input, handle_auto_ads_schedule_selection,
         handle_auto_ads_finalize_campaign, handle_auto_ads_manage_channels,
+        handle_auto_ads_analytics, handle_auto_ads_settings,
+        handle_auto_ads_type_promotional, handle_auto_ads_type_product_launch,
+        handle_auto_ads_type_discount, handle_auto_ads_type_announcement, handle_auto_ads_type_custom,
+        handle_auto_ads_schedule_hourly, handle_auto_ads_schedule_daily,
+        handle_auto_ads_schedule_every_3_hours, handle_auto_ads_schedule_every_6_hours,
+        handle_auto_ads_schedule_custom, handle_auto_ads_schedule_once,
+        handle_auto_ads_select_channels, handle_auto_ads_add_channel,
+        handle_auto_ads_remove_channel, handle_auto_ads_test_channels,
         initialize_auto_ads_system
     )
 except ImportError:
@@ -236,6 +247,11 @@ try:
         handle_vip_max_purchases_message, handle_vip_status_menu, handle_vip_perks_info, 
         handle_vip_custom_emoji, handle_vip_custom_emoji_message, handle_vip_edit_level,
         handle_vip_analytics, handle_vip_manage_benefits, handle_vip_list_customers,
+        handle_vip_configure_benefits, handle_vip_delete_level, handle_vip_reset_defaults,
+        handle_vip_edit_name, handle_vip_edit_emoji, handle_vip_edit_requirements,
+        handle_vip_edit_discount, handle_vip_edit_benefits, handle_vip_toggle_active,
+        handle_vip_add_benefit, handle_vip_remove_benefit, handle_vip_confirm_delete,
+        handle_vip_confirm_reset, handle_vip_export_analytics,
         process_vip_level_up, VIPManager
     )
 except ImportError:
@@ -473,6 +489,12 @@ def callback_query_router(func):
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
                 "admin_system_health": admin.handle_admin_system_health,
+                "admin_user_stats": admin.handle_admin_user_stats,
+                "admin_financial_reports": admin.handle_admin_financial_reports,
+                "admin_db_cleanup": admin.handle_admin_db_cleanup,
+                "admin_system_stats": admin.handle_admin_system_stats,
+                "admin_restart_services": admin.handle_admin_restart_services,
+                "admin_view_logs": admin.handle_admin_view_logs,
                 
                 # Stock management handlers
                 "stock_management_menu": handle_stock_management_menu,
@@ -489,16 +511,38 @@ def callback_query_router(func):
                 "referral_share_code": handle_referral_share_code,
                 "referral_copy_code": handle_referral_copy_code,
                 "referral_admin_menu": handle_referral_admin_menu,
+                "referral_how_it_works": handle_referral_how_it_works,
+                "referral_view_details": handle_referral_view_details,
+                "referral_tips": handle_referral_tips,
+                "referral_admin_stats": handle_referral_admin_stats,
+                "referral_admin_top_referrers": handle_referral_admin_top_referrers,
+                "referral_admin_settings": handle_referral_admin_settings,
+                "referral_admin_reset": handle_referral_admin_reset,
                 
                 # Auto ads system handlers
                 "auto_ads_menu": handle_auto_ads_menu,
                 "auto_ads_view_campaigns": handle_auto_ads_view_campaigns,
                 "auto_ads_create_campaign": handle_auto_ads_create_campaign,
-                "auto_ads_type": handle_auto_ads_campaign_type,
-                "auto_ads_schedule": handle_auto_ads_schedule_selection,
-                "auto_ads_finalize": handle_auto_ads_finalize_campaign,
+                "auto_ads_analytics": handle_auto_ads_analytics,
+                "auto_ads_settings": handle_auto_ads_settings,
                 "auto_ads_manage_channels": handle_auto_ads_manage_channels,
+                "auto_ads_type_promotional": handle_auto_ads_type_promotional,
+                "auto_ads_type_product_launch": handle_auto_ads_type_product_launch,
+                "auto_ads_type_discount": handle_auto_ads_type_discount,
+                "auto_ads_type_announcement": handle_auto_ads_type_announcement,
+                "auto_ads_type_custom": handle_auto_ads_type_custom,
+                "auto_ads_schedule_hourly": handle_auto_ads_schedule_hourly,
+                "auto_ads_schedule_daily": handle_auto_ads_schedule_daily,
+                "auto_ads_schedule_every_3_hours": handle_auto_ads_schedule_every_3_hours,
+                "auto_ads_schedule_every_6_hours": handle_auto_ads_schedule_every_6_hours,
+                "auto_ads_schedule_custom": handle_auto_ads_schedule_custom,
+                "auto_ads_schedule_once": handle_auto_ads_schedule_once,
+                "auto_ads_add_channel": handle_auto_ads_add_channel,
+                "auto_ads_remove_channel": handle_auto_ads_remove_channel,
+                "auto_ads_test_channels": handle_auto_ads_test_channels,
                 "auto_ads_finalize_campaign": handle_auto_ads_finalize_campaign,
+                "auto_ads_campaign_type": handle_auto_ads_campaign_type,
+                "auto_ads_schedule_selection": handle_auto_ads_schedule_selection,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -512,6 +556,20 @@ def callback_query_router(func):
                 "vip_analytics": handle_vip_analytics,
                 "vip_manage_benefits": handle_vip_manage_benefits,
                 "vip_list_customers": handle_vip_list_customers,
+                "vip_configure_benefits": handle_vip_configure_benefits,
+                "vip_delete_level": handle_vip_delete_level,
+                "vip_reset_defaults": handle_vip_reset_defaults,
+                "vip_edit_name": handle_vip_edit_name,
+                "vip_edit_emoji": handle_vip_edit_emoji,
+                "vip_edit_requirements": handle_vip_edit_requirements,
+                "vip_edit_discount": handle_vip_edit_discount,
+                "vip_edit_benefits": handle_vip_edit_benefits,
+                "vip_toggle_active": handle_vip_toggle_active,
+                "vip_add_benefit": handle_vip_add_benefit,
+                "vip_remove_benefit": handle_vip_remove_benefit,
+                "vip_confirm_delete": handle_vip_confirm_delete,
+                "vip_confirm_reset": handle_vip_confirm_reset,
+                "vip_export_analytics": handle_vip_export_analytics,
                 
                 # Missing stock management handlers
                 "stock_analytics": handle_stock_analytics,
@@ -522,6 +580,8 @@ def callback_query_router(func):
                 "ab_create_test": handle_ab_create_test,
                 "ab_test_templates": handle_ab_test_templates,
                 "ab_test_results": handle_ab_test_results,
+                "ab_template_button_text": handle_ab_template_button_text,
+                "ab_template_layout": handle_ab_template_layout,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -603,6 +663,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_vip_min_purchases': handle_vip_min_purchases_message,
         'awaiting_vip_max_purchases': handle_vip_max_purchases_message,
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
+        'awaiting_auto_ads_campaign_name': handle_auto_ads_campaign_name_message,
+        'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,

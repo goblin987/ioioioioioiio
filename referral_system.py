@@ -524,4 +524,89 @@ async def handle_referral_admin_menu(update: Update, context: ContextTypes.DEFAU
         if conn:
             conn.close()
 
+# --- Missing Referral Handlers ---
+
+async def handle_referral_how_it_works(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show how referral program works"""
+    query = update.callback_query
+    
+    msg = "❓ **How Referrals Work**\n\n"
+    msg += "1️⃣ Get your unique referral code\n"
+    msg += "2️⃣ Share it with friends\n" 
+    msg += "3️⃣ They use your code when making purchases\n"
+    msg += "4️⃣ You both get rewards!\n\n"
+    msg += "💰 **Rewards:**\n"
+    msg += "• You: 10% commission on their purchases\n"
+    msg += "• Friend: 5% discount on first purchase"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Referrals", callback_data="referral_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_referral_view_details(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """View referral details and stats"""
+    query = update.callback_query
+    
+    await query.answer("Detailed stats coming soon!", show_alert=False)
+    await query.edit_message_text("📊 Detailed referral statistics coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_menu")]]))
+
+async def handle_referral_tips(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show referral tips and tricks"""
+    query = update.callback_query
+    
+    msg = "💡 **Referral Tips & Tricks**\n\n"
+    msg += "🎯 **Best Practices:**\n"
+    msg += "• Share in relevant groups/chats\n"
+    msg += "• Explain the benefits to friends\n"
+    msg += "• Be genuine, not spammy\n"
+    msg += "• Follow up but don't be pushy\n\n"
+    msg += "📈 **Maximize Earnings:**\n"
+    msg += "• Target active buyers\n"
+    msg += "• Share during sales events\n"
+    msg += "• Use personal messages\n"
+    msg += "• Build trust first"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Referrals", callback_data="referral_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_referral_admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show admin referral statistics"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Admin stats coming soon!", show_alert=False)
+    await query.edit_message_text("📊 Admin referral statistics coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+
+async def handle_referral_admin_top_referrers(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show top referrers"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Top referrers coming soon!", show_alert=False)
+    await query.edit_message_text("👥 Top referrers list coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+
+async def handle_referral_admin_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show referral program settings"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Settings coming soon!", show_alert=False)
+    await query.edit_message_text("⚙️ Referral program settings coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+
+async def handle_referral_admin_reset(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Reset referral program"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("Reset function coming soon!", show_alert=False)
+    await query.edit_message_text("🔄 Referral program reset coming soon!", 
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+
 # --- END OF FILE referral_system.py ---

@@ -687,6 +687,67 @@ async def handle_admin_system_health(update: Update, context: ContextTypes.DEFAU
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
+async def handle_admin_user_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show user statistics"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📊 **User Statistics**\n\nDetailed user analytics and insights coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Analytics", callback_data="admin_analytics_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_financial_reports(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show financial reports"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "💰 **Financial Reports**\n\nAdvanced financial analytics coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Analytics", callback_data="admin_analytics_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# --- Missing Admin System Handlers ---
+async def handle_admin_db_cleanup(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Database cleanup tools"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🗃️ **Database Cleanup**\n\nMaintenance tools coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Maintenance", callback_data="admin_maintenance_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_system_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show system statistics"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📊 **System Statistics**\n\nDetailed system metrics coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Maintenance", callback_data="admin_maintenance_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_restart_services(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Restart system services"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🔄 **Restart Services**\n\nService restart tools coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Maintenance", callback_data="admin_maintenance_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """View system logs"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📋 **System Logs**\n\nLog viewing interface coming soon!"
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Maintenance", callback_data="admin_maintenance_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
 
 # --- Sales Analytics Handlers ---
 async def handle_sales_analytics_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
