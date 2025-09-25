@@ -1017,20 +1017,19 @@ async def handle_enhanced_manual_setup_start(update: Update, context: ContextTyp
     context.user_data['enhanced_ads_state'] = 'awaiting_manual_account_details'
     
     msg = "🔧 **MANUAL ACCOUNT SETUP** 🔧\n\n"
-    msg += "**📝 Please provide all account details in this format:**\n\n"
+    msg += "**📝 Please provide account details in this format:**\n\n"
     
     msg += "```\n"
     msg += "Account Name: My Business Bot\n"
     msg += "Phone: +1234567890\n"
     msg += "API ID: 12345678\n"
     msg += "API Hash: abcd1234efgh5678\n"
-    msg += "Session String: your_session_string_here\n"
     msg += "```\n\n"
     
-    msg += "**🔐 Session String Sources:**\n"
-    msg += "• Telethon StringSession\n"
-    msg += "• Pyrogram session string\n"
-    msg += "• Other userbot session exports\n\n"
+    msg += "**🔐 After providing details, you'll receive a login code:**\n"
+    msg += "• Check your Telegram app\n"
+    msg += "• Enter the verification code\n"
+    msg += "• Account will be automatically configured\n\n"
     
     msg += "**📤 Please send your account details now...**"
     
@@ -1041,7 +1040,7 @@ async def handle_enhanced_manual_setup_start(update: Update, context: ContextTyp
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_enhanced_manual_account_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle manual account details input"""
+    """Handle manual account details input and start login process"""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
     
@@ -1075,11 +1074,9 @@ async def handle_enhanced_manual_account_details(update: Update, context: Contex
                     details['api_id'] = value
                 elif 'api hash' in key or 'api_hash' in key:
                     details['api_hash'] = value
-                elif 'session' in key:
-                    details['session_string'] = value
         
         # Validate required fields
-        required = ['account_name', 'api_id', 'api_hash', 'session_string']
+        required = ['account_name', 'api_id', 'api_hash', 'phone_number']
         missing = [field for field in required if not details.get(field)]
         
         if missing:
@@ -1088,20 +1085,126 @@ async def handle_enhanced_manual_account_details(update: Update, context: Contex
                 "Please provide all required information.", parse_mode='Markdown')
             return
         
-        # Save to database
-        success = await save_userbot_account(details, details['session_string'])
+        # Store account details for login process
+        context.user_data['pending_account'] = details
+        
+        # Start login process
+        await start_userbot_login(update, context, details)
+        
+    except Exception as e:
+        logger.error(f"Error parsing manual account details: {e}")
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ **Invalid format!**\n\nPlease use the exact format provided.", parse_mode='Markdown')
+
+async def start_userbot_login(update: Update, context: ContextTypes.DEFAULT_TYPE, details: Dict[str, str]):
+    """Start the userbot login process"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not TELETHON_AVAILABLE:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ **Telethon not available!**\n\nPlease install telethon for userbot functionality.", 
+            parse_mode='Markdown')
+        return
+    
+    try:
+        # Create temporary client for login
+        session_name = f"temp_login_{user_id}_{int(time.time())}"
+        client = TelegramClient(session_name, int(details['api_id']), details['api_hash'])
+        
+        # Connect and start login process
+        await client.connect()
+        
+        # Send code request
+        await client.send_code_request(details['phone_number'])
+        
+        # Store client in context for code verification
+        context.user_data['login_client'] = client
+        context.user_data['enhanced_ads_state'] = 'awaiting_login_code'
+        
+        msg = "📱 **LOGIN CODE SENT!** 📱\n\n"
+        msg += f"🤖 **Account:** {details['account_name']}\n"
+        msg += f"📱 **Phone:** {details['phone_number']}\n\n"
+        msg += "**📲 Check your Telegram app for the verification code!**\n\n"
+        msg += "**📤 Please send the 5-digit code you received:**"
+        
+        keyboard = [
+            [InlineKeyboardButton("❌ Cancel Login", callback_data="enhanced_manage_accounts")]
+        ]
+        
+        await send_message_with_retry(context.bot, chat_id, msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error starting userbot login: {e}")
+        await send_message_with_retry(context.bot, chat_id, 
+            f"❌ **Login failed:** {str(e)}\n\nPlease check your API credentials and try again.", 
+            parse_mode='Markdown')
+
+async def handle_enhanced_login_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle login code verification"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get('enhanced_ads_state') != 'awaiting_login_code':
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ Please send the verification code.", parse_mode=None)
+        return
+    
+    code = update.message.text.strip()
+    
+    # Validate code format
+    if not code.isdigit() or len(code) != 5:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ **Invalid code format!**\n\nPlease send the 5-digit verification code.", 
+            parse_mode='Markdown')
+        return
+    
+    try:
+        # Get login client and account details
+        client = context.user_data.get('login_client')
+        account_details = context.user_data.get('pending_account')
+        
+        if not client or not account_details:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ **Login session expired!**\n\nPlease start the login process again.", 
+                parse_mode='Markdown')
+            return
+        
+        # Verify code and complete login
+        await client.sign_in(account_details['phone_number'], code)
+        
+        # Get session string
+        session_string = client.session.save()
+        
+        # Save account to database
+        success = await save_userbot_account(account_details, session_string)
+        
+        # Clean up
+        await client.disconnect()
+        context.user_data.pop('login_client', None)
+        context.user_data.pop('pending_account', None)
+        context.user_data.pop('enhanced_ads_state', None)
         
         if success:
-            # Clear state
-            context.user_data.pop('enhanced_ads_state', None)
-            
-            msg = "🎉 **Manual Account Setup Complete!** 🎉\n\n"
-            msg += f"🤖 **Account:** {details['account_name']}\n"
-            msg += f"📱 **Phone:** {details.get('phone_number', 'Not provided')}\n"
-            msg += f"🔑 **API ID:** {details['api_id']}\n\n"
-            msg += "**✅ Account ready for campaigns!**"
+            msg = "🎉 **ACCOUNT LOGIN SUCCESSFUL!** 🎉\n\n"
+            msg += f"🤖 **Account:** {account_details['account_name']}\n"
+            msg += f"📱 **Phone:** {account_details['phone_number']}\n"
+            msg += f"🔑 **API ID:** {account_details['api_id']}\n\n"
+            msg += "**✅ Userbot account is now active and ready for campaigns!**\n\n"
+            msg += "**🚀 What's next?**\n"
+            msg += "• Add channels to post to\n"
+            msg += "• Create automated campaigns\n"
+            msg += "• Start posting with userbot technology"
             
             keyboard = [
+                [InlineKeyboardButton("📺 Add Channels", callback_data="enhanced_manage_channels")],
                 [InlineKeyboardButton("📢 Create Campaign", callback_data="enhanced_create_campaign")],
                 [InlineKeyboardButton("🤖 Manage Accounts", callback_data="enhanced_manage_accounts")],
                 [InlineKeyboardButton("🏠 Auto Ads Menu", callback_data="enhanced_auto_ads_menu")]
@@ -1111,12 +1214,99 @@ async def handle_enhanced_manual_account_details(update: Update, context: Contex
                 reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
         else:
             await send_message_with_retry(context.bot, chat_id, 
-                "❌ Failed to save account. Please check your details and try again.", parse_mode=None)
+                "❌ **Failed to save account!**\n\nPlease try again.", parse_mode=None)
+        
+    except PhoneCodeInvalidError:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ **Invalid verification code!**\n\nPlease check the code and try again.", 
+            parse_mode='Markdown')
+    except SessionPasswordNeededError:
+        # Handle 2FA password
+        context.user_data['enhanced_ads_state'] = 'awaiting_2fa_password'
+        await send_message_with_retry(context.bot, chat_id, 
+            "🔐 **2FA PASSWORD REQUIRED** 🔐\n\n"
+            "This account has two-factor authentication enabled.\n"
+            "**📤 Please send your 2FA password:**", 
+            parse_mode='Markdown')
+    except FloodWaitError as e:
+        await send_message_with_retry(context.bot, chat_id, 
+            f"⏰ **Rate limited!**\n\nPlease wait {e.seconds} seconds before trying again.", 
+            parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Error during login verification: {e}")
+        await send_message_with_retry(context.bot, chat_id, 
+            f"❌ **Login failed:** {str(e)}\n\nPlease try again.", parse_mode='Markdown')
+
+async def handle_enhanced_2fa_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle 2FA password input"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get('enhanced_ads_state') != 'awaiting_2fa_password':
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ Please send your 2FA password.", parse_mode=None)
+        return
+    
+    password = update.message.text.strip()
+    
+    try:
+        # Get login client and account details
+        client = context.user_data.get('login_client')
+        account_details = context.user_data.get('pending_account')
+        
+        if not client or not account_details:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ **Login session expired!**\n\nPlease start the login process again.", 
+                parse_mode='Markdown')
+            return
+        
+        # Complete 2FA login
+        await client.sign_in(password=password)
+        
+        # Get session string
+        session_string = client.session.save()
+        
+        # Save account to database
+        success = await save_userbot_account(account_details, session_string)
+        
+        # Clean up
+        await client.disconnect()
+        context.user_data.pop('login_client', None)
+        context.user_data.pop('pending_account', None)
+        context.user_data.pop('enhanced_ads_state', None)
+        
+        if success:
+            msg = "🎉 **2FA LOGIN SUCCESSFUL!** 🎉\n\n"
+            msg += f"🤖 **Account:** {account_details['account_name']}\n"
+            msg += f"📱 **Phone:** {account_details['phone_number']}\n"
+            msg += f"🔑 **API ID:** {account_details['api_id']}\n\n"
+            msg += "**✅ Userbot account with 2FA is now active!**\n\n"
+            msg += "**🚀 Ready for campaigns!**"
+            
+            keyboard = [
+                [InlineKeyboardButton("📺 Add Channels", callback_data="enhanced_manage_channels")],
+                [InlineKeyboardButton("📢 Create Campaign", callback_data="enhanced_create_campaign")],
+                [InlineKeyboardButton("🤖 Manage Accounts", callback_data="enhanced_manage_accounts")],
+                [InlineKeyboardButton("🏠 Auto Ads Menu", callback_data="enhanced_auto_ads_menu")]
+            ]
+            
+            await send_message_with_retry(context.bot, chat_id, msg, 
+                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        else:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ **Failed to save account!**\n\nPlease try again.", parse_mode=None)
         
     except Exception as e:
-        logger.error(f"Error parsing manual account details: {e}")
+        logger.error(f"Error during 2FA verification: {e}")
         await send_message_with_retry(context.bot, chat_id, 
-            "❌ **Invalid format!**\n\nPlease use the exact format provided.", parse_mode='Markdown')
+            f"❌ **2FA failed:** {str(e)}\n\nPlease check your password and try again.", 
+            parse_mode='Markdown')
 
 async def handle_enhanced_ads_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """📊 View Analytics Dashboard"""

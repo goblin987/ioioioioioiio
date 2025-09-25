@@ -285,11 +285,11 @@ try:
         handle_enhanced_manage_channels, handle_enhanced_quick_add_channel, handle_enhanced_session_file_upload,
         handle_enhanced_account_details, handle_enhanced_channel_link, init_enhanced_auto_ads_tables,
         enhanced_telethon_manager, handle_enhanced_add_account, handle_enhanced_manual_setup_start,
-        handle_enhanced_manual_account_details, handle_enhanced_ads_analytics, handle_enhanced_test_system,
-        handle_enhanced_manage_campaigns, handle_enhanced_add_channel, handle_enhanced_channel_details,
-        handle_enhanced_ads_settings, handle_enhanced_create_campaign, handle_enhanced_test_accounts,
-        handle_enhanced_test_channels, handle_enhanced_test_connections, handle_enhanced_test_database,
-        handle_enhanced_test_all
+        handle_enhanced_manual_account_details, handle_enhanced_login_code, handle_enhanced_2fa_password,
+        handle_enhanced_ads_analytics, handle_enhanced_test_system, handle_enhanced_manage_campaigns, 
+        handle_enhanced_add_channel, handle_enhanced_channel_details, handle_enhanced_ads_settings, 
+        handle_enhanced_create_campaign, handle_enhanced_test_accounts, handle_enhanced_test_channels, 
+        handle_enhanced_test_connections, handle_enhanced_test_database, handle_enhanced_test_all
     )
 except ImportError:
     import logging
@@ -336,6 +336,10 @@ except ImportError:
     async def handle_enhanced_account_details(update, context):
         pass
     async def handle_enhanced_manual_account_details(update, context):
+        pass
+    async def handle_enhanced_login_code(update, context):
+        pass
+    async def handle_enhanced_2fa_password(update, context):
         pass
     async def handle_enhanced_channel_link(update, context):
         pass
@@ -829,6 +833,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_session_file': handle_enhanced_session_file_upload,
         'awaiting_account_details': handle_enhanced_account_details,
         'awaiting_manual_account_details': handle_enhanced_manual_account_details,
+        'awaiting_login_code': handle_enhanced_login_code,
+        'awaiting_2fa_password': handle_enhanced_2fa_password,
         'awaiting_channel_link': handle_enhanced_channel_link,
         'awaiting_channel_details': handle_enhanced_channel_details,
 
