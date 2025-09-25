@@ -157,6 +157,104 @@ class TgcfBot:
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
+    async def show_bump_service(self, query):
+        """Show bump service menu"""
+        msg = "📢 **Bump Service**\n\n"
+        msg += "**🚀 Automated Campaign Management**\n\n"
+        msg += "• Schedule campaigns to run automatically\n"
+        msg += "• Multi-account broadcasting\n"
+        msg += "• Performance tracking and analytics\n"
+        msg += "• Smart retry mechanisms\n\n"
+        msg += "**🎯 Features:**\n"
+        msg += "• Campaign scheduling\n"
+        msg += "• Target management\n"
+        msg += "• Performance monitoring\n"
+        msg += "• Error handling\n\n"
+        msg += "This feature is coming soon!"
+        
+        keyboard = [
+            [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    async def show_my_configs(self, query):
+        """Show my configurations menu"""
+        user_id = query.from_user.id
+        
+        # Get user's configurations from database
+        configs = self.db.get_user_configs(user_id)
+        
+        msg = "📋 **My Configurations**\n\n"
+        
+        if configs:
+            msg += f"**📋 Your Configurations ({len(configs)}):**\n\n"
+            for config in configs:
+                status = "✅ Active" if config.get('is_active', True) else "❌ Inactive"
+                msg += f"**{config['name']}**\n"
+                msg += f"📊 Status: {status}\n"
+                msg += f"📅 Created: {config.get('created_at', 'Unknown')}\n\n"
+        else:
+            msg += "📭 **No configurations found**\n\n"
+            msg += "**🚀 Get Started:**\n"
+            msg += "1. Create a new forwarding configuration\n"
+            msg += "2. Set up your target channels\n"
+            msg += "3. Start forwarding messages!\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("➕ Add New Configuration", callback_data="add_forwarding")],
+        ]
+        
+        if configs:
+            keyboard.extend([
+                [InlineKeyboardButton("✏️ Edit Configuration", callback_data="edit_config")],
+                [InlineKeyboardButton("🗑️ Delete Configuration", callback_data="delete_config")]
+            ])
+        
+        keyboard.append([InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")])
+        
+        await query.edit_message_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    async def show_help(self, query):
+        """Show help menu"""
+        msg = "❓ **Help & Support**\n\n"
+        msg += "**🚀 Getting Started:**\n"
+        msg += "1. **Add Accounts** - Set up your Telegram userbot accounts\n"
+        msg += "2. **Create Configurations** - Set up forwarding rules\n"
+        msg += "3. **Start Campaigns** - Begin automated messaging\n\n"
+        msg += "**📋 Account Management:**\n"
+        msg += "• Add accounts manually with API credentials\n"
+        msg += "• Upload session files for quick setup\n"
+        msg += "• Manage multiple accounts simultaneously\n\n"
+        msg += "**⚙️ Configuration:**\n"
+        msg += "• Set up forwarding rules\n"
+        msg += "• Configure target channels\n"
+        msg += "• Schedule automated campaigns\n\n"
+        msg += "**🔧 Troubleshooting:**\n"
+        msg += "• Check account status in Manage Accounts\n"
+        msg += "• Verify API credentials are correct\n"
+        msg += "• Ensure target channels are accessible\n\n"
+        msg += "**📞 Support:**\n"
+        msg += "For additional help, contact the administrator."
+        
+        keyboard = [
+            [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
     async def start_manual_setup(self, query):
         """Start manual account setup (5-step process)"""
         user_id = query.from_user.id
@@ -476,14 +574,16 @@ async def handle_testforwarder_bump_service(update: Update, context: ContextType
     query = update.callback_query
     if not query:
         return
-    await query.edit_message_text("📢 **Bump Service**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+    bot = get_testforwarder_bot()
+    await bot.show_bump_service(query)
 
 async def handle_testforwarder_my_configs(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle my configs callback"""
     query = update.callback_query
     if not query:
         return
-    await query.edit_message_text("📋 **My Configurations**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+    bot = get_testforwarder_bot()
+    await bot.show_my_configs(query)
 
 async def handle_testforwarder_add_forwarding(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle add forwarding callback"""
@@ -497,7 +597,8 @@ async def handle_testforwarder_help(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     if not query:
         return
-    await query.edit_message_text("❓ **Help**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+    bot = get_testforwarder_bot()
+    await bot.show_help(query)
 
 async def handle_testforwarder_manage_accounts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle manage accounts callback"""
@@ -520,3 +621,17 @@ async def handle_testforwarder_delete_account(update: Update, context: ContextTy
     if not query:
         return
     await query.edit_message_text("🗑️ **Delete Account**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_edit_config(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit config callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("✏️ **Edit Configuration**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_delete_config(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete config callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("🗑️ **Delete Configuration**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)

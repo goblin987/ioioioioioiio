@@ -285,7 +285,8 @@ try:
         handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
         handle_testforwarder_bump_service, handle_testforwarder_my_configs,
         handle_testforwarder_add_forwarding, handle_testforwarder_help,
-        handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account
+        handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
+        handle_testforwarder_edit_config, handle_testforwarder_delete_config
     )
 except ImportError:
     import logging
@@ -314,6 +315,10 @@ except ImportError:
     async def handle_testforwarder_edit_account(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_delete_account(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_edit_config(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_delete_config(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
 
 try:
@@ -618,6 +623,8 @@ def callback_query_router(func):
     "edit_account": handle_testforwarder_edit_account,
     "delete_account": handle_testforwarder_delete_account,
     "main_menu": handle_testforwarder_menu,
+    "edit_config": handle_testforwarder_edit_config,
+    "delete_config": handle_testforwarder_delete_config,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
