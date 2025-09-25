@@ -62,11 +62,18 @@ class TestforwarderBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(
-            "Choose an option:",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=reply_markup
-        )
+        try:
+            await query.edit_message_text(
+                "Choose an option:",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            # If message is not modified, just answer the callback
+            if "Message is not modified" in str(e):
+                await query.answer()
+            else:
+                raise e
     
     async def start_manual_setup(self, query):
         """Start manual account setup (5-step process)"""
@@ -370,3 +377,31 @@ async def handle_testforwarder_2fa(update: Update, context: ContextTypes.DEFAULT
     """Handle 2FA password for testforwarder bot"""
     bot = get_testforwarder_bot()
     await bot.handle_2fa_password(update, context)
+
+async def handle_testforwarder_bump_service(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle bump service callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("📢 **Bump Service**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_my_configs(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle my configs callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("📋 **My Configurations**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_add_forwarding(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle add forwarding callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("➕ **Add New Forwarding**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_help(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle help callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("❓ **Help**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)

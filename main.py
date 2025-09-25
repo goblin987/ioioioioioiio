@@ -282,7 +282,9 @@ try:
     import testforwarder_integration
     from testforwarder_integration import (
         handle_testforwarder_menu, handle_testforwarder_manual_setup,
-        handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa
+        handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
+        handle_testforwarder_bump_service, handle_testforwarder_my_configs,
+        handle_testforwarder_add_forwarding, handle_testforwarder_help
     )
 except ImportError:
     import logging
@@ -298,6 +300,14 @@ except ImportError:
         pass
     async def handle_testforwarder_2fa(update, context):
         pass
+    async def handle_testforwarder_bump_service(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_my_configs(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_add_forwarding(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_help(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
 
 try:
     import vip_system
@@ -582,11 +592,15 @@ def callback_query_router(func):
                 "referral_admin_settings": handle_referral_admin_settings,
                 "referral_admin_reset": handle_referral_admin_reset,
                 
-                # Testforwarder integration handlers
-                "auto_ads_menu": handle_testforwarder_menu,
-                "tf_main_menu": handle_testforwarder_menu,
-                "tf_manage_accounts": handle_testforwarder_menu,
-                "tf_manual_setup": handle_testforwarder_manual_setup,
+    # Testforwarder integration handlers
+    "auto_ads_menu": handle_testforwarder_menu,
+    "tf_main_menu": handle_testforwarder_menu,
+    "tf_manage_accounts": handle_testforwarder_menu,
+    "tf_manual_setup": handle_testforwarder_manual_setup,
+    "tf_bump_service": handle_testforwarder_bump_service,
+    "tf_my_configs": handle_testforwarder_my_configs,
+    "tf_add_forwarding": handle_testforwarder_add_forwarding,
+    "tf_help": handle_testforwarder_help,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
