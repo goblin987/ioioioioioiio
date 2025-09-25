@@ -116,6 +116,47 @@ class TgcfBot:
             else:
                 raise e
     
+    async def show_manage_accounts(self, query):
+        """Show manage accounts menu"""
+        user_id = query.from_user.id
+        
+        # Get user's accounts from database
+        accounts = self.db.get_user_accounts(user_id)
+        
+        msg = "👥 **Manage Accounts**\n\n"
+        
+        if accounts:
+            msg += f"**📋 Your Accounts ({len(accounts)}):**\n\n"
+            for account in accounts:
+                status = "✅ Active" if account.get('is_active', True) else "❌ Inactive"
+                msg += f"**{account['account_name']}**\n"
+                msg += f"📱 Phone: {account.get('phone_number', 'Not set')}\n"
+                msg += f"📊 Status: {status}\n\n"
+        else:
+            msg += "📭 **No accounts configured**\n\n"
+            msg += "**🚀 Get Started:**\n"
+            msg += "1. Add an account manually\n"
+            msg += "2. Configure API credentials\n"
+            msg += "3. Start creating campaigns!\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("➕ Add Account Manually", callback_data="manual_setup")],
+        ]
+        
+        if accounts:
+            keyboard.extend([
+                [InlineKeyboardButton("✏️ Edit Account", callback_data="edit_account")],
+                [InlineKeyboardButton("🗑️ Delete Account", callback_data="delete_account")]
+            ])
+        
+        keyboard.append([InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")])
+        
+        await query.edit_message_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
     async def start_manual_setup(self, query):
         """Start manual account setup (5-step process)"""
         user_id = query.from_user.id
@@ -457,3 +498,25 @@ async def handle_testforwarder_help(update: Update, context: ContextTypes.DEFAUL
     if not query:
         return
     await query.edit_message_text("❓ **Help**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_manage_accounts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle manage accounts callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_testforwarder_bot()
+    await bot.show_manage_accounts(query)
+
+async def handle_testforwarder_edit_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit account callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("✏️ **Edit Account**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_delete_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete account callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("🗑️ **Delete Account**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)

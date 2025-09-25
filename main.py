@@ -284,7 +284,8 @@ try:
         handle_testforwarder_menu, handle_testforwarder_manual_setup,
         handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
         handle_testforwarder_bump_service, handle_testforwarder_my_configs,
-        handle_testforwarder_add_forwarding, handle_testforwarder_help
+        handle_testforwarder_add_forwarding, handle_testforwarder_help,
+        handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account
     )
 except ImportError:
     import logging
@@ -307,6 +308,12 @@ except ImportError:
     async def handle_testforwarder_add_forwarding(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_help(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_manage_accounts(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_edit_account(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_delete_account(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
 
 try:
@@ -602,11 +609,15 @@ def callback_query_router(func):
     "tf_add_forwarding": handle_testforwarder_add_forwarding,
     "tf_help": handle_testforwarder_help,
     # Original testforwarder callback data
-    "manage_accounts": handle_testforwarder_menu,
+    "manage_accounts": handle_testforwarder_manage_accounts,
     "bump_service": handle_testforwarder_bump_service,
     "my_configs": handle_testforwarder_my_configs,
     "add_forwarding": handle_testforwarder_add_forwarding,
     "help": handle_testforwarder_help,
+    "manual_setup": handle_testforwarder_manual_setup,
+    "edit_account": handle_testforwarder_edit_account,
+    "delete_account": handle_testforwarder_delete_account,
+    "main_menu": handle_testforwarder_menu,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -986,7 +997,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
