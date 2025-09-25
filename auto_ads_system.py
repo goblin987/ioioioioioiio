@@ -1279,14 +1279,18 @@ async def handle_auto_ads_add_channel(update: Update, context: ContextTypes.DEFA
     context.user_data['state'] = 'awaiting_channel_info'
     
     msg = "➕ **Add New Auto Ads Channel**\n\n"
-    msg += "Please provide channel information in this format:\n\n"
-    msg += "**Format:** `Channel Name | Channel ID | Type`\n\n"
+    msg += "Simply send the channel link! The system will automatically extract the channel information.\n\n"
+    msg += "**Supported formats:**\n"
+    msg += "• `https://t.me/channelname`\n"
+    msg += "• `@channelname`\n"
+    msg += "• `t.me/channelname`\n"
+    msg += "• `channelname`\n\n"
     msg += "**Examples:**\n"
-    msg += "• `Main Channel | @mychannel | telegram`\n"
-    msg += "• `Product Updates | -1001234567890 | telegram`\n"
-    msg += "• `News Feed | @newsbot | telegram`\n\n"
-    msg += "**Channel Types:** telegram, discord, slack\n"
-    msg += "**Channel ID:** Can be @username or numeric ID"
+    msg += "• `https://t.me/mychannel`\n"
+    msg += "• `@mychannel`\n"
+    msg += "• `t.me/mychannel`\n"
+    msg += "• `mychannel`\n\n"
+    msg += "Just paste the channel link and the system will handle the rest!"
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="auto_ads_manage_channels")]]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -1358,23 +1362,43 @@ async def handle_channel_info_message(update: Update, context: ContextTypes.DEFA
     
     channel_info = update.message.text.strip()
     
-    # Parse the channel info
+    # Extract channel info from link
     try:
-        parts = [part.strip() for part in channel_info.split('|')]
-        if len(parts) != 3:
-            raise ValueError("Invalid format")
+        # Handle different Telegram channel link formats
+        if channel_info.startswith('https://t.me/'):
+            # Extract channel username from https://t.me/channelname
+            channel_username = channel_info.replace('https://t.me/', '').replace('@', '')
+            channel_id = f"@{channel_username}"
+            channel_name = channel_username.title()
+        elif channel_info.startswith('@'):
+            # Handle @channelname format
+            channel_username = channel_info.replace('@', '')
+            channel_id = channel_info
+            channel_name = channel_username.title()
+        elif channel_info.startswith('t.me/'):
+            # Handle t.me/channelname format
+            channel_username = channel_info.replace('t.me/', '').replace('@', '')
+            channel_id = f"@{channel_username}"
+            channel_name = channel_username.title()
+        else:
+            # Assume it's a channel username without @
+            channel_username = channel_info.replace('@', '')
+            channel_id = f"@{channel_username}"
+            channel_name = channel_username.title()
         
-        channel_name, channel_id, channel_type = parts
+        # Validate channel format
+        if not channel_username or len(channel_username) < 3:
+            raise ValueError("Invalid channel format")
         
-        if not all([channel_name, channel_id, channel_type]):
-            raise ValueError("Missing information")
-        
-        if channel_type.lower() not in ['telegram', 'discord', 'slack']:
-            raise ValueError("Invalid channel type")
-        
-    except ValueError as e:
+    except Exception as e:
         await send_message_with_retry(context.bot, chat_id, 
-            "❌ Invalid format. Please use: `Channel Name | Channel ID | Type`", parse_mode='Markdown')
+            "❌ Invalid channel link format.\n\n"
+            "**Supported formats:**\n"
+            "• `https://t.me/channelname`\n"
+            "• `@channelname`\n"
+            "• `t.me/channelname`\n"
+            "• `channelname`\n\n"
+            "Please try again with a valid channel link.", parse_mode='Markdown')
         return
     
     # Add channel to database
@@ -1393,8 +1417,8 @@ async def handle_channel_info_message(update: Update, context: ContextTypes.DEFA
         c.execute("""
             INSERT INTO auto_ads_channels 
             (channel_name, channel_id, channel_type, is_active, subscriber_count, created_at)
-            VALUES (?, ?, ?, 1, 0, ?)
-        """, (channel_name, channel_id, channel_type.lower(), datetime.now().isoformat()))
+            VALUES (?, ?, 'telegram', 1, 0, ?)
+        """, (channel_name, channel_id, datetime.now().isoformat()))
         
         conn.commit()
         
@@ -1402,9 +1426,9 @@ async def handle_channel_info_message(update: Update, context: ContextTypes.DEFA
         context.user_data.pop('state', None)
         
         msg = f"✅ **Channel Added Successfully!**\n\n"
-        msg += f"**Name:** {channel_name}\n"
-        msg += f"**ID:** {channel_id}\n"
-        msg += f"**Type:** {channel_type.title()}\n\n"
+        msg += f"**Channel:** {channel_name}\n"
+        msg += f"**Link:** {channel_id}\n"
+        msg += f"**Type:** Telegram\n\n"
         msg += "The channel is now available for auto ads campaigns!"
         
         keyboard = [

@@ -522,7 +522,6 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         
         # === SYSTEM & SETTINGS ===
         [InlineKeyboardButton("⚙️ System Settings", callback_data="admin_system_menu")],
-        [InlineKeyboardButton("🧪 A/B Testing", callback_data="ab_testing_menu")],
         
         # === QUICK ACCESS ===
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],

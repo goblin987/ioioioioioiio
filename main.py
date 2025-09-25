@@ -218,36 +218,6 @@ except ImportError:
     def get_active_welcome_message(): return "Welcome!"
     def get_start_menu_buttons(): return []
 
-try:
-    import ab_testing
-    from ab_testing import (
-        handle_ab_testing_menu, handle_ab_view_tests, handle_ab_create_test,
-        handle_ab_test_templates, handle_ab_test_results, ABTestManager,
-        create_sample_tests, handle_ab_template_button_text, handle_ab_template_layout,
-        handle_ab_create_button_test, handle_ab_create_layout_test, handle_ab_create_feature_test,
-        handle_ab_create_pricing_test, handle_ab_create_ui_test, handle_ab_test_name_message,
-        handle_ab_detailed_analysis, handle_ab_export_results
-    )
-except ImportError:
-    import logging
-    logging.getLogger(__name__).error("Could not import ab_testing module")
-    # Create dummy handlers
-    async def handle_ab_testing_menu(update, context, params=None):
-        await update.callback_query.edit_message_text("A/B testing not available")
-    async def handle_ab_view_tests(update, context, params=None):
-        await update.callback_query.edit_message_text("A/B testing not available")
-    async def handle_ab_create_test(update, context, params=None):
-        await update.callback_query.edit_message_text("A/B testing not available")
-    async def handle_ab_test_templates(update, context, params=None):
-        await update.callback_query.edit_message_text("A/B testing not available")
-    async def handle_ab_test_results(update, context, params=None):
-        await update.callback_query.edit_message_text("A/B testing not available")
-    class ABTestManager:
-        @staticmethod
-        def get_user_variant(test_name, user_id): return None
-        @staticmethod
-        def track_event(test_name, user_id, event_type, event_value=None): pass
-    async def create_sample_tests(): pass
 
 try:
     import referral_system
@@ -583,8 +553,6 @@ def callback_query_router(func):
                 "stock_detailed_report": handle_stock_detailed_report,
                 
                 # A/B testing handlers
-                "ab_testing_menu": handle_ab_testing_menu,
-                "ab_view_tests": handle_ab_view_tests,
                 
                 # Referral system handlers
                 "referral_menu": handle_referral_menu,
@@ -670,18 +638,6 @@ def callback_query_router(func):
                 "stock_confirm_reset": handle_stock_confirm_reset,
                 
                 # Missing A/B test handlers  
-                "ab_create_test": handle_ab_create_test,
-                "ab_test_templates": handle_ab_test_templates,
-                "ab_test_results": handle_ab_test_results,
-                "ab_template_button_text": handle_ab_template_button_text,
-                "ab_template_layout": handle_ab_template_layout,
-                "ab_create_button_test": handle_ab_create_button_test,
-                "ab_create_layout_test": handle_ab_create_layout_test,
-                "ab_create_feature_test": handle_ab_create_feature_test,
-                "ab_create_pricing_test": handle_ab_create_pricing_test,
-                "ab_create_ui_test": handle_ab_create_ui_test,
-                "ab_detailed_analysis": handle_ab_detailed_analysis,
-                "ab_export_results": handle_ab_export_results,
                 
                 # Welcome editor handlers
                 "welcome_editor_menu": handle_welcome_editor_menu,
@@ -803,7 +759,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_auto_ads_campaign_name': handle_auto_ads_campaign_name_message,
         'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
         'awaiting_channel_info': handle_channel_info_message,
-        'awaiting_ab_test_name': handle_ab_test_name_message,
         'awaiting_welcome_text': handle_welcome_text_message,
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
