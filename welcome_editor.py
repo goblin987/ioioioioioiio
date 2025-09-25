@@ -46,13 +46,13 @@ def init_welcome_tables():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Welcome messages table
+        # Welcome messages table (using existing structure)
         c.execute("""
             CREATE TABLE IF NOT EXISTS welcome_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
-                message_text TEXT NOT NULL,
-                is_active INTEGER DEFAULT 0,
+                template_text TEXT NOT NULL,
+                description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -75,8 +75,8 @@ def init_welcome_tables():
         c.execute("SELECT COUNT(*) FROM welcome_messages")
         if c.fetchone()[0] == 0:
             c.execute("""
-                INSERT INTO welcome_messages (name, message_text, is_active)
-                VALUES ('default', ?, 1)
+                INSERT INTO welcome_messages (name, template_text, description)
+                VALUES ('default', ?, 'Default welcome message')
             """, (DEFAULT_WELCOME_TEXT,))
         
         # Insert default buttons if none exist
@@ -108,10 +108,16 @@ def get_active_welcome_message():
         conn = get_db_connection()
         c = conn.cursor()
         
-        c.execute("SELECT message_text FROM welcome_messages WHERE is_active = 1 LIMIT 1")
+        # Use existing bot_settings table to get active template name
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = 'active_welcome_message_name'")
+        active_name_result = c.fetchone()
+        active_name = active_name_result['setting_value'] if active_name_result else 'default'
+        
+        # Get the template text
+        c.execute("SELECT template_text FROM welcome_messages WHERE name = ? LIMIT 1", (active_name,))
         result = c.fetchone()
         
-        return result['message_text'] if result else DEFAULT_WELCOME_TEXT
+        return result['template_text'] if result else DEFAULT_WELCOME_TEXT
         
     except Exception as e:
         logger.error(f"Error getting active welcome message: {e}")
@@ -169,8 +175,12 @@ async def handle_welcome_editor_menu(update: Update, context: ContextTypes.DEFAU
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get current active message info
-        c.execute("SELECT name, message_text FROM welcome_messages WHERE is_active = 1 LIMIT 1")
+        # Get current active message info using bot_settings
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = 'active_welcome_message_name'")
+        active_name_result = c.fetchone()
+        active_name = active_name_result['setting_value'] if active_name_result else 'default'
+        
+        c.execute("SELECT name, template_text FROM welcome_messages WHERE name = ? LIMIT 1", (active_name,))
         active_msg = c.fetchone()
         
         # Get button count
@@ -189,7 +199,7 @@ async def handle_welcome_editor_menu(update: Update, context: ContextTypes.DEFAU
     msg += "**Easy-to-use editor for your bot's welcome experience!**\n\n"
     
     if active_msg:
-        preview = active_msg['message_text'][:100] + "..." if len(active_msg['message_text']) > 100 else active_msg['message_text']
+        preview = active_msg['template_text'][:100] + "..." if len(active_msg['template_text']) > 100 else active_msg['template_text']
         msg += f"📝 **Current Message:** {active_msg['name']}\n"
         msg += f"📄 **Preview:** {preview}\n\n"
     else:
@@ -288,11 +298,9 @@ async def handle_welcome_edit_buttons(update: Update, context: ContextTypes.DEFA
     msg += "\n**Button Management Options:**"
     
     keyboard = [
-        [InlineKeyboardButton("➕ Add New Button", callback_data="welcome_add_button")],
         [InlineKeyboardButton("✏️ Edit Button Text", callback_data="welcome_edit_button_text")],
         [InlineKeyboardButton("🔄 Rearrange Buttons", callback_data="welcome_rearrange_buttons")],
         [InlineKeyboardButton("❌ Enable/Disable Buttons", callback_data="welcome_toggle_buttons")],
-        [InlineKeyboardButton("🗑️ Delete Button", callback_data="welcome_delete_button")],
         [InlineKeyboardButton("👀 Preview Layout", callback_data="welcome_preview_buttons")],
         [InlineKeyboardButton("⬅️ Back to Editor", callback_data="welcome_editor_menu")]
     ]
@@ -396,12 +404,17 @@ async def handle_welcome_text_message(update: Update, context: ContextTypes.DEFA
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Update the active welcome message
-        c.execute("UPDATE welcome_messages SET is_active = 0")  # Deactivate all
+        # Update the welcome message using existing structure
         c.execute("""
-            INSERT OR REPLACE INTO welcome_messages (name, message_text, is_active)
-            VALUES ('custom', ?, 1)
+            INSERT OR REPLACE INTO welcome_messages (name, template_text, description)
+            VALUES ('custom', ?, 'Custom welcome message')
         """, (new_welcome_text,))
+        
+        # Set as active in bot_settings
+        c.execute("""
+            INSERT OR REPLACE INTO bot_settings (setting_key, setting_value)
+            VALUES ('active_welcome_message_name', 'custom')
+        """)
         
         conn.commit()
         
@@ -633,14 +646,18 @@ async def save_welcome_template(query, template_text, template_name):
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Deactivate all messages
-        c.execute("UPDATE welcome_messages SET is_active = 0")
-        
         # Insert or update the template
+        template_key = template_name.lower().replace(" ", "_")
         c.execute("""
-            INSERT OR REPLACE INTO welcome_messages (name, message_text, is_active)
-            VALUES (?, ?, 1)
-        """, (template_name.lower().replace(" ", "_"), template_text))
+            INSERT OR REPLACE INTO welcome_messages (name, template_text, description)
+            VALUES (?, ?, ?)
+        """, (template_key, template_text, template_name))
+        
+        # Set as active in bot_settings
+        c.execute("""
+            INSERT OR REPLACE INTO bot_settings (setting_key, setting_value)
+            VALUES ('active_welcome_message_name', ?)
+        """, (template_key,))
         
         conn.commit()
         
@@ -664,109 +681,7 @@ async def save_welcome_template(query, template_text, template_name):
         if conn:
             conn.close()
 
-async def handle_welcome_add_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Add new button to start menu"""
-    query = update.callback_query
-    if not is_primary_admin(query.from_user.id):
-        return await query.answer("Access denied.", show_alert=True)
-    
-    # Set state for button addition
-    context.user_data['state'] = 'awaiting_button_info'
-    
-    msg = "➕ **Add New Start Menu Button**\n\n"
-    msg += "**Format:** `Button Text | callback_data | row`\n\n"
-    msg += "**Examples:**\n"
-    msg += "• `🎁 Promotions | promotions_menu | 0`\n"
-    msg += "• `📱 Apps | apps_menu | 1`\n"
-    msg += "• `🔥 Hot Deals | hot_deals | 2`\n\n"
-    msg += "**Row Numbers:**\n"
-    msg += "• Row 0 = Top row\n"
-    msg += "• Row 1 = Middle row  \n"
-    msg += "• Row 2 = Bottom row\n\n"
-    msg += "**Please send button info in the format above:**"
-    
-    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="welcome_edit_buttons")]]
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-async def handle_button_info_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle button info input"""
-    user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
-    
-    if not is_primary_admin(user_id):
-        return
-    
-    if context.user_data.get("state") != "awaiting_button_info":
-        return
-    
-    if not update.message or not update.message.text:
-        await send_message_with_retry(context.bot, chat_id, "❌ Please send text in the correct format.", parse_mode=None)
-        return
-    
-    button_info = update.message.text.strip()
-    
-    # Parse button info
-    try:
-        parts = [part.strip() for part in button_info.split('|')]
-        if len(parts) != 3:
-            raise ValueError("Invalid format")
-        
-        button_text, callback_data, row_str = parts
-        row_position = int(row_str)
-        
-        if not all([button_text, callback_data]):
-            raise ValueError("Missing information")
-        
-        if row_position < 0 or row_position > 5:
-            raise ValueError("Row must be 0-5")
-        
-    except ValueError:
-        await send_message_with_retry(context.bot, chat_id, 
-            "❌ Invalid format. Please use: `Button Text | callback_data | row`", parse_mode='Markdown')
-        return
-    
-    # Add button to database
-    conn = None
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        
-        # Get next column position in this row
-        c.execute("SELECT MAX(column_position) FROM start_menu_buttons WHERE row_position = ?", (row_position,))
-        max_col = c.fetchone()[0]
-        next_col = (max_col + 1) if max_col is not None else 0
-        
-        # Insert new button
-        c.execute("""
-            INSERT INTO start_menu_buttons (button_text, callback_data, row_position, column_position, is_enabled)
-            VALUES (?, ?, ?, ?, 1)
-        """, (button_text, callback_data, row_position, next_col))
-        
-        conn.commit()
-        
-        # Clear state
-        context.user_data.pop('state', None)
-        
-        msg = f"✅ **Button Added Successfully!**\n\n"
-        msg += f"**Text:** {button_text}\n"
-        msg += f"**Action:** {callback_data}\n"
-        msg += f"**Position:** Row {row_position + 1}, Column {next_col + 1}\n\n"
-        msg += "The new button is now active in the start menu!"
-        
-        keyboard = [
-            [InlineKeyboardButton("👀 Preview Layout", callback_data="welcome_preview_buttons")],
-            [InlineKeyboardButton("🔘 Back to Buttons", callback_data="welcome_edit_buttons")]
-        ]
-        
-        await send_message_with_retry(context.bot, chat_id, msg, 
-            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-        
-    except Exception as e:
-        logger.error(f"Error adding button: {e}")
-        await send_message_with_retry(context.bot, chat_id, "❌ Error adding button. Please try again.", parse_mode=None)
-    finally:
-        if conn:
-            conn.close()
+# Add/Delete button functions removed as requested
 
 async def handle_welcome_auto_arrange(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Auto-arrange buttons in 2-per-row layout"""
@@ -867,5 +782,247 @@ async def handle_welcome_preview_buttons(update: Update, context: ContextTypes.D
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# --- Missing Button Management Handlers ---
+
+async def handle_welcome_move_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Move a specific button to new position"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid button ID", show_alert=True)
+        return
+    
+    button_id = int(params[0])
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get button info
+        c.execute("SELECT button_text, row_position, column_position FROM start_menu_buttons WHERE id = ?", (button_id,))
+        button = c.fetchone()
+        
+        if not button:
+            await query.answer("Button not found", show_alert=True)
+            return
+        
+        msg = f"🔄 **Move Button: {button['button_text']}**\n\n"
+        msg += f"**Current Position:** Row {button['row_position'] + 1}, Column {button['column_position'] + 1}\n\n"
+        msg += "Select new position:"
+        
+        keyboard = [
+            [InlineKeyboardButton("📍 Row 1, Col 1", callback_data=f"welcome_set_position|{button_id}|0|0")],
+            [InlineKeyboardButton("📍 Row 1, Col 2", callback_data=f"welcome_set_position|{button_id}|0|1")],
+            [InlineKeyboardButton("📍 Row 2, Col 1", callback_data=f"welcome_set_position|{button_id}|1|0")],
+            [InlineKeyboardButton("📍 Row 2, Col 2", callback_data=f"welcome_set_position|{button_id}|1|1")],
+            [InlineKeyboardButton("📍 Row 3, Col 1", callback_data=f"welcome_set_position|{button_id}|2|0")],
+            [InlineKeyboardButton("📍 Row 3, Col 2", callback_data=f"welcome_set_position|{button_id}|2|1")],
+            [InlineKeyboardButton("⬅️ Back", callback_data="welcome_rearrange_buttons")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error moving button: {e}")
+        await query.answer("Error loading button", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_welcome_toggle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Enable/disable buttons"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all buttons
+        c.execute("""
+            SELECT id, button_text, is_enabled
+            FROM start_menu_buttons 
+            ORDER BY row_position, column_position
+        """)
+        buttons = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading buttons for toggle: {e}")
+        buttons = []
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "❌ **Enable/Disable Start Menu Buttons**\n\n"
+    msg += "Toggle buttons on/off. Disabled buttons won't appear in the start menu.\n\n"
+    msg += "**Current Status:**\n"
+    
+    keyboard = []
+    for btn in buttons:
+        status = "✅ Enabled" if btn['is_enabled'] else "❌ Disabled"
+        status_emoji = "✅" if btn['is_enabled'] else "❌"
+        
+        msg += f"{status_emoji} {btn['button_text']} - {status}\n"
+        
+        toggle_text = f"❌ Disable {btn['button_text']}" if btn['is_enabled'] else f"✅ Enable {btn['button_text']}"
+        keyboard.append([InlineKeyboardButton(toggle_text, callback_data=f"welcome_toggle_button|{btn['id']}")])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to Button Manager", callback_data="welcome_edit_buttons")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_welcome_edit_button_text(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit button text"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all buttons
+        c.execute("""
+            SELECT id, button_text, callback_data
+            FROM start_menu_buttons 
+            WHERE is_enabled = 1
+            ORDER BY row_position, column_position
+        """)
+        buttons = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading buttons for editing: {e}")
+        buttons = []
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "✏️ **Edit Button Text**\n\n"
+    msg += "Select a button to edit its text:\n\n"
+    
+    keyboard = []
+    for btn in buttons:
+        keyboard.append([InlineKeyboardButton(
+            f"Edit: {btn['button_text']}", 
+            callback_data=f"welcome_edit_text_for|{btn['id']}"
+        )])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to Button Manager", callback_data="welcome_edit_buttons")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_welcome_use_template(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show template selection for text editing"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Redirect to templates
+    await handle_welcome_templates(update, context, params)
+
+async def handle_welcome_toggle_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle individual button enable/disable"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid button ID", show_alert=True)
+        return
+    
+    button_id = int(params[0])
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get current status
+        c.execute("SELECT button_text, is_enabled FROM start_menu_buttons WHERE id = ?", (button_id,))
+        button = c.fetchone()
+        
+        if not button:
+            await query.answer("Button not found", show_alert=True)
+            return
+        
+        # Toggle status
+        new_status = not button['is_enabled']
+        c.execute("UPDATE start_menu_buttons SET is_enabled = ? WHERE id = ?", (new_status, button_id))
+        conn.commit()
+        
+        action = "enabled" if new_status else "disabled"
+        status_emoji = "✅" if new_status else "❌"
+        
+        await query.answer(f"Button {action}!", show_alert=False)
+        
+        # Refresh the toggle menu
+        await handle_welcome_toggle_buttons(update, context, params)
+        
+    except Exception as e:
+        logger.error(f"Error toggling button: {e}")
+        await query.answer("Error toggling button", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_welcome_set_position(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set button position"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 3:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    button_id = int(params[0])
+    new_row = int(params[1])
+    new_col = int(params[2])
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update button position
+        c.execute("""
+            UPDATE start_menu_buttons 
+            SET row_position = ?, column_position = ?
+            WHERE id = ?
+        """, (new_row, new_col, button_id))
+        
+        conn.commit()
+        
+        # Get button name for confirmation
+        c.execute("SELECT button_text FROM start_menu_buttons WHERE id = ?", (button_id,))
+        button = c.fetchone()
+        
+        msg = f"✅ **Button Moved Successfully!**\n\n"
+        msg += f"**Button:** {button['button_text']}\n"
+        msg += f"**New Position:** Row {new_row + 1}, Column {new_col + 1}\n\n"
+        msg += "The button has been moved to its new position!"
+        
+        keyboard = [
+            [InlineKeyboardButton("👀 Preview Layout", callback_data="welcome_preview_buttons")],
+            [InlineKeyboardButton("🔄 Move Another", callback_data="welcome_rearrange_buttons")],
+            [InlineKeyboardButton("⬅️ Back to Buttons", callback_data="welcome_edit_buttons")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer("Button moved!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error setting button position: {e}")
+        await query.answer("Error moving button", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 # --- END OF FILE welcome_editor.py ---

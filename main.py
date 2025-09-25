@@ -157,9 +157,10 @@ try:
         handle_welcome_editor_menu, handle_welcome_edit_text, handle_welcome_edit_buttons,
         handle_welcome_rearrange_buttons, handle_welcome_text_message, handle_welcome_preview,
         handle_welcome_templates, handle_welcome_template_friendly, handle_welcome_template_professional,
-        handle_welcome_template_ecommerce, handle_welcome_template_gaming, handle_welcome_add_button,
-        handle_button_info_message, handle_welcome_auto_arrange, handle_welcome_preview_buttons,
-        init_welcome_tables, get_active_welcome_message, get_start_menu_buttons
+        handle_welcome_template_ecommerce, handle_welcome_template_gaming, handle_welcome_auto_arrange, 
+        handle_welcome_preview_buttons, handle_welcome_move_button, handle_welcome_toggle_buttons,
+        handle_welcome_edit_button_text, handle_welcome_use_template, handle_welcome_toggle_button,
+        handle_welcome_set_position, init_welcome_tables, get_active_welcome_message, get_start_menu_buttons
     )
 except ImportError:
     import logging
@@ -657,9 +658,14 @@ def callback_query_router(func):
                 "welcome_template_professional": handle_welcome_template_professional,
                 "welcome_template_ecommerce": handle_welcome_template_ecommerce,
                 "welcome_template_gaming": handle_welcome_template_gaming,
-                "welcome_add_button": handle_welcome_add_button,
                 "welcome_auto_arrange": handle_welcome_auto_arrange,
                 "welcome_preview_buttons": handle_welcome_preview_buttons,
+                "welcome_move_button": handle_welcome_move_button,
+                "welcome_toggle_buttons": handle_welcome_toggle_buttons,
+                "welcome_edit_button_text": handle_welcome_edit_button_text,
+                "welcome_use_template": handle_welcome_use_template,
+                "welcome_toggle_button": handle_welcome_toggle_button,
+                "welcome_set_position": handle_welcome_set_position,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -747,7 +753,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_channel_info': handle_channel_info_message,
         'awaiting_ab_test_name': handle_ab_test_name_message,
         'awaiting_welcome_text': handle_welcome_text_message,
-        'awaiting_button_info': handle_button_info_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,
