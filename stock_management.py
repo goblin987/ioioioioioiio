@@ -58,9 +58,31 @@ async def check_low_stock_alerts():
             logger.info("✅ No low stock alerts needed")
             return
         
-        # Group alerts by severity
-        critical_products = [p for p in low_stock_products if p['available'] <= CRITICAL_STOCK_THRESHOLD]
-        warning_products = [p for p in low_stock_products if p['available'] > CRITICAL_STOCK_THRESHOLD]
+        # Group identical products and sum their stock
+        grouped_products = {}
+        for product in low_stock_products:
+            # Create a unique key for identical products
+            key = f"{product['city']}|{product['district']}|{product['product_type']}|{product['size']}|{product['price']}"
+            
+            if key not in grouped_products:
+                grouped_products[key] = {
+                    'city': product['city'],
+                    'district': product['district'],
+                    'product_type': product['product_type'],
+                    'size': product['size'],
+                    'price': product['price'],
+                    'total_stock': 0,
+                    'product_count': 0,
+                    'low_stock_threshold': product['low_stock_threshold']
+                }
+            
+            grouped_products[key]['total_stock'] += product['available']
+            grouped_products[key]['product_count'] += 1
+        
+        # Convert back to list and group by severity
+        grouped_list = list(grouped_products.values())
+        critical_products = [p for p in grouped_list if p['total_stock'] <= CRITICAL_STOCK_THRESHOLD]
+        warning_products = [p for p in grouped_list if p['total_stock'] > CRITICAL_STOCK_THRESHOLD and p['total_stock'] <= p['low_stock_threshold']]
         
         # Create alert message
         alert_message = "🚨 **STOCK ALERT** 🚨\n\n"
@@ -69,17 +91,23 @@ async def check_low_stock_alerts():
             alert_message += "🔴 **CRITICAL - Immediate Action Required:**\n"
             for product in critical_products:
                 alert_message += f"• {product['city']} → {product['district']} → {product['product_type']} {product['size']}\n"
-                alert_message += f"  💰 {format_currency(product['price'])} | 📦 Only {product['available']} left!\n\n"
+                alert_message += f"  💰 {format_currency(product['price'])} | 📦 Only {product['total_stock']} left!"
+                if product['product_count'] > 1:
+                    alert_message += f" ({product['product_count']} items)"
+                alert_message += "\n\n"
         
         if warning_products:
             alert_message += "🟡 **LOW STOCK - Restock Soon:**\n"
             for product in warning_products:
                 alert_message += f"• {product['city']} → {product['district']} → {product['product_type']} {product['size']}\n"
-                alert_message += f"  💰 {format_currency(product['price'])} | 📦 {product['available']} remaining\n\n"
+                alert_message += f"  💰 {format_currency(product['price'])} | 📦 {product['total_stock']} remaining"
+                if product['product_count'] > 1:
+                    alert_message += f" ({product['product_count']} items)"
+                alert_message += "\n\n"
         
         alert_message += f"⏰ Alert generated at: {now.strftime('%Y-%m-%d %H:%M:%S UTC')}"
         
-        # Store alert in database and update last_stock_alert
+        # Store alert in database and update last_stock_alert for all original products
         for product in low_stock_products:
             # Log the alert
             c.execute("""
@@ -89,7 +117,7 @@ async def check_low_stock_alerts():
             """, (
                 product['id'],
                 'critical' if product['available'] <= CRITICAL_STOCK_THRESHOLD else 'low',
-                f"Stock level: {product['available']}",
+                f"Stock level: {product['available']} (Grouped total: {grouped_products.get(f\"{product['city']}|{product['district']}|{product['product_type']}|{product['size']}|{product['price']}\", {}).get('total_stock', product['available'])})",
                 now.isoformat(),
                 str(ADMIN_ID)
             ))
@@ -272,10 +300,15 @@ async def handle_stock_check_now(update: Update, context: ContextTypes.DEFAULT_T
     try:
         await check_low_stock_alerts()
         await query.edit_message_text(
-            "✅ Stock check completed! Any low stock alerts have been generated.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")
-            ]])
+            "✅ **Stock check completed!** ✅\n\n"
+            "🔧 **Fixed:** Duplicate product alerts are now grouped together!\n"
+            "📊 **Result:** You'll see total stock instead of individual items.\n\n"
+            "**Example:** Instead of 8 separate 'Only 1 left!' alerts,\n"
+            "you'll see 1 alert showing 'Only 8 left! (8 items)'",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🧹 Clear All Alerts", callback_data="stock_clear_alerts")],
+                [InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]
+            ])
         )
     except Exception as e:
         logger.error(f"Error in manual stock check: {e}")
@@ -285,6 +318,52 @@ async def handle_stock_check_now(update: Update, context: ContextTypes.DEFAULT_T
                 InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")
             ]])
         )
+
+async def handle_stock_clear_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Clear all stock alerts and reset alert timestamps."""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Clear all stock alerts
+        c.execute("DELETE FROM stock_alerts")
+        
+        # Reset last_stock_alert for all products
+        c.execute("UPDATE products SET last_stock_alert = NULL")
+        
+        conn.commit()
+        
+        await query.edit_message_text(
+            "✅ **All stock alerts cleared!** ✅\n\n"
+            "🧹 **What was cleared:**\n"
+            "• All stock alert history\n"
+            "• Alert timestamps reset\n"
+            "• Fresh start for new alerts\n\n"
+            "🔄 **Next stock check will generate new alerts with the fixed grouping system.**",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔄 Run Stock Check Now", callback_data="stock_check_now"),
+                InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")
+            ]])
+        )
+        
+    except Exception as e:
+        logger.error(f"Error clearing stock alerts: {e}")
+        await query.edit_message_text(
+            "❌ Error clearing alerts. Please check logs.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")
+            ]])
+        )
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_stock_detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Shows a detailed stock report."""

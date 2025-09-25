@@ -126,7 +126,7 @@ from viewer_admin import (
 try:
     import stock_management
     from stock_management import (
-        handle_stock_management_menu, handle_stock_check_now, handle_stock_detailed_report,
+        handle_stock_management_menu, handle_stock_check_now, handle_stock_clear_alerts, handle_stock_detailed_report,
         handle_stock_analytics, handle_stock_configure_thresholds, handle_stock_view_alerts,
         handle_stock_export_analytics, handle_stock_set_global_thresholds,
         handle_stock_configure_by_type, handle_stock_reset_thresholds, handle_stock_confirm_reset,
@@ -140,6 +140,8 @@ except ImportError:
         await update.callback_query.edit_message_text("Stock management not available")
     async def handle_stock_check_now(update, context, params=None):
         await update.callback_query.edit_message_text("Stock check not available")
+    async def handle_stock_clear_alerts(update, context, params=None):
+        await update.callback_query.edit_message_text("Stock alerts not available")
     async def handle_stock_detailed_report(update, context, params=None):
         await update.callback_query.edit_message_text("Stock report not available")
     async def handle_stock_analytics(update, context, params=None):
@@ -582,6 +584,7 @@ def callback_query_router(func):
                 # Stock management handlers
                 "stock_management_menu": handle_stock_management_menu,
                 "stock_check_now": handle_stock_check_now,
+                "stock_clear_alerts": handle_stock_clear_alerts,
                 "stock_detailed_report": handle_stock_detailed_report,
                 
                 # A/B testing handlers
