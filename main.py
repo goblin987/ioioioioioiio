@@ -280,19 +280,19 @@ except ImportError:
 
 try:
     import testforwarder_integration
-                from testforwarder_integration import (
-                    handle_testforwarder_menu, handle_testforwarder_manual_setup,
-                    handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
-                    handle_testforwarder_bump_service, handle_testforwarder_my_configs,
-                    handle_testforwarder_add_forwarding, handle_testforwarder_help,
-                    handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
-                    handle_testforwarder_edit_config, handle_testforwarder_delete_config,
-                    handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
-                    handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign,
-                    handle_testforwarder_select_account, handle_testforwarder_run_campaign,
-                    handle_testforwarder_select_forwarding_account, handle_testforwarder_upload_session,
-                    get_testforwarder_bot
-                )
+    from testforwarder_integration import (
+        handle_testforwarder_menu, handle_testforwarder_manual_setup,
+        handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
+        handle_testforwarder_bump_service, handle_testforwarder_my_configs,
+        handle_testforwarder_add_forwarding, handle_testforwarder_help,
+        handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
+        handle_testforwarder_edit_config, handle_testforwarder_delete_config,
+        handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
+        handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign,
+        handle_testforwarder_select_account, handle_testforwarder_run_campaign,
+        handle_testforwarder_select_forwarding_account, handle_testforwarder_upload_session,
+        get_testforwarder_bot
+    )
 except ImportError:
     import logging
     logging.getLogger(__name__).error("Could not import testforwarder_integration module")
