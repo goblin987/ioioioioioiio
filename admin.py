@@ -1250,9 +1250,22 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
     pending_drop = user_specific_data.get("pending_drop")
 
     if not pending_drop:
+        # Check if this might be from a bulk operation that's already completed
+        bulk_messages = user_specific_data.get("bulk_messages", [])
+        if bulk_messages:
+            logger.info(f"Confirmation received but no pending_drop data - likely from completed bulk operation for user {user_id}")
+            await query.edit_message_text("✅ Bulk products have already been created successfully!\n\nUse the admin menu to add more products.", parse_mode=None)
+            return
+        
         logger.error(f"Confirmation 'yes' received for add drop, but no pending_drop data found for user {user_id}.")
         user_specific_data.pop("state", None)
-        return await query.edit_message_text("❌ Error: No pending drop data found. Please start again.", parse_mode=None)
+        
+        # Clear any old data that might be causing confusion
+        keys_to_clear = ["pending_drop", "pending_drop_size", "pending_drop_price", "admin_city_id", "admin_district_id", "admin_product_type", "admin_city", "admin_district"]
+        for key in keys_to_clear:
+            user_specific_data.pop(key, None)
+        
+        return await query.edit_message_text("❌ Error: No pending drop data found. This might be an old confirmation button.\n\nPlease use the admin menu to start a new product addition.", parse_mode=None)
 
     city = pending_drop.get("city"); district = pending_drop.get("district"); p_type = pending_drop.get("product_type")
     size = pending_drop.get("size"); price = pending_drop.get("price"); original_text = pending_drop.get("original_text", "")
@@ -1437,6 +1450,10 @@ async def handle_adm_bulk_add(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not city_name or not district_name:
         return await query.edit_message_text("Error: City/District not found. Please select again.", parse_mode=None)
     type_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
+    
+    # Clear any old single product data to avoid conflicts
+    context.user_data.pop("pending_drop", None)
+    context.user_data.pop("state", None)
     
     # Store initial bulk product details
     context.user_data["bulk_admin_city_id"] = city_id
