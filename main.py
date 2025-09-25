@@ -779,9 +779,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_refill_crypto_choice': None,
         'awaiting_basket_crypto_choice': None,
         
-        # Auto ads system message handlers
-        'awaiting_campaign_name': handle_auto_ads_campaign_name_message,
-        'awaiting_campaign_message': handle_auto_ads_campaign_message_input,
+        # Auto ads system message handlers (removed - using testforwarder integration)
         
         # VIP system message handlers
         'awaiting_vip_level_name': handle_vip_level_name_message,
