@@ -479,28 +479,35 @@ async def handle_referral_admin_menu(update: Update, context: ContextTypes.DEFAU
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get referral program statistics
-        c.execute("SELECT COUNT(*) as total_codes FROM referral_codes WHERE is_active = 1")
-        total_codes = c.fetchone()['total_codes']
+        # Get referral program statistics from users table
+        c.execute("SELECT COUNT(*) as total_users FROM users WHERE referral_code IS NOT NULL")
+        users_with_codes = c.fetchone()['total_users']
         
-        c.execute("SELECT COUNT(*) as total_referrals FROM referrals")
-        total_referrals = c.fetchone()['total_referrals']
+        c.execute("SELECT COUNT(*) as total_referrals, SUM(total_earnings) as total_earnings FROM users WHERE total_referrals > 0")
+        referral_stats = c.fetchone()
         
-        c.execute("SELECT COUNT(*) as completed_referrals FROM referrals WHERE status = 'completed'")
-        completed_referrals = c.fetchone()['completed_referrals']
+        c.execute("SELECT COUNT(*) as active_referrers FROM users WHERE total_referrals > 0")
+        active_referrers = c.fetchone()['active_referrers']
         
-        c.execute("SELECT SUM(referrer_reward) as total_rewards FROM referrals WHERE status = 'completed'")
-        total_rewards = c.fetchone()['total_rewards'] or 0
+        total_referrals = referral_stats['total_referrals'] or 0
+        total_earnings = referral_stats['total_earnings'] or 0
         
         msg = "🎁 **Referral Program Admin**\n\n"
         msg += f"📊 **Program Statistics:**\n"
-        msg += f"• Active Referral Codes: {total_codes}\n"
-        msg += f"• Total Referrals: {total_referrals}\n"
-        msg += f"• Completed Referrals: {completed_referrals}\n"
-        msg += f"• Total Rewards Paid: {format_currency(total_rewards)}\n\n"
+        msg += f"• Users with Referral Codes: {users_with_codes}\n"
+        msg += f"• Active Referrers: {active_referrers}\n"
+        msg += f"• Total Referrals Made: {total_referrals}\n"
+        msg += f"• Total Earnings Paid: ${total_earnings:.2f}\n\n"
         
-        conversion_rate = (completed_referrals / total_referrals * 100) if total_referrals > 0 else 0
-        msg += f"• Conversion Rate: {conversion_rate:.1f}%"
+        if active_referrers > 0:
+            avg_referrals = total_referrals / active_referrers
+            msg += f"• Average Referrals per User: {avg_referrals:.1f}\n"
+        
+        msg += f"\n🎯 **Referral Program Features:**\n"
+        msg += f"• 10% commission for referrers\n"
+        msg += f"• 5% discount for new users\n"
+        msg += f"• Automatic tracking and rewards\n"
+        msg += f"• Real-time statistics"
         
         keyboard = [
             [InlineKeyboardButton("📊 Detailed Stats", callback_data="referral_admin_stats")],
@@ -514,12 +521,24 @@ async def handle_referral_admin_menu(update: Update, context: ContextTypes.DEFAU
         
     except Exception as e:
         logger.error(f"Error showing referral admin menu: {e}")
-        await query.edit_message_text(
-            "❌ Error loading referral admin dashboard.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")
-            ]])
-        )
+        # Fallback to simple menu if database queries fail
+        msg = "🎁 **Referral Program Admin**\n\n"
+        msg += "📊 **Referral System Management**\n\n"
+        msg += "Manage your referral program settings and view statistics.\n\n"
+        msg += "**Features:**\n"
+        msg += "• View referral statistics\n"
+        msg += "• Manage top referrers\n"
+        msg += "• Configure program settings\n"
+        msg += "• Reset program data"
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 View Stats", callback_data="referral_admin_stats")],
+            [InlineKeyboardButton("👥 Top Referrers", callback_data="referral_admin_top_referrers")],
+            [InlineKeyboardButton("⚙️ Settings", callback_data="referral_admin_settings")],
+            [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
     finally:
         if conn:
             conn.close()
@@ -656,49 +675,44 @@ async def handle_referral_admin_stats(update: Update, context: ContextTypes.DEFA
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get overall referral statistics
+        # Get overall referral statistics from users table
         c.execute("""
             SELECT 
-                COUNT(*) as total_referrals,
-                COUNT(DISTINCT referrer_user_id) as active_referrers,
-                SUM(commission_earned) as total_commissions,
-                AVG(commission_earned) as avg_commission
-            FROM referrals
+                SUM(total_referrals) as total_referrals,
+                COUNT(CASE WHEN total_referrals > 0 THEN 1 END) as active_referrers,
+                SUM(total_earnings) as total_commissions,
+                AVG(total_earnings) as avg_commission
+            FROM users
         """)
         overall_stats = c.fetchone()
         
-        # Get recent referral activity (last 30 days)
+        # Get recent referral activity (users who joined recently)
         c.execute("""
             SELECT 
-                COUNT(*) as recent_referrals,
-                SUM(commission_earned) as recent_commissions
-            FROM referrals 
-            WHERE created_at >= datetime('now', '-30 days')
+                COUNT(*) as recent_users,
+                SUM(total_referrals) as recent_referrals
+            FROM users 
+            WHERE first_interaction >= datetime('now', '-30 days')
+            AND total_referrals > 0
         """)
         recent_stats = c.fetchone()
         
-        # Get top referrers
+        # Get top referrers from users table
         c.execute("""
-            SELECT u.user_id, u.referral_code, 
-                   COUNT(r.id) as referral_count,
-                   SUM(r.commission_earned) as total_earned
-            FROM users u
-            LEFT JOIN referrals r ON u.user_id = r.referrer_user_id
-            WHERE u.referral_code IS NOT NULL
-            GROUP BY u.user_id
-            HAVING referral_count > 0
-            ORDER BY total_earned DESC
+            SELECT user_id, referral_code, total_referrals, total_earnings
+            FROM users
+            WHERE referral_code IS NOT NULL AND total_referrals > 0
+            ORDER BY total_referrals DESC, total_earnings DESC
             LIMIT 10
         """)
         top_referrers = c.fetchall()
         
-        # Get referral conversion rates
+        # Get conversion stats (users with purchases)
         c.execute("""
             SELECT 
-                COUNT(CASE WHEN u.total_purchases > 0 THEN 1 END) as converted_referrals,
-                COUNT(*) as total_referred_users
-            FROM referrals r
-            JOIN users u ON r.referred_user_id = u.user_id
+                COUNT(CASE WHEN total_purchases > 0 THEN 1 END) as users_with_purchases,
+                COUNT(*) as total_users
+            FROM users
         """)
         conversion_stats = c.fetchone()
         
@@ -713,30 +727,37 @@ async def handle_referral_admin_stats(update: Update, context: ContextTypes.DEFA
     msg = "📊 **Referral Program Statistics**\n\n"
     
     # Overall performance
+    total_referrals = overall_stats['total_referrals'] or 0
+    active_referrers = overall_stats['active_referrers'] or 0
+    total_commissions = overall_stats['total_commissions'] or 0
+    avg_commission = overall_stats['avg_commission'] or 0
+    
     msg += f"🎯 **Overall Performance:**\n"
-    msg += f"• Total Referrals: {overall_stats['total_referrals']:,}\n"
-    msg += f"• Active Referrers: {overall_stats['active_referrers']:,}\n"
-    msg += f"• Total Commissions Paid: ${overall_stats['total_commissions']:.2f}\n"
-    msg += f"• Average Commission: ${overall_stats['avg_commission']:.2f}\n\n"
+    msg += f"• Total Referrals: {total_referrals:,}\n"
+    msg += f"• Active Referrers: {active_referrers:,}\n"
+    msg += f"• Total Commissions Paid: ${total_commissions:.2f}\n"
+    msg += f"• Average Commission: ${avg_commission:.2f}\n\n"
     
     # Recent activity
+    recent_referrals = recent_stats['recent_referrals'] or 0
+    recent_users = recent_stats['recent_users'] or 0
     msg += f"📅 **Last 30 Days:**\n"
-    msg += f"• New Referrals: {recent_stats['recent_referrals']:,}\n"
-    msg += f"• Recent Commissions: ${recent_stats['recent_commissions'] or 0:.2f}\n\n"
+    msg += f"• New Active Referrers: {recent_users:,}\n"
+    msg += f"• New Referrals Made: {recent_referrals:,}\n\n"
     
     # Conversion metrics
-    if conversion_stats['total_referred_users'] > 0:
-        conversion_rate = (conversion_stats['converted_referrals'] / conversion_stats['total_referred_users']) * 100
-        msg += f"📈 **Conversion Metrics:**\n"
-        msg += f"• Referred Users: {conversion_stats['total_referred_users']:,}\n"
-        msg += f"• Converted to Customers: {conversion_stats['converted_referrals']:,}\n"
-        msg += f"• Conversion Rate: {conversion_rate:.1f}%\n\n"
+    if conversion_stats['total_users'] > 0:
+        conversion_rate = (conversion_stats['users_with_purchases'] / conversion_stats['total_users']) * 100
+        msg += f"📈 **User Conversion Metrics:**\n"
+        msg += f"• Total Users: {conversion_stats['total_users']:,}\n"
+        msg += f"• Users with Purchases: {conversion_stats['users_with_purchases']:,}\n"
+        msg += f"• Overall Conversion Rate: {conversion_rate:.1f}%\n\n"
     
     # Top performers
     if top_referrers:
         msg += f"🏆 **Top Referrers:**\n"
         for i, referrer in enumerate(top_referrers[:5], 1):
-            msg += f"{i}. User {referrer['user_id']}: {referrer['referral_count']} referrals (${referrer['total_earned']:.2f})\n"
+            msg += f"{i}. User {referrer['user_id']}: {referrer['total_referrals']} referrals (${referrer['total_earnings']:.2f})\n"
     
     keyboard = [
         [InlineKeyboardButton("👥 Top Referrers", callback_data="referral_admin_top_referrers")],

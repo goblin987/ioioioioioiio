@@ -259,6 +259,8 @@ try:
         handle_vip_add_benefit, handle_vip_remove_benefit, handle_vip_confirm_delete,
         handle_vip_confirm_reset, handle_vip_export_analytics,
         handle_vip_set_emoji, handle_vip_set_discount, handle_vip_name_edit_message,
+        handle_vip_custom_product_discounts, handle_vip_priority_support,
+        handle_vip_early_access, handle_vip_view_all_benefits,
         process_vip_level_up, VIPManager
     )
 except ImportError:
@@ -580,6 +582,10 @@ def callback_query_router(func):
                 "vip_export_analytics": handle_vip_export_analytics,
                 "vip_set_emoji": handle_vip_set_emoji,
                 "vip_set_discount": handle_vip_set_discount,
+                "vip_custom_product_discounts": handle_vip_custom_product_discounts,
+                "vip_priority_support": handle_vip_priority_support,
+                "vip_early_access": handle_vip_early_access,
+                "vip_view_all_benefits": handle_vip_view_all_benefits,
                 
                 # Missing stock management handlers
                 "stock_analytics": handle_stock_analytics,

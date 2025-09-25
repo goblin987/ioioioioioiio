@@ -1585,9 +1585,38 @@ async def handle_vip_edit_benefits(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("VIP benefits editing coming soon!", show_alert=False)
-    await query.edit_message_text("🎁 VIP benefits editing feature coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    msg = f"🎁 **Edit VIP Level Benefits**\n\n"
+    msg += f"**Level:** {level['level_emoji']} {level['level_name']}\n"
+    msg += f"**Current Discount:** {level['discount_percentage']}%\n\n"
+    msg += "💰 **Available Benefits:**\n"
+    msg += "• Percentage discount on all purchases\n"
+    msg += "• Custom discounts on specific products\n"
+    msg += "• Priority customer support\n"
+    msg += "• Early access to new products\n\n"
+    msg += "Choose benefit type to configure:"
+    
+    keyboard = [
+        [InlineKeyboardButton("💰 Set Discount %", callback_data=f"vip_edit_discount|{level_id}")],
+        [InlineKeyboardButton("🎯 Custom Product Discounts", callback_data=f"vip_custom_product_discounts|{level_id}")],
+        [InlineKeyboardButton("⭐ Priority Support", callback_data=f"vip_priority_support|{level_id}")],
+        [InlineKeyboardButton("🚀 Early Access", callback_data=f"vip_early_access|{level_id}")],
+        [InlineKeyboardButton("📋 View All Benefits", callback_data=f"vip_view_all_benefits|{level_id}")],
+        [InlineKeyboardButton("⬅️ Back to Level", callback_data=f"vip_edit_level|{level_id}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_vip_toggle_active(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle VIP level active status"""
@@ -1892,6 +1921,238 @@ async def handle_vip_confirm_delete(update: Update, context: ContextTypes.DEFAUL
     except Exception as e:
         logger.error(f"Error deleting VIP level: {e}")
         await query.answer("Error deleting level", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+# --- VIP Benefits Management Handlers ---
+
+async def handle_vip_custom_product_discounts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Configure custom product discounts for VIP level"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    
+    msg = f"🎯 **Custom Product Discounts**\n\n"
+    msg += f"Set specific discount percentages for different product categories:\n\n"
+    msg += "**Available Product Categories:**\n"
+    msg += "• Electronics: Custom % discount\n"
+    msg += "• Clothing: Custom % discount\n"
+    msg += "• Books: Custom % discount\n"
+    msg += "• Home & Garden: Custom % discount\n"
+    msg += "• Sports: Custom % discount\n\n"
+    msg += "Select a category to set custom discount:"
+    
+    keyboard = [
+        [InlineKeyboardButton("📱 Electronics", callback_data=f"vip_discount_electronics|{level_id}")],
+        [InlineKeyboardButton("👕 Clothing", callback_data=f"vip_discount_clothing|{level_id}")],
+        [InlineKeyboardButton("📚 Books", callback_data=f"vip_discount_books|{level_id}")],
+        [InlineKeyboardButton("🏠 Home & Garden", callback_data=f"vip_discount_home|{level_id}")],
+        [InlineKeyboardButton("⚽ Sports", callback_data=f"vip_discount_sports|{level_id}")],
+        [InlineKeyboardButton("⬅️ Back to Benefits", callback_data=f"vip_edit_benefits|{level_id}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_vip_priority_support(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Configure priority support benefit"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Check current priority support status
+        c.execute("SELECT benefits FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        if level and level['benefits']:
+            benefits = eval(level['benefits']) if isinstance(level['benefits'], str) else level['benefits']
+        else:
+            benefits = []
+        
+        has_priority = "Priority Support" in benefits
+        
+        if has_priority:
+            # Remove priority support
+            benefits = [b for b in benefits if b != "Priority Support"]
+            action = "removed"
+            status = "❌ Disabled"
+        else:
+            # Add priority support
+            benefits.append("Priority Support")
+            action = "added"
+            status = "✅ Enabled"
+        
+        # Update benefits
+        c.execute("UPDATE vip_levels SET benefits = ? WHERE id = ?", (str(benefits), level_id))
+        conn.commit()
+        
+        msg = f"⭐ **Priority Support Updated!**\n\n"
+        msg += f"Priority support has been {action} for this VIP level.\n\n"
+        msg += f"**Status:** {status}\n\n"
+        msg += "**Priority Support Benefits:**\n"
+        msg += "• Faster response times\n"
+        msg += "• Dedicated support channel\n"
+        msg += "• Priority in support queue\n"
+        msg += "• Direct admin contact"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 Toggle Again", callback_data=f"vip_priority_support|{level_id}")],
+            [InlineKeyboardButton("⬅️ Back to Benefits", callback_data=f"vip_edit_benefits|{level_id}")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer(f"Priority support {action}!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error updating priority support: {e}")
+        await query.answer("Error updating benefit", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_vip_early_access(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Configure early access benefit"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Check current early access status
+        c.execute("SELECT benefits FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        if level and level['benefits']:
+            benefits = eval(level['benefits']) if isinstance(level['benefits'], str) else level['benefits']
+        else:
+            benefits = []
+        
+        has_early_access = "Early Access" in benefits
+        
+        if has_early_access:
+            # Remove early access
+            benefits = [b for b in benefits if b != "Early Access"]
+            action = "removed"
+            status = "❌ Disabled"
+        else:
+            # Add early access
+            benefits.append("Early Access")
+            action = "added"
+            status = "✅ Enabled"
+        
+        # Update benefits
+        c.execute("UPDATE vip_levels SET benefits = ? WHERE id = ?", (str(benefits), level_id))
+        conn.commit()
+        
+        msg = f"🚀 **Early Access Updated!**\n\n"
+        msg += f"Early access has been {action} for this VIP level.\n\n"
+        msg += f"**Status:** {status}\n\n"
+        msg += "**Early Access Benefits:**\n"
+        msg += "• First access to new products\n"
+        msg += "• Beta feature testing\n"
+        msg += "• Exclusive previews\n"
+        msg += "• Priority notifications"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 Toggle Again", callback_data=f"vip_early_access|{level_id}")],
+            [InlineKeyboardButton("⬅️ Back to Benefits", callback_data=f"vip_edit_benefits|{level_id}")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer(f"Early access {action}!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error updating early access: {e}")
+        await query.answer("Error updating benefit", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_vip_view_all_benefits(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """View all benefits for VIP level"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get level details
+        c.execute("SELECT level_name, level_emoji, discount_percentage, benefits FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        if not level:
+            await query.answer("Level not found", show_alert=True)
+            return
+        
+        msg = f"📋 **All Benefits Summary**\n\n"
+        msg += f"**Level:** {level['level_emoji']} {level['level_name']}\n\n"
+        
+        # Main discount
+        msg += f"💰 **Primary Benefits:**\n"
+        msg += f"• {level['discount_percentage']}% discount on all purchases\n\n"
+        
+        # Additional benefits
+        if level['benefits']:
+            try:
+                benefits = eval(level['benefits']) if isinstance(level['benefits'], str) else level['benefits']
+                if benefits:
+                    msg += f"⭐ **Additional Benefits:**\n"
+                    for benefit in benefits:
+                        msg += f"• {benefit}\n"
+                    msg += "\n"
+            except:
+                pass
+        
+        msg += f"🎯 **Benefit Types Available:**\n"
+        msg += f"• Percentage discounts (main benefit)\n"
+        msg += f"• Custom product category discounts\n"
+        msg += f"• Priority customer support\n"
+        msg += f"• Early access to new features\n"
+        msg += f"• Exclusive notifications\n\n"
+        msg += f"💡 **Note:** No free shipping - focus on discount percentages for maximum value!"
+        
+        keyboard = [
+            [InlineKeyboardButton("✏️ Edit Benefits", callback_data=f"vip_edit_benefits|{level_id}")],
+            [InlineKeyboardButton("⬅️ Back to Level", callback_data=f"vip_edit_level|{level_id}")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error viewing benefits: {e}")
+        await query.answer("Error loading benefits", show_alert=True)
     finally:
         if conn:
             conn.close()
