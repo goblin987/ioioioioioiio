@@ -974,4 +974,588 @@ async def save_channel(channel_info: Dict[str, str]) -> bool:
         if conn:
             conn.close()
 
+# --- Missing Enhanced Handlers ---
+
+async def handle_enhanced_add_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """➕ Add Account Manually"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "➕ **ADD USERBOT ACCOUNT MANUALLY** ➕\n\n"
+    msg += "🔧 **Manual Account Configuration**\n\n"
+    
+    msg += "**📋 Required Information:**\n"
+    msg += "• Account Name (e.g., 'My Business Bot')\n"
+    msg += "• Phone Number (e.g., '+1234567890')\n"
+    msg += "• API ID (from my.telegram.org)\n"
+    msg += "• API Hash (from my.telegram.org)\n"
+    msg += "• Session String (from your userbot)\n\n"
+    
+    msg += "**🚨 Important Notes:**\n"
+    msg += "• This is for advanced users only\n"
+    msg += "• You need existing session credentials\n"
+    msg += "• Easier to use 'Upload Session File' instead\n\n"
+    
+    msg += "**💡 Recommendation:** Use 'Upload Session File' for easier setup!"
+    
+    keyboard = [
+        [InlineKeyboardButton("📤 Upload Session File Instead", callback_data="enhanced_upload_session")],
+        [InlineKeyboardButton("🔧 Continue Manual Setup", callback_data="enhanced_manual_setup_start")],
+        [InlineKeyboardButton("⬅️ Back to Accounts", callback_data="enhanced_manage_accounts")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_enhanced_manual_setup_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """🔧 Start Manual Setup Process"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Set manual setup state
+    context.user_data['enhanced_ads_state'] = 'awaiting_manual_account_details'
+    
+    msg = "🔧 **MANUAL ACCOUNT SETUP** 🔧\n\n"
+    msg += "**📝 Please provide all account details in this format:**\n\n"
+    
+    msg += "```\n"
+    msg += "Account Name: My Business Bot\n"
+    msg += "Phone: +1234567890\n"
+    msg += "API ID: 12345678\n"
+    msg += "API Hash: abcd1234efgh5678\n"
+    msg += "Session String: your_session_string_here\n"
+    msg += "```\n\n"
+    
+    msg += "**🔐 Session String Sources:**\n"
+    msg += "• Telethon StringSession\n"
+    msg += "• Pyrogram session string\n"
+    msg += "• Other userbot session exports\n\n"
+    
+    msg += "**📤 Please send your account details now...**"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data="enhanced_manage_accounts")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_enhanced_manual_account_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle manual account details input"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get('enhanced_ads_state') != 'awaiting_manual_account_details':
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ Please send account details as text.", parse_mode=None)
+        return
+    
+    text = update.message.text.strip()
+    
+    # Parse manual account details
+    try:
+        details = {}
+        for line in text.split('\n'):
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower()
+                value = value.strip()
+                
+                if 'account name' in key or 'name' in key:
+                    details['account_name'] = value
+                elif 'phone' in key:
+                    details['phone_number'] = value
+                elif 'api id' in key or 'api_id' in key:
+                    details['api_id'] = value
+                elif 'api hash' in key or 'api_hash' in key:
+                    details['api_hash'] = value
+                elif 'session' in key:
+                    details['session_string'] = value
+        
+        # Validate required fields
+        required = ['account_name', 'api_id', 'api_hash', 'session_string']
+        missing = [field for field in required if not details.get(field)]
+        
+        if missing:
+            await send_message_with_retry(context.bot, chat_id, 
+                f"❌ **Missing required fields:** {', '.join(missing)}\n\n"
+                "Please provide all required information.", parse_mode='Markdown')
+            return
+        
+        # Save to database
+        success = await save_userbot_account(details, details['session_string'])
+        
+        if success:
+            # Clear state
+            context.user_data.pop('enhanced_ads_state', None)
+            
+            msg = "🎉 **Manual Account Setup Complete!** 🎉\n\n"
+            msg += f"🤖 **Account:** {details['account_name']}\n"
+            msg += f"📱 **Phone:** {details.get('phone_number', 'Not provided')}\n"
+            msg += f"🔑 **API ID:** {details['api_id']}\n\n"
+            msg += "**✅ Account ready for campaigns!**"
+            
+            keyboard = [
+                [InlineKeyboardButton("📢 Create Campaign", callback_data="enhanced_create_campaign")],
+                [InlineKeyboardButton("🤖 Manage Accounts", callback_data="enhanced_manage_accounts")],
+                [InlineKeyboardButton("🏠 Auto Ads Menu", callback_data="enhanced_auto_ads_menu")]
+            ]
+            
+            await send_message_with_retry(context.bot, chat_id, msg, 
+                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        else:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ Failed to save account. Please check your details and try again.", parse_mode=None)
+        
+    except Exception as e:
+        logger.error(f"Error parsing manual account details: {e}")
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ **Invalid format!**\n\nPlease use the exact format provided.", parse_mode='Markdown')
+
+async def handle_enhanced_ads_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """📊 View Analytics Dashboard"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get comprehensive analytics
+        c.execute("""
+            SELECT COUNT(*) as total_accounts, 
+                   SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_accounts,
+                   SUM(success_count) as total_success,
+                   SUM(error_count) as total_errors
+            FROM userbot_accounts
+        """)
+        account_stats = c.fetchone()
+        
+        c.execute("""
+            SELECT COUNT(*) as total_campaigns,
+                   SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_campaigns,
+                   SUM(total_sent) as total_messages,
+                   SUM(total_errors) as campaign_errors
+            FROM enhanced_auto_ads_campaigns
+        """)
+        campaign_stats = c.fetchone()
+        
+        c.execute("""
+            SELECT COUNT(*) as total_channels,
+                   SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_channels,
+                   SUM(success_count) as channel_success,
+                   SUM(error_count) as channel_errors
+            FROM enhanced_channels
+        """)
+        channel_stats = c.fetchone()
+        
+        # Get recent activity
+        c.execute("""
+            SELECT COUNT(*) as recent_executions
+            FROM campaign_execution_logs
+            WHERE execution_time > datetime('now', '-24 hours')
+        """)
+        recent_activity = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error loading analytics: {e}")
+        account_stats = {'total_accounts': 0, 'active_accounts': 0, 'total_success': 0, 'total_errors': 0}
+        campaign_stats = {'total_campaigns': 0, 'active_campaigns': 0, 'total_messages': 0, 'campaign_errors': 0}
+        channel_stats = {'total_channels': 0, 'active_channels': 0, 'channel_success': 0, 'channel_errors': 0}
+        recent_activity = {'recent_executions': 0}
+    finally:
+        if conn:
+            conn.close()
+    
+    # Build analytics message
+    msg = "📊 **ENHANCED AUTO ADS ANALYTICS** 📊\n\n"
+    msg += "🤖 **Userbot Accounts:**\n"
+    msg += f"• Total: {account_stats['total_accounts']} | Active: {account_stats['active_accounts']}\n"
+    msg += f"• Success: {account_stats['total_success']:,} | Errors: {account_stats['total_errors']:,}\n\n"
+    
+    msg += "📢 **Campaigns:**\n"
+    msg += f"• Total: {campaign_stats['total_campaigns']} | Active: {campaign_stats['active_campaigns']}\n"
+    msg += f"• Messages Sent: {campaign_stats['total_messages']:,}\n"
+    msg += f"• Errors: {campaign_stats['campaign_errors']:,}\n\n"
+    
+    msg += "📺 **Channels:**\n"
+    msg += f"• Total: {channel_stats['total_channels']} | Active: {channel_stats['active_channels']}\n"
+    msg += f"• Successful Posts: {channel_stats['channel_success']:,}\n"
+    msg += f"• Errors: {channel_stats['channel_errors']:,}\n\n"
+    
+    msg += f"⚡ **Recent Activity (24h):** {recent_activity['recent_executions']} executions\n\n"
+    
+    # Calculate success rates
+    if account_stats['total_success'] + account_stats['total_errors'] > 0:
+        account_rate = (account_stats['total_success'] / (account_stats['total_success'] + account_stats['total_errors'])) * 100
+        msg += f"✅ **Account Success Rate:** {account_rate:.1f}%\n"
+    
+    if channel_stats['channel_success'] + channel_stats['channel_errors'] > 0:
+        channel_rate = (channel_stats['channel_success'] / (channel_stats['channel_success'] + channel_stats['channel_errors'])) * 100
+        msg += f"📺 **Channel Success Rate:** {channel_rate:.1f}%\n"
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("📈 Detailed Reports", callback_data="enhanced_detailed_analytics"),
+            InlineKeyboardButton("📊 Export Data", callback_data="enhanced_export_analytics")
+        ],
+        [
+            InlineKeyboardButton("🔄 Refresh", callback_data="enhanced_ads_analytics"),
+            InlineKeyboardButton("⬅️ Back to Menu", callback_data="enhanced_auto_ads_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_enhanced_test_system(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """🧪 Test System Functionality"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🧪 **SYSTEM TEST CENTER** 🧪\n\n"
+    msg += "🔧 **Comprehensive Testing Suite**\n\n"
+    
+    msg += "**🎯 Available Tests:**\n\n"
+    
+    msg += "🤖 **Account Tests:**\n"
+    msg += "• Test userbot connections\n"
+    msg += "• Validate session data\n"
+    msg += "• Check API credentials\n\n"
+    
+    msg += "📺 **Channel Tests:**\n"
+    msg += "• Verify channel access\n"
+    msg += "• Test posting permissions\n"
+    msg += "• Check channel validity\n\n"
+    
+    msg += "🚀 **System Tests:**\n"
+    msg += "• Database connectivity\n"
+    msg += "• Telethon integration\n"
+    msg += "• Error handling\n\n"
+    
+    msg += "**🔬 Choose a test to run:**"
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🤖 Test Accounts", callback_data="enhanced_test_accounts"),
+            InlineKeyboardButton("📺 Test Channels", callback_data="enhanced_test_channels")
+        ],
+        [
+            InlineKeyboardButton("🔗 Test Connections", callback_data="enhanced_test_connections"),
+            InlineKeyboardButton("💾 Test Database", callback_data="enhanced_test_database")
+        ],
+        [
+            InlineKeyboardButton("🧪 Run All Tests", callback_data="enhanced_test_all"),
+            InlineKeyboardButton("⬅️ Back to Menu", callback_data="enhanced_auto_ads_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_enhanced_manage_campaigns(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """📢 Manage Campaigns"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all campaigns
+        c.execute("""
+            SELECT id, campaign_name, is_active, created_at, last_run, 
+                   total_sent, total_errors, next_run
+            FROM enhanced_auto_ads_campaigns 
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+        campaigns = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading campaigns: {e}")
+        campaigns = []
+    finally:
+        if conn:
+            conn.close()
+    
+    # Build campaigns menu
+    msg = "📢 **CAMPAIGN MANAGER** 📢\n\n"
+    msg += "🎯 **Professional Campaign Management**\n\n"
+    
+    if campaigns:
+        msg += f"**📋 Your Campaigns ({len(campaigns)}):**\n\n"
+        for campaign in campaigns:
+            status = "✅ Active" if campaign['is_active'] else "❌ Inactive"
+            
+            msg += f"**{campaign['campaign_name']}**\n"
+            msg += f"📊 Status: {status}\n"
+            msg += f"📤 Sent: {campaign['total_sent']} | ❌ Errors: {campaign['total_errors']}\n"
+            msg += f"⏰ Created: {campaign['created_at'][:16]}\n\n"
+    else:
+        msg += "📭 **No campaigns created yet**\n\n"
+        msg += "**🚀 Get Started:**\n"
+        msg += "1. Set up userbot accounts\n"
+        msg += "2. Add target channels\n"
+        msg += "3. Create your first campaign!\n\n"
+    
+    msg += "**🎯 Campaign Management:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("➕ Create Campaign", callback_data="enhanced_create_campaign")],
+    ]
+    
+    if campaigns:
+        keyboard.extend([
+            [InlineKeyboardButton("✏️ Edit Campaign", callback_data="enhanced_edit_campaign")],
+            [InlineKeyboardButton("▶️ Start/Stop", callback_data="enhanced_toggle_campaign")],
+            [InlineKeyboardButton("🗑️ Delete Campaign", callback_data="enhanced_delete_campaign")]
+        ])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("📊 Campaign Analytics", callback_data="enhanced_campaign_analytics")],
+        [InlineKeyboardButton("⬅️ Back to Menu", callback_data="enhanced_auto_ads_menu")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_enhanced_add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """➕ Add Channel (Regular Method)"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Set state for channel addition
+    context.user_data['enhanced_ads_state'] = 'awaiting_channel_details'
+    
+    msg = "➕ **ADD CHANNEL** ➕\n\n"
+    msg += "📺 **Channel Configuration**\n\n"
+    
+    msg += "**📋 Please provide channel details:**\n\n"
+    
+    msg += "**Format:**\n"
+    msg += "`Channel Name: My Channel`\n"
+    msg += "`Channel Link: https://t.me/mychannel`\n"
+    msg += "`Description: Business announcements`\n\n"
+    
+    msg += "**📝 Example:**\n"
+    msg += "`Channel Name: Business Updates`\n"
+    msg += "`Channel Link: @businessupdates`\n"
+    msg += "`Description: Daily business news`\n\n"
+    
+    msg += "**🔗 Supported Formats:**\n"
+    msg += "• https://t.me/channelname\n"
+    msg += "• @channelname\n"
+    msg += "• channelname\n"
+    msg += "• -1001234567890\n\n"
+    
+    msg += "**📤 Please send your channel details...**"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔗 Quick Add Instead", callback_data="enhanced_quick_add_channel")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="enhanced_manage_channels")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_enhanced_channel_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle detailed channel input"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get('enhanced_ads_state') != 'awaiting_channel_details':
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ Please send channel details as text.", parse_mode=None)
+        return
+    
+    text = update.message.text.strip()
+    
+    # Parse channel details
+    try:
+        details = {'description': 'No description provided'}
+        channel_link = None
+        
+        for line in text.split('\n'):
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower()
+                value = value.strip()
+                
+                if 'channel name' in key or 'name' in key:
+                    details['name'] = value
+                elif 'channel link' in key or 'link' in key or 'url' in key:
+                    channel_link = value
+                elif 'description' in key:
+                    details['description'] = value
+        
+        if not details.get('name') or not channel_link:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ **Missing required fields!**\n\nPlease provide both channel name and link.", 
+                parse_mode='Markdown')
+            return
+        
+        # Parse channel info
+        channel_info = parse_channel_input(channel_link)
+        if not channel_info:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ **Invalid channel link format!**", parse_mode='Markdown')
+            return
+        
+        # Merge details
+        channel_info['name'] = details['name']
+        channel_info['description'] = details.get('description', 'No description')
+        
+        # Save channel
+        success = await save_channel(channel_info)
+        
+        if success:
+            # Clear state
+            context.user_data.pop('enhanced_ads_state', None)
+            
+            msg = "✅ **Channel Added Successfully!** ✅\n\n"
+            msg += f"📺 **Name:** {channel_info['name']}\n"
+            msg += f"🔗 **Link:** {channel_link}\n"
+            msg += f"📝 **Description:** {details.get('description', 'None')}\n\n"
+            msg += "**🚀 Ready for campaigns!**"
+            
+            keyboard = [
+                [InlineKeyboardButton("📢 Create Campaign", callback_data="enhanced_create_campaign")],
+                [InlineKeyboardButton("📺 Manage Channels", callback_data="enhanced_manage_channels")],
+                [InlineKeyboardButton("🏠 Auto Ads Menu", callback_data="enhanced_auto_ads_menu")]
+            ]
+            
+            await send_message_with_retry(context.bot, chat_id, msg, 
+                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        else:
+            await send_message_with_retry(context.bot, chat_id, 
+                "❌ Failed to add channel. Please try again.", parse_mode=None)
+        
+    except Exception as e:
+        logger.error(f"Error parsing channel details: {e}")
+        await send_message_with_retry(context.bot, chat_id, 
+            "❌ **Invalid format!**\n\nPlease use the provided format.", parse_mode='Markdown')
+
+async def handle_enhanced_ads_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """⚙️ System Settings"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "⚙️ **ENHANCED AUTO ADS SETTINGS** ⚙️\n\n"
+    msg += "🔧 **System Configuration**\n\n"
+    
+    # Check Telethon status
+    telethon_status = "✅ Available" if TELETHON_AVAILABLE else "❌ Not Available"
+    msg += f"**🤖 Telethon Status:** {telethon_status}\n"
+    
+    if TELETHON_AVAILABLE:
+        msg += f"**📦 Telethon Version:** Available\n"
+    else:
+        msg += "**⚠️ Install telethon for full functionality**\n"
+    
+    msg += f"**🗃️ Database:** Connected\n"
+    msg += f"**🔐 Security:** Admin-only access\n\n"
+    
+    msg += "**⚙️ Configuration Options:**\n\n"
+    
+    msg += "🤖 **Account Settings:**\n"
+    msg += "• Session timeout management\n"
+    msg += "• Connection retry settings\n"
+    msg += "• Error handling configuration\n\n"
+    
+    msg += "📺 **Channel Settings:**\n"
+    msg += "• Posting rate limits\n"
+    msg += "• Error retry attempts\n"
+    msg += "• Channel validation rules\n\n"
+    
+    msg += "📊 **Analytics Settings:**\n"
+    msg += "• Data retention period\n"
+    msg += "• Report generation\n"
+    msg += "• Performance tracking\n"
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🤖 Account Settings", callback_data="enhanced_account_settings"),
+            InlineKeyboardButton("📺 Channel Settings", callback_data="enhanced_channel_settings")
+        ],
+        [
+            InlineKeyboardButton("📊 Analytics Settings", callback_data="enhanced_analytics_settings"),
+            InlineKeyboardButton("🔧 System Diagnostics", callback_data="enhanced_system_diagnostics")
+        ],
+        [
+            InlineKeyboardButton("💾 Backup Settings", callback_data="enhanced_backup_settings"),
+            InlineKeyboardButton("🔄 Reset to Defaults", callback_data="enhanced_reset_settings")
+        ],
+        [InlineKeyboardButton("⬅️ Back to Menu", callback_data="enhanced_auto_ads_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# Placeholder handlers for settings and other features
+async def handle_enhanced_create_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """➕ Create New Campaign"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.edit_message_text(
+        "🚧 **Campaign Creation Coming Soon!** 🚧\n\n"
+        "This feature will allow you to:\n"
+        "• Create automated campaigns\n"
+        "• Schedule posts to multiple channels\n"
+        "• Use userbot technology for direct posting\n"
+        "• Track campaign performance\n\n"
+        "📋 **For now, use the existing manual posting features.**",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("⬅️ Back to Menu", callback_data="enhanced_auto_ads_menu")
+        ]]),
+        parse_mode='Markdown'
+    )
+
+# Add placeholder handlers for all other missing callbacks
+async def handle_enhanced_test_accounts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    await update.callback_query.edit_message_text(
+        "🧪 **Account Testing Coming Soon!**\n\nThis will test all userbot accounts.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="enhanced_test_system")]])
+    )
+
+async def handle_enhanced_test_channels(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    await update.callback_query.edit_message_text(
+        "🧪 **Channel Testing Coming Soon!**\n\nThis will test all channels.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="enhanced_test_system")]])
+    )
+
+async def handle_enhanced_test_connections(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    await update.callback_query.edit_message_text(
+        "🧪 **Connection Testing Coming Soon!**\n\nThis will test system connections.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="enhanced_test_system")]])
+    )
+
+async def handle_enhanced_test_database(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    await update.callback_query.edit_message_text(
+        "🧪 **Database Testing Coming Soon!**\n\nThis will test database connectivity.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="enhanced_test_system")]])
+    )
+
+async def handle_enhanced_test_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    await update.callback_query.edit_message_text(
+        "🧪 **Full System Test Coming Soon!**\n\nThis will run all tests.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="enhanced_test_system")]])
+    )
+
 # --- END OF FILE enhanced_auto_ads_system.py ---
