@@ -188,6 +188,31 @@ except ImportError:
     def init_price_editor_tables(): pass
 
 try:
+    import interactive_welcome_editor
+    from interactive_welcome_editor import (
+        handle_interactive_welcome_editor, handle_interactive_text_editor, handle_interactive_button_designer,
+        handle_interactive_live_preview, handle_interactive_smart_templates, handle_interactive_text_editing,
+        init_interactive_welcome_tables
+    )
+except ImportError:
+    import logging
+    logging.getLogger(__name__).error("Could not import interactive_welcome_editor module")
+    # Create dummy handlers
+    async def handle_interactive_welcome_editor(update, context, params=None):
+        await update.callback_query.edit_message_text("Interactive editor not available")
+    async def handle_interactive_text_editor(update, context, params=None):
+        await update.callback_query.edit_message_text("Interactive editor not available")
+    async def handle_interactive_button_designer(update, context, params=None):
+        await update.callback_query.edit_message_text("Interactive editor not available")
+    async def handle_interactive_live_preview(update, context, params=None):
+        await update.callback_query.edit_message_text("Interactive editor not available")
+    async def handle_interactive_smart_templates(update, context, params=None):
+        await update.callback_query.edit_message_text("Interactive editor not available")
+    async def handle_interactive_text_editing(update, context):
+        pass
+    def init_interactive_welcome_tables(): pass
+
+try:
     import welcome_editor
     from welcome_editor import (
         handle_welcome_editor_menu, handle_welcome_edit_text, handle_welcome_edit_buttons,
@@ -669,6 +694,13 @@ def callback_query_router(func):
                 "welcome_reset_execute": handle_welcome_reset_execute,
                 "welcome_save_changes": handle_welcome_save_changes,
                 
+                # Interactive welcome editor handlers
+                "interactive_welcome_editor": handle_interactive_welcome_editor,
+                "interactive_text_editor": handle_interactive_text_editor,
+                "interactive_button_designer": handle_interactive_button_designer,
+                "interactive_live_preview": handle_interactive_live_preview,
+                "interactive_smart_templates": handle_interactive_smart_templates,
+                
                 # Product price editor handlers
                 "product_price_editor_menu": handle_product_price_editor_menu,
                 "price_search_products": handle_price_search_products,
@@ -770,6 +802,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
         'awaiting_channel_info': handle_channel_info_message,
         'awaiting_welcome_text': handle_welcome_text_message,
+        'interactive_text_editing': handle_interactive_text_editing,
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
 

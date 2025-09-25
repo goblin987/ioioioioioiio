@@ -1293,6 +1293,13 @@ def init_db():
                 init_price_editor_tables()
             except ImportError:
                 logger.warning("Product price editor not available, skipping price editor table initialization")
+            
+            # Initialize interactive welcome editor tables
+            try:
+                from interactive_welcome_editor import init_interactive_welcome_tables
+                init_interactive_welcome_tables()
+            except ImportError:
+                logger.warning("Interactive welcome editor not available, skipping interactive welcome table initialization")
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (
