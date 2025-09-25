@@ -2305,7 +2305,13 @@ Buttons will appear as an inline keyboard below your ad message.
         """Handle incoming messages for configuration setup"""
         user_id = update.effective_user.id
         
+        # Debug logging
+        logger.info(f"🔍 MESSAGE HANDLER: User {user_id} sent message: '{update.message.text}'")
+        logger.info(f"🔍 SESSION CHECK: User {user_id} in sessions: {user_id in self.user_sessions}")
+        logger.info(f"🔍 ACTIVE SESSIONS: {list(self.user_sessions.keys())}")
+        
         if user_id not in self.user_sessions:
+            logger.info(f"🔍 NO SESSION: User {user_id} not in sessions, ignoring message")
             return
         
         session = self.user_sessions[user_id]
@@ -4112,6 +4118,11 @@ Send the session file now, or click Cancel to go back.
         """Start manual account setup (old 5-step process)"""
         user_id = query.from_user.id
         self.user_sessions[user_id] = {"step": "account_name", "account_data": {}}
+        
+        # Debug logging
+        logger.info(f"🔍 MANUAL SETUP: Created session for user {user_id}")
+        logger.info(f"🔍 SESSION DATA: {self.user_sessions[user_id]}")
+        logger.info(f"🔍 ALL SESSIONS: {list(self.user_sessions.keys())}")
         
         text = """**Manual Account Setup**
 
