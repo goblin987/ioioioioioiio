@@ -1447,9 +1447,28 @@ async def handle_vip_edit_name(update: Update, context: ContextTypes.DEFAULT_TYP
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("VIP name editing coming soon!", show_alert=False)
-    await query.edit_message_text("🔧 VIP name editing feature coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    # Set up state for name editing
+    context.user_data['state'] = 'awaiting_vip_name_edit'
+    context.user_data['vip_edit_data'] = {'level_id': level_id, 'field': 'name'}
+    
+    msg = f"✏️ **Edit VIP Level Name**\n\n"
+    msg += f"**Current Name:** {level['level_emoji']} {level['level_name']}\n\n"
+    msg += "Please enter the new name for this VIP level:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"vip_edit_level|{level_id}")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_vip_edit_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Edit VIP level emoji"""
@@ -1457,9 +1476,36 @@ async def handle_vip_edit_emoji(update: Update, context: ContextTypes.DEFAULT_TY
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("VIP emoji editing coming soon!", show_alert=False)
-    await query.edit_message_text("😀 VIP emoji editing feature coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    msg = f"😀 **Edit VIP Level Emoji**\n\n"
+    msg += f"**Current:** {level['level_emoji']} {level['level_name']}\n\n"
+    msg += "Select a new emoji for this VIP level:"
+    
+    # Popular VIP emojis
+    emojis = ["👑", "💎", "⭐", "🌟", "✨", "🏆", "🥇", "💫", "🎖️", "🔥", "💰", "🎯", "⚡", "🚀", "💝", "🎊"]
+    
+    keyboard = []
+    for i in range(0, len(emojis), 4):  # 4 emojis per row
+        row = []
+        for emoji in emojis[i:i+4]:
+            row.append(InlineKeyboardButton(emoji, callback_data=f"vip_set_emoji|{level_id}|{emoji}"))
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton("🔧 Custom Emoji", callback_data=f"vip_custom_emoji_edit|{level_id}")])
+    keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data=f"vip_edit_level|{level_id}")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_vip_edit_requirements(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Edit VIP level requirements"""
@@ -1467,9 +1513,33 @@ async def handle_vip_edit_requirements(update: Update, context: ContextTypes.DEF
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("VIP requirements editing coming soon!", show_alert=False)
-    await query.edit_message_text("🔢 VIP requirements editing feature coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    max_purchases = level['max_purchases'] if level['max_purchases'] else "∞"
+    
+    msg = f"🔢 **Edit VIP Level Requirements**\n\n"
+    msg += f"**Level:** {level['level_emoji']} {level['level_name']}\n"
+    msg += f"**Current Requirements:** {level['min_purchases']} - {max_purchases} purchases\n\n"
+    msg += "Choose what to modify:"
+    
+    keyboard = [
+        [InlineKeyboardButton("📈 Edit Minimum Purchases", callback_data=f"vip_edit_min_req|{level_id}")],
+        [InlineKeyboardButton("📊 Edit Maximum Purchases", callback_data=f"vip_edit_max_req|{level_id}")],
+        [InlineKeyboardButton("🎯 Quick Presets", callback_data=f"vip_req_presets|{level_id}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"vip_edit_level|{level_id}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_vip_edit_discount(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Edit VIP level discount"""
@@ -1477,9 +1547,37 @@ async def handle_vip_edit_discount(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("VIP discount editing coming soon!", show_alert=False)
-    await query.edit_message_text("💰 VIP discount editing feature coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    levels = VIPManager.get_all_vip_levels()
+    level = next((l for l in levels if l['id'] == level_id), None)
+    
+    if not level:
+        await query.answer("Level not found", show_alert=True)
+        return
+    
+    msg = f"💰 **Edit VIP Level Discount**\n\n"
+    msg += f"**Level:** {level['level_emoji']} {level['level_name']}\n"
+    msg += f"**Current Discount:** {level['discount_percentage']}%\n\n"
+    msg += "Select a new discount percentage:"
+    
+    discounts = [0, 5, 10, 15, 20, 25, 30, 35, 40, 50]
+    
+    keyboard = []
+    for i in range(0, len(discounts), 3):  # 3 discounts per row
+        row = []
+        for discount in discounts[i:i+3]:
+            emoji = "🆓" if discount == 0 else "💰"
+            row.append(InlineKeyboardButton(f"{emoji} {discount}%", callback_data=f"vip_set_discount|{level_id}|{discount}"))
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton("🔧 Custom Percentage", callback_data=f"vip_custom_discount|{level_id}")])
+    keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data=f"vip_edit_level|{level_id}")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_vip_edit_benefits(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Edit VIP level benefits"""
@@ -1497,9 +1595,53 @@ async def handle_vip_toggle_active(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("VIP toggle coming soon!", show_alert=False)
-    await query.edit_message_text("🔄 VIP toggle feature coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_manage_levels")]]))
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    
+    try:
+        # Toggle the active status
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get current status
+        c.execute("SELECT is_active, level_name, level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        level_data = c.fetchone()
+        
+        if not level_data:
+            await query.answer("Level not found", show_alert=True)
+            return
+        
+        new_status = not level_data['is_active']
+        
+        # Update status
+        c.execute("UPDATE vip_levels SET is_active = ? WHERE id = ?", (new_status, level_id))
+        conn.commit()
+        
+        status_text = "✅ Active" if new_status else "❌ Inactive"
+        action_text = "activated" if new_status else "deactivated"
+        
+        msg = f"🔄 **VIP Level Status Updated!**\n\n"
+        msg += f"**Level:** {level_data['level_emoji']} {level_data['level_name']}\n"
+        msg += f"**New Status:** {status_text}\n\n"
+        msg += f"The VIP level has been {action_text} successfully!"
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 Back to Level", callback_data=f"vip_edit_level|{level_id}")],
+            [InlineKeyboardButton("📊 Manage Levels", callback_data="vip_manage_levels")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer(f"Level {action_text}!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error toggling VIP level status: {e}")
+        await query.answer("Error updating status", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_vip_add_benefit(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Add benefit to VIP level"""
@@ -1550,5 +1692,208 @@ async def handle_vip_export_analytics(update: Update, context: ContextTypes.DEFA
     await query.answer("VIP export coming soon!", show_alert=False)
     await query.edit_message_text("📋 VIP analytics export feature coming soon!", 
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="vip_analytics")]]))
+
+# --- Additional VIP Edit Action Handlers ---
+
+async def handle_vip_set_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set emoji for VIP level"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    new_emoji = params[1]
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update emoji
+        c.execute("UPDATE vip_levels SET level_emoji = ? WHERE id = ?", (new_emoji, level_id))
+        conn.commit()
+        
+        # Get updated level info
+        c.execute("SELECT level_name FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        msg = f"😀 **Emoji Updated Successfully!**\n\n"
+        msg += f"**New Look:** {new_emoji} {level['level_name']}\n\n"
+        msg += "The VIP level emoji has been updated!"
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 Back to Level", callback_data=f"vip_edit_level|{level_id}")],
+            [InlineKeyboardButton("📊 Manage Levels", callback_data="vip_manage_levels")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer("Emoji updated!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error updating VIP emoji: {e}")
+        await query.answer("Error updating emoji", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_vip_set_discount(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set discount for VIP level"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    new_discount = float(params[1])
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update discount
+        c.execute("UPDATE vip_levels SET discount_percentage = ? WHERE id = ?", (new_discount, level_id))
+        conn.commit()
+        
+        # Get updated level info
+        c.execute("SELECT level_name, level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        msg = f"💰 **Discount Updated Successfully!**\n\n"
+        msg += f"**Level:** {level['level_emoji']} {level['level_name']}\n"
+        msg += f"**New Discount:** {new_discount}%\n\n"
+        msg += "The VIP level discount has been updated!"
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 Back to Level", callback_data=f"vip_edit_level|{level_id}")],
+            [InlineKeyboardButton("📊 Manage Levels", callback_data="vip_manage_levels")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer("Discount updated!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error updating VIP discount: {e}")
+        await query.answer("Error updating discount", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_vip_name_edit_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle VIP level name editing message"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get("state") != "awaiting_vip_name_edit":
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, "❌ Please enter a valid name.", parse_mode=None)
+        return
+    
+    new_name = update.message.text.strip()
+    
+    if len(new_name) < 2:
+        await send_message_with_retry(context.bot, chat_id, "❌ Name must be at least 2 characters long.", parse_mode=None)
+        return
+    
+    if len(new_name) > 50:
+        await send_message_with_retry(context.bot, chat_id, "❌ Name must be less than 50 characters.", parse_mode=None)
+        return
+    
+    edit_data = context.user_data.get('vip_edit_data', {})
+    level_id = edit_data.get('level_id')
+    
+    if not level_id:
+        await send_message_with_retry(context.bot, chat_id, "❌ Session expired. Please try again.", parse_mode=None)
+        return
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update name
+        c.execute("UPDATE vip_levels SET level_name = ? WHERE id = ?", (new_name, level_id))
+        conn.commit()
+        
+        # Get updated level info
+        c.execute("SELECT level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        # Clear state
+        context.user_data.pop('state', None)
+        context.user_data.pop('vip_edit_data', None)
+        
+        msg = f"✅ **VIP Level Name Updated!**\n\n"
+        msg += f"**New Name:** {level['level_emoji']} {new_name}\n\n"
+        msg += "The VIP level name has been successfully updated!"
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 Back to Level", callback_data=f"vip_edit_level|{level_id}")],
+            [InlineKeyboardButton("📊 Manage Levels", callback_data="vip_manage_levels")]
+        ]
+        
+        await send_message_with_retry(context.bot, chat_id, msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error updating VIP level name: {e}")
+        await send_message_with_retry(context.bot, chat_id, "❌ Error updating name. Please try again.", parse_mode=None)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_vip_confirm_delete(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm VIP level deletion"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid level ID", show_alert=True)
+        return
+    
+    level_id = int(params[0])
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get level info before deletion
+        c.execute("SELECT level_name, level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        level = c.fetchone()
+        
+        if not level:
+            await query.answer("Level not found", show_alert=True)
+            return
+        
+        # Delete the level
+        c.execute("DELETE FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("DELETE FROM vip_benefits WHERE level_id = ?", (level_id,))
+        conn.commit()
+        
+        msg = f"✅ **VIP Level Deleted Successfully!**\n\n"
+        msg += f"**Deleted:** {level['level_emoji']} {level['level_name']}\n\n"
+        msg += "The VIP level and all associated benefits have been removed."
+        
+        keyboard = [[InlineKeyboardButton("📊 Back to Levels", callback_data="vip_manage_levels")]]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer("Level deleted!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error deleting VIP level: {e}")
+        await query.answer("Error deleting level", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 # --- END OF FILE vip_system.py ---

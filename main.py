@@ -128,6 +128,8 @@ try:
     from stock_management import (
         handle_stock_management_menu, handle_stock_check_now, handle_stock_detailed_report,
         handle_stock_analytics, handle_stock_configure_thresholds, handle_stock_view_alerts,
+        handle_stock_export_analytics, handle_stock_set_global_thresholds,
+        handle_stock_configure_by_type, handle_stock_reset_thresholds, handle_stock_confirm_reset,
         check_low_stock_alerts
     )
 except ImportError:
@@ -214,6 +216,7 @@ try:
         handle_auto_ads_schedule_custom, handle_auto_ads_schedule_once,
         handle_auto_ads_select_channels, handle_auto_ads_add_channel,
         handle_auto_ads_remove_channel, handle_auto_ads_test_channels,
+        handle_auto_ads_toggle_channel, handle_channel_info_message,
         initialize_auto_ads_system
     )
 except ImportError:
@@ -252,6 +255,7 @@ try:
         handle_vip_edit_discount, handle_vip_edit_benefits, handle_vip_toggle_active,
         handle_vip_add_benefit, handle_vip_remove_benefit, handle_vip_confirm_delete,
         handle_vip_confirm_reset, handle_vip_export_analytics,
+        handle_vip_set_emoji, handle_vip_set_discount, handle_vip_name_edit_message,
         process_vip_level_up, VIPManager
     )
 except ImportError:
@@ -543,6 +547,7 @@ def callback_query_router(func):
                 "auto_ads_finalize_campaign": handle_auto_ads_finalize_campaign,
                 "auto_ads_campaign_type": handle_auto_ads_campaign_type,
                 "auto_ads_schedule_selection": handle_auto_ads_schedule_selection,
+                "auto_ads_toggle_channel": handle_auto_ads_toggle_channel,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -570,11 +575,18 @@ def callback_query_router(func):
                 "vip_confirm_delete": handle_vip_confirm_delete,
                 "vip_confirm_reset": handle_vip_confirm_reset,
                 "vip_export_analytics": handle_vip_export_analytics,
+                "vip_set_emoji": handle_vip_set_emoji,
+                "vip_set_discount": handle_vip_set_discount,
                 
                 # Missing stock management handlers
                 "stock_analytics": handle_stock_analytics,
                 "stock_configure_thresholds": handle_stock_configure_thresholds,
                 "stock_view_alerts": handle_stock_view_alerts,
+                "stock_export_analytics": handle_stock_export_analytics,
+                "stock_set_global_thresholds": handle_stock_set_global_thresholds,
+                "stock_configure_by_type": handle_stock_configure_by_type,
+                "stock_reset_thresholds": handle_stock_reset_thresholds,
+                "stock_confirm_reset": handle_stock_confirm_reset,
                 
                 # Missing A/B test handlers  
                 "ab_create_test": handle_ab_create_test,
@@ -663,8 +675,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_vip_min_purchases': handle_vip_min_purchases_message,
         'awaiting_vip_max_purchases': handle_vip_max_purchases_message,
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
+        'awaiting_vip_name_edit': handle_vip_name_edit_message,
         'awaiting_auto_ads_campaign_name': handle_auto_ads_campaign_name_message,
         'awaiting_auto_ads_campaign_message': handle_auto_ads_campaign_message_input,
+        'awaiting_channel_info': handle_channel_info_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,

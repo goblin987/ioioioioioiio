@@ -356,15 +356,120 @@ async def handle_stock_analytics(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("Access denied.", show_alert=True)
         return
     
-    msg = "📊 **Stock Analytics**\n\n"
-    msg += "Coming soon! Advanced stock analytics including:\n\n"
-    msg += "• Turnover rates by product type\n"
-    msg += "• Stock movement trends\n"
-    msg += "• Reorder recommendations\n"
-    msg += "• Seasonal patterns\n"
-    msg += "• Profit margins by category\n"
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get comprehensive analytics
+        # Total inventory value
+        c.execute("SELECT SUM(price * available) as total_value FROM products WHERE available > 0")
+        total_value_result = c.fetchone()
+        total_value = total_value_result['total_value'] if total_value_result['total_value'] else 0
+        
+        # Stock distribution by city
+        c.execute("""
+            SELECT city, 
+                   COUNT(*) as products,
+                   SUM(available) as total_stock,
+                   SUM(price * available) as city_value,
+                   AVG(price) as avg_price
+            FROM products 
+            WHERE available > 0
+            GROUP BY city 
+            ORDER BY total_stock DESC
+        """)
+        city_stats = c.fetchall()
+        
+        # Top selling product types (based on stock levels - lower stock = more sales)
+        c.execute("""
+            SELECT product_type, 
+                   COUNT(*) as variants,
+                   SUM(available) as current_stock,
+                   AVG(price) as avg_price,
+                   MIN(available) as lowest_stock
+            FROM products 
+            GROUP BY product_type 
+            ORDER BY current_stock ASC
+        """)
+        product_stats = c.fetchall()
+        
+        # Stock velocity indicators
+        c.execute("""
+            SELECT 
+                COUNT(CASE WHEN available = 0 THEN 1 END) as sold_out,
+                COUNT(CASE WHEN available <= 2 THEN 1 END) as critical,
+                COUNT(CASE WHEN available <= 5 THEN 1 END) as low_stock,
+                COUNT(CASE WHEN available > 20 THEN 1 END) as overstocked,
+                COUNT(*) as total_products
+            FROM products
+        """)
+        velocity_stats = c.fetchone()
+        
+        # Price analysis
+        c.execute("""
+            SELECT 
+                MIN(price) as min_price,
+                MAX(price) as max_price,
+                AVG(price) as avg_price,
+                COUNT(DISTINCT price) as price_points
+            FROM products
+            WHERE available > 0
+        """)
+        price_stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error getting stock analytics: {e}")
+        await query.answer("Error loading analytics", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
     
-    keyboard = [[InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]]
+    # Build comprehensive analytics message
+    msg = "📊 **Advanced Stock Analytics**\n\n"
+    
+    # Financial overview
+    msg += f"💰 **Financial Overview:**\n"
+    msg += f"• Total Inventory Value: ${total_value:,.2f}\n"
+    msg += f"• Price Range: ${price_stats['min_price']:.2f} - ${price_stats['max_price']:.2f}\n"
+    msg += f"• Average Product Price: ${price_stats['avg_price']:.2f}\n"
+    msg += f"• Unique Price Points: {price_stats['price_points']}\n\n"
+    
+    # Stock velocity analysis
+    msg += f"🚀 **Stock Velocity Analysis:**\n"
+    sold_out_pct = (velocity_stats['sold_out'] / velocity_stats['total_products']) * 100
+    critical_pct = (velocity_stats['critical'] / velocity_stats['total_products']) * 100
+    low_stock_pct = (velocity_stats['low_stock'] / velocity_stats['total_products']) * 100
+    overstocked_pct = (velocity_stats['overstocked'] / velocity_stats['total_products']) * 100
+    
+    msg += f"• 🔴 Sold Out: {velocity_stats['sold_out']} ({sold_out_pct:.1f}%)\n"
+    msg += f"• 🟠 Critical (≤2): {velocity_stats['critical']} ({critical_pct:.1f}%)\n"
+    msg += f"• 🟡 Low Stock (≤5): {velocity_stats['low_stock']} ({low_stock_pct:.1f}%)\n"
+    msg += f"• 🟢 Overstocked (>20): {velocity_stats['overstocked']} ({overstocked_pct:.1f}%)\n\n"
+    
+    # Top cities by inventory
+    if city_stats:
+        msg += f"🏙️ **Top Cities by Inventory:**\n"
+        for i, city in enumerate(city_stats[:3], 1):
+            msg += f"{i}. **{city['city']}**: {city['total_stock']} units (${city['city_value']:,.2f})\n"
+            msg += f"   {city['products']} products, avg ${city['avg_price']:.2f}\n"
+        msg += "\n"
+    
+    # Product performance insights
+    if product_stats:
+        msg += f"📈 **Product Performance (by stock velocity):**\n"
+        for i, product in enumerate(product_stats[:3], 1):
+            velocity_indicator = "🔥" if product['current_stock'] < 50 else "📦"
+            msg += f"{velocity_indicator} **{product['product_type']}**: {product['current_stock']} units left\n"
+            msg += f"   {product['variants']} variants, avg ${product['avg_price']:.2f}\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Export Analytics", callback_data="stock_export_analytics")],
+        [InlineKeyboardButton("🔄 Refresh Data", callback_data="stock_analytics")],
+        [InlineKeyboardButton("⚙️ Configure Alerts", callback_data="stock_configure_thresholds")],
+        [InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]
+    ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -377,13 +482,81 @@ async def handle_stock_configure_thresholds(update: Update, context: ContextType
         await query.answer("Access denied.", show_alert=True)
         return
     
-    msg = "⚙️ **Configure Stock Thresholds**\n\n"
-    msg += "Set custom alert thresholds for different product categories:\n\n"
-    msg += "• Default threshold: 5 units\n"
-    msg += "• Critical threshold: 2 units\n\n"
-    msg += "Coming soon: Per-product threshold configuration!"
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get current threshold settings by product type
+        c.execute("""
+            SELECT product_type,
+                   COUNT(*) as product_count,
+                   AVG(low_stock_threshold) as avg_threshold,
+                   MIN(low_stock_threshold) as min_threshold,
+                   MAX(low_stock_threshold) as max_threshold
+            FROM products 
+            GROUP BY product_type
+            ORDER BY product_count DESC
+        """)
+        threshold_stats = c.fetchall()
+        
+        # Get products with custom thresholds
+        c.execute("""
+            SELECT city, district, product_type, size, low_stock_threshold, available
+            FROM products 
+            WHERE low_stock_threshold != 5
+            ORDER BY low_stock_threshold DESC
+            LIMIT 10
+        """)
+        custom_thresholds = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error getting threshold configuration: {e}")
+        await query.answer("Error loading configuration", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
     
-    keyboard = [[InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]]
+    msg = "⚙️ **Stock Alert Threshold Configuration**\n\n"
+    
+    # Current global settings
+    msg += f"🌐 **Global Settings:**\n"
+    msg += f"• Default Low Stock Threshold: {LOW_STOCK_THRESHOLD} units\n"
+    msg += f"• Critical Stock Threshold: {CRITICAL_STOCK_THRESHOLD} units\n"
+    msg += f"• Alert Cooldown: {STOCK_ALERT_COOLDOWN_HOURS} hours\n\n"
+    
+    # Product type analysis
+    if threshold_stats:
+        msg += f"📊 **Threshold Analysis by Product Type:**\n"
+        for stat in threshold_stats[:5]:
+            avg_threshold = stat['avg_threshold'] if stat['avg_threshold'] else LOW_STOCK_THRESHOLD
+            msg += f"• **{stat['product_type']}**: {stat['product_count']} products\n"
+            msg += f"  Avg threshold: {avg_threshold:.1f} units ({stat['min_threshold']}-{stat['max_threshold']})\n"
+        msg += "\n"
+    
+    # Custom threshold products
+    if custom_thresholds:
+        msg += f"🔧 **Products with Custom Thresholds:**\n"
+        for product in custom_thresholds[:5]:
+            status_icon = "🔴" if product['available'] <= product['low_stock_threshold'] else "🟢"
+            msg += f"{status_icon} {product['city']} → {product['product_type']} {product['size']}\n"
+            msg += f"   Threshold: {product['low_stock_threshold']} | Current: {product['available']}\n"
+        
+        if len(custom_thresholds) > 5:
+            msg += f"... and {len(custom_thresholds) - 5} more\n"
+        msg += "\n"
+    
+    msg += f"🎛️ **Configuration Options:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("📈 Set Global Thresholds", callback_data="stock_set_global_thresholds")],
+        [InlineKeyboardButton("🏷️ Configure by Product Type", callback_data="stock_configure_by_type")],
+        [InlineKeyboardButton("🎯 Set Individual Thresholds", callback_data="stock_set_individual")],
+        [InlineKeyboardButton("⏰ Adjust Alert Frequency", callback_data="stock_configure_frequency")],
+        [InlineKeyboardButton("🔄 Reset to Defaults", callback_data="stock_reset_thresholds")],
+        [InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")]
+    ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -449,6 +622,190 @@ async def handle_stock_view_alerts(update: Update, context: ContextTypes.DEFAULT
                 InlineKeyboardButton("⬅️ Back to Stock Management", callback_data="stock_management_menu")
             ]])
         )
+    finally:
+        if conn:
+            conn.close()
+
+# --- Additional Stock Configuration Handlers ---
+
+async def handle_stock_export_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Export stock analytics data"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get comprehensive data for export
+        c.execute("""
+            SELECT city, district, product_type, size, price, available, 
+                   low_stock_threshold, stock_alerts_enabled,
+                   CASE 
+                       WHEN available = 0 THEN 'Out of Stock'
+                       WHEN available <= 2 THEN 'Critical'
+                       WHEN available <= 5 THEN 'Low Stock'
+                       WHEN available > 20 THEN 'Overstocked'
+                       ELSE 'Normal'
+                   END as stock_status
+            FROM products
+            ORDER BY city, district, product_type, available ASC
+        """)
+        
+        products = c.fetchall()
+        
+        if not products:
+            await query.answer("No products found for export", show_alert=True)
+            return
+        
+        # Create export summary
+        export_data = f"📋 **Stock Analytics Export**\n"
+        export_data += f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        export_data += f"Total Products: {len(products)}\n\n"
+        
+        # Group by status
+        status_counts = {}
+        for product in products:
+            status = product['stock_status']
+            status_counts[status] = status_counts.get(status, 0) + 1
+        
+        export_data += "📊 **Stock Status Summary:**\n"
+        for status, count in status_counts.items():
+            export_data += f"• {status}: {count} products\n"
+        
+        export_data += "\n🔍 **Critical Items Requiring Attention:**\n"
+        critical_items = [p for p in products if p['stock_status'] in ['Out of Stock', 'Critical']]
+        
+        for item in critical_items[:10]:
+            export_data += f"• {item['city']} → {item['product_type']} {item['size']}\n"
+            export_data += f"  Stock: {item['available']} | Price: ${item['price']:.2f}\n"
+        
+        if len(critical_items) > 10:
+            export_data += f"... and {len(critical_items) - 10} more critical items\n"
+        
+        # Send as a long message (Telegram supports up to 4096 characters)
+        keyboard = [[InlineKeyboardButton("⬅️ Back to Analytics", callback_data="stock_analytics")]]
+        await query.edit_message_text(export_data, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error exporting stock analytics: {e}")
+        await query.answer("Export failed", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_stock_set_global_thresholds(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set global stock thresholds"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📈 **Set Global Stock Thresholds**\n\n"
+    msg += f"Current Settings:\n"
+    msg += f"• Low Stock Threshold: {LOW_STOCK_THRESHOLD} units\n"
+    msg += f"• Critical Stock Threshold: {CRITICAL_STOCK_THRESHOLD} units\n\n"
+    msg += "Choose new threshold levels:\n\n"
+    msg += "⚠️ This will apply to ALL products without custom thresholds."
+    
+    keyboard = [
+        [InlineKeyboardButton("📊 Low: 3, Critical: 1", callback_data="stock_global_3_1")],
+        [InlineKeyboardButton("📊 Low: 5, Critical: 2", callback_data="stock_global_5_2")],
+        [InlineKeyboardButton("📊 Low: 10, Critical: 3", callback_data="stock_global_10_3")],
+        [InlineKeyboardButton("📊 Low: 15, Critical: 5", callback_data="stock_global_15_5")],
+        [InlineKeyboardButton("🔧 Custom Settings", callback_data="stock_custom_global")],
+        [InlineKeyboardButton("⬅️ Back", callback_data="stock_configure_thresholds")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_stock_configure_by_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Configure thresholds by product type"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get product types
+        c.execute("""
+            SELECT product_type, COUNT(*) as count, AVG(available) as avg_stock
+            FROM products 
+            GROUP BY product_type 
+            ORDER BY count DESC
+        """)
+        product_types = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error getting product types: {e}")
+        await query.answer("Error loading product types", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "🏷️ **Configure Thresholds by Product Type**\n\n"
+    msg += "Select a product type to configure custom thresholds:\n\n"
+    
+    keyboard = []
+    for ptype in product_types[:10]:  # Show top 10 product types
+        avg_stock = ptype['avg_stock'] if ptype['avg_stock'] else 0
+        button_text = f"{ptype['product_type']} ({ptype['count']} items, avg: {avg_stock:.1f})"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"stock_type_{ptype['product_type']}")])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="stock_configure_thresholds")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_stock_reset_thresholds(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Reset all thresholds to default"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🔄 **Reset Stock Thresholds**\n\n"
+    msg += "⚠️ **WARNING**: This will reset ALL custom thresholds to default values:\n\n"
+    msg += f"• Low Stock Threshold: {LOW_STOCK_THRESHOLD} units\n"
+    msg += f"• Critical Stock Threshold: {CRITICAL_STOCK_THRESHOLD} units\n\n"
+    msg += "This action cannot be undone. Are you sure?"
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Yes, Reset All", callback_data="stock_confirm_reset")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="stock_configure_thresholds")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_stock_confirm_reset(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm and execute threshold reset"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Reset all thresholds to default
+        c.execute("UPDATE products SET low_stock_threshold = ?", (LOW_STOCK_THRESHOLD,))
+        updated_count = c.rowcount
+        conn.commit()
+        
+        msg = f"✅ **Thresholds Reset Successfully!**\n\n"
+        msg += f"Updated {updated_count} products to default threshold of {LOW_STOCK_THRESHOLD} units.\n\n"
+        msg += "All custom thresholds have been cleared."
+        
+        keyboard = [[InlineKeyboardButton("⬅️ Back to Configuration", callback_data="stock_configure_thresholds")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error resetting thresholds: {e}")
+        await query.answer("Reset failed", show_alert=True)
     finally:
         if conn:
             conn.close()
