@@ -196,7 +196,8 @@ try:
         handle_welcome_template_ecommerce, handle_welcome_template_gaming, handle_welcome_auto_arrange, 
         handle_welcome_preview_buttons, handle_welcome_move_button, handle_welcome_toggle_buttons,
         handle_welcome_edit_button_text, handle_welcome_use_template, handle_welcome_toggle_button,
-        handle_welcome_set_position, init_welcome_tables, get_active_welcome_message, get_start_menu_buttons
+        handle_welcome_set_position, handle_welcome_reset_confirm, handle_welcome_reset_execute,
+        handle_welcome_save_changes, init_welcome_tables, get_active_welcome_message, get_start_menu_buttons
     )
 except ImportError:
     import logging
@@ -213,6 +214,12 @@ except ImportError:
     async def handle_welcome_text_message(update, context):
         pass
     async def handle_welcome_preview(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_reset_confirm(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_reset_execute(update, context, params=None):
+        await update.callback_query.edit_message_text("Welcome editor not available")
+    async def handle_welcome_save_changes(update, context, params=None):
         await update.callback_query.edit_message_text("Welcome editor not available")
     def init_welcome_tables(): pass
     def get_active_welcome_message(): return "Welcome!"
@@ -658,6 +665,9 @@ def callback_query_router(func):
                 "welcome_use_template": handle_welcome_use_template,
                 "welcome_toggle_button": handle_welcome_toggle_button,
                 "welcome_set_position": handle_welcome_set_position,
+                "welcome_reset_confirm": handle_welcome_reset_confirm,
+                "welcome_reset_execute": handle_welcome_reset_execute,
+                "welcome_save_changes": handle_welcome_save_changes,
                 
                 # Product price editor handlers
                 "product_price_editor_menu": handle_product_price_editor_menu,
