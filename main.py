@@ -286,7 +286,9 @@ try:
         handle_testforwarder_bump_service, handle_testforwarder_my_configs,
         handle_testforwarder_add_forwarding, handle_testforwarder_help,
         handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
-        handle_testforwarder_edit_config, handle_testforwarder_delete_config
+        handle_testforwarder_edit_config, handle_testforwarder_delete_config,
+        handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
+        handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign
     )
 except ImportError:
     import logging
@@ -319,6 +321,14 @@ except ImportError:
     async def handle_testforwarder_edit_config(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_delete_config(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_add_campaign(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_my_campaigns(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_edit_campaign(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_delete_campaign(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
 
 try:
@@ -625,6 +635,10 @@ def callback_query_router(func):
     "main_menu": handle_testforwarder_menu,
     "edit_config": handle_testforwarder_edit_config,
     "delete_config": handle_testforwarder_delete_config,
+    "add_campaign": handle_testforwarder_add_campaign,
+    "my_campaigns": handle_testforwarder_my_campaigns,
+    "edit_campaign": handle_testforwarder_edit_campaign,
+    "delete_campaign": handle_testforwarder_delete_campaign,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,

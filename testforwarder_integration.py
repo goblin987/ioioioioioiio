@@ -170,9 +170,12 @@ class TgcfBot:
         msg += "• Target management\n"
         msg += "• Performance monitoring\n"
         msg += "• Error handling\n\n"
-        msg += "This feature is coming soon!"
+        msg += "**🎯 Ready to Start?**\n"
+        msg += "Create campaigns and start sending automated ads!"
         
         keyboard = [
+            [InlineKeyboardButton("➕ Create Campaign", callback_data="add_campaign")],
+            [InlineKeyboardButton("📋 My Campaigns", callback_data="my_campaigns")],
             [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
         ]
         
@@ -248,6 +251,80 @@ class TgcfBot:
         keyboard = [
             [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
         ]
+        
+        await query.edit_message_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    async def start_add_campaign(self, query):
+        """Start campaign creation process"""
+        user_id = query.from_user.id
+        
+        # Check if user has accounts
+        accounts = self.db.get_user_accounts(user_id)
+        if not accounts:
+            await query.edit_message_text(
+                "❌ **No Accounts Found**\n\nYou need to add at least one account before creating campaigns.\n\nPlease add an account first in Manage Accounts.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("👥 Manage Accounts", callback_data="manage_accounts")],
+                    [InlineKeyboardButton("⬅️ Back to Bump Service", callback_data="bump_service")]
+                ])
+            )
+            return
+        
+        # Start campaign creation
+        self.user_sessions[user_id] = {"step": "campaign_name", "campaign_data": {}}
+        
+        msg = "🚀 **Create New Campaign**\n\n"
+        msg += "**Step 1/6: Campaign Name**\n\n"
+        msg += "Please enter a name for this campaign (e.g., 'Product Launch', 'Weekly Promo', 'Holiday Sale')."
+        
+        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="bump_service")]]
+        
+        await query.edit_message_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    async def show_my_campaigns(self, query):
+        """Show user's campaigns"""
+        user_id = query.from_user.id
+        
+        # Get user's campaigns from database
+        campaigns = self.db.get_user_campaigns(user_id)
+        
+        msg = "📋 **My Campaigns**\n\n"
+        
+        if campaigns:
+            msg += f"**📋 Your Campaigns ({len(campaigns)}):**\n\n"
+            for campaign in campaigns:
+                status = "✅ Active" if campaign.get('is_active', True) else "❌ Inactive"
+                msg += f"**{campaign['campaign_name']}**\n"
+                msg += f"📊 Status: {status}\n"
+                msg += f"📅 Schedule: {campaign.get('schedule_type', 'Once')}\n"
+                msg += f"🎯 Targets: {len(campaign.get('target_chats', []))} chat(s)\n\n"
+        else:
+            msg += "📭 **No campaigns found**\n\n"
+            msg += "**🚀 Get Started:**\n"
+            msg += "1. Create your first campaign\n"
+            msg += "2. Set up your target channels\n"
+            msg += "3. Start sending automated ads!\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("➕ Create New Campaign", callback_data="add_campaign")],
+        ]
+        
+        if campaigns:
+            keyboard.extend([
+                [InlineKeyboardButton("✏️ Edit Campaign", callback_data="edit_campaign")],
+                [InlineKeyboardButton("🗑️ Delete Campaign", callback_data="delete_campaign")]
+            ])
+        
+        keyboard.append([InlineKeyboardButton("⬅️ Back to Bump Service", callback_data="bump_service")])
         
         await query.edit_message_text(
             msg,
@@ -635,3 +712,33 @@ async def handle_testforwarder_delete_config(update: Update, context: ContextTyp
     if not query:
         return
     await query.edit_message_text("🗑️ **Delete Configuration**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_add_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle add campaign callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_testforwarder_bot()
+    await bot.start_add_campaign(query)
+
+async def handle_testforwarder_my_campaigns(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle my campaigns callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_testforwarder_bot()
+    await bot.show_my_campaigns(query)
+
+async def handle_testforwarder_edit_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle edit campaign callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("✏️ **Edit Campaign**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
+
+async def handle_testforwarder_delete_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete campaign callback"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.edit_message_text("🗑️ **Delete Campaign**\n\nThis feature is coming soon!", parse_mode=ParseMode.MARKDOWN)
