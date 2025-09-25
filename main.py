@@ -281,44 +281,33 @@ except ImportError:
 try:
     import auto_ads_system
     from auto_ads_system import (
-        handle_auto_ads_menu, handle_auto_ads_view_campaigns, handle_auto_ads_create_campaign,
-        handle_auto_ads_campaign_type, handle_auto_ads_campaign_name_message,
-        handle_auto_ads_campaign_message_input, handle_auto_ads_schedule_selection,
-        handle_auto_ads_finalize_campaign, handle_auto_ads_manage_channels,
-        handle_auto_ads_analytics, handle_auto_ads_settings,
-        handle_auto_ads_type_promotional, handle_auto_ads_type_product_launch,
-        handle_auto_ads_type_discount, handle_auto_ads_type_announcement, handle_auto_ads_type_custom,
-        handle_auto_ads_schedule_hourly, handle_auto_ads_schedule_daily,
-        handle_auto_ads_schedule_every_3_hours, handle_auto_ads_schedule_every_6_hours,
-        handle_auto_ads_schedule_custom, handle_auto_ads_schedule_once,
-        handle_auto_ads_select_channels, handle_auto_ads_add_channel,
-        handle_auto_ads_remove_channel, handle_auto_ads_test_channels,
-        handle_auto_ads_toggle_channel, handle_channel_info_message,
-        initialize_auto_ads_system
+        handle_enhanced_auto_ads_menu, handle_enhanced_manage_accounts, handle_enhanced_upload_session,
+        handle_enhanced_manage_channels, handle_enhanced_quick_add_channel, handle_enhanced_session_file_upload,
+        handle_enhanced_account_details, handle_enhanced_channel_link, init_enhanced_auto_ads_tables,
+        enhanced_telethon_manager
     )
 except ImportError:
     import logging
     logging.getLogger(__name__).error("Could not import auto_ads_system module")
-    # Create dummy handlers
-    async def handle_auto_ads_menu(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    async def handle_auto_ads_view_campaigns(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    async def handle_auto_ads_create_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    async def handle_auto_ads_campaign_type(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    async def handle_auto_ads_campaign_name_message(update, context):
+    # Create dummy handlers for enhanced auto ads
+    async def handle_enhanced_auto_ads_menu(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_enhanced_manage_accounts(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_enhanced_upload_session(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_enhanced_manage_channels(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_enhanced_quick_add_channel(update, context, params=None):
+        await update.callback_query.edit_message_text("Enhanced auto ads not available")
+    async def handle_enhanced_session_file_upload(update, context):
         pass
-    async def handle_auto_ads_campaign_message_input(update, context):
+    async def handle_enhanced_account_details(update, context):
         pass
-    async def handle_auto_ads_schedule_selection(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    async def handle_auto_ads_finalize_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    async def handle_auto_ads_manage_channels(update, context, params=None):
-        await update.callback_query.edit_message_text("Auto ads system not available")
-    def initialize_auto_ads_system(bot): pass
+    async def handle_enhanced_channel_link(update, context):
+        pass
+    def init_enhanced_auto_ads_tables(): pass
+    enhanced_telethon_manager = None
 
 try:
     import vip_system
@@ -603,11 +592,13 @@ def callback_query_router(func):
                 "referral_admin_settings": handle_referral_admin_settings,
                 "referral_admin_reset": handle_referral_admin_reset,
                 
-                # Auto ads system handlers
-                "auto_ads_menu": handle_auto_ads_menu,
-                "auto_ads_view_campaigns": handle_auto_ads_view_campaigns,
-                "auto_ads_create_campaign": handle_auto_ads_create_campaign,
-                "auto_ads_analytics": handle_auto_ads_analytics,
+                # Enhanced Auto ads system handlers
+                "auto_ads_menu": handle_enhanced_auto_ads_menu,
+                "enhanced_auto_ads_menu": handle_enhanced_auto_ads_menu,
+                "enhanced_manage_accounts": handle_enhanced_manage_accounts,
+                "enhanced_upload_session": handle_enhanced_upload_session,
+                "enhanced_manage_channels": handle_enhanced_manage_channels,
+                "enhanced_quick_add_channel": handle_enhanced_quick_add_channel,
                 "auto_ads_settings": handle_auto_ads_settings,
                 "auto_ads_manage_channels": handle_auto_ads_manage_channels,
                 "auto_ads_type_promotional": handle_auto_ads_type_promotional,
@@ -808,6 +799,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'interactive_text_editing': handle_interactive_text_editing,
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
+        
+        # Enhanced auto ads message handlers
+        'awaiting_session_file': handle_enhanced_session_file_upload,
+        'awaiting_account_details': handle_enhanced_account_details,
+        'awaiting_channel_link': handle_enhanced_channel_link,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,
