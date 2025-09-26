@@ -543,7 +543,7 @@ class TgcfBot:
                 return False
             
             # Execute campaign
-            success = await self.bump_service.execute_campaign_async(campaign_id)
+            success = await self.bump_service._execute_campaign_async(campaign_id)
             return success
             
         except Exception as e:
@@ -1353,7 +1353,14 @@ async def handle_testforwarder_run_campaign(update: Update, context: ContextType
         return
     
     user_id = query.from_user.id
-    campaign_id = int(params['campaign_id'])
+    
+    # Extract campaign ID from callback data
+    callback_data = query.data
+    if '_' in callback_data:
+        campaign_id = int(callback_data.split('_')[-1])
+    else:
+        # Fallback to params if available
+        campaign_id = int(params.get('campaign_id', 1))
     
     bot = get_testforwarder_bot()
     

@@ -659,6 +659,11 @@ def callback_query_router(func):
     "select_account_4": handle_testforwarder_select_account,
     "select_account_5": handle_testforwarder_select_account,
     "run_campaign": handle_testforwarder_run_campaign,
+    "run_campaign_1": handle_testforwarder_run_campaign,
+    "run_campaign_2": handle_testforwarder_run_campaign,
+    "run_campaign_3": handle_testforwarder_run_campaign,
+    "run_campaign_4": handle_testforwarder_run_campaign,
+    "run_campaign_5": handle_testforwarder_run_campaign,
     "select_forwarding_account": handle_testforwarder_select_forwarding_account,
     "upload_session": handle_testforwarder_upload_session,
                 
