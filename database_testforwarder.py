@@ -20,20 +20,23 @@ Version: 1.0.0
 import sqlite3
 import json
 import os
+import logging
 from typing import Dict, List, Optional
 from config_testforwarder import Config
 
+logger = logging.getLogger(__name__)
+
 class Database:
     def __init__(self, db_path: str = None):
-        # Use persistent disk if available, otherwise local storage
+        # Use the same database path as the main bot
         if db_path is None:
-            # Check for Render persistent disk mount
-            if os.path.exists('/data'):
-                self.db_path = '/data/tgcf.db'
-            else:
-                self.db_path = 'tgcf.db'
+            from config_testforwarder import Config
+            self.db_path = Config.DATABASE_PATH
         else:
             self.db_path = db_path
+        
+        # Debug logging
+        logger.info(f"Testforwarder Database initialized with path: {self.db_path}")
         
         # Ensure directory exists (only if path contains directory)
         db_dir = os.path.dirname(self.db_path)
@@ -166,6 +169,8 @@ class Database:
     
     def get_user_accounts(self, user_id: int) -> List[Dict]:
         """Get all Telegram accounts for a user"""
+        logger.info(f"Getting accounts for user {user_id}")
+        
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -174,7 +179,8 @@ class Database:
                 ORDER BY created_at DESC
             ''', (user_id,))
             rows = cursor.fetchall()
-            return [{
+            
+            accounts = [{
                 'id': row[0],
                 'user_id': row[1],
                 'account_name': row[2],
@@ -185,6 +191,9 @@ class Database:
                 'is_active': row[7],
                 'created_at': row[8]
             } for row in rows]
+            
+            logger.info(f"Found {len(accounts)} accounts for user {user_id}")
+            return accounts
     
     def get_account(self, account_id: int) -> Optional[Dict]:
         """Get account by ID with retry logic for database locks"""
@@ -494,6 +503,8 @@ class Database:
         """Add a new Telegram account to the database"""
         from datetime import datetime
         
+        logger.info(f"Adding account for user {user_id}: {account_name} ({phone_number})")
+        
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -507,6 +518,7 @@ class Database:
             ))
             account_id = cursor.lastrowid
             conn.commit()
+            logger.info(f"Account added successfully with ID: {account_id}")
             return account_id
     
     def get_account_by_id(self, account_id: int) -> Optional[Dict]:
