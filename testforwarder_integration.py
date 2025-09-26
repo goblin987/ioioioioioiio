@@ -1422,18 +1422,42 @@ async def handle_testforwarder_select_account(update: Update, context: ContextTy
         return
     
     user_id = query.from_user.id
-    account_id = int(params['account_id'])
+    
+    # Extract account ID from callback data
+    callback_data = query.data
+    if '_' in callback_data:
+        account_id = int(callback_data.split('_')[-1])
+    else:
+        # Fallback to params if available
+        account_id = int(params.get('account_id', 1))
     
     bot = get_testforwarder_bot()
     campaign_id = await bot.complete_campaign_creation(user_id, account_id)
     
     if campaign_id:
+        # Get campaign details for display
+        session = bot.user_sessions.get(user_id, {})
+        campaign_data = session.get('campaign_data', {})
+        
+        # Get account details
+        account = bot.db.get_account_by_id(account_id)
+        account_name = account.get('account_name', 'Unknown') if account else 'Unknown'
+        account_phone = account.get('phone_number', 'Unknown') if account else 'Unknown'
+        
         await query.edit_message_text(
-            f"🎉 **Campaign Created Successfully!**\n\n**Campaign ID:** {campaign_id}\n\nYour campaign has been saved and is ready to run!",
+            f"🎉 **Campaign Created Successfully!**\n\n"
+            f"**Campaign:** {campaign_data.get('campaign_name', 'Unknown')}\n"
+            f"**Account:** {account_name} ({account_phone})\n"
+            f"**Schedule:** {campaign_data.get('schedule_type', 'Unknown')} at {campaign_data.get('schedule_time', 'Unknown')}\n"
+            f"**Targets:** {len(campaign_data.get('target_chats', []))} chat(s)\n\n"
+            f"⏳ **Campaign created and ready to start**\n\n"
+            f"🚀 Click 'Start Campaign' to send the first message\n"
+            f"🗓️ Then messages will repeat according to your schedule",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("📋 View My Campaigns", callback_data="my_campaigns")],
-                [InlineKeyboardButton("⬅️ Back to Bump Service", callback_data="bump_service")]
+                [InlineKeyboardButton("🚀 Start Campaign", callback_data=f"run_campaign_{campaign_id}")],
+                [InlineKeyboardButton("🗂️ My Campaigns", callback_data="my_campaigns")],
+                [InlineKeyboardButton("⬅️ Back Bump Service", callback_data="bump_service")]
             ])
         )
     else:

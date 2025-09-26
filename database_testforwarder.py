@@ -508,3 +508,29 @@ class Database:
             account_id = cursor.lastrowid
             conn.commit()
             return account_id
+    
+    def get_account_by_id(self, account_id: int) -> Optional[Dict]:
+        """Get account by ID"""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, user_id, account_name, phone_number, api_id, api_hash, 
+                       session_string, is_active, created_at
+                FROM telegram_accounts 
+                WHERE id = ?
+            ''', (account_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'user_id': row[1],
+                    'account_name': row[2],
+                    'phone_number': row[3],
+                    'api_id': row[4],
+                    'api_hash': row[5],
+                    'session_string': row[6],
+                    'is_active': bool(row[7]),
+                    'created_at': row[8]
+                }
+            return None
