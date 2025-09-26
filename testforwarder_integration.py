@@ -148,10 +148,10 @@ class TgcfBot:
             msg += "2. Configure API credentials\n"
             msg += "3. Start creating campaigns!\n\n"
         
-                keyboard = [
-                    [InlineKeyboardButton("➕ Add Account Manually", callback_data="manual_setup")],
-                    [InlineKeyboardButton("📁 Upload Session File", callback_data="upload_session")],
-                ]
+        keyboard = [
+            [InlineKeyboardButton("➕ Add Account Manually", callback_data="manual_setup")],
+            [InlineKeyboardButton("📁 Upload Session File", callback_data="upload_session")],
+        ]
         
         if accounts:
             keyboard.extend([
