@@ -1314,6 +1314,15 @@ def init_db():
                 init_referral_tables()
             except ImportError:
                 logger.warning("Referral system not available, skipping referral table initialization")
+            
+            # Initialize testforwarder database tables
+            try:
+                from database_testforwarder import Database
+                testforwarder_db = Database()
+                testforwarder_db.init_database()
+                logger.info("Testforwarder database tables initialized successfully")
+            except ImportError:
+                logger.warning("Testforwarder database not available, skipping testforwarder table initialization")
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (
