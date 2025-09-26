@@ -317,9 +317,10 @@ class TgcfBot:
         # Start campaign creation
         self.user_sessions[user_id] = {"step": "campaign_name", "campaign_data": {}}
         
-        msg = "🚀 **Create New Campaign**\n\n"
+        msg = "➕ **Create New Ad Campaign**\n\n"
         msg += "**Step 1/6: Campaign Name**\n\n"
-        msg += "Please enter a name for this campaign (e.g., 'Product Launch', 'Weekly Promo', 'Holiday Sale')."
+        msg += "Please send me a name for this ad campaign (e.g., \"Daily Product Promo\", \"Weekend Sale\").\n\n"
+        msg += "This name will help you identify the campaign in your dashboard."
         
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="bump_service")]]
         
@@ -891,31 +892,8 @@ This name will help you identify the account when managing campaigns."""
                 )
             
             elif session['step'] == 'schedule_type':
-                schedule_type = message_text.lower()
-                if schedule_type not in ['once', 'daily', 'weekly', 'custom']:
-                    await update.message.reply_text(
-                        "❌ **Invalid schedule type**\n\nPlease enter one of: once, daily, weekly, custom",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                    return
-                
-                session['campaign_data']['schedule_type'] = schedule_type
-                
-                if schedule_type == 'once':
-                    session['campaign_data']['schedule_time'] = 'immediate'
-                    session['step'] = 'account_selection'
-                    
-                    await update.message.reply_text(
-                        "✅ **Schedule set to immediate!**\n\n**Step 5/6: Account Selection**\n\nWhich account should send this campaign?",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                else:
-                    session['step'] = 'schedule_time'
-                    
-                    await update.message.reply_text(
-                        f"✅ **Schedule type set to {schedule_type}!**\n\n**Step 5/6: Schedule Time**\n\nWhat time should the campaign run? (Format: HH:MM, e.g., 14:30)",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
+                # This step is handled by inline buttons, not text input
+                pass
             
             elif session['step'] == 'schedule_time':
                 import re
@@ -1451,7 +1429,149 @@ async def handle_testforwarder_add_buttons_no(update: Update, context: ContextTy
         session['step'] = 'target_selection'
         
         await query.edit_message_text(
-            "✅ **No buttons added!**\n\n**Step 4/6: Target Selection**\n\nHow would you like to select target channels?\n\n• Send channel links (one per line)\n• Or type 'all' to target all your configured channels",
+            "🎯 **Step 3/6: Target Chats**\n\n**Choose how to select your target chats:**\n\n**🌐 Send to All Worker Groups**\n• Automatically targets all groups your worker account is in\n• Smart detection of group chats\n• Excludes private chats and channels\n• Perfect for broad campaigns\n\n**🎯 Specify Target Chats**\n• Send specific channel/group links\n• Custom audience selection",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🌐 Send to All Worker Groups", callback_data="target_all_groups")],
+                [InlineKeyboardButton("🎯 Specify Target Chats", callback_data="target_specific_chats")],
+                [InlineKeyboardButton("🔙 Back to Buttons", callback_data="back_to_button_choice")],
+                [InlineKeyboardButton("❌ Cancel Campaign", callback_data="cancel_campaign")]
+            ])
+        )
+
+async def handle_testforwarder_target_all_groups(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle target all groups callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['campaign_data']['target_chats'] = ['all_groups']
+        session['step'] = 'schedule_type'
+        
+        await query.edit_message_text(
+            "✅ **Target set to all worker groups!**\n\n**Step 4/6: Schedule Type**\n\n**How often should this campaign run?**",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📅 Daily", callback_data="schedule_daily")],
+                [InlineKeyboardButton("📊 Weekly", callback_data="schedule_weekly")],
+                [InlineKeyboardButton("⏰ Hourly", callback_data="schedule_hourly")],
+                [InlineKeyboardButton("🔧 Custom", callback_data="schedule_custom")],
+                [InlineKeyboardButton("🔙 Back to Targets", callback_data="back_to_target_selection")],
+                [InlineKeyboardButton("❌ Cancel Campaign", callback_data="cancel_campaign")]
+            ])
+        )
+
+async def handle_testforwarder_target_specific_chats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle target specific chats callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['step'] = 'target_chat_input'
+        
+        await query.edit_message_text(
+            "🎯 **Specify Target Chats**\n\nPlease send me the channel/group links where you want to post your ads.\n\n**Format:**\n• One link per line\n• Use @channelname or https://t.me/channelname\n\n**Examples:**\n`@mychannel`\n`https://t.me/mychannel`\n`@group1`\n`@group2`\n\n**When finished, type 'done' or 'finish'**",
+            parse_mode=ParseMode.MARKDOWN
+        )
+
+async def handle_testforwarder_schedule_daily(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle daily schedule callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['campaign_data']['schedule_type'] = 'daily'
+        session['step'] = 'schedule_time'
+        
+        await query.edit_message_text(
+            "✅ **Daily schedule selected!**\n\n**Step 5/6: Schedule Time**\n\nPlease send me the time when ads should be posted daily.\n\n**Format:** HH:MM (24-hour format)\n**Example:** 14:30 (for 2:30 PM)",
+            parse_mode=ParseMode.MARKDOWN
+        )
+
+async def handle_testforwarder_schedule_weekly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle weekly schedule callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['campaign_data']['schedule_type'] = 'weekly'
+        session['step'] = 'schedule_time'
+        
+        await query.edit_message_text(
+            "✅ **Weekly schedule selected!**\n\n**Step 5/6: Schedule Time**\n\nPlease send me the day and time when ads should be posted weekly.\n\n**Format:** Day HH:MM\n**Example:** Monday 14:30",
+            parse_mode=ParseMode.MARKDOWN
+        )
+
+async def handle_testforwarder_schedule_hourly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle hourly schedule callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['campaign_data']['schedule_type'] = 'hourly'
+        session['campaign_data']['schedule_time'] = 'every hour'
+        session['step'] = 'account_selection'
+        
+        # Show account selection
+        accounts = bot.db.get_user_accounts(user_id)
+        if not accounts:
+            await query.edit_message_text(
+                "❌ **No Accounts Found**\n\nYou need to add at least one account before creating campaigns.\n\nPlease add an account first in Manage Accounts.",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
+                ])
+            )
+            return
+        
+        reply_markup = await bot.get_account_selection_keyboard(user_id)
+        await query.edit_message_text(
+            "✅ **Hourly schedule set!**\n\n**Step 5/6: Select Account**\n\nWhich Telegram account should be used to post these ads?",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+
+async def handle_testforwarder_schedule_custom(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle custom schedule callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['campaign_data']['schedule_type'] = 'custom'
+        session['step'] = 'schedule_time'
+        
+        await query.edit_message_text(
+            "✅ **Custom schedule selected!**\n\n**Step 5/6: Custom Schedule**\n\nPlease send me your custom schedule.\n\n**Examples:**\n• every 4 hours\n• every 30 minutes\n• every 2 days\n• every 12 hours\n• every 1 day",
             parse_mode=ParseMode.MARKDOWN
         )
 

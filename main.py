@@ -292,6 +292,9 @@ try:
         handle_testforwarder_select_account, handle_testforwarder_run_campaign,
         handle_testforwarder_select_forwarding_account, handle_testforwarder_upload_session,
         handle_testforwarder_add_buttons_yes, handle_testforwarder_add_buttons_no,
+        handle_testforwarder_target_all_groups, handle_testforwarder_target_specific_chats,
+        handle_testforwarder_schedule_daily, handle_testforwarder_schedule_weekly,
+        handle_testforwarder_schedule_hourly, handle_testforwarder_schedule_custom,
         get_testforwarder_bot
     )
 except ImportError:
@@ -347,6 +350,18 @@ except ImportError:
     async def handle_testforwarder_add_buttons_yes(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_add_buttons_no(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_target_all_groups(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_target_specific_chats(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_schedule_daily(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_schedule_weekly(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_schedule_hourly(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_schedule_custom(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     def get_testforwarder_bot():
         return None
@@ -676,6 +691,12 @@ def callback_query_router(func):
     "upload_session": handle_testforwarder_upload_session,
     "add_buttons_yes": handle_testforwarder_add_buttons_yes,
     "add_buttons_no": handle_testforwarder_add_buttons_no,
+    "target_all_groups": handle_testforwarder_target_all_groups,
+    "target_specific_chats": handle_testforwarder_target_specific_chats,
+    "schedule_daily": handle_testforwarder_schedule_daily,
+    "schedule_weekly": handle_testforwarder_schedule_weekly,
+    "schedule_hourly": handle_testforwarder_schedule_hourly,
+    "schedule_custom": handle_testforwarder_schedule_custom,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -1060,7 +1081,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
