@@ -103,8 +103,8 @@ class TgcfBot:
             [InlineKeyboardButton("📢 Bump Service", callback_data="bump_service")],
             [InlineKeyboardButton("📋 My Configurations", callback_data="my_configs")],
             [InlineKeyboardButton("➕ Add New Forwarding", callback_data="add_forwarding")],
-            [InlineKeyboardButton("❓ Help", callback_data="help")],
-            [InlineKeyboardButton("⬅️ Back to Main Bot", callback_data="admin_menu")]
+            [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
+            [InlineKeyboardButton("❓ Help", callback_data="help")]
         ]
         return InlineKeyboardMarkup(keyboard)
 
@@ -236,6 +236,35 @@ class TgcfBot:
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
+    async def show_settings(self, query):
+        """Show settings menu"""
+        text = """
+⚙️ **Settings**
+
+**Current Settings:**
+• Max messages per batch: 100
+• Delay between messages: 0.1s
+• Web interface: Available
+
+**Available Options:**
+• Configure forwarding limits
+• Set up filters
+• Manage plugins
+• Export/Import configurations
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("🔧 Advanced Settings", callback_data="advanced_settings")],
+            [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+
     async def show_help(self, query):
         """Show help menu"""
         msg = "❓ **Help & Support**\n\n"
@@ -1257,6 +1286,14 @@ async def handle_testforwarder_add_forwarding(update: Update, context: ContextTy
         "➕ **Add New Forwarding Configuration**\n\n**Step 1/4: Configuration Name**\n\nPlease enter a name for this forwarding configuration (e.g., 'News Forwarding', 'Product Updates').",
         parse_mode=ParseMode.MARKDOWN
     )
+
+async def handle_testforwarder_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle settings callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_testforwarder_bot()
+    await bot.show_settings(query)
 
 async def handle_testforwarder_help(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle help callback"""

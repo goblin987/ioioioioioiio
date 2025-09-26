@@ -284,7 +284,7 @@ try:
         handle_testforwarder_menu, handle_testforwarder_manual_setup,
         handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
         handle_testforwarder_bump_service, handle_testforwarder_my_configs,
-        handle_testforwarder_add_forwarding, handle_testforwarder_help,
+        handle_testforwarder_add_forwarding, handle_testforwarder_settings, handle_testforwarder_help,
         handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
         handle_testforwarder_edit_config, handle_testforwarder_delete_config,
         handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
@@ -312,6 +312,8 @@ except ImportError:
     async def handle_testforwarder_my_configs(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_add_forwarding(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_settings(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_help(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
@@ -641,6 +643,7 @@ def callback_query_router(func):
     "bump_service": handle_testforwarder_bump_service,
     "my_configs": handle_testforwarder_my_configs,
     "add_forwarding": handle_testforwarder_add_forwarding,
+    "settings": handle_testforwarder_settings,
     "help": handle_testforwarder_help,
     "manual_setup": handle_testforwarder_manual_setup,
     "edit_account": handle_testforwarder_edit_account,
