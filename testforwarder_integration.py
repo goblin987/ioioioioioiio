@@ -743,6 +743,14 @@ This name will help you identify the account when managing campaigns."""
                 
                 # Start the login process
                 await self.start_userbot_login(update, context)
+            
+            elif session['step'] == 'verify_code':
+                # Handle verification code
+                await self.handle_login_code(update, context, message_text)
+            
+            elif session['step'] == '2fa_password':
+                # Handle 2FA password
+                await self.handle_2fa_password(update, context, message_text)
         
         # Handle campaign creation
         elif 'campaign_data' in session:
@@ -1042,10 +1050,9 @@ This name will help you identify the account when managing campaigns."""
             # Clean up session
             del self.user_sessions[user_id]
     
-    async def handle_login_code(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_login_code(self, update: Update, context: ContextTypes.DEFAULT_TYPE, code: str):
         """Handle login code verification"""
         user_id = update.effective_user.id
-        message_text = update.message.text
         
         if user_id not in self.user_sessions:
             return
@@ -1061,7 +1068,7 @@ This name will help you identify the account when managing campaigns."""
             client = session['temp_client']
             
             # Verify the code
-            await client.sign_in(phone=session['account_data']['phone_number'], code=message_text)
+            await client.sign_in(phone=session['account_data']['phone_number'], code=code)
             
             # Get session string
             session_string = client.session.save()
@@ -1108,10 +1115,9 @@ This name will help you identify the account when managing campaigns."""
                 parse_mode=ParseMode.MARKDOWN
             )
     
-    async def handle_2fa_password(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_2fa_password(self, update: Update, context: ContextTypes.DEFAULT_TYPE, password: str):
         """Handle 2FA password"""
         user_id = update.effective_user.id
-        message_text = update.message.text
         
         if user_id not in self.user_sessions:
             return
@@ -1125,7 +1131,7 @@ This name will help you identify the account when managing campaigns."""
             client = session['temp_client']
             
             # Sign in with 2FA password
-            await client.sign_in(password=message_text)
+            await client.sign_in(password=password)
             
             # Get session string
             session_string = client.session.save()
