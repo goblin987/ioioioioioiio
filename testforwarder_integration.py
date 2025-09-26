@@ -822,8 +822,13 @@ This name will help you identify the account when managing campaigns."""
                     session['step'] = 'button_choice'
                     
                     await update.message.reply_text(
-                        "✅ **Message link set!**\n\n**Step 3/6: Add Buttons?**\n\nWould you like to add buttons to your message?\n\n• Type 'yes' to add buttons\n• Type 'no' to skip buttons",
-                        parse_mode=ParseMode.MARKDOWN
+                        "✅ **Message link set!**\n\n**Step 3/6: Add Buttons**\n\nWould you like to add clickable buttons under your forwarded message?",
+                        parse_mode=ParseMode.MARKDOWN,
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("✅ Yes, Add Buttons", callback_data="add_buttons_yes")],
+                            [InlineKeyboardButton("❌ No Buttons", callback_data="add_buttons_no")],
+                            [InlineKeyboardButton("🔙 Back", callback_data="back_to_ad_content")]
+                        ])
                     )
                 else:
                     await update.message.reply_text(
@@ -832,24 +837,8 @@ This name will help you identify the account when managing campaigns."""
                     )
             
             elif session['step'] == 'button_choice':
-                if message_text.lower() == 'yes':
-                    session['step'] = 'button_input'
-                    await update.message.reply_text(
-                        "✅ **Adding buttons!**\n\n**Step 4/6: Button Configuration**\n\nPlease send me the button configuration in this format:\n\n`Button Text | URL`\n\nExample:\n`Visit Website | https://example.com`\n`Contact Us | https://t.me/username`\n\nYou can add multiple buttons, one per line.",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                elif message_text.lower() == 'no':
-                    session['campaign_data']['buttons'] = []
-                    session['step'] = 'target_selection'
-                    await update.message.reply_text(
-                        "✅ **No buttons added!**\n\n**Step 4/6: Target Selection**\n\nHow would you like to select target channels?\n\n• Send channel links (one per line)\n• Or type 'all' to target all your configured channels",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                else:
-                    await update.message.reply_text(
-                        "❌ **Invalid choice**\n\nPlease type 'yes' to add buttons or 'no' to skip.",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
+                # This step is handled by inline buttons, not text input
+                pass
             
             elif session['step'] == 'button_input':
                 buttons = self.parse_button_input(message_text)
@@ -1427,6 +1416,43 @@ async def handle_testforwarder_run_campaign(update: Update, context: ContextType
                 [InlineKeyboardButton("📋 View My Campaigns", callback_data="my_campaigns")],
                 [InlineKeyboardButton("⬅️ Back to Bump Service", callback_data="bump_service")]
             ])
+        )
+
+async def handle_testforwarder_add_buttons_yes(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle add buttons yes callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['step'] = 'button_input'
+        
+        await query.edit_message_text(
+            "➕ **Add Buttons to Your Ad**\n\n**Format:** [Button Text] - [URL]\n\n**Examples:**\n`Shop Now - https://example.com/shop`\n`Visit Website - https://mysite.com`\n`Contact Us - https://t.me/support`\n\n**Send one button per message, or multiple buttons separated by new lines.**\n\n**When finished, type 'done' or 'finish'**",
+            parse_mode=ParseMode.MARKDOWN
+        )
+
+async def handle_testforwarder_add_buttons_no(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle add buttons no callback"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    user_id = query.from_user.id
+    bot = get_testforwarder_bot()
+    
+    if user_id in bot.user_sessions:
+        session = bot.user_sessions[user_id]
+        session['campaign_data']['buttons'] = []
+        session['step'] = 'target_selection'
+        
+        await query.edit_message_text(
+            "✅ **No buttons added!**\n\n**Step 4/6: Target Selection**\n\nHow would you like to select target channels?\n\n• Send channel links (one per line)\n• Or type 'all' to target all your configured channels",
+            parse_mode=ParseMode.MARKDOWN
         )
 
 async def handle_testforwarder_select_forwarding_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):

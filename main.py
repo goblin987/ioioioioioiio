@@ -291,6 +291,7 @@ try:
         handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign,
         handle_testforwarder_select_account, handle_testforwarder_run_campaign,
         handle_testforwarder_select_forwarding_account, handle_testforwarder_upload_session,
+        handle_testforwarder_add_buttons_yes, handle_testforwarder_add_buttons_no,
         get_testforwarder_bot
     )
 except ImportError:
@@ -342,6 +343,10 @@ except ImportError:
     async def handle_testforwarder_select_forwarding_account(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     async def handle_testforwarder_upload_session(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_add_buttons_yes(update, context, params=None):
+        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    async def handle_testforwarder_add_buttons_no(update, context, params=None):
         await update.callback_query.edit_message_text("Testforwarder integration not available")
     def get_testforwarder_bot():
         return None
@@ -669,6 +674,8 @@ def callback_query_router(func):
     "run_campaign_5": handle_testforwarder_run_campaign,
     "select_forwarding_account": handle_testforwarder_select_forwarding_account,
     "upload_session": handle_testforwarder_upload_session,
+    "add_buttons_yes": handle_testforwarder_add_buttons_yes,
+    "add_buttons_no": handle_testforwarder_add_buttons_no,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
