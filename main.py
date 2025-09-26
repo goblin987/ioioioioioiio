@@ -833,9 +833,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_new_price': handle_price_new_price_message,
         
         # Enhanced auto ads message handlers (testforwarder integration)
-        'awaiting_session_file': handle_enhanced_session_file_upload,
-        'awaiting_account_details': handle_enhanced_account_details,
-        'awaiting_channel_link': handle_enhanced_channel_link,
+        'awaiting_session_file': handle_testforwarder_message,
+        'awaiting_account_details': handle_testforwarder_message,
+        'awaiting_channel_link': handle_testforwarder_message,
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,

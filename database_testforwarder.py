@@ -450,3 +450,41 @@ class Database:
             campaign_id = cursor.lastrowid
             conn.commit()
             return campaign_id
+    
+    def get_user_campaigns(self, user_id: int) -> List[Dict]:
+        """Get all campaigns for a specific user"""
+        import json
+        
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, user_id, account_id, campaign_name, ad_content, 
+                       target_chats, schedule_type, schedule_time, target_mode, 
+                       is_active, created_at, last_run, total_sends
+                FROM ad_campaigns 
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+            ''', (user_id,))
+            
+            rows = cursor.fetchall()
+            campaigns = []
+            
+            for row in rows:
+                campaign = {
+                    'id': row[0],
+                    'user_id': row[1],
+                    'account_id': row[2],
+                    'campaign_name': row[3],
+                    'ad_content': row[4],
+                    'target_chats': json.loads(row[5]) if row[5] else [],
+                    'schedule_type': row[6],
+                    'schedule_time': row[7],
+                    'target_mode': row[8],
+                    'is_active': bool(row[9]),
+                    'created_at': row[10],
+                    'last_run': row[11],
+                    'total_sends': row[12] or 0
+                }
+                campaigns.append(campaign)
+            
+            return campaigns
