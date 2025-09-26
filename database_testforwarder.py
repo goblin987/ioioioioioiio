@@ -499,11 +499,11 @@ class Database:
             cursor.execute('''
                 INSERT INTO telegram_accounts 
                 (user_id, account_name, phone_number, api_id, api_hash, 
-                 session_string, is_active, created_at, last_used)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 session_string, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 user_id, account_name, phone_number, api_id, api_hash,
-                session_string, 1, datetime.now().isoformat(), datetime.now().isoformat()
+                session_string, 1, datetime.now().isoformat()
             ))
             account_id = cursor.lastrowid
             conn.commit()
