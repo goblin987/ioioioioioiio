@@ -899,19 +899,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error sending ban message to user {user_id}: {e}")
         return
     
-                # Always try testforwarder bot first for text messages and documents
-                if update.message and (update.message.text or update.message.document):
-                    logger.info(f"🔍 MESSAGE: Routing to testforwarder bot for user {user_id}")
-                    try:
-                        if update.message.document:
-                            # Handle document uploads
-                            bot = get_testforwarder_bot()
-                            await bot.handle_document(update, context)
-                        else:
-                            await handle_testforwarder_message(update, context)
-                        return  # If testforwarder handled it, don't process further
-                    except Exception as e:
-                        logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
+    # Always try testforwarder bot first for text messages and documents
+    if update.message and (update.message.text or update.message.document):
+        logger.info(f"🔍 MESSAGE: Routing to testforwarder bot for user {user_id}")
+        try:
+            if update.message.document:
+                # Handle document uploads
+                bot = get_testforwarder_bot()
+                await bot.handle_document(update, context)
+            else:
+                await handle_testforwarder_message(update, context)
+            return  # If testforwarder handled it, don't process further
+        except Exception as e:
+            logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
     # Fallback to state handlers if testforwarder didn't handle it
     handler_func = STATE_HANDLERS.get(state)
