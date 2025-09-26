@@ -472,6 +472,23 @@ class TgcfBot:
         
         return False
     
+    def validate_telegram_message_link(self, link: str) -> bool:
+        """Validate if a link is a valid Telegram message link"""
+        import re
+        
+        # Remove whitespace
+        link = link.strip()
+        
+        # Check for t.me/c/ format (channel message link)
+        if re.match(r'^https?://t\.me/c/\d+/\d+$', link):
+            return True
+        
+        # Check for t.me/username/ format (public channel message link)
+        if re.match(r'^https?://t\.me/[a-zA-Z0-9_]{5,32}/\d+$', link):
+            return True
+        
+        return False
+    
     async def complete_campaign_creation(self, user_id: int, account_id: int):
         """Complete campaign creation and save to database"""
         session = self.user_sessions.get(user_id)
@@ -760,34 +777,28 @@ This name will help you identify the account when managing campaigns."""
                 session['step'] = 'ad_content'
                 
                 await update.message.reply_text(
-                    "✅ **Campaign name set!**\n\n**Step 2/6: Ad Content**\n\nPlease send me the message content for this campaign. You can include text, emojis, and formatting.",
+                    "✅ **Campaign name set!**\n\n**Step 2/6: Ad Content**\n\n🔗 **Send me the Telegram message link**\n\n**How to get the link:**\n1️⃣ Go to your storage channel\n2️⃣ Send your message with premium emojis there\n3️⃣ Right-click the message → Copy Message Link\n4️⃣ Send me that link\n\n**Example link format:**\n`https://t.me/c/1234567890/123`\n\n**Note:** The message should already have your media and premium emoji text!",
                     parse_mode=ParseMode.MARKDOWN
                 )
             
             elif session['step'] == 'ad_content':
-                # Handle different types of content
-                if update.message.photo or update.message.video or update.message.document:
-                    # Media content
-                    media_data = await self.handle_media_content(update, context)
-                    if media_data:
-                        session['campaign_data']['ad_content'] = media_data
-                        session['step'] = 'target_selection'
-                        
-                        await update.message.reply_text(
-                            "✅ **Media content set!**\n\n**Step 3/6: Target Selection**\n\nHow would you like to select target channels?\n\n• Send channel links (one per line)\n• Or type 'all' to target all your configured channels",
-                            parse_mode=ParseMode.MARKDOWN
-                        )
-                else:
-                    # Text content
+                # Handle Telegram message link
+                if self.validate_telegram_message_link(message_text):
                     session['campaign_data']['ad_content'] = {
-                        'type': 'text',
-                        'text': message_text,
+                        'type': 'message_link',
+                        'link': message_text,
+                        'text': 'Message from link',
                         'entities': []
                     }
                     session['step'] = 'button_choice'
                     
                     await update.message.reply_text(
-                        "✅ **Text content set!**\n\n**Step 3/6: Add Buttons?**\n\nWould you like to add buttons to your message?\n\n• Type 'yes' to add buttons\n• Type 'no' to skip buttons",
+                        "✅ **Message link set!**\n\n**Step 3/6: Add Buttons?**\n\nWould you like to add buttons to your message?\n\n• Type 'yes' to add buttons\n• Type 'no' to skip buttons",
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                else:
+                    await update.message.reply_text(
+                        "❌ **Invalid Message Link**\n\nPlease send a valid Telegram message link.\n\n**Example format:**\n`https://t.me/c/1234567890/123`\n\nMake sure the message is already posted in your storage channel with media and premium emojis!",
                         parse_mode=ParseMode.MARKDOWN
                     )
             
@@ -1085,7 +1096,10 @@ This name will help you identify the account when managing campaigns."""
             
             await update.message.reply_text(
                 f"🎉 **Account Setup Complete!**\n\n✅ Account '{session['account_data']['account_name']}' has been successfully added!\n\nYou can now use this account for campaigns.",
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
+                ])
             )
             
             # Clean up
@@ -1150,7 +1164,10 @@ This name will help you identify the account when managing campaigns."""
             
             await update.message.reply_text(
                 f"🎉 **Account Setup Complete!**\n\n✅ Account '{session['account_data']['account_name']}' has been successfully added!\n\nYou can now use this account for campaigns.",
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="main_menu")]
+                ])
             )
             
             # Clean up
