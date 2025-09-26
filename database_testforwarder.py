@@ -488,3 +488,23 @@ class Database:
                 campaigns.append(campaign)
             
             return campaigns
+    
+    def add_account(self, user_id: int, account_name: str, phone_number: str, 
+                    api_id: int, api_hash: str, session_string: str) -> int:
+        """Add a new Telegram account to the database"""
+        from datetime import datetime
+        
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO telegram_accounts 
+                (user_id, account_name, phone_number, api_id, api_hash, 
+                 session_string, is_active, created_at, last_used)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id, account_name, phone_number, api_id, api_hash,
+                session_string, 1, datetime.now().isoformat(), datetime.now().isoformat()
+            ))
+            account_id = cursor.lastrowid
+            conn.commit()
+            return account_id

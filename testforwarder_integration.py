@@ -1110,8 +1110,10 @@ This name will help you identify the account when managing campaigns."""
             )
         except Exception as e:
             logger.error(f"Error verifying login code: {e}")
+            # Escape markdown characters in error message
+            error_msg = str(e).replace('*', '\\*').replace('_', '\\_').replace('`', '\\`').replace('[', '\\[').replace(']', '\\]')
             await update.message.reply_text(
-                f"❌ **Verification Error**\n\nFailed to verify code: {str(e)}\n\nPlease try again.",
+                f"❌ **Verification Error**\n\nFailed to verify code: {error_msg}\n\nPlease try again.",
                 parse_mode=ParseMode.MARKDOWN
             )
     
@@ -1157,8 +1159,10 @@ This name will help you identify the account when managing campaigns."""
             
         except Exception as e:
             logger.error(f"Error with 2FA password: {e}")
+            # Escape markdown characters in error message
+            error_msg = str(e).replace('*', '\\*').replace('_', '\\_').replace('`', '\\`').replace('[', '\\[').replace(']', '\\]')
             await update.message.reply_text(
-                f"❌ **2FA Error**\n\nFailed to verify 2FA password: {str(e)}\n\nPlease try again.",
+                f"❌ **2FA Error**\n\nFailed to verify 2FA password: {error_msg}\n\nPlease try again.",
                 parse_mode=ParseMode.MARKDOWN
             )
 
