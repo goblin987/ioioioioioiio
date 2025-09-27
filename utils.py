@@ -1348,20 +1348,32 @@ def init_db():
                 logger.warning("Enhanced auto ads system not available, skipping enhanced auto ads table initialization")
             
             # Initialize referral system tables
+            logger.info("🔧 About to initialize referral system tables...")
             try:
+                logger.info("🔧 Importing referral_system...")
                 from referral_system import init_referral_tables
+                logger.info("🔧 Calling init_referral_tables()...")
                 init_referral_tables()
+                logger.info("✅ Referral system tables initialized successfully")
             except ImportError:
                 logger.warning("Referral system not available, skipping referral table initialization")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize referral tables: {e}", exc_info=True)
             
             # Initialize testforwarder database tables
+            logger.info("🔧 About to initialize testforwarder database tables...")
             try:
+                logger.info("🔧 Importing database_testforwarder...")
                 from database_testforwarder import Database
+                logger.info("🔧 Creating Database instance...")
                 testforwarder_db = Database()
+                logger.info("🔧 Calling testforwarder_db.init_database()...")
                 testforwarder_db.init_database()
-                logger.info("Testforwarder database tables initialized successfully")
+                logger.info("✅ Testforwarder database tables initialized successfully")
             except ImportError:
                 logger.warning("Testforwarder database not available, skipping testforwarder table initialization")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize testforwarder database: {e}", exc_info=True)
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (
