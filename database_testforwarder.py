@@ -17,77 +17,91 @@ License: MIT
 Version: 1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-import sqlite3
 import json
 import os
 import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from typing import Dict, List, Optional
 from config_testforwarder import Config
 
 logger = logging.getLogger(__name__)
 
+# --- PostgreSQL Helper Functions ---
+def get_sql_placeholder():
+    """Returns PostgreSQL SQL placeholder."""
+    return '%s'
+
+def get_auto_increment():
+    """Returns PostgreSQL auto increment syntax."""
+    return 'SERIAL PRIMARY KEY'
+
+def get_boolean_type():
+    """Returns PostgreSQL boolean type."""
+    return 'BOOLEAN'
+
+def get_text_type():
+    """Returns PostgreSQL text type."""
+    return 'TEXT'
+
+def get_timestamp_type():
+    """Returns PostgreSQL timestamp type."""
+    return 'TIMESTAMP'
+
 class Database:
     def __init__(self, db_path: str = None):
-        # Use the same database path as the main bot
-        if db_path is None:
-            from config_testforwarder import Config
-            self.db_path = Config.DATABASE_PATH
-        else:
-            self.db_path = db_path
+        # PostgreSQL configuration only
+        from config_testforwarder import Config
+        self.postgres_host = Config.POSTGRES_HOST
+        self.postgres_port = Config.POSTGRES_PORT
+        self.postgres_db = Config.POSTGRES_DB
+        self.postgres_user = Config.POSTGRES_USER
+        self.postgres_password = Config.POSTGRES_PASSWORD
+        logger.info(f"Testforwarder Database initialized with PostgreSQL: {self.postgres_host}:{self.postgres_port}/{self.postgres_db}")
         
-        # Debug logging
-        logger.info(f"Testforwarder Database initialized with path: {self.db_path}")
-        
-        # Ensure directory exists (only if path contains directory)
-        db_dir = os.path.dirname(self.db_path)
-        if db_dir:
-            os.makedirs(db_dir, exist_ok=True)
         self.init_database()
     
     def _get_connection(self):
-        """Get database connection with proper configuration"""
-        return sqlite3.connect(
-            self.db_path,
-            timeout=30.0,
-            check_same_thread=False,
-            isolation_level=None
+        """Get PostgreSQL database connection."""
+        return psycopg2.connect(
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=self.postgres_db,
+            user=self.postgres_user,
+            password=self.postgres_password,
+            cursor_factory=RealDictCursor
         )
     
     def init_database(self):
-        """Initialize database tables with WAL mode for better concurrency"""
+        """Initialize PostgreSQL database tables."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            
-            # Enable WAL mode for better concurrency
-            cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.execute("PRAGMA synchronous=NORMAL")
-            cursor.execute("PRAGMA cache_size=10000")
-            cursor.execute("PRAGMA temp_store=MEMORY")
+            # PostgreSQL doesn't need special optimizations like SQLite PRAGMA statements
             
             # Users table
-            cursor.execute('''
+            cursor.execute(f'''
                 CREATE TABLE IF NOT EXISTS users (
                     user_id INTEGER PRIMARY KEY,
-                    username TEXT,
-                    first_name TEXT,
-                    last_name TEXT,
-                    is_active BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    username {get_text_type()},
+                    first_name {get_text_type()},
+                    last_name {get_text_type()},
+                    is_active {get_boolean_type()} DEFAULT TRUE,
+                    created_at {get_timestamp_type()} DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
             
             # Telegram accounts
-            cursor.execute('''
+            cursor.execute(f'''
                 CREATE TABLE IF NOT EXISTS telegram_accounts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {get_auto_increment()},
                     user_id INTEGER,
-                    account_name TEXT,
-                    phone_number TEXT,
-                    api_id TEXT,
-                    api_hash TEXT,
-                    session_string TEXT,
-                    is_active BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    account_name {get_text_type()},
+                    phone_number {get_text_type()},
+                    api_id {get_text_type()},
+                    api_hash {get_text_type()},
+                    session_string {get_text_type()},
+                    is_active {get_boolean_type()} DEFAULT TRUE,
+                    created_at {get_timestamp_type()} DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users (user_id)
                 )
             ''')

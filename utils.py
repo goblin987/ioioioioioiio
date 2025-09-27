@@ -1,7 +1,8 @@
-import sqlite3
 import time
 import os
 import logging
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import json
 import shutil
 import tempfile
@@ -23,9 +24,16 @@ from telegram import helpers
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# --- PostgreSQL Configuration ---
+POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5432')
+POSTGRES_DB = os.getenv('POSTGRES_DB', 'shop_db')
+POSTGRES_USER = os.getenv('POSTGRES_USER', 'postgres')
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+POSTGRES_URL = os.getenv('DATABASE_URL', f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}')
+
 # --- Render Disk Path Configuration ---
 RENDER_DISK_MOUNT_PATH = '/mnt/data'
-DATABASE_PATH = os.path.join(RENDER_DISK_MOUNT_PATH, 'shop.db')
 MEDIA_DIR = os.path.join(RENDER_DISK_MOUNT_PATH, 'media')
 BOT_MEDIA_JSON_PATH = os.path.join(RENDER_DISK_MOUNT_PATH, 'bot_media.json')
 
@@ -36,7 +44,7 @@ try:
 except OSError as e:
     logger.error(f"Could not create media directory {MEDIA_DIR}: {e}")
 
-logger.info(f"Using Database Path: {DATABASE_PATH}")
+logger.info(f"Using PostgreSQL Database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
 logger.info(f"Using Media Directory: {MEDIA_DIR}")
 logger.info(f"Using Bot Media Config Path: {BOT_MEDIA_JSON_PATH}")
 
@@ -1062,20 +1070,58 @@ CACHE_EXPIRY_SECONDS = 900
 
 # --- Database Connection Helper ---
 def get_db_connection():
-    """Returns a connection to the SQLite database using the configured path."""
+    """Returns a connection to the PostgreSQL database."""
     try:
-        db_dir = os.path.dirname(DATABASE_PATH)
-        if db_dir:
-            try: os.makedirs(db_dir, exist_ok=True)
-            except OSError as e: logger.warning(f"Could not create DB dir {db_dir}: {e}")
-        conn = sqlite3.connect(DATABASE_PATH, timeout=10)
-        conn.execute("PRAGMA foreign_keys = ON;")
-        conn.row_factory = sqlite3.Row
+        conn = psycopg2.connect(
+            host=POSTGRES_HOST,
+            port=POSTGRES_PORT,
+            database=POSTGRES_DB,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
+            cursor_factory=RealDictCursor
+        )
+        conn.autocommit = False
         return conn
-    except sqlite3.Error as e:
-        logger.critical(f"CRITICAL ERROR connecting to database at {DATABASE_PATH}: {e}")
+    except psycopg2.Error as e:
+        db_info = f"PostgreSQL at {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+        logger.critical(f"CRITICAL ERROR connecting to {db_info}: {e}")
         raise SystemExit(f"Failed to connect to database: {e}")
 
+
+# --- PostgreSQL Helper Functions ---
+def get_sql_placeholder():
+    """Returns PostgreSQL SQL placeholder."""
+    return '%s'
+
+def get_auto_increment():
+    """Returns PostgreSQL auto increment syntax."""
+    return 'SERIAL PRIMARY KEY'
+
+def get_boolean_type():
+    """Returns PostgreSQL boolean type."""
+    return 'BOOLEAN'
+
+def get_text_type():
+    """Returns PostgreSQL text type."""
+    return 'TEXT'
+
+def get_timestamp_type():
+    """Returns PostgreSQL timestamp type."""
+    return 'TIMESTAMP'
+
+def get_ignore_conflict():
+    """Returns PostgreSQL conflict resolution syntax."""
+    return 'ON CONFLICT DO NOTHING'
+
+def safe_alter_table(cursor, table_name, column_name, column_definition):
+    """Safely adds a column to a PostgreSQL table."""
+    try:
+        cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {column_name} {column_definition}")
+    except psycopg2.OperationalError as e:
+        if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+            pass  # Column already exists, ignore
+        else:
+            raise  # Re-raise other errors
 
 # --- Database Initialization ---
 def init_db():
@@ -1084,63 +1130,47 @@ def init_db():
         with get_db_connection() as conn:
             c = conn.cursor()
             # --- users table ---
-            c.execute('''CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY, username TEXT, balance REAL DEFAULT 0.0,
-                total_purchases INTEGER DEFAULT 0, basket TEXT DEFAULT '',
-                language TEXT DEFAULT 'en', theme TEXT DEFAULT 'default',
-                is_banned INTEGER DEFAULT 0,
-                is_reseller INTEGER DEFAULT 0, -- <<< ADDED is_reseller column
-                last_active TEXT DEFAULT NULL, -- Track when user was last active/reachable
-                broadcast_failed_count INTEGER DEFAULT 0 -- Track consecutive broadcast failures
+            c.execute(f'''CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY, 
+                username {get_text_type()}, 
+                balance REAL DEFAULT 0.0,
+                total_purchases INTEGER DEFAULT 0, 
+                basket {get_text_type()} DEFAULT '',
+                language {get_text_type()} DEFAULT 'en', 
+                theme {get_text_type()} DEFAULT 'default',
+                is_banned {get_boolean_type()} DEFAULT FALSE,
+                is_reseller {get_boolean_type()} DEFAULT FALSE,
+                last_active {get_timestamp_type()} DEFAULT NULL,
+                broadcast_failed_count INTEGER DEFAULT 0
             )''')
-            # Add is_banned column if missing (safer check)
-            try: c.execute("ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0")
-            except sqlite3.OperationalError: pass # Ignore if already exists
-            # <<< ADDED: Add is_reseller column if missing (safer check) >>>
-            try:
-                c.execute("ALTER TABLE users ADD COLUMN is_reseller INTEGER DEFAULT 0")
-                logger.info("Added 'is_reseller' column to users table.")
-            except sqlite3.OperationalError as alter_e:
-                 if "duplicate column name: is_reseller" in str(alter_e): pass # Ignore if already exists
-                 else: raise # Reraise other errors
-            # <<< END ADDED >>>
-            
-            # Add broadcast tracking columns if missing
-            try:
-                c.execute("ALTER TABLE users ADD COLUMN last_active TEXT DEFAULT NULL")
-                logger.info("Added 'last_active' column to users table.")
-            except sqlite3.OperationalError as alter_e:
-                if "duplicate column name: last_active" in str(alter_e): pass
-                else: raise
-            
-            try:
-                c.execute("ALTER TABLE users ADD COLUMN broadcast_failed_count INTEGER DEFAULT 0")
-                logger.info("Added 'broadcast_failed_count' column to users table.")
-            except sqlite3.OperationalError as alter_e:
-                if "duplicate column name: broadcast_failed_count" in str(alter_e): pass
-                else: raise
+            # Add missing columns safely
+            safe_alter_table(c, 'users', 'is_banned', f'{get_boolean_type()} DEFAULT FALSE')
+            safe_alter_table(c, 'users', 'is_reseller', f'{get_boolean_type()} DEFAULT FALSE')
+            safe_alter_table(c, 'users', 'last_active', f'{get_timestamp_type()} DEFAULT NULL')
+            safe_alter_table(c, 'users', 'broadcast_failed_count', 'INTEGER DEFAULT 0')
 
             # cities table
-            c.execute('''CREATE TABLE IF NOT EXISTS cities (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL
+            c.execute(f'''CREATE TABLE IF NOT EXISTS cities (
+                id {get_auto_increment()}, 
+                name {get_text_type()} UNIQUE NOT NULL
             )''')
             # districts table
-            c.execute('''CREATE TABLE IF NOT EXISTS districts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, city_id INTEGER NOT NULL, name TEXT NOT NULL,
-                FOREIGN KEY(city_id) REFERENCES cities(id) ON DELETE CASCADE, UNIQUE (city_id, name)
+            c.execute(f'''CREATE TABLE IF NOT EXISTS districts (
+                id {get_auto_increment()}, 
+                city_id INTEGER NOT NULL, 
+                name {get_text_type()} NOT NULL,
+                FOREIGN KEY(city_id) REFERENCES cities(id) ON DELETE CASCADE, 
+                UNIQUE (city_id, name)
             )''')
             # product_types table
             c.execute(f'''CREATE TABLE IF NOT EXISTS product_types (
-                name TEXT PRIMARY KEY NOT NULL,
-                emoji TEXT DEFAULT '{DEFAULT_PRODUCT_EMOJI}',
-                description TEXT
+                name {get_text_type()} PRIMARY KEY NOT NULL,
+                emoji {get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}',
+                description {get_text_type()}
             )''')
-            # Add emoji column if missing
-            try: c.execute(f"ALTER TABLE product_types ADD COLUMN emoji TEXT DEFAULT '{DEFAULT_PRODUCT_EMOJI}'")
-            except sqlite3.OperationalError: pass # Ignore if already exists
-            # Add description column if missing
-            try: c.execute("ALTER TABLE product_types ADD COLUMN description TEXT")
-            except sqlite3.OperationalError: pass # Ignore if already exists
+            # Add missing columns safely
+            safe_alter_table(c, 'product_types', 'emoji', f"{get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}'")
+            safe_alter_table(c, 'product_types', 'description', get_text_type())
 
             # products table
             c.execute('''CREATE TABLE IF NOT EXISTS products (
