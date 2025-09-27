@@ -1666,6 +1666,8 @@ def main() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to initialize auto ads tables: {e}", exc_info=True)
     
+    logger.info("🔧 Finished auto ads initialization, continuing with main flow...")
+    
     logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
     load_all_data()

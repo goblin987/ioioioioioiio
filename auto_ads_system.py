@@ -24,8 +24,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotComm
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode
 from utils import get_db_connection
-from telethon_manager_testforwarder import TelethonManager
-from bump_service_testforwarder import BumpService
+# Lazy imports to avoid startup hangs
+# from telethon_manager_testforwarder import TelethonManager
+# from bump_service_testforwarder import BumpService
 
 # Configure professional logging
 logging.basicConfig(
