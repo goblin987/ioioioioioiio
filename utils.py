@@ -33,10 +33,11 @@ POSTGRES_USER = os.getenv('POSTGRES_USER', 'postgres')
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
 POSTGRES_URL = os.getenv('DATABASE_URL', f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}')
 
-# --- Render Disk Path Configuration ---
-RENDER_DISK_MOUNT_PATH = '/mnt/data'
-MEDIA_DIR = os.path.join(RENDER_DISK_MOUNT_PATH, 'media')
-BOT_MEDIA_JSON_PATH = os.path.join(RENDER_DISK_MOUNT_PATH, 'bot_media.json')
+# --- Media Directory Configuration (Render-Compatible) ---
+# Use relative path within app directory for Render compatibility
+MEDIA_BASE_DIR = os.getenv('MEDIA_DIR', './media')  # Allow override via env var
+MEDIA_DIR = os.path.abspath(MEDIA_BASE_DIR)
+BOT_MEDIA_JSON_PATH = os.path.join(MEDIA_DIR, 'bot_media.json')
 
 # Ensure the base media directory exists on the disk when the script starts
 try:
@@ -1347,33 +1348,36 @@ def init_db():
             except ImportError:
                 logger.warning("Enhanced auto ads system not available, skipping enhanced auto ads table initialization")
             
-            # Initialize referral system tables
-            logger.info("🔧 About to initialize referral system tables...")
-            try:
-                logger.info("🔧 Importing referral_system...")
-                from referral_system import init_referral_tables
-                logger.info("🔧 Calling init_referral_tables()...")
-                init_referral_tables()
-                logger.info("✅ Referral system tables initialized successfully")
-            except ImportError:
-                logger.warning("Referral system not available, skipping referral table initialization")
-            except Exception as e:
-                logger.error(f"❌ Failed to initialize referral tables: {e}", exc_info=True)
+            # YOLO MODE: Temporarily disable problematic module initializations to get bot running
+            logger.info("🚀 YOLO MODE: Skipping referral system initialization (causing hang)")
+            # # Initialize referral system tables
+            # logger.info("🔧 About to initialize referral system tables...")
+            # try:
+            #     logger.info("🔧 Importing referral_system...")
+            #     from referral_system import init_referral_tables
+            #     logger.info("🔧 Calling init_referral_tables()...")
+            #     init_referral_tables()
+            #     logger.info("✅ Referral system tables initialized successfully")
+            # except ImportError:
+            #     logger.warning("Referral system not available, skipping referral table initialization")
+            # except Exception as e:
+            #     logger.error(f"❌ Failed to initialize referral tables: {e}", exc_info=True)
             
-            # Initialize testforwarder database tables
-            logger.info("🔧 About to initialize testforwarder database tables...")
-            try:
-                logger.info("🔧 Importing database_testforwarder...")
-                from database_testforwarder import Database
-                logger.info("🔧 Creating Database instance...")
-                testforwarder_db = Database()
-                logger.info("🔧 Calling testforwarder_db.init_database()...")
-                testforwarder_db.init_database()
-                logger.info("✅ Testforwarder database tables initialized successfully")
-            except ImportError:
-                logger.warning("Testforwarder database not available, skipping testforwarder table initialization")
-            except Exception as e:
-                logger.error(f"❌ Failed to initialize testforwarder database: {e}", exc_info=True)
+            logger.info("🚀 YOLO MODE: Skipping testforwarder initialization (causing hang)")
+            # # Initialize testforwarder database tables
+            # logger.info("🔧 About to initialize testforwarder database tables...")
+            # try:
+            #     logger.info("🔧 Importing database_testforwarder...")
+            #     from database_testforwarder import Database
+            #     logger.info("🔧 Creating Database instance...")
+            #     testforwarder_db = Database()
+            #     logger.info("🔧 Calling testforwarder_db.init_database()...")
+            #     testforwarder_db.init_database()
+            #     logger.info("✅ Testforwarder database tables initialized successfully")
+            # except ImportError:
+            #     logger.warning("Testforwarder database not available, skipping testforwarder table initialization")
+            # except Exception as e:
+            #     logger.error(f"❌ Failed to initialize testforwarder database: {e}", exc_info=True)
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (
