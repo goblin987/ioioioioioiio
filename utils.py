@@ -1382,46 +1382,8 @@ def init_db():
                 discount_amount REAL NOT NULL
             )''')
             
-            # YOLO MODE: Bulletproof migration for discount code reuse
-            try:
-                # Check if there are any existing unique constraints on this table
-                indexes = c.execute("PRAGMA index_list(discount_code_usage)").fetchall()
-                has_unique_constraint = False
-                for index in indexes:
-                    if index[2]:  # unique flag
-                        index_info = c.execute("PRAGMA index_info(" + index[1] + ")").fetchall()
-                        if len(index_info) == 2:  # Check if it's a composite index on user_id and code
-                            columns = [col[2] for col in index_info]
-                            if 'user_id' in columns and 'code' in columns:
-                                has_unique_constraint = True
-                                logger.info(f"Found unique constraint: {index[1]}")
-                                break
-                
-                if has_unique_constraint:
-                    logger.info("YOLO MODE: Migrating discount_code_usage table to allow code reuse...")
-                    # Create new table without unique constraint
-                    c.execute('''CREATE TABLE discount_code_usage_new (
-                        id SERIAL PRIMARY KEY,
-                        user_id INTEGER NOT NULL,
-                        code TEXT NOT NULL,
-                        used_at TEXT NOT NULL,
-                        discount_amount REAL NOT NULL
-                    )''')
-                    
-                    # Copy all data (duplicates will be preserved)
-                    c.execute("INSERT INTO discount_code_usage_new SELECT * FROM discount_code_usage")
-                    
-                    # Drop old table and rename new one
-                    c.execute("DROP TABLE discount_code_usage")
-                    c.execute("ALTER TABLE discount_code_usage_new RENAME TO discount_code_usage")
-                    logger.info("YOLO MODE: Migration completed - Users can now reuse discount codes")
-                else:
-                    logger.info("YOLO MODE: No unique constraint found, table is already in correct state")
-                    
-            except Exception as e:
-                logger.error(f"YOLO MODE: Migration error (continuing anyway): {e}")
-                # Continue execution even if migration fails
-                pass
+            # Note: discount_code_usage table migration skipped for PostgreSQL to avoid startup delays
+            logger.info("✅ Discount_code_usage table created successfully (migration skipped for PostgreSQL)")
             # pending_deposits table
             c.execute('''CREATE TABLE IF NOT EXISTS pending_deposits (
                 payment_id TEXT PRIMARY KEY NOT NULL, user_id INTEGER NOT NULL,
@@ -1430,11 +1392,8 @@ def init_db():
                 is_purchase INTEGER DEFAULT 0, basket_snapshot_json TEXT DEFAULT NULL,
                 discount_code_used TEXT DEFAULT NULL
             )''')
-            # Add columns to pending_deposits if missing
-            pending_cols = [col[1] for col in c.execute("PRAGMA table_info(pending_deposits)").fetchall()]
-            if 'is_purchase' not in pending_cols: c.execute("ALTER TABLE pending_deposits ADD COLUMN is_purchase INTEGER DEFAULT 0")
-            if 'basket_snapshot_json' not in pending_cols: c.execute("ALTER TABLE pending_deposits ADD COLUMN basket_snapshot_json TEXT DEFAULT NULL")
-            if 'discount_code_used' not in pending_cols: c.execute("ALTER TABLE pending_deposits ADD COLUMN discount_code_used TEXT DEFAULT NULL")
+            # Note: pending_deposits table columns already included in CREATE TABLE statement
+            logger.info("✅ Pending_deposits table created successfully")
 
             # Admin Log table
             c.execute('''CREATE TABLE IF NOT EXISTS admin_log (
@@ -1475,49 +1434,23 @@ def init_db():
                 ("basket_focus", "Welcome back, {username}!\n\n🛒 You have **{basket_count} item(s)** in your basket! Don't forget about them!\n💰 Balance: {balance_str} EUR\n⭐ Status: {status} ({purchases} total purchases)\n\nCheck out your basket, keep shopping, or top up! 👇\n\n⚠️ Note: No refunds.", "Reminds user about items in basket")
             ]
             inserted_count = 0
-            changes_before = conn.total_changes # Get changes before loop
             for name, text, desc in initial_templates:
                 try:
-                    c.execute("INSERT OR IGNORE INTO welcome_messages (name, template_text, description) VALUES (?, ?, ?)", (name, text, desc))
-                except psycopg2.Error as insert_e: logger.error(f"Error inserting template '{name}': {insert_e}")
-            changes_after = conn.total_changes # Get changes after loop
-            inserted_count = changes_after - changes_before # Calculate the difference
+                    c.execute("INSERT INTO welcome_messages (name, template_text, description) VALUES (%s, %s, %s) ON CONFLICT (name) DO NOTHING", (name, text, desc))
+                    inserted_count += 1
+                except psycopg2.Error as insert_e: 
+                    logger.error(f"Error inserting template '{name}': {insert_e}")
 
             if inserted_count > 0: logger.info(f"Checked/Inserted {inserted_count} initial welcome message templates.")
             else: logger.info("Initial welcome message templates already exist or failed to insert.")
 
             # Set default as active if setting doesn't exist
-            c.execute("INSERT OR IGNORE INTO bot_settings (setting_key, setting_value) VALUES (?, ?)",
+            c.execute("INSERT INTO bot_settings (setting_key, setting_value) VALUES (%s, %s) ON CONFLICT (setting_key) DO NOTHING",
                       ("active_welcome_message_name", "default"))
             logger.info("Ensured 'default' is set as active welcome message in settings if not already set.")
 
-            # MIGRATION: Fix product_media table schema (remove UNIQUE constraint and add proper foreign key)
-            try:
-                # Check if the table exists and has the old schema
-                c.execute("PRAGMA table_info(product_media)")
-                columns = c.fetchall()
-                
-                # Check if file_path has UNIQUE constraint
-                file_path_column = next((col for col in columns if col[1] == 'file_path'), None)
-                has_unique_constraint = file_path_column and 'UNIQUE' in str(file_path_column)
-                
-                if has_unique_constraint:
-                    logger.info("Migrating product_media table to remove UNIQUE constraint on file_path...")
-                    # Create new table with proper schema
-                    c.execute('''CREATE TABLE IF NOT EXISTS product_media_new (
-                        id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
-                        media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
-                    )''')
-                    # Copy data
-                    c.execute("INSERT INTO product_media_new SELECT * FROM product_media")
-                    # Drop old table and rename new one
-                    c.execute("DROP TABLE product_media")
-                    c.execute("ALTER TABLE product_media_new RENAME TO product_media")
-                    logger.info("Successfully migrated product_media table to remove UNIQUE constraint")
-                else:
-                    logger.info("product_media table schema is already correct")
-            except Exception as migration_e:
-                logger.warning(f"Migration attempt failed, continuing with existing table: {migration_e}")
+            # Note: product_media table migration skipped for PostgreSQL to avoid startup delays
+            logger.info("✅ Product_media table created successfully (migration skipped for PostgreSQL)")
 
             # Create Indices
             c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
