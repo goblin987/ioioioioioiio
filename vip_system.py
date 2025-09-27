@@ -151,7 +151,7 @@ class VIPManager:
             cursor.execute('''INSERT INTO vip_levels 
                             (level_name, level_emoji, min_purchases, max_purchases, 
                              level_order, benefits, discount_percentage, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
                          (level['level_name'], level['level_emoji'], level['min_purchases'],
                           level['max_purchases'], level['level_order'], level['benefits'],
                           level['discount_percentage'], datetime.now(timezone.utc).isoformat()))
@@ -292,7 +292,7 @@ class VIPManager:
                 c.execute("""
                     INSERT INTO user_vip_history 
                     (user_id, old_level_name, new_level_name, level_up_date, purchases_at_levelup)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (
                     user_id,
                     old_level['level_name'],
@@ -373,7 +373,7 @@ class VIPManager:
             c.execute('''INSERT INTO vip_levels 
                         (level_name, level_emoji, min_purchases, max_purchases,
                          level_order, benefits, discount_percentage, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
                      (
                          level_data['level_name'],
                          level_data['level_emoji'],

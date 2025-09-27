@@ -39,7 +39,13 @@ class Config:
     # Database Configuration
     DATABASE_URL = os.getenv('DATABASE_URL')
     
-# Note: PostgreSQL configuration is now part of the Config class
+    # PostgreSQL Configuration
+    POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+    POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5432')
+    POSTGRES_DB = os.getenv('POSTGRES_DB', 'shop_db')
+    POSTGRES_USER = os.getenv('POSTGRES_USER', 'postgres')
+    POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+    POSTGRES_URL = os.getenv('POSTGRES_URL')
 
 # Persistent Storage Configuration
 PERSISTENT_DISK_PATH = '/mnt/data'  # Render persistent disk mount point (same as main bot)
