@@ -1155,7 +1155,7 @@ def init_db():
             # --- users table ---
             logger.info(f"🔧 Creating users table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY, 
+                user_id BIGINT PRIMARY KEY, 
                 username {get_text_type()}, 
                 balance REAL DEFAULT 0.0,
                 total_purchases INTEGER DEFAULT 0, 
@@ -1221,14 +1221,14 @@ def init_db():
             # purchases table
             logger.info(f"🔧 Creating purchases table...")
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (
-                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, product_id INTEGER,
+                id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL, product_id INTEGER,
                 product_name TEXT NOT NULL, product_type TEXT NOT NULL, product_size TEXT NOT NULL,
                 price_paid REAL NOT NULL, city TEXT NOT NULL, district TEXT NOT NULL, purchase_date TEXT NOT NULL
             )''')
             logger.info(f"✅ Purchases table created successfully")
             # reviews table
             c.execute('''CREATE TABLE IF NOT EXISTS reviews (
-                review_id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL,
+                review_id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
                 review_text TEXT NOT NULL, review_date TEXT NOT NULL
             )''')
             # stock_alerts table - for tracking low stock notifications
@@ -1260,7 +1260,7 @@ def init_db():
             c.execute('''CREATE TABLE IF NOT EXISTS ab_test_assignments (
                 id SERIAL PRIMARY KEY,
                 test_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
                 variant TEXT NOT NULL,
                 assigned_at TEXT NOT NULL,
                 UNIQUE(test_id, user_id)
@@ -1270,7 +1270,7 @@ def init_db():
             c.execute('''CREATE TABLE IF NOT EXISTS ab_test_events (
                 id SERIAL PRIMARY KEY,
                 test_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
                 event_type TEXT NOT NULL,
                 event_value REAL,
                 created_at TEXT NOT NULL,
@@ -1280,7 +1280,7 @@ def init_db():
             # referral_codes table - for referral program
             c.execute('''CREATE TABLE IF NOT EXISTS referral_codes (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
                 referral_code TEXT NOT NULL UNIQUE,
                 created_at TEXT NOT NULL,
                 is_active INTEGER DEFAULT 1,
@@ -1291,8 +1291,8 @@ def init_db():
             # referrals table - tracks successful referrals
             c.execute('''CREATE TABLE IF NOT EXISTS referrals (
                 id SERIAL PRIMARY KEY,
-                referrer_user_id INTEGER NOT NULL,
-                referred_user_id INTEGER NOT NULL,
+                referrer_user_id BIGINT NOT NULL,
+                referred_user_id BIGINT NOT NULL,
                 referral_code TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 first_purchase_at TEXT,
@@ -1305,7 +1305,7 @@ def init_db():
             # user_notifications table - for system notifications
             c.execute('''CREATE TABLE IF NOT EXISTS user_notifications (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
                 message TEXT NOT NULL,
                 notification_type TEXT NOT NULL,
                 created_at TEXT NOT NULL,
@@ -1395,7 +1395,7 @@ def init_db():
             logger.info("🔧 Creating discount_code_usage table...")
             c.execute('''CREATE TABLE IF NOT EXISTS discount_code_usage (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
                 code TEXT NOT NULL,
                 used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 discount_amount REAL NOT NULL
@@ -1407,7 +1407,7 @@ def init_db():
             # pending_deposits table
             logger.info("🔧 Creating pending_deposits table...")
             c.execute('''CREATE TABLE IF NOT EXISTS pending_deposits (
-                payment_id TEXT PRIMARY KEY NOT NULL, user_id INTEGER NOT NULL,
+                payment_id TEXT PRIMARY KEY NOT NULL, user_id BIGINT NOT NULL,
                 currency TEXT NOT NULL, target_eur_amount REAL NOT NULL,
                 expected_crypto_amount REAL NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_purchase BOOLEAN DEFAULT FALSE, basket_snapshot_json TEXT DEFAULT NULL,
@@ -1421,7 +1421,7 @@ def init_db():
             logger.info("🔧 Creating admin_log table...")
             c.execute('''CREATE TABLE IF NOT EXISTS admin_log (
                 id SERIAL PRIMARY KEY,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, admin_id INTEGER NOT NULL, target_user_id INTEGER,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, admin_id BIGINT NOT NULL, target_user_id BIGINT,
                 action TEXT NOT NULL, reason TEXT, amount_change REAL DEFAULT NULL,
                 old_value TEXT, new_value TEXT
             )''')
@@ -1445,7 +1445,7 @@ def init_db():
 
             # <<< ADDED: reseller_discounts table >>>
             c.execute('''CREATE TABLE IF NOT EXISTS reseller_discounts (
-                reseller_user_id INTEGER NOT NULL,
+                reseller_user_id BIGINT NOT NULL,
                 product_type TEXT NOT NULL,
                 discount_percentage REAL NOT NULL CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
                 PRIMARY KEY (reseller_user_id, product_type)
