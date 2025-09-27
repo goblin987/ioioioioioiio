@@ -265,7 +265,7 @@ def init_interactive_welcome_tables():
                 industry TEXT DEFAULT 'general',
                 preview_text TEXT,
                 suggested_buttons TEXT,
-                is_active INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT FALSE,
                 usage_count INTEGER DEFAULT 0,
                 rating REAL DEFAULT 0.0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -281,7 +281,7 @@ def init_interactive_welcome_tables():
                 callback_data TEXT NOT NULL,
                 row_position INTEGER DEFAULT 0,
                 col_position INTEGER DEFAULT 0,
-                is_enabled INTEGER DEFAULT 1,
+                is_enabled BOOLEAN DEFAULT TRUE,
                 button_color TEXT DEFAULT 'blue',
                 button_style TEXT DEFAULT 'primary',
                 description TEXT,
@@ -309,7 +309,7 @@ def init_interactive_welcome_tables():
                 c.execute("""
                     INSERT INTO interactive_welcome_messages 
                     (name, template_text, category, tone, industry, preview_text, suggested_buttons)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     template_data["name"],
                     template_data["template"],
@@ -327,7 +327,7 @@ def init_interactive_welcome_tables():
                 c.execute("""
                     INSERT INTO interactive_start_buttons 
                     (button_text, callback_data, row_position, col_position, is_enabled, button_color, button_style)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     button["text"], button["callback"], button["row"], button["col"],
                     button["enabled"], button["color"], button["style"]
@@ -337,9 +337,10 @@ def init_interactive_welcome_tables():
         logger.info("Interactive welcome message tables initialized successfully")
         
     except Exception as e:
-        logger.error(f"Error initializing interactive welcome tables: {e}")
+        logger.error(f"Error initializing interactive welcome tables: {e}", exc_info=True)
         if conn:
             conn.rollback()
+        raise  # Re-raise to see the actual error
     finally:
         if conn:
             conn.close()
@@ -442,7 +443,7 @@ async def init_editor_session(admin_user_id: int, context: ContextTypes.DEFAULT_
         # Check for existing session
         c.execute("""
             SELECT session_data FROM welcome_editor_sessions 
-            WHERE admin_user_id = ? 
+            WHERE admin_user_id = %s 
             ORDER BY updated_at DESC 
             LIMIT 1
         """, (admin_user_id,))
@@ -906,9 +907,10 @@ async def save_interactive_message(text: str, admin_user_id: int, analysis: Dict
         
         # Save as custom message
         c.execute("""
-            INSERT OR REPLACE INTO interactive_welcome_messages 
+            INSERT INTO interactive_welcome_messages 
             (name, template_text, category, tone, preview_text, is_active)
-            VALUES ('Custom Message', ?, 'custom', ?, ?, 1)
+            VALUES ('Custom Message', %s, 'custom', %s, %s, 1)
+            ON CONFLICT (name) DO UPDATE SET template_text = EXCLUDED.template_text, category = EXCLUDED.category, tone = EXCLUDED.tone, preview_text = EXCLUDED.preview_text, is_active = EXCLUDED.is_active
         """, (text, analysis['tone'].lower(), text[:100] + '...'))
         
         # Deactivate other messages
@@ -916,8 +918,9 @@ async def save_interactive_message(text: str, admin_user_id: int, analysis: Dict
         
         # Update bot settings
         c.execute("""
-            INSERT OR REPLACE INTO bot_settings (setting_key, setting_value)
+            INSERT INTO bot_settings (setting_key, setting_value)
             VALUES ('active_welcome_message_name', 'Custom Message')
+            ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
         """)
         
         conn.commit()

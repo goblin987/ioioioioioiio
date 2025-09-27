@@ -45,6 +45,15 @@ from utils import (
     get_first_primary_admin_id, # Admin helper for notifications
     is_user_banned  # Import ban check helper
 )
+
+# Import auto ads system initialization
+try:
+    from auto_ads_system import init_enhanced_auto_ads_tables
+except ImportError:
+    def init_enhanced_auto_ads_tables(): 
+        logging.getLogger(__name__).warning("Auto ads system not available")
+        return True
+
 import user # Import user module
 from user import (
     start, handle_shop, handle_city_selection, handle_district_selection,
@@ -1080,7 +1089,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
@@ -1630,6 +1639,31 @@ def main() -> None:
     logger.info("🔧 Initializing database...")
     init_db()
     logger.info("✅ Database initialized successfully")
+    
+    logger.info("🔧 Initializing module-specific tables...")
+    try:
+        init_welcome_tables()
+        logger.info("✅ Welcome tables initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize welcome tables: {e}", exc_info=True)
+    
+    try:
+        init_interactive_welcome_tables()
+        logger.info("✅ Interactive welcome tables initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize interactive welcome tables: {e}", exc_info=True)
+    
+    try:
+        init_price_editor_tables()
+        logger.info("✅ Price editor tables initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize price editor tables: {e}", exc_info=True)
+    
+    try:
+        init_enhanced_auto_ads_tables()
+        logger.info("✅ Auto ads tables initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize auto ads tables: {e}", exc_info=True)
     logger.info("🔧 Loading all data...")
     load_all_data()
     logger.info("✅ All data loaded successfully")
@@ -1683,7 +1717,7 @@ def main() -> None:
         nonlocal application
         logger.info("🔧 Initializing application...")
         try:
-            await application.initialize()
+        await application.initialize()
             logger.info("✅ Application initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize application: {e}")
@@ -1694,16 +1728,16 @@ def main() -> None:
             webhook_result = await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES)
             if webhook_result:
                 logger.info("✅ Telegram webhook set successfully.")
-            else:
+        else:
                 logger.error("❌ Failed to set Telegram webhook.")
-                return
+            return
         except Exception as e:
             logger.error(f"❌ Error setting webhook: {e}")
             return
         
         logger.info("🔧 Starting Telegram application...")
         try:
-            await application.start()
+        await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
         except Exception as e:
             logger.error(f"❌ Failed to start Telegram application: {e}")

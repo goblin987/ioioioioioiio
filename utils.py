@@ -1489,7 +1489,7 @@ def add_pending_deposit(payment_id: str, user_id: int, currency: str, target_eur
                     payment_id, user_id, currency, target_eur_amount,
                     expected_crypto_amount, created_at, is_purchase,
                     basket_snapshot_json, discount_code_used
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 payment_id, user_id, currency.lower(), target_eur_amount,
                 expected_crypto_amount, datetime.now(timezone.utc).isoformat(),
@@ -1514,7 +1514,7 @@ def get_pending_deposit(payment_id: str):
             c.execute("""
                 SELECT user_id, currency, target_eur_amount, expected_crypto_amount,
                        is_purchase, basket_snapshot_json, discount_code_used
-                FROM pending_deposits WHERE payment_id = ?
+                FROM pending_deposits WHERE payment_id = %s
             """, (payment_id,))
             row = c.fetchone()
             if row:
@@ -1555,7 +1555,7 @@ def _unreserve_basket_items(basket_snapshot: list | None):
         c = conn.cursor()
         c.execute("BEGIN")
         decrement_data = [(count, pid) for pid, count in product_ids_to_release_counts.items()]
-        c.executemany("UPDATE products SET reserved = MAX(0, reserved - ?) WHERE id = ?", decrement_data)
+        c.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
         conn.commit()
         total_released = sum(product_ids_to_release_counts.values())
         logger.info(f"Un-reserved {total_released} items due to failed/expired/cancelled payment.") # General log message
@@ -1573,7 +1573,7 @@ def remove_pending_deposit(payment_id: str, trigger: str = "unknown"): # Added t
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        result = c.execute("DELETE FROM pending_deposits WHERE payment_id = ?", (payment_id,))
+        result = c.execute("DELETE FROM pending_deposits WHERE payment_id = %s", (payment_id,))
         conn.commit()
         deleted = result.rowcount > 0
         if deleted:
@@ -1721,7 +1721,7 @@ async def is_user_banned(user_id: int) -> bool:
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute("SELECT is_banned FROM users WHERE user_id = ?", (user_id,))
+            c.execute("SELECT is_banned FROM users WHERE user_id = %s", (user_id,))
             res = c.fetchone()
             return res and res['is_banned'] == 1
         except psycopg2.Error as e:
@@ -1854,7 +1854,7 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("BEGIN")
-        c.execute("SELECT basket FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
         result = c.fetchone(); basket_str = result['basket'] if result else ''
         if not basket_str:
             # If DB basket is empty, ensure context basket is also empty
@@ -1902,10 +1902,10 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
 
         if expired_items_found:
             new_basket_str = ','.join(valid_items_str_list)
-            c.execute("UPDATE users SET basket = ? WHERE user_id = ?", (new_basket_str, user_id))
+            c.execute("UPDATE users SET basket = %s WHERE user_id = %s", (new_basket_str, user_id))
             if expired_product_ids_counts:
                 decrement_data = [(count, pid) for pid, count in expired_product_ids_counts.items()]
-                c.executemany("UPDATE products SET reserved = MAX(0, reserved - ?) WHERE id = ?", decrement_data)
+                c.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
                 logger.info(f"Released {sum(expired_product_ids_counts.values())} reservations for user {user_id} due to expiry.")
 
         c.execute("COMMIT") # Commit transaction
@@ -1997,7 +1997,7 @@ def clear_all_expired_baskets():
 
         # Update user basket strings
         if user_basket_updates:
-            c_update.executemany("UPDATE users SET basket = ? WHERE user_id = ?", user_basket_updates)
+            c_update.executemany("UPDATE users SET basket = %s WHERE user_id = %s", user_basket_updates)
             logger.info(f"Scheduled clear: Updated basket strings for {len(user_basket_updates)} users.")
 
         # Decrement reservations
@@ -2025,7 +2025,7 @@ def clear_all_expired_baskets():
 def fetch_last_purchases(user_id, limit=10):
     try:
         with get_db_connection() as conn:
-            c = conn.cursor(); c.execute("SELECT purchase_date, product_name, product_type, product_size, price_paid FROM purchases WHERE user_id = ? ORDER BY purchase_date DESC LIMIT ?", (user_id, limit))
+            c = conn.cursor(); c.execute("SELECT purchase_date, product_name, product_type, product_size, price_paid FROM purchases WHERE user_id = %s ORDER BY purchase_date DESC LIMIT %s", (user_id, limit))
             return [dict(row) for row in c.fetchall()]
     except psycopg2.Error as e: logger.error(f"DB error fetching purchase history user {user_id}: {e}", exc_info=True); return []
 
@@ -2282,9 +2282,9 @@ def fetch_user_ids_for_broadcast(target_type: str, target_value: str | int | Non
 
             if min_purchases != -1:
                  if max_purchases == float('inf'):
-                     c.execute("SELECT user_id FROM users WHERE total_purchases >= ? AND is_banned=0", (min_purchases,)) # Exclude banned
+                     c.execute("SELECT user_id FROM users WHERE total_purchases >= %s AND is_banned=0", (min_purchases,)) # Exclude banned
                  else:
-                     c.execute("SELECT user_id FROM users WHERE total_purchases BETWEEN ? AND ? AND is_banned=0", (min_purchases, max_purchases)) # Exclude banned
+                     c.execute("SELECT user_id FROM users WHERE total_purchases BETWEEN %s AND %s AND is_banned=0", (min_purchases, max_purchases)) # Exclude banned
                  user_ids = [row['user_id'] for row in c.fetchall()]
                  logger.info(f"Broadcast target status '{target_value}': Found {len(user_ids)} non-banned users.")
             else: logger.warning(f"Invalid status value for broadcast: {target_value}")
@@ -2296,7 +2296,7 @@ def fetch_user_ids_for_broadcast(target_type: str, target_value: str | int | Non
                 SELECT p1.user_id
                 FROM purchases p1
                 JOIN users u ON p1.user_id = u.user_id
-                WHERE p1.city = ? AND u.is_banned = 0 AND p1.purchase_date = (
+                WHERE p1.city = %s AND u.is_banned = 0 AND p1.purchase_date = (
                     SELECT MAX(purchase_date)
                     FROM purchases p2
                     WHERE p1.user_id = p2.user_id
@@ -2374,7 +2374,7 @@ def update_user_broadcast_status(user_id: int, success: bool):
                 c.execute("""
                     UPDATE users 
                     SET broadcast_failed_count = 0, last_active = ?
-                    WHERE user_id = ?
+                    WHERE user_id = %s
                 """, (current_time, user_id))
                 logger.debug(f"Reset broadcast failure count for user {user_id}")
             else:
@@ -2382,11 +2382,11 @@ def update_user_broadcast_status(user_id: int, success: bool):
                 c.execute("""
                     UPDATE users 
                     SET broadcast_failed_count = COALESCE(broadcast_failed_count, 0) + 1
-                    WHERE user_id = ?
+                    WHERE user_id = %s
                 """, (user_id,))
                 
                 # Check new failure count
-                c.execute("SELECT broadcast_failed_count FROM users WHERE user_id = ?", (user_id,))
+                c.execute("SELECT broadcast_failed_count FROM users WHERE user_id = %s", (user_id,))
                 result = c.fetchone()
                 if result and result['broadcast_failed_count'] >= 5:
                     logger.info(f"User {user_id} marked as unreachable after {result['broadcast_failed_count']} consecutive failures")
@@ -2445,7 +2445,7 @@ def log_admin_action(admin_id: int, action: str, target_user_id: int | None = No
             c = conn.cursor()
             c.execute("""
                 INSERT INTO admin_log (timestamp, admin_id, target_user_id, action, reason, amount_change, old_value, new_value)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 datetime.now(timezone.utc).isoformat(),
                 admin_id,
@@ -2487,11 +2487,11 @@ def load_active_welcome_message() -> str:
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = ?", ("active_welcome_message_name",))
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("active_welcome_message_name",))
         setting_row = c.fetchone()
         active_name = setting_row['setting_value'] if setting_row else "default"
 
-        c.execute("SELECT template_text FROM welcome_messages WHERE name = ?", (active_name,))
+        c.execute("SELECT template_text FROM welcome_messages WHERE name = %s", (active_name,))
         template_row = c.fetchone()
         if template_row:
             logger.info(f"Loaded active welcome message template: '{active_name}'")
@@ -2499,7 +2499,7 @@ def load_active_welcome_message() -> str:
         else:
             # If active template name points to a non-existent template, try fallback
             logger.warning(f"Active welcome message template '{active_name}' not found. Trying 'default'.")
-            c.execute("SELECT template_text FROM welcome_messages WHERE name = ?", ("default",))
+            c.execute("SELECT template_text FROM welcome_messages WHERE name = %s", ("default",))
             template_row = c.fetchone()
             if template_row:
                 logger.info("Loaded fallback 'default' welcome message template.")
@@ -2559,7 +2559,7 @@ def add_welcome_message_template(name: str, template_text: str, description: str
     try:
         with get_db_connection() as conn:
             c = conn.cursor()
-            c.execute("INSERT INTO welcome_messages (name, template_text, description) VALUES (?, ?, ?)",
+            c.execute("INSERT INTO welcome_messages (name, template_text, description) VALUES (%s, %s, %s)",
                       (name, template_text, description))
             conn.commit()
             logger.info(f"Added welcome message template: '{name}'")
@@ -2580,16 +2580,16 @@ def update_welcome_message_template(name: str, new_template_text: str | None = N
     updates = []
     params = []
     if new_template_text is not None:
-        updates.append("template_text = ?")
+        updates.append("template_text = %s")
         params.append(new_template_text)
     if new_description is not None:
         # Handle empty string description as NULL
         desc_to_save = new_description if new_description else None
-        updates.append("description = ?")
+        updates.append("description = %s")
         params.append(desc_to_save)
 
     params.append(name)
-    sql = f"UPDATE welcome_messages SET {', '.join(updates)} WHERE name = ?"
+    sql = f"UPDATE welcome_messages SET {', '.join(updates)} WHERE name = %s"
 
     try:
         with get_db_connection() as conn:
@@ -2612,7 +2612,7 @@ def delete_welcome_message_template(name: str) -> bool:
         with get_db_connection() as conn:
             c = conn.cursor()
             # Check if it's the active one (handled better in admin logic now)
-            result = c.execute("DELETE FROM welcome_messages WHERE name = ?", (name,))
+            result = c.execute("DELETE FROM welcome_messages WHERE name = %s", (name,))
             conn.commit()
             if result.rowcount > 0:
                 logger.info(f"Deleted welcome message template: '{name}'")
@@ -2630,12 +2630,12 @@ def set_active_welcome_message(name: str) -> bool:
         with get_db_connection() as conn:
             c = conn.cursor()
             # First check if the template name actually exists
-            c.execute("SELECT 1 FROM welcome_messages WHERE name = ?", (name,))
+            c.execute("SELECT 1 FROM welcome_messages WHERE name = %s", (name,))
             if not c.fetchone():
                 logger.error(f"Attempted to activate non-existent welcome template: '{name}'")
                 return False
             # Update or insert the setting
-            c.execute("INSERT OR REPLACE INTO bot_settings (setting_key, setting_value) VALUES (?, ?)",
+            c.execute("INSERT INTO bot_settings (setting_key, setting_value) VALUES (%s, %s) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value",
                       ("active_welcome_message_name", name))
             conn.commit()
             logger.info(f"Set active welcome message template to: '{name}'")

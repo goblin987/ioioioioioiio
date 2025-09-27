@@ -1,7 +1,7 @@
 # --- START OF FILE referral_system.py ---
 
 import logging
-import sqlite3
+import psycopg2
 import random
 import string
 from datetime import datetime, timezone
@@ -88,7 +88,7 @@ async def create_referral_code(user_id: int) -> Optional[str]:
         # Check if user already has a referral code
         c.execute("""
             SELECT referral_code FROM referral_codes 
-            WHERE user_id = ? AND is_active = 1
+            WHERE user_id = %s AND is_active = 1
         """, (user_id,))
         
         existing = c.fetchone()
@@ -101,13 +101,13 @@ async def create_referral_code(user_id: int) -> Optional[str]:
             code = generate_referral_code(user_id)
             
             # Check if code already exists
-            c.execute("SELECT id FROM referral_codes WHERE referral_code = ?", (code,))
+            c.execute("SELECT id FROM referral_codes WHERE referral_code = %s", (code,))
             if not c.fetchone():
                 # Code is unique, create it
                 c.execute("""
                     INSERT INTO referral_codes 
                     (user_id, referral_code, created_at, is_active)
-                    VALUES (?, ?, ?, 1)
+                    VALUES (%s, %s, %s, 1)
                 """, (user_id, code, datetime.now(timezone.utc).isoformat()))
                 
                 conn.commit()
@@ -138,7 +138,7 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
         
         # Check if user already used a referral code
         c.execute("""
-            SELECT id FROM referrals WHERE referred_user_id = ?
+            SELECT id FROM referrals WHERE referred_user_id = %s
         """, (referred_user_id,))
         
         if c.fetchone():
@@ -153,7 +153,7 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
             SELECT rc.user_id, rc.referral_code, u.username
             FROM referral_codes rc
             LEFT JOIN users u ON rc.user_id = u.user_id
-            WHERE rc.referral_code = ? AND rc.is_active = 1
+            WHERE rc.referral_code = %s AND rc.is_active = 1
         """, (referral_code.upper(),))
         
         referrer = c.fetchone()
@@ -179,7 +179,7 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
             INSERT INTO referrals 
             (referrer_user_id, referred_user_id, referral_code, created_at, 
              referred_reward, status)
-            VALUES (?, ?, ?, ?, ?, 'active')
+            VALUES (%s, %s, %s, %s, %s, 'active')
         """, (
             referrer_user_id, referred_user_id, referral_code,
             datetime.now(timezone.utc).isoformat(),
@@ -188,14 +188,14 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
         
         # Give immediate bonus to referred user
         c.execute("""
-            UPDATE users SET balance = balance + ? WHERE user_id = ?
+            UPDATE users SET balance = balance + %s WHERE user_id = %s
         """, (float(REFERRED_USER_BONUS), referred_user_id))
         
         # Update referrer's total referrals count
         c.execute("""
             UPDATE referral_codes 
             SET total_referrals = total_referrals + 1
-            WHERE user_id = ?
+            WHERE user_id = %s
         """, (referrer_user_id,))
         
         conn.commit()
@@ -236,7 +236,7 @@ async def process_referral_purchase(user_id: int, purchase_amount: Decimal) -> b
         c.execute("""
             SELECT referrer_user_id, referral_code, first_purchase_at
             FROM referrals 
-            WHERE referred_user_id = ? AND status = 'active'
+            WHERE referred_user_id = %s AND status = 'active'
         """, (user_id,))
         
         referral = c.fetchone()
@@ -259,20 +259,20 @@ async def process_referral_purchase(user_id: int, purchase_amount: Decimal) -> b
         # Update referral record
         c.execute("""
             UPDATE referrals 
-            SET first_purchase_at = ?, referrer_reward = ?, status = 'completed'
-            WHERE referred_user_id = ?
+            SET first_purchase_at = %s, referrer_reward = %s, status = 'completed'
+            WHERE referred_user_id = %s
         """, (datetime.now(timezone.utc).isoformat(), float(referrer_reward), user_id))
         
         # Give reward to referrer
         c.execute("""
-            UPDATE users SET balance = balance + ? WHERE user_id = ?
+            UPDATE users SET balance = balance + %s WHERE user_id = %s
         """, (float(referrer_reward), referrer_user_id))
         
         # Update referrer's total rewards earned
         c.execute("""
             UPDATE referral_codes 
-            SET total_rewards_earned = total_rewards_earned + ?
-            WHERE user_id = ?
+            SET total_rewards_earned = total_rewards_earned + %s
+            WHERE user_id = %s
         """, (float(referrer_reward), referrer_user_id))
         
         conn.commit()
@@ -292,7 +292,7 @@ async def process_referral_purchase(user_id: int, purchase_amount: Decimal) -> b
             # Store notification in context for main to send
             conn.execute("""
                 INSERT INTO user_notifications (user_id, message, notification_type, created_at)
-                VALUES (?, ?, 'referral_reward', ?)
+                VALUES (%s, %s, 'referral_reward', %s)
             """, (referrer_user_id, reward_msg, datetime.now(timezone.utc).isoformat()))
             
         except Exception as e:
@@ -320,7 +320,7 @@ def get_referral_stats(user_id: int) -> Dict[str, any]:
         c.execute("""
             SELECT referral_code, total_referrals, total_rewards_earned, created_at
             FROM referral_codes 
-            WHERE user_id = ? AND is_active = 1
+            WHERE user_id = %s AND is_active = 1
         """, (user_id,))
         
         code_info = c.fetchone()
@@ -331,7 +331,7 @@ def get_referral_stats(user_id: int) -> Dict[str, any]:
         c.execute("""
             SELECT COUNT(*) as completed_referrals
             FROM referrals 
-            WHERE referrer_user_id = ? AND status = 'completed'
+            WHERE referrer_user_id = %s AND status = 'completed'
         """, (user_id,))
         
         completed = c.fetchone()['completed_referrals']
@@ -340,7 +340,7 @@ def get_referral_stats(user_id: int) -> Dict[str, any]:
         c.execute("""
             SELECT COUNT(*) as pending_referrals
             FROM referrals 
-            WHERE referrer_user_id = ? AND status = 'active' AND first_purchase_at IS NULL
+            WHERE referrer_user_id = %s AND status = 'active' AND first_purchase_at IS NULL
         """, (user_id,))
         
         pending = c.fetchone()['pending_referrals']
@@ -350,7 +350,7 @@ def get_referral_stats(user_id: int) -> Dict[str, any]:
             SELECT r.created_at, r.status, r.referrer_reward, u.username
             FROM referrals r
             LEFT JOIN users u ON r.referred_user_id = u.user_id
-            WHERE r.referrer_user_id = ?
+            WHERE r.referrer_user_id = %s
             ORDER BY r.created_at DESC
             LIMIT 10
         """, (user_id,))
@@ -620,7 +620,7 @@ async def handle_referral_view_details(update: Update, context: ContextTypes.DEF
         c.execute("""
             SELECT referral_code, total_referrals, total_earnings
             FROM users 
-            WHERE user_id = ?
+            WHERE user_id = %s
         """, (user_id,))
         user_stats = c.fetchone()
         
@@ -632,7 +632,7 @@ async def handle_referral_view_details(update: Update, context: ContextTypes.DEF
         c.execute("""
             SELECT referred_user_id, created_at, commission_earned, status
             FROM referrals 
-            WHERE referrer_user_id = ?
+            WHERE referrer_user_id = %s
             ORDER BY created_at DESC
             LIMIT 10
         """, (user_id,))
@@ -644,7 +644,7 @@ async def handle_referral_view_details(update: Update, context: ContextTypes.DEF
                 COUNT(*) as recent_referrals,
                 SUM(commission_earned) as recent_earnings
             FROM referrals 
-            WHERE referrer_user_id = ? 
+            WHERE referrer_user_id = %s 
             AND created_at >= datetime('now', '-30 days')
         """, (user_id,))
         recent_stats = c.fetchone()

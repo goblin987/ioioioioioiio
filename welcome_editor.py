@@ -66,7 +66,7 @@ def init_welcome_tables():
                 callback_data TEXT NOT NULL,
                 row_position INTEGER DEFAULT 0,
                 column_position INTEGER DEFAULT 0,
-                is_enabled INTEGER DEFAULT 1,
+                is_enabled BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -76,7 +76,7 @@ def init_welcome_tables():
         if c.fetchone()[0] == 0:
             c.execute("""
                 INSERT INTO welcome_messages (name, template_text, description)
-                VALUES ('default', ?, 'Default welcome message')
+                VALUES ('default', %s, 'Default welcome message')
             """, (DEFAULT_WELCOME_TEXT,))
         
         # Insert default buttons if none exist
@@ -85,16 +85,17 @@ def init_welcome_tables():
             for button in DEFAULT_START_BUTTONS:
                 c.execute("""
                     INSERT INTO start_menu_buttons (button_text, callback_data, row_position, column_position, is_enabled)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (button["text"], button["callback"], button["row"], button["position"], button["enabled"]))
         
         conn.commit()
         logger.info("Welcome message tables initialized successfully")
         
     except Exception as e:
-        logger.error(f"Error initializing welcome tables: {e}")
+        logger.error(f"Error initializing welcome tables: {e}", exc_info=True)
         if conn:
             conn.rollback()
+        raise  # Re-raise to see the actual error
     finally:
         if conn:
             conn.close()
@@ -114,7 +115,7 @@ def get_active_welcome_message():
         active_name = active_name_result['setting_value'] if active_name_result else 'default'
         
         # Get the template text
-        c.execute("SELECT template_text FROM welcome_messages WHERE name = ? LIMIT 1", (active_name,))
+        c.execute("SELECT template_text FROM welcome_messages WHERE name = %s LIMIT 1", (active_name,))
         result = c.fetchone()
         
         return result['template_text'] if result else DEFAULT_WELCOME_TEXT
@@ -180,7 +181,7 @@ async def handle_welcome_editor_menu(update: Update, context: ContextTypes.DEFAU
         active_name_result = c.fetchone()
         active_name = active_name_result['setting_value'] if active_name_result else 'default'
         
-        c.execute("SELECT name, template_text FROM welcome_messages WHERE name = ? LIMIT 1", (active_name,))
+        c.execute("SELECT name, template_text FROM welcome_messages WHERE name = %s LIMIT 1", (active_name,))
         active_msg = c.fetchone()
         
         # Get button count
@@ -410,14 +411,16 @@ async def handle_welcome_text_message(update: Update, context: ContextTypes.DEFA
         
         # Update the welcome message using existing structure
         c.execute("""
-            INSERT OR REPLACE INTO welcome_messages (name, template_text, description)
-            VALUES ('custom', ?, 'Custom welcome message')
+            INSERT INTO welcome_messages (name, template_text, description)
+            VALUES ('custom', %s, 'Custom welcome message')
+            ON CONFLICT (name) DO UPDATE SET template_text = EXCLUDED.template_text, description = EXCLUDED.description
         """, (new_welcome_text,))
         
         # Set as active in bot_settings
         c.execute("""
-            INSERT OR REPLACE INTO bot_settings (setting_key, setting_value)
+            INSERT INTO bot_settings (setting_key, setting_value)
             VALUES ('active_welcome_message_name', 'custom')
+            ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
         """)
         
         conn.commit()
@@ -653,14 +656,16 @@ async def save_welcome_template(query, template_text, template_name):
         # Insert or update the template
         template_key = template_name.lower().replace(" ", "_")
         c.execute("""
-            INSERT OR REPLACE INTO welcome_messages (name, template_text, description)
-            VALUES (?, ?, ?)
+            INSERT INTO welcome_messages (name, template_text, description)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (name) DO UPDATE SET template_text = EXCLUDED.template_text, description = EXCLUDED.description
         """, (template_key, template_text, template_name))
         
         # Set as active in bot_settings
         c.execute("""
-            INSERT OR REPLACE INTO bot_settings (setting_key, setting_value)
-            VALUES ('active_welcome_message_name', ?)
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES ('active_welcome_message_name', %s)
+            ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
         """, (template_key,))
         
         conn.commit()
@@ -709,8 +714,8 @@ async def handle_welcome_auto_arrange(update: Update, context: ContextTypes.DEFA
             
             c.execute("""
                 UPDATE start_menu_buttons 
-                SET row_position = ?, column_position = ?
-                WHERE id = ?
+                SET row_position = %s, column_position = %s
+                WHERE id = %s
             """, (new_row, new_col, btn['id']))
         
         conn.commit()
@@ -807,7 +812,7 @@ async def handle_welcome_move_button(update: Update, context: ContextTypes.DEFAU
         c = conn.cursor()
         
         # Get button info
-        c.execute("SELECT button_text, row_position, column_position FROM start_menu_buttons WHERE id = ?", (button_id,))
+        c.execute("SELECT button_text, row_position, column_position FROM start_menu_buttons WHERE id = %s", (button_id,))
         button = c.fetchone()
         
         if not button:
@@ -949,7 +954,7 @@ async def handle_welcome_toggle_button(update: Update, context: ContextTypes.DEF
         c = conn.cursor()
         
         # Get current status
-        c.execute("SELECT button_text, is_enabled FROM start_menu_buttons WHERE id = ?", (button_id,))
+        c.execute("SELECT button_text, is_enabled FROM start_menu_buttons WHERE id = %s", (button_id,))
         button = c.fetchone()
         
         if not button:
@@ -958,7 +963,7 @@ async def handle_welcome_toggle_button(update: Update, context: ContextTypes.DEF
         
         # Toggle status
         new_status = not button['is_enabled']
-        c.execute("UPDATE start_menu_buttons SET is_enabled = ? WHERE id = ?", (new_status, button_id))
+        c.execute("UPDATE start_menu_buttons SET is_enabled = %s WHERE id = %s", (new_status, button_id))
         conn.commit()
         
         action = "enabled" if new_status else "disabled"
@@ -998,14 +1003,14 @@ async def handle_welcome_set_position(update: Update, context: ContextTypes.DEFA
         # Update button position
         c.execute("""
             UPDATE start_menu_buttons 
-            SET row_position = ?, column_position = ?
-            WHERE id = ?
+            SET row_position = %s, column_position = %s
+            WHERE id = %s
         """, (new_row, new_col, button_id))
         
         conn.commit()
         
         # Get button name for confirmation
-        c.execute("SELECT button_text FROM start_menu_buttons WHERE id = ?", (button_id,))
+        c.execute("SELECT button_text FROM start_menu_buttons WHERE id = %s", (button_id,))
         button = c.fetchone()
         
         msg = f"✅ **Button Moved Successfully!**\n\n"
@@ -1063,14 +1068,16 @@ async def handle_welcome_reset_execute(update: Update, context: ContextTypes.DEF
         
         # Reset welcome message to default
         c.execute("""
-            INSERT OR REPLACE INTO welcome_messages (name, template_text, description)
-            VALUES ('default', ?, 'Default welcome message')
+            INSERT INTO welcome_messages (name, template_text, description)
+            VALUES ('default', %s, 'Default welcome message')
+            ON CONFLICT (name) DO UPDATE SET template_text = EXCLUDED.template_text, description = EXCLUDED.description
         """, (DEFAULT_WELCOME_TEXT,))
         
         # Set default as active
         c.execute("""
-            INSERT OR REPLACE INTO bot_settings (setting_key, setting_value)
+            INSERT INTO bot_settings (setting_key, setting_value)
             VALUES ('active_welcome_message_name', 'default')
+            ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
         """)
         
         # Clear all existing buttons
@@ -1080,7 +1087,7 @@ async def handle_welcome_reset_execute(update: Update, context: ContextTypes.DEF
         for button in DEFAULT_START_BUTTONS:
             c.execute("""
                 INSERT INTO start_menu_buttons (button_text, callback_data, row_position, column_position, is_enabled)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             """, (button["text"], button["callback"], button["row"], button["position"], button["enabled"]))
         
         conn.commit()

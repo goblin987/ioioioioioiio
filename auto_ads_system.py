@@ -23,8 +23,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode
-from config_testforwarder import Config
-from database_testforwarder import Database
+from utils import get_db_connection
 from telethon_manager_testforwarder import TelethonManager
 from bump_service_testforwarder import BumpService
 
@@ -4438,11 +4437,26 @@ async def handle_enhanced_channel_link(update: Update, context: ContextTypes.DEF
 def init_enhanced_auto_ads_tables():
     """Initialize database tables for the auto ads system"""
     try:
-        db = Database()
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Create basic auto ads tables
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                message_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        """)
+        
+        conn.commit()
+        conn.close()
         logger.info("Auto ads system database tables initialized successfully")
         return True
     except Exception as e:
-        logger.error(f"Failed to initialize auto ads database: {e}")
+        logger.error(f"Failed to initialize auto ads database: {e}", exc_info=True)
         return False
 
 # Enhanced telethon manager instance
