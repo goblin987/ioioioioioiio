@@ -72,16 +72,18 @@ def init_welcome_tables():
         """)
         
         # Insert default welcome message if none exists
-        c.execute("SELECT COUNT(*) FROM welcome_messages")
-        if c.fetchone()[0] == 0:
+        c.execute("SELECT COUNT(*) as count FROM welcome_messages")
+        result = c.fetchone()
+        if result['count'] == 0:
             c.execute("""
                 INSERT INTO welcome_messages (name, template_text, description)
                 VALUES ('default', %s, 'Default welcome message')
             """, (DEFAULT_WELCOME_TEXT,))
         
         # Insert default buttons if none exist
-        c.execute("SELECT COUNT(*) FROM start_menu_buttons")
-        if c.fetchone()[0] == 0:
+        c.execute("SELECT COUNT(*) as count FROM start_menu_buttons")
+        result = c.fetchone()
+        if result['count'] == 0:
             for button in DEFAULT_START_BUTTONS:
                 c.execute("""
                     INSERT INTO start_menu_buttons (button_text, callback_data, row_position, column_position, is_enabled)

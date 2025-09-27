@@ -70,7 +70,8 @@ def get_products_for_price_editing(limit=20, offset=0, search_term=None, city=No
             count_params.append(category)
         
         c.execute(count_query, count_params)
-        total_count = c.fetchone()[0]
+        result = c.fetchone()
+        total_count = result['count']
         
         return products, total_count
         

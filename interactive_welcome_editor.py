@@ -303,8 +303,9 @@ def init_interactive_welcome_tables():
         """)
         
         # Insert enhanced templates if none exist
-        c.execute("SELECT COUNT(*) FROM interactive_welcome_messages")
-        if c.fetchone()[0] == 0:
+        c.execute("SELECT COUNT(*) as count FROM interactive_welcome_messages")
+        result = c.fetchone()
+        if result['count'] == 0:
             for template_key, template_data in INTERACTIVE_TEMPLATES.items():
                 c.execute("""
                     INSERT INTO interactive_welcome_messages 
@@ -321,8 +322,9 @@ def init_interactive_welcome_tables():
                 ))
         
         # Insert enhanced buttons if none exist
-        c.execute("SELECT COUNT(*) FROM interactive_start_buttons")
-        if c.fetchone()[0] == 0:
+        c.execute("SELECT COUNT(*) as count FROM interactive_start_buttons")
+        result = c.fetchone()
+        if result['count'] == 0:
             for button in ENHANCED_DEFAULT_BUTTONS:
                 c.execute("""
                     INSERT INTO interactive_start_buttons 

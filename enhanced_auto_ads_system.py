@@ -354,14 +354,17 @@ async def handle_enhanced_auto_ads_menu(update: Update, context: ContextTypes.DE
         c = conn.cursor()
         
         # Get statistics
-        c.execute("SELECT COUNT(*) FROM userbot_accounts WHERE is_active = 1")
-        active_accounts = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) as count FROM userbot_accounts WHERE is_active = true")
+        result = c.fetchone()
+        active_accounts = result['count']
         
-        c.execute("SELECT COUNT(*) FROM enhanced_auto_ads_campaigns WHERE is_active = 1")
-        active_campaigns = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) as count FROM enhanced_auto_ads_campaigns WHERE is_active = true")
+        result = c.fetchone()
+        active_campaigns = result['count']
         
-        c.execute("SELECT COUNT(*) FROM enhanced_channels WHERE is_active = 1")
-        active_channels = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) as count FROM enhanced_channels WHERE is_active = true")
+        result = c.fetchone()
+        active_channels = result['count']
         
         # Get recent activity
         c.execute("""

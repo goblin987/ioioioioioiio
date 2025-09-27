@@ -2691,10 +2691,12 @@ async def handle_adm_delete_type(update: Update, context: ContextTypes.DEFAULT_T
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM products WHERE product_type = ?", (type_name_to_delete,))
-        product_count = c.fetchone()[0]
-        c.execute("SELECT COUNT(*) FROM reseller_discounts WHERE product_type = ?", (type_name_to_delete,))
-        reseller_discount_count = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) as count FROM products WHERE product_type = %s", (type_name_to_delete,))
+        result = c.fetchone()
+        product_count = result['count']
+        c.execute("SELECT COUNT(*) as count FROM reseller_discounts WHERE product_type = %s", (type_name_to_delete,))
+        result = c.fetchone()
+        reseller_discount_count = result['count']
 
         if product_count > 0 or reseller_discount_count > 0:
             error_msg_parts = []
@@ -3899,10 +3901,12 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "delete_type":
               if not action_params: raise ValueError("Missing type_name")
               type_name = action_params[0]
-              c.execute("SELECT COUNT(*) FROM products WHERE product_type = ?", (type_name,))
-              product_count = c.fetchone()[0]
-              c.execute("SELECT COUNT(*) FROM reseller_discounts WHERE product_type = ?", (type_name,))
-              reseller_discount_count = c.fetchone()[0]
+              c.execute("SELECT COUNT(*) as count FROM products WHERE product_type = %s", (type_name,))
+              result = c.fetchone()
+              product_count = result['count']
+              c.execute("SELECT COUNT(*) as count FROM reseller_discounts WHERE product_type = %s", (type_name,))
+              result = c.fetchone()
+              reseller_discount_count = result['count']
               if product_count == 0 and reseller_discount_count == 0:
                   delete_type_result = c.execute("DELETE FROM product_types WHERE name = ?", (type_name,))
                   if delete_type_result.rowcount > 0:

@@ -2872,19 +2872,21 @@ def check_payment_system_health():
         
         # Check for stuck payments
         c.execute("""
-            SELECT COUNT(*) FROM pending_deposits 
-            WHERE created_at < datetime('now', '-30 minutes')
-            AND is_purchase = 1
+            SELECT COUNT(*) as count FROM pending_deposits 
+            WHERE created_at < NOW() - INTERVAL '30 minutes'
+            AND is_purchase = true
         """)
-        stuck_payments = c.fetchone()[0]
+        result = c.fetchone()
+        stuck_payments = result['count']
         
         # Check for recent failures
         c.execute("""
-            SELECT COUNT(*) FROM pending_deposits 
-            WHERE created_at > datetime('now', '-1 hour')
-            AND is_purchase = 1
+            SELECT COUNT(*) as count FROM pending_deposits 
+            WHERE created_at > NOW() - INTERVAL '1 hour'
+            AND is_purchase = true
         """)
-        recent_payments = c.fetchone()[0]
+        result = c.fetchone()
+        recent_payments = result['count']
         
         conn.close()
         
