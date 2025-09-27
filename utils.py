@@ -1072,7 +1072,15 @@ CACHE_EXPIRY_SECONDS = 900
 # --- Database Connection Helper ---
 def get_db_connection():
     """Returns a connection to the PostgreSQL database."""
+    logger.info(f"🔧 Attempting to connect to PostgreSQL...")
+    logger.info(f"🔧 Host: {POSTGRES_HOST}")
+    logger.info(f"🔧 Port: {POSTGRES_PORT}")
+    logger.info(f"🔧 Database: {POSTGRES_DB}")
+    logger.info(f"🔧 User: {POSTGRES_USER}")
+    logger.info(f"🔧 Password: {'*' * len(POSTGRES_PASSWORD) if POSTGRES_PASSWORD else 'EMPTY'}")
+    
     try:
+        logger.info(f"🔧 Creating PostgreSQL connection...")
         conn = psycopg2.connect(
             host=POSTGRES_HOST,
             port=POSTGRES_PORT,
@@ -1082,10 +1090,13 @@ def get_db_connection():
             cursor_factory=RealDictCursor
         )
         conn.autocommit = False
+        logger.info(f"✅ Successfully connected to PostgreSQL!")
         return conn
     except psycopg2.Error as e:
         db_info = f"PostgreSQL at {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-        logger.critical(f"CRITICAL ERROR connecting to {db_info}: {e}")
+        logger.critical(f"❌ CRITICAL ERROR connecting to {db_info}: {e}")
+        logger.critical(f"❌ Error type: {type(e).__name__}")
+        logger.critical(f"❌ Error details: {str(e)}")
         raise SystemExit(f"Failed to connect to database: {e}")
 
 
@@ -1127,8 +1138,11 @@ def safe_alter_table(cursor, table_name, column_name, column_definition):
 # --- Database Initialization ---
 def init_db():
     """Initializes the database schema."""
+    logger.info(f"🔧 Starting database initialization...")
     try:
+        logger.info(f"🔧 Getting database connection...")
         with get_db_connection() as conn:
+            logger.info(f"✅ Database connection established, starting schema creation...")
             c = conn.cursor()
             # --- users table ---
             c.execute(f'''CREATE TABLE IF NOT EXISTS users (
