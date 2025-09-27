@@ -109,7 +109,7 @@ class Database:
             # Forwarding configurations
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS forwarding_configs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     user_id INTEGER,
                     account_id INTEGER,
                     source_chat_id TEXT,
@@ -126,7 +126,7 @@ class Database:
             # Message logs
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS message_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     user_id INTEGER,
                     account_id INTEGER,
                     source_message_id INTEGER,
@@ -146,8 +146,12 @@ class Database:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO users (user_id, username, first_name, last_name)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                username = EXCLUDED.username,
+                first_name = EXCLUDED.first_name,
+                last_name = EXCLUDED.last_name
             ''', (user_id, username, first_name, last_name))
             conn.commit()
     
@@ -155,7 +159,7 @@ class Database:
         """Get user by ID"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
+            cursor.execute('SELECT * FROM users WHERE user_id = %s', (user_id,))
             row = cursor.fetchone()
             if row:
                 return {
@@ -176,7 +180,7 @@ class Database:
             cursor.execute('''
                 INSERT INTO telegram_accounts 
                 (user_id, account_name, phone_number, api_id, api_hash, session_string)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
             ''', (user_id, account_name, phone_number, api_id, api_hash, session_string))
             conn.commit()
             return cursor.lastrowid
@@ -189,7 +193,7 @@ class Database:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM telegram_accounts 
-                WHERE user_id = ? AND is_active = 1
+                WHERE user_id = %s AND is_active = 1
                 ORDER BY created_at DESC
             ''', (user_id,))
             rows = cursor.fetchall()
@@ -219,7 +223,7 @@ class Database:
             try:
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
-                    cursor.execute('SELECT * FROM telegram_accounts WHERE id = ?', (account_id,))
+                    cursor.execute('SELECT * FROM telegram_accounts WHERE id = %s', (account_id,))
                     row = cursor.fetchone()
                     if row:
                         return {
@@ -251,8 +255,8 @@ class Database:
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE telegram_accounts 
-                SET session_string = ?
-                WHERE id = ?
+                SET session_string = %s
+                WHERE id = %s
             ''', (session_string, account_id))
             conn.commit()
     
@@ -262,21 +266,21 @@ class Database:
             cursor = conn.cursor()
             
             # Get account info before deletion for logging
-            cursor.execute('SELECT account_name, phone_number FROM telegram_accounts WHERE id = ?', (account_id,))
+            cursor.execute('SELECT account_name, phone_number FROM telegram_accounts WHERE id = %s', (account_id,))
             account_info = cursor.fetchone()
             
             # Completely remove the account record (not just deactivate)
-            cursor.execute('DELETE FROM telegram_accounts WHERE id = ?', (account_id,))
+            cursor.execute('DELETE FROM telegram_accounts WHERE id = %s', (account_id,))
             
             # Also clean up related data
             # Delete any forwarding configs using this account
-            cursor.execute('DELETE FROM forwarding_configs WHERE account_id = ?', (account_id,))
+            cursor.execute('DELETE FROM forwarding_configs WHERE account_id = %s', (account_id,))
             
             # Delete any campaigns using this account
-            cursor.execute('DELETE FROM ad_campaigns WHERE account_id = ?', (account_id,))
+            cursor.execute('DELETE FROM ad_campaigns WHERE account_id = %s', (account_id,))
             
             # Delete any message logs for this account
-            cursor.execute('DELETE FROM message_logs WHERE account_id = ?', (account_id,))
+            cursor.execute('DELETE FROM message_logs WHERE account_id = %s', (account_id,))
             
             conn.commit()
             
@@ -293,7 +297,7 @@ class Database:
             cursor.execute('''
                 INSERT INTO forwarding_configs 
                 (user_id, account_id, source_chat_id, destination_chat_id, config_name, config_data)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
             ''', (user_id, account_id, source_chat_id, destination_chat_id, config_name, json.dumps(config_data)))
             conn.commit()
             return cursor.lastrowid
@@ -307,7 +311,7 @@ class Database:
                     SELECT fc.*, ta.account_name 
                     FROM forwarding_configs fc
                     LEFT JOIN telegram_accounts ta ON fc.account_id = ta.id
-                    WHERE fc.user_id = ? AND fc.account_id = ? AND fc.is_active = 1
+                    WHERE fc.user_id = %s AND fc.account_id = %s AND fc.is_active = 1
                     ORDER BY fc.created_at DESC
                 ''', (user_id, account_id))
             else:
@@ -315,7 +319,7 @@ class Database:
                     SELECT fc.*, ta.account_name 
                     FROM forwarding_configs fc
                     LEFT JOIN telegram_accounts ta ON fc.account_id = ta.id
-                    WHERE fc.user_id = ? AND fc.is_active = 1
+                    WHERE fc.user_id = %s AND fc.is_active = 1
                     ORDER BY fc.created_at DESC
                 ''', (user_id,))
             rows = cursor.fetchall()
@@ -338,8 +342,8 @@ class Database:
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE forwarding_configs 
-                SET config_data = ?
-                WHERE id = ?
+                SET config_data = %s
+                WHERE id = %s
             ''', (json.dumps(config_data), config_id))
             conn.commit()
     
@@ -347,7 +351,7 @@ class Database:
         """Delete forwarding configuration"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('UPDATE forwarding_configs SET is_active = 0 WHERE id = ?', (config_id,))
+            cursor.execute('UPDATE forwarding_configs SET is_active = 0 WHERE id = %s', (config_id,))
             conn.commit()
     
     def log_message(self, user_id: int, account_id: int, source_message_id: int, 
@@ -358,7 +362,7 @@ class Database:
             cursor.execute('''
                 INSERT INTO message_logs 
                 (user_id, account_id, source_message_id, destination_message_id, source_chat_id, destination_chat_id)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
             ''', (user_id, account_id, source_message_id, destination_message_id, source_chat_id, destination_chat_id))
             conn.commit()
     
@@ -370,7 +374,7 @@ class Database:
                 SELECT c.*, a.account_name 
                 FROM ad_campaigns c
                 LEFT JOIN telegram_accounts a ON c.account_id = a.id
-                WHERE c.id = ?
+                WHERE c.id = %s
             ''', (campaign_id,))
             
             row = cursor.fetchone()
@@ -408,7 +412,7 @@ class Database:
                 UPDATE ad_campaigns 
                 SET last_run = CURRENT_TIMESTAMP,
                     total_sends = total_sends + 1
-                WHERE id = ?
+                WHERE id = %s
             ''', (campaign_id,))
             conn.commit()
     
@@ -419,7 +423,7 @@ class Database:
             cursor = conn.cursor()
             
             # Get the current ad_content
-            cursor.execute('SELECT ad_content FROM ad_campaigns WHERE id = ?', (campaign_id,))
+            cursor.execute('SELECT ad_content FROM ad_campaigns WHERE id = %s', (campaign_id,))
             row = cursor.fetchone()
             if not row:
                 return False
@@ -441,8 +445,8 @@ class Database:
                 # Update the database
                 cursor.execute('''
                     UPDATE ad_campaigns 
-                    SET ad_content = ?
-                    WHERE id = ?
+                    SET ad_content = %s
+                    WHERE id = %s
                 ''', (updated_ad_content_str, campaign_id))
                 conn.commit()
                 
@@ -464,7 +468,7 @@ class Database:
                 INSERT INTO ad_campaigns 
                 (user_id, account_id, campaign_name, ad_content, target_chats, 
                  schedule_type, schedule_time, target_mode, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 user_id, account_id, campaign_name, ad_content, 
                 json.dumps(target_chats), schedule_type, schedule_time, 
@@ -485,7 +489,7 @@ class Database:
                        target_chats, schedule_type, schedule_time, target_mode, 
                        is_active, created_at, last_run, total_sends
                 FROM ad_campaigns 
-                WHERE user_id = ?
+                WHERE user_id = %s
                 ORDER BY created_at DESC
             ''', (user_id,))
             
@@ -525,7 +529,7 @@ class Database:
                 INSERT INTO telegram_accounts 
                 (user_id, account_name, phone_number, api_id, api_hash, 
                  session_string, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 user_id, account_name, phone_number, api_id, api_hash,
                 session_string, 1, datetime.now().isoformat()
@@ -543,7 +547,7 @@ class Database:
                 SELECT id, user_id, account_name, phone_number, api_id, api_hash, 
                        session_string, is_active, created_at
                 FROM telegram_accounts 
-                WHERE id = ?
+                WHERE id = %s
             ''', (account_id,))
             
             row = cursor.fetchone()
