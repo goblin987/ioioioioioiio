@@ -1083,8 +1083,8 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                 logger.info("📧 Sent low stock alert to admin")
             except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
-        except Exception as e:
-            logger.error(f"Error in stock alerts job: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error in stock alerts job: {e}", exc_info=True)
 
 async def auto_ads_execution_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
     """Wrapper for executing pending auto ads campaigns."""
