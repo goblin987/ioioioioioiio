@@ -1673,17 +1673,42 @@ def main() -> None:
         logger.info("Initializing application...")
         await application.initialize()
         logger.info(f"Setting Telegram webhook to: {WEBHOOK_URL}/telegram/{TOKEN}")
-        if await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES):
-            logger.info("Telegram webhook set successfully.")
-        else:
-            logger.error("Failed to set Telegram webhook.")
+        try:
+            webhook_result = await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES)
+            if webhook_result:
+                logger.info("✅ Telegram webhook set successfully.")
+            else:
+                logger.error("❌ Failed to set Telegram webhook.")
+                return
+        except Exception as e:
+            logger.error(f"❌ Error setting webhook: {e}")
             return
+        
         await application.start()
-        logger.info("Telegram application started (webhook mode).")
+        logger.info("✅ Telegram application started (webhook mode).")
+        
         port = int(os.environ.get("PORT", 10000))
-        flask_thread = threading.Thread(target=lambda: flask_app.run(host='0.0.0.0', port=port, debug=False), daemon=True)
+        logger.info(f"Starting Flask server on port {port}...")
+        
+        def run_flask():
+            try:
+                flask_app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+            except Exception as e:
+                logger.error(f"Flask server error: {e}")
+        
+        flask_thread = threading.Thread(target=run_flask, daemon=True)
         flask_thread.start()
-        logger.info(f"Flask server started in a background thread on port {port}.")
+        logger.info(f"✅ Flask server started in background thread on port {port}.")
+        
+        # Test webhook endpoint
+        try:
+            import requests
+            test_url = f"{WEBHOOK_URL}/health"
+            response = requests.get(test_url, timeout=10)
+            logger.info(f"✅ Health check successful: {response.status_code}")
+        except Exception as e:
+            logger.warning(f"⚠️ Health check failed: {e}")
+        
         logger.info("Main thread entering keep-alive loop...")
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
         for s in signals: main_loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(s, main_loop, application)))
