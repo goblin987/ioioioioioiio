@@ -1704,46 +1704,64 @@ def remove_pending_deposit(payment_id: str, trigger: str = "unknown"): # Added t
 def load_cities():
     cities_data = {}
     try:
-        with get_db_connection() as conn: c = conn.cursor(); c.execute("SELECT id, name FROM cities ORDER BY name"); cities_data = {str(row['id']): row['name'] for row in c.fetchall()}
-    except psycopg2.Error as e: logger.error(f"Failed to load cities: {e}")
+        logger.info("🔧 Connecting to database for cities...")
+        with get_db_connection() as conn: 
+            logger.info("🔧 Executing cities query...")
+            c = conn.cursor(); c.execute("SELECT id, name FROM cities ORDER BY name"); cities_data = {str(row['id']): row['name'] for row in c.fetchall()}
+            logger.info(f"✅ Cities query completed, found {len(cities_data)} cities")
+    except psycopg2.Error as e: logger.error(f"❌ Failed to load cities: {e}")
     return cities_data
 
 def load_districts():
     districts_data = {}
     try:
+        logger.info("🔧 Connecting to database for districts...")
         with get_db_connection() as conn:
+            logger.info("🔧 Executing districts query...")
             c = conn.cursor(); c.execute("SELECT d.city_id, d.id, d.name FROM districts d ORDER BY d.city_id, d.name")
             for row in c.fetchall(): city_id_str = str(row['city_id']); districts_data.setdefault(city_id_str, {})[str(row['id'])] = row['name']
-    except psycopg2.Error as e: logger.error(f"Failed to load districts: {e}")
+            logger.info(f"✅ Districts query completed, found {sum(len(d) for d in districts_data.values())} districts")
+    except psycopg2.Error as e: logger.error(f"❌ Failed to load districts: {e}")
     return districts_data
 
 def load_product_types():
     product_types_dict = {}
     try:
+        logger.info("🔧 Connecting to database for product types...")
         with get_db_connection() as conn:
+            logger.info("🔧 Executing product types query...")
             c = conn.cursor()
-            c.execute("SELECT name, COALESCE(emoji, ?) as emoji FROM product_types ORDER BY name", (DEFAULT_PRODUCT_EMOJI,))
+            c.execute("SELECT name, COALESCE(emoji, %s) as emoji FROM product_types ORDER BY name", (DEFAULT_PRODUCT_EMOJI,))
             product_types_dict = {row['name']: row['emoji'] for row in c.fetchall()}
+            logger.info(f"✅ Product types query completed, found {len(product_types_dict)} product types")
     except psycopg2.Error as e:
-        logger.error(f"Failed to load product types and emojis: {e}")
+        logger.error(f"❌ Failed to load product types and emojis: {e}")
     return product_types_dict
 
 def load_all_data():
     """Loads all dynamic data, modifying global variables IN PLACE."""
     global CITIES, DISTRICTS, PRODUCT_TYPES
-    logger.info("Starting load_all_data (in-place update)...")
+    logger.info("🔧 Starting load_all_data (in-place update)...")
     try:
+        logger.info("🔧 Loading cities...")
         cities_data = load_cities()
+        logger.info(f"✅ Loaded {len(cities_data)} cities")
+        
+        logger.info("🔧 Loading districts...")
         districts_data = load_districts()
+        logger.info(f"✅ Loaded {sum(len(d) for d in districts_data.values())} districts")
+        
+        logger.info("🔧 Loading product types...")
         product_types_dict = load_product_types()
+        logger.info(f"✅ Loaded {len(product_types_dict)} product types")
 
         CITIES.clear(); CITIES.update(cities_data)
         DISTRICTS.clear(); DISTRICTS.update(districts_data)
         PRODUCT_TYPES.clear(); PRODUCT_TYPES.update(product_types_dict)
 
-        logger.info(f"Loaded (in-place) {len(CITIES)} cities, {sum(len(d) for d in DISTRICTS.values())} districts, {len(PRODUCT_TYPES)} product types.")
+        logger.info(f"✅ Loaded (in-place) {len(CITIES)} cities, {sum(len(d) for d in DISTRICTS.values())} districts, {len(PRODUCT_TYPES)} product types.")
     except Exception as e:
-        logger.error(f"Error during load_all_data (in-place): {e}", exc_info=True)
+        logger.error(f"❌ Error during load_all_data (in-place): {e}", exc_info=True)
         CITIES.clear(); DISTRICTS.clear(); PRODUCT_TYPES.clear()
 
 
