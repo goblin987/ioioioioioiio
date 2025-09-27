@@ -1380,53 +1380,65 @@ def init_db():
             #     logger.error(f"❌ Failed to initialize testforwarder database: {e}", exc_info=True)
 
             # discount_codes table
+            logger.info("🔧 Creating discount_codes table...")
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (
                 id SERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL,
                 discount_type TEXT NOT NULL CHECK(discount_type IN ('percentage', 'fixed')),
-                value REAL NOT NULL, is_active INTEGER DEFAULT 1 CHECK(is_active IN (0, 1)),
+                value REAL NOT NULL, is_active BOOLEAN DEFAULT TRUE,
                 max_uses INTEGER DEFAULT NULL, uses_count INTEGER DEFAULT 0,
-                created_date TEXT NOT NULL, expiry_date TEXT DEFAULT NULL,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, expiry_date TIMESTAMP DEFAULT NULL,
                 min_order_amount REAL DEFAULT NULL
             )''')
+            logger.info("✅ Discount_codes table created successfully")
             
             # discount_code_usage table - Track individual user usage (allows reuse)
+            logger.info("🔧 Creating discount_code_usage table...")
             c.execute('''CREATE TABLE IF NOT EXISTS discount_code_usage (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 code TEXT NOT NULL,
-                used_at TEXT NOT NULL,
+                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 discount_amount REAL NOT NULL
             )''')
+            logger.info("✅ Discount_code_usage table created successfully")
             
             # Note: discount_code_usage table migration skipped for PostgreSQL to avoid startup delays
             logger.info("✅ Discount_code_usage table created successfully (migration skipped for PostgreSQL)")
             # pending_deposits table
+            logger.info("🔧 Creating pending_deposits table...")
             c.execute('''CREATE TABLE IF NOT EXISTS pending_deposits (
                 payment_id TEXT PRIMARY KEY NOT NULL, user_id INTEGER NOT NULL,
                 currency TEXT NOT NULL, target_eur_amount REAL NOT NULL,
-                expected_crypto_amount REAL NOT NULL, created_at TEXT NOT NULL,
-                is_purchase INTEGER DEFAULT 0, basket_snapshot_json TEXT DEFAULT NULL,
+                expected_crypto_amount REAL NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_purchase BOOLEAN DEFAULT FALSE, basket_snapshot_json TEXT DEFAULT NULL,
                 discount_code_used TEXT DEFAULT NULL
             )''')
+            logger.info("✅ Pending_deposits table created successfully")
             # Note: pending_deposits table columns already included in CREATE TABLE statement
             logger.info("✅ Pending_deposits table created successfully")
 
             # Admin Log table
+            logger.info("🔧 Creating admin_log table...")
             c.execute('''CREATE TABLE IF NOT EXISTS admin_log (
                 id SERIAL PRIMARY KEY,
-                timestamp TEXT NOT NULL, admin_id INTEGER NOT NULL, target_user_id INTEGER,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, admin_id INTEGER NOT NULL, target_user_id INTEGER,
                 action TEXT NOT NULL, reason TEXT, amount_change REAL DEFAULT NULL,
                 old_value TEXT, new_value TEXT
             )''')
+            logger.info("✅ Admin_log table created successfully")
             # Bot Settings table
+            logger.info("🔧 Creating bot_settings table...")
             c.execute('''CREATE TABLE IF NOT EXISTS bot_settings (
                 setting_key TEXT PRIMARY KEY NOT NULL, setting_value TEXT
             )''')
+            logger.info("✅ Bot_settings table created successfully")
             # Welcome Messages table
+            logger.info("🔧 Creating welcome_messages table...")
             c.execute('''CREATE TABLE IF NOT EXISTS welcome_messages (
                 id SERIAL PRIMARY KEY, name TEXT UNIQUE NOT NULL,
                 template_text TEXT NOT NULL, description TEXT
             )''')
+            logger.info("✅ Welcome_messages table created successfully")
             # Add description column if missing
             try: c.execute("ALTER TABLE welcome_messages ADD COLUMN description TEXT")
             except psycopg2.OperationalError: pass # Ignore if already exists
