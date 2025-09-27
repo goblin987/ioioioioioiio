@@ -1660,10 +1660,13 @@ def main() -> None:
         logger.error(f"❌ Failed to initialize price editor tables: {e}", exc_info=True)
     
     try:
+        logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
         init_enhanced_auto_ads_tables()
         logger.info("✅ Auto ads tables initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize auto ads tables: {e}", exc_info=True)
+    
+    logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
     load_all_data()
     logger.info("✅ All data loaded successfully")
@@ -1712,6 +1715,8 @@ def main() -> None:
 
     # Enhanced auto ads system is initialized via database init
     logger.info("Enhanced auto ads system tables initialized via database init")
+    
+    logger.info("🔧 About to define setup_webhooks_and_run function...")
 
     async def setup_webhooks_and_run():
         nonlocal application
@@ -1797,6 +1802,7 @@ def main() -> None:
         loop.stop()
 
     try:
+        logger.info("🔧 About to start main event loop...")
         logger.info("🔧 Starting main event loop...")
         main_loop.run_until_complete(setup_webhooks_and_run())
         logger.info("✅ Main event loop completed successfully")
