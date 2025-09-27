@@ -1145,6 +1145,7 @@ def init_db():
             logger.info(f"✅ Database connection established, starting schema creation...")
             c = conn.cursor()
             # --- users table ---
+            logger.info(f"🔧 Creating users table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY, 
                 username {get_text_type()}, 
@@ -1158,18 +1159,24 @@ def init_db():
                 last_active {get_timestamp_type()} DEFAULT NULL,
                 broadcast_failed_count INTEGER DEFAULT 0
             )''')
+            logger.info(f"✅ Users table created successfully")
             # Add missing columns safely
+            logger.info(f"🔧 Adding missing columns to users table...")
             safe_alter_table(c, 'users', 'is_banned', f'{get_boolean_type()} DEFAULT FALSE')
             safe_alter_table(c, 'users', 'is_reseller', f'{get_boolean_type()} DEFAULT FALSE')
             safe_alter_table(c, 'users', 'last_active', f'{get_timestamp_type()} DEFAULT NULL')
             safe_alter_table(c, 'users', 'broadcast_failed_count', 'INTEGER DEFAULT 0')
+            logger.info(f"✅ Users table columns updated successfully")
 
             # cities table
+            logger.info(f"🔧 Creating cities table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS cities (
                 id {get_auto_increment()}, 
                 name {get_text_type()} UNIQUE NOT NULL
             )''')
+            logger.info(f"✅ Cities table created successfully")
             # districts table
+            logger.info(f"🔧 Creating districts table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS districts (
                 id {get_auto_increment()}, 
                 city_id INTEGER NOT NULL, 
@@ -1177,47 +1184,62 @@ def init_db():
                 FOREIGN KEY(city_id) REFERENCES cities(id) ON DELETE CASCADE, 
                 UNIQUE (city_id, name)
             )''')
+            logger.info(f"✅ Districts table created successfully")
             # product_types table
+            logger.info(f"🔧 Creating product_types table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS product_types (
                 name {get_text_type()} PRIMARY KEY NOT NULL,
                 emoji {get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}',
                 description {get_text_type()}
             )''')
+            logger.info(f"✅ Product_types table created successfully")
             # Add missing columns safely
+            logger.info(f"🔧 Adding missing columns to product_types table...")
             safe_alter_table(c, 'product_types', 'emoji', f"{get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}'")
             safe_alter_table(c, 'product_types', 'description', get_text_type())
+            logger.info(f"✅ Product_types table columns updated successfully")
 
             # products table
+            logger.info(f"🔧 Creating products table...")
             c.execute('''CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY, city TEXT NOT NULL, district TEXT NOT NULL,
                 product_type TEXT NOT NULL, size TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
                 added_by INTEGER, added_date TEXT
             )''')
+            logger.info(f"✅ Products table created successfully")
             
             # Add new columns to existing products table if they don't exist
             # Use separate transactions to avoid transaction abort issues
             def safe_add_column(column_name, column_definition):
                 try:
+                    logger.info(f"🔧 Adding column {column_name}...")
                     c.execute(f"ALTER TABLE products ADD COLUMN {column_name} {column_definition}")
                     conn.commit()  # Commit each column addition separately
+                    logger.info(f"✅ Column {column_name} added successfully")
                 except psycopg2.errors.DuplicateColumn:
                     conn.rollback()  # Rollback on duplicate column
+                    logger.info(f"ℹ️ Column {column_name} already exists, skipping")
                     pass  # Column already exists
                 except Exception as e:
                     conn.rollback()  # Rollback on any other error
-                    logger.warning(f"Could not add column {column_name}: {e}")
+                    logger.warning(f"❌ Could not add column {column_name}: {e}")
             
+            logger.info(f"🔧 Adding missing columns to products table...")
             safe_add_column("low_stock_threshold", "INTEGER DEFAULT 5")
             safe_add_column("stock_alerts_enabled", "INTEGER DEFAULT 1")
             safe_add_column("last_stock_alert", "TEXT")
+            logger.info(f"✅ Products table columns updated successfully")
             # product_media table (Fixed: No UNIQUE constraint on file_path to prevent insertion errors)
+            logger.info(f"🔧 Creating product_media table...")
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
                 id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
                 media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             )''')
+            logger.info(f"✅ Product_media table created successfully")
             # purchases table
+            logger.info(f"🔧 Creating purchases table...")
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, product_id INTEGER,
                 product_name TEXT NOT NULL, product_type TEXT NOT NULL, product_size TEXT NOT NULL,
@@ -1225,6 +1247,7 @@ def init_db():
                 FOREIGN KEY(user_id) REFERENCES users(user_id),
                 FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE SET NULL
             )''')
+            logger.info(f"✅ Purchases table created successfully")
             # reviews table
             c.execute('''CREATE TABLE IF NOT EXISTS reviews (
                 review_id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL,
@@ -1551,8 +1574,9 @@ def init_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_reseller_discounts_user_id ON reseller_discounts(reseller_user_id)")
             # <<< END ADDED >>>
 
+            logger.info(f"🔧 Committing all database changes...")
             conn.commit()
-            logger.info(f"PostgreSQL database schema initialized/verified successfully.")
+            logger.info(f"✅ PostgreSQL database schema initialized/verified successfully.")
     except psycopg2.Error as e:
         logger.critical(f"CRITICAL ERROR: PostgreSQL database initialization failed: {e}", exc_info=True)
         raise SystemExit("Database initialization failed.")
