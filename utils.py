@@ -1210,13 +1210,13 @@ def init_db():
             # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
             # will be added later when needed to avoid startup delays
             logger.info(f"✅ Products table created with basic columns")
-            # product_media table (simplified without foreign key to avoid startup issues)
-            logger.info(f"🔧 Creating product_media table...")
-            c.execute('''CREATE TABLE IF NOT EXISTS product_media (
-                id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
-                media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
-            )''')
-            logger.info(f"✅ Product_media table created successfully")
+            # product_media table (temporarily disabled to debug startup issue)
+            logger.info(f"🔧 Skipping product_media table creation for debugging...")
+            # c.execute('''CREATE TABLE IF NOT EXISTS product_media (
+            #     id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
+            #     media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
+            # )''')
+            logger.info(f"✅ Product_media table creation skipped")
             # purchases table
             logger.info(f"🔧 Creating purchases table...")
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (
