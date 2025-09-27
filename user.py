@@ -106,14 +106,14 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         conn = get_db_connection()
         c = conn.cursor()
         # Get user stats
-        c.execute("SELECT balance, total_purchases FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT balance, total_purchases FROM users WHERE user_id = %s", (user_id,))
         result = c.fetchone()
         if result:
             balance = Decimal(str(result['balance']))
             purchases = result['total_purchases']
 
         # Get active welcome template name setting
-        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = ?", ("active_welcome_message_name",)) # LINE 89
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("active_welcome_message_name",)) # LINE 89
         setting_row = c.fetchone()
         if setting_row and setting_row['setting_value']: # Check if value is not None/empty
             active_template_name_from_db = setting_row['setting_value']
@@ -142,7 +142,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         try:
             conn_load = get_db_connection()
             c_load = conn_load.cursor()
-            c_load.execute("SELECT template_text FROM welcome_messages WHERE name = ?", (active_template_name_from_db,))
+            c_load.execute("SELECT template_text FROM welcome_messages WHERE name = %s", (active_template_name_from_db,))
             template_row = c_load.fetchone()
             if template_row:
                 welcome_template_to_use = template_row['template_text']
@@ -270,11 +270,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             c = conn.cursor()
             # Ensure user exists
             c.execute("""
-                INSERT INTO users (user_id, username, language, is_reseller) VALUES (?, ?, 'en', 0)
+                INSERT INTO users (user_id, username, language, is_reseller) VALUES (%s, %s, 'en', 0)
                 ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
             """, (user_id, username))
             # Get language
-            c.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+            c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
             result = c.fetchone()
             db_lang = result['language'] if result else 'en'
             try: from utils import LANGUAGES as UTILS_LANGUAGES_START
@@ -413,7 +413,7 @@ async def handle_city_selection(update: Update, context: ContextTypes.DEFAULT_TY
                     c.execute("""
                         SELECT product_type, size, price, COUNT(*) as quantity
                         FROM products
-                        WHERE city = ? AND district = ? AND available > reserved
+                        WHERE city = %s AND district = %s AND available > reserved
                         GROUP BY product_type, size, price
                         ORDER BY product_type, price, size
                     """, (city_name, dist_name))
@@ -526,7 +526,7 @@ async def handle_district_selection(update: Update, context: ContextTypes.DEFAUL
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute("SELECT DISTINCT product_type FROM products WHERE city = ? AND district = ? AND available > reserved ORDER BY product_type", (city, district))
+            c.execute("SELECT DISTINCT product_type FROM products WHERE city = %s AND district = %s AND available > reserved ORDER BY product_type", (city, district))
             available_types = [row['product_type'] for row in c.fetchall()]
             break  # Success, exit retry loop
         except sqlite3.Error as e:
@@ -593,7 +593,7 @@ async def handle_type_selection(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT size, price, COUNT(*) as count_available FROM products WHERE city = ? AND district = ? AND product_type = ? AND available > reserved GROUP BY size, price ORDER BY price", (city, district, p_type))
+        c.execute("SELECT size, price, COUNT(*) as count_available FROM products WHERE city = %s AND district = %s AND product_type = %s AND available > reserved GROUP BY size, price ORDER BY price", (city, district, p_type))
         products = c.fetchall()
 
         if not products:
@@ -668,7 +668,7 @@ async def handle_product_selection(update: Update, context: ContextTypes.DEFAULT
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT COUNT(*) as count FROM products WHERE city = ? AND district = ? AND product_type = ? AND size = ? AND price = ? AND available > reserved", (city, district, p_type, size, float(original_price)))
+        c.execute("SELECT COUNT(*) as count FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved", (city, district, p_type, size, float(original_price)))
         available_count_result = c.fetchone(); available_count = available_count_result['count'] if available_count_result else 0
 
         if available_count <= 0:
@@ -743,7 +743,7 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
         c.execute("BEGIN EXCLUSIVE")
         
         # Step 1: Find an available product
-        c.execute("SELECT id FROM products WHERE city = ? AND district = ? AND product_type = ? AND size = ? AND price = ? AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
+        c.execute("SELECT id FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
         product_row = c.fetchone()
 
         if not product_row:
@@ -756,7 +756,7 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
         
         # Step 2: Atomically reserve the specific product with availability check
         # This prevents race conditions by ensuring reserved never exceeds available
-        update_result = c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = ? AND available > reserved", (product_id_reserved,))
+        update_result = c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (product_id_reserved,))
         
         if update_result.rowcount == 0:
             # Race condition: product was taken between SELECT and UPDATE
@@ -764,11 +764,11 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
             keyboard = [[InlineKeyboardButton(f"{EMOJI_BACK} {back_options_button}", callback_data=f"type|{city_id}|{dist_id}|{p_type}"), InlineKeyboardButton(f"{EMOJI_HOME} {home_button}", callback_data="back_start")]]
             await query.edit_message_text("❌ Sorry, this item was just taken by another user! Please try again.", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
             return
-        c.execute("SELECT basket FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
         user_basket_row = c.fetchone(); current_basket_str = user_basket_row['basket'] if user_basket_row else ''
         timestamp = time.time(); new_item_str = f"{product_id_reserved}:{timestamp}"
         new_basket_str = f"{current_basket_str},{new_item_str}" if current_basket_str else new_item_str
-        c.execute("UPDATE users SET basket = ? WHERE user_id = ?", (new_basket_str, user_id))
+        c.execute("UPDATE users SET basket = %s WHERE user_id = %s", (new_basket_str, user_id))
         conn.commit()
 
         if "basket" not in context.user_data or not isinstance(context.user_data["basket"], list): context.user_data["basket"] = []
@@ -882,7 +882,7 @@ async def handle_profile(update: Update, context: ContextTypes.DEFAULT_TYPE, par
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT balance, total_purchases FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT balance, total_purchases FROM users WHERE user_id = %s", (user_id,))
         result = c.fetchone()
         if not result: logger.error(f"User {user_id} not found in DB for profile."); await query.edit_message_text("❌ Error: Could not load profile.", parse_mode=None); return
         balance, purchases = Decimal(str(result['balance'])), result['total_purchases']
@@ -940,7 +940,7 @@ def validate_discount_code(code_text: str, base_total_float: float) -> tuple[boo
         conn = get_db_connection()
         c = conn.cursor()
         # Use case-insensitive search by converting both to uppercase
-        c.execute("SELECT * FROM discount_codes WHERE UPPER(code) = ?", (normalized_code,))
+        c.execute("SELECT * FROM discount_codes WHERE UPPER(code) = %s", (normalized_code,))
         code_data = c.fetchone()
 
         if not code_data: return False, not_found_msg, None
@@ -1051,7 +1051,7 @@ def validate_and_apply_discount_atomic(code_text: str, base_total_float: float, 
         # Get and validate discount code
         c.execute("""
             SELECT * FROM discount_codes 
-            WHERE UPPER(code) = ?
+            WHERE UPPER(code) = %s
         """, (normalized_code,))
         code_data = c.fetchone()
 
@@ -1126,13 +1126,13 @@ def validate_and_apply_discount_atomic(code_text: str, base_total_float: float, 
         # ATOMIC: Record usage and increment usage count
         c.execute("""
             INSERT INTO discount_code_usage (user_id, code, used_at, discount_amount)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (user_id, normalized_code, datetime.now(timezone.utc).isoformat(), float(discount_amount)))
         
         c.execute("""
             UPDATE discount_codes 
             SET uses_count = uses_count + 1 
-            WHERE UPPER(code) = ?
+            WHERE UPPER(code) = %s
         """, (normalized_code,))
         
         # Commit the transaction
@@ -1210,7 +1210,7 @@ async def handle_view_basket(update: Update, context: ContextTypes.DEFAULT_TYPE,
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            placeholders = ','.join('?' for _ in product_ids_in_basket)
+            placeholders = ','.join('%s' for _ in product_ids_in_basket)
             c.execute(f"SELECT id, name, size FROM products WHERE id IN ({placeholders})", product_ids_in_basket)
             product_db_details = {row['id']: {'name': row['name'], 'size': row['size']} for row in c.fetchall()}
         except sqlite3.Error as e:
@@ -1239,7 +1239,7 @@ async def handle_view_basket(update: Update, context: ContextTypes.DEFAULT_TYPE,
         db_info = product_db_details.get(prod_id, {})
         basket_items_with_details.append({
             'id': prod_id, 'type': product_type, 'name': db_info.get('name', f'P{prod_id}'),
-            'size': db_info.get('size', '?'), 'original_price': original_price,
+            'size': db_info.get('size', '%s'), 'original_price': original_price,
             'discounted_price': item_price_after_reseller, 'timestamp': timestamp,
             'has_reseller_discount': item_reseller_discount > Decimal('0.0')
         })
@@ -1449,16 +1449,16 @@ async def handle_remove_from_basket(update: Update, context: ContextTypes.DEFAUL
         conn = get_db_connection()
         c = conn.cursor(); c.execute("BEGIN")
         if item_removed_from_context:
-             update_result = c.execute("UPDATE products SET reserved = MAX(0, reserved - 1) WHERE id = ?", (product_id_to_remove,))
+             update_result = c.execute("UPDATE products SET reserved = MAX(0, reserved - 1) WHERE id = %s", (product_id_to_remove,))
              if update_result.rowcount > 0: logger.debug(f"Decremented reservation P{product_id_to_remove}.")
-             else: logger.warning(f"Could not find P{product_id_to_remove} to decrement reservation (maybe already cleared?).")
-        c.execute("SELECT basket FROM users WHERE user_id = ?", (user_id,))
+             else: logger.warning(f"Could not find P{product_id_to_remove} to decrement reservation (maybe already cleared%s).")
+        c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
         db_basket_result = c.fetchone(); db_basket_str = db_basket_result['basket'] if db_basket_result else ''
         if db_basket_str and item_to_remove_str:
             items_list = db_basket_str.split(',')
             if item_to_remove_str in items_list:
                 items_list.remove(item_to_remove_str); new_db_basket_str = ','.join(items_list)
-                c.execute("UPDATE users SET basket = ? WHERE user_id = ?", (new_db_basket_str, user_id)); logger.debug(f"Updated DB basket user {user_id} to: {new_db_basket_str}")
+                c.execute("UPDATE users SET basket = %s WHERE user_id = %s", (new_db_basket_str, user_id)); logger.debug(f"Updated DB basket user {user_id} to: {new_db_basket_str}")
             else: logger.warning(f"Item string '{item_to_remove_str}' not found in DB basket '{db_basket_str}' user {user_id}.")
         elif item_removed_from_context and not item_to_remove_str: logger.warning(f"Could not construct item string for DB removal P{product_id_to_remove}.")
         elif not item_removed_from_context: logger.debug(f"Item {product_id_to_remove} not in context, DB basket not modified.")
@@ -1509,10 +1509,10 @@ async def handle_clear_basket(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     try:
         conn = get_db_connection()
-        c = conn.cursor(); c.execute("BEGIN"); c.execute("UPDATE users SET basket = '' WHERE user_id = ?", (user_id,))
+        c = conn.cursor(); c.execute("BEGIN"); c.execute("UPDATE users SET basket = '' WHERE user_id = %s", (user_id,))
         if product_ids_to_release_counts:
              decrement_data = [(count, pid) for pid, count in product_ids_to_release_counts.items()]
-             c.executemany("UPDATE products SET reserved = MAX(0, reserved - ?) WHERE id = ?", decrement_data)
+             c.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
              total_items_released = sum(product_ids_to_release_counts.values()); logger.info(f"Released {total_items_released} reservations user {user_id} clear.")
         conn.commit()
         context.user_data["basket"] = []; context.user_data.pop('applied_discount', None)
@@ -1569,7 +1569,7 @@ async def handle_confirm_pay(update: Update, context: ContextTypes.DEFAULT_TYPE,
              await handle_view_basket(update, context)
              return
 
-        placeholders = ','.join('?' for _ in product_ids_in_basket)
+        placeholders = ','.join('%s' for _ in product_ids_in_basket)
         # MODIFIED: Fetch city, district, original_text
         c.execute(f"SELECT id, price, name, size, product_type, city, district, original_text FROM products WHERE id IN ({placeholders})", product_ids_in_basket)
         product_db_details = {row['id']: dict(row) for row in c.fetchall()}
@@ -1622,7 +1622,7 @@ async def handle_confirm_pay(update: Update, context: ContextTypes.DEFAULT_TYPE,
                 await query.answer("Applied discount code became invalid.", show_alert=True)
 
         if final_total < Decimal('0.0'): final_total = Decimal('0.0')
-        c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         balance_result = c.fetchone()
         user_balance = Decimal(str(balance_result['balance'])) if balance_result else Decimal('0.0')
     except (sqlite3.Error, Exception) as e:
@@ -1655,7 +1655,7 @@ async def handle_confirm_pay(update: Update, context: ContextTypes.DEFAULT_TYPE,
         track_reservation(user_id, valid_basket_items_snapshot, "basket")
         insufficient_msg_template = lang_data.get("insufficient_balance_pay_option", "⚠️ Insufficient Balance! ({balance} / {required} EUR)")
         insufficient_msg = insufficient_msg_template.format(balance=format_currency(user_balance), required=format_currency(final_total))
-        prompt_msg = lang_data.get("prompt_discount_or_pay", "Do you have a discount code to apply before paying with crypto?")
+        prompt_msg = lang_data.get("prompt_discount_or_pay", "Do you have a discount code to apply before paying with crypto%s")
         pay_crypto_button = lang_data.get("pay_crypto_button", "💳 Pay with Crypto")
         apply_discount_button = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
         back_basket_button = lang_data.get("back_basket_button", "Back to Basket")
@@ -1873,7 +1873,7 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
         c = conn.cursor()
         c.execute("BEGIN EXCLUSIVE")
         # MODIFIED: Fetch city, district, original_text for snapshot
-        c.execute("SELECT id, name, price, size, product_type, city, district, original_text FROM products WHERE city = ? AND district = ? AND product_type = ? AND size = ? AND price = ? AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
+        c.execute("SELECT id, name, price, size, product_type, city, district, original_text FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
         product_to_reserve = c.fetchone()
 
         if not product_to_reserve:
@@ -1885,13 +1885,13 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
         else:
             reserved_id = product_to_reserve['id']
             product_details_for_snapshot = dict(product_to_reserve) # Now contains enriched data
-            update_result = c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = ? AND available > reserved", (reserved_id,))
+            update_result = c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (reserved_id,))
             if update_result.rowcount == 1:
                 conn.commit()
                 logger.info(f"Successfully reserved product {reserved_id} for single item payment by user {user_id}.")
             else:
                 conn.rollback()
-                logger.warning(f"Failed to reserve product {reserved_id} (race condition?) for single item payment user {user_id}.")
+                logger.warning(f"Failed to reserve product {reserved_id} (race condition%s) for single item payment user {user_id}.")
                 try: await query.edit_message_text("❌ Sorry, this item was just taken!", parse_mode=None)
                 except Exception: pass
                 error_occurred_reservation = True
@@ -1936,7 +1936,7 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
         item_name_display = f"{PRODUCT_TYPES.get(p_type, '')} {product_details_for_snapshot['name']} {product_details_for_snapshot['size']}"
         price_display_str = format_currency(price_after_reseller)
         prompt_msg = (f"You are about to pay for: {item_name_display} ({price_display_str} EUR).\n\n"
-                      f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply?')}")
+                      f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply%s')}")
         pay_now_direct_button_text = lang_data.get("pay_now_button", "Pay Now")
         apply_discount_button_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
         back_to_product_button_text = lang_data.get("back_options_button", "Back to Product")
@@ -1983,7 +1983,7 @@ async def handle_view_history(update: Update, context: ContextTypes.DEFAULT_TYPE
                 # Convert to local time if needed, or keep as UTC/formatted
                 date_str = dt_obj.strftime('%y-%m-%d %H:%M') # Shorter date format
             except (ValueError, TypeError):
-                date_str = "???"
+                date_str = "%s%s%s"
             p_type = purchase.get('product_type', 'Product') # Use get with fallback
             p_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
             p_name = purchase.get('product_name', 'N/A') # Use name from purchase record if available
@@ -2019,7 +2019,7 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
             try:
                 conn = get_db_connection()
                 c = conn.cursor()
-                c.execute("UPDATE users SET language = ? WHERE user_id = ?", (new_lang, user_id))
+                c.execute("UPDATE users SET language = %s WHERE user_id = %s", (new_lang, user_id))
                 conn.commit()
                 logger.info(f"User {user_id} DB language updated to {new_lang}")
 
@@ -2120,7 +2120,7 @@ async def handle_price_list_city(update: Update, context: ContextTypes.DEFAULT_T
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT product_type, size, price, district, COUNT(*) as quantity FROM products WHERE city = ? AND available > reserved GROUP BY product_type, size, price, district ORDER BY product_type, price, size, district", (city_name,))
+        c.execute("SELECT product_type, size, price, district, COUNT(*) as quantity FROM products WHERE city = %s AND available > reserved GROUP BY product_type, size, price, district ORDER BY product_type, price, size, district", (city_name,))
         results = c.fetchall()
         no_products_in_city = lang_data.get("no_products_in_city", "No products available here."); available_label = lang_data.get("available_label", "available")
 
@@ -2233,7 +2233,7 @@ async def handle_leave_review_message(update: Update, context: ContextTypes.DEFA
         conn = get_db_connection()
         c = conn.cursor()
         c.execute(
-            "INSERT INTO reviews (user_id, review_text, review_date) VALUES (?, ?, ?)",
+            "INSERT INTO reviews (user_id, review_text, review_date) VALUES (%s, %s, %s)",
             (user_id, review_text, datetime.now(timezone.utc).isoformat())
         )
         conn.commit()
@@ -2486,7 +2486,7 @@ async def handle_single_item_discount_code_message(update: Update, context: Cont
     try:
         conn_balance = get_db_connection()
         c_balance = conn_balance.cursor()
-        c_balance.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+        c_balance.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         balance_result = c_balance.fetchone()
         user_balance = Decimal(str(balance_result['balance'])) if balance_result else Decimal('0.0')
     except sqlite3.Error as e:
