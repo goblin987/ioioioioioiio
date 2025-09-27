@@ -1178,8 +1178,7 @@ def init_db():
                 id SERIAL PRIMARY KEY, city TEXT NOT NULL, district TEXT NOT NULL,
                 product_type TEXT NOT NULL, size TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
-                added_by INTEGER, added_date TEXT, low_stock_threshold INTEGER DEFAULT 5,
-                stock_alerts_enabled INTEGER DEFAULT 1, last_stock_alert TEXT
+                added_by INTEGER, added_date TEXT
             )''')
             
             # Add new columns to existing products table if they don't exist
