@@ -270,7 +270,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             c = conn.cursor()
             # Ensure user exists
             c.execute("""
-                INSERT INTO users (user_id, username, language, is_reseller) VALUES (%s, %s, 'en', 0)
+                INSERT INTO users (user_id, username, language, is_reseller) VALUES (%s, %s, 'en', FALSE)
                 ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
             """, (user_id, username))
             # Get language
