@@ -1439,9 +1439,9 @@ def init_db():
                 template_text TEXT NOT NULL, description TEXT
             )''')
             logger.info("✅ Welcome_messages table created successfully")
-            # Add description column if missing
-            try: c.execute("ALTER TABLE welcome_messages ADD COLUMN description TEXT")
-            except psycopg2.OperationalError: pass # Ignore if already exists
+            # Add description column if missing (skip for PostgreSQL to avoid duplicate column errors)
+            # try: c.execute("ALTER TABLE welcome_messages ADD COLUMN description TEXT")
+            # except psycopg2.OperationalError: pass # Ignore if already exists
 
             # <<< ADDED: reseller_discounts table >>>
             c.execute('''CREATE TABLE IF NOT EXISTS reseller_discounts (
