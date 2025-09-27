@@ -154,12 +154,8 @@ def init_price_editor_tables():
             )
         """)
         
-        # Add last_price_update column to products if it doesn't exist
-        c.execute("PRAGMA table_info(products)")
-        columns = [column[1] for column in c.fetchall()]
-        
-        if 'last_price_update' not in columns:
-            c.execute("ALTER TABLE products ADD COLUMN last_price_update TIMESTAMP")
+        # Note: last_price_update column will be added later when needed to avoid startup delays
+        logger.info("✅ Price editor tables initialized (column addition skipped for PostgreSQL)")
         
         conn.commit()
         logger.info("Price editor tables initialized successfully")
