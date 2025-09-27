@@ -1208,27 +1208,9 @@ def init_db():
             )''')
             logger.info(f"✅ Products table created successfully")
             
-            # Add new columns to existing products table if they don't exist
-            # Use separate transactions to avoid transaction abort issues
-            def safe_add_column(column_name, column_definition):
-                try:
-                    logger.info(f"🔧 Adding column {column_name}...")
-                    c.execute(f"ALTER TABLE products ADD COLUMN {column_name} {column_definition}")
-                    conn.commit()  # Commit each column addition separately
-                    logger.info(f"✅ Column {column_name} added successfully")
-                except psycopg2.errors.DuplicateColumn:
-                    conn.rollback()  # Rollback on duplicate column
-                    logger.info(f"ℹ️ Column {column_name} already exists, skipping")
-                    pass  # Column already exists
-                except Exception as e:
-                    conn.rollback()  # Rollback on any other error
-                    logger.warning(f"❌ Could not add column {column_name}: {e}")
-            
-            logger.info(f"🔧 Adding missing columns to products table...")
-            safe_add_column("low_stock_threshold", "INTEGER DEFAULT 5")
-            safe_add_column("stock_alerts_enabled", "INTEGER DEFAULT 1")
-            safe_add_column("last_stock_alert", "TEXT")
-            logger.info(f"✅ Products table columns updated successfully")
+            # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
+            # will be added later when needed to avoid startup delays
+            logger.info(f"✅ Products table created with basic columns")
             # product_media table (Fixed: No UNIQUE constraint on file_path to prevent insertion errors)
             logger.info(f"🔧 Creating product_media table...")
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
