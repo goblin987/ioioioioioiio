@@ -1080,7 +1080,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
@@ -1670,9 +1670,15 @@ def main() -> None:
 
     async def setup_webhooks_and_run():
         nonlocal application
-        logger.info("Initializing application...")
-        await application.initialize()
-        logger.info(f"Setting Telegram webhook to: {WEBHOOK_URL}/telegram/{TOKEN}")
+        logger.info("🔧 Initializing application...")
+        try:
+            await application.initialize()
+            logger.info("✅ Application initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize application: {e}")
+            return
+        
+        logger.info(f"🔧 Setting Telegram webhook to: {WEBHOOK_URL}/telegram/{TOKEN}")
         try:
             webhook_result = await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES)
             if webhook_result:
@@ -1684,38 +1690,53 @@ def main() -> None:
             logger.error(f"❌ Error setting webhook: {e}")
             return
         
-        await application.start()
-        logger.info("✅ Telegram application started (webhook mode).")
+        logger.info("🔧 Starting Telegram application...")
+        try:
+            await application.start()
+            logger.info("✅ Telegram application started (webhook mode).")
+        except Exception as e:
+            logger.error(f"❌ Failed to start Telegram application: {e}")
+            return
         
         port = int(os.environ.get("PORT", 10000))
-        logger.info(f"Starting Flask server on port {port}...")
+        logger.info(f"🔧 Starting Flask server on port {port}...")
         
         def run_flask():
             try:
+                logger.info("🔧 Flask server starting...")
                 flask_app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+                logger.info("✅ Flask server running")
             except Exception as e:
-                logger.error(f"Flask server error: {e}")
+                logger.error(f"❌ Flask server error: {e}")
         
         flask_thread = threading.Thread(target=run_flask, daemon=True)
         flask_thread.start()
         logger.info(f"✅ Flask server started in background thread on port {port}.")
         
+        # Wait a moment for Flask to start
+        await asyncio.sleep(2)
+        
         # Test webhook endpoint
         try:
             import requests
             test_url = f"{WEBHOOK_URL}/health"
+            logger.info(f"🔧 Testing health check at: {test_url}")
             response = requests.get(test_url, timeout=10)
             logger.info(f"✅ Health check successful: {response.status_code}")
         except Exception as e:
             logger.warning(f"⚠️ Health check failed: {e}")
         
-        logger.info("Main thread entering keep-alive loop...")
+        logger.info("🔧 Main thread entering keep-alive loop...")
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
         for s in signals: main_loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(s, main_loop, application)))
         try:
-            while True: await asyncio.sleep(3600)
-        except asyncio.CancelledError: logger.info("Keep-alive loop cancelled.")
-        finally: logger.info("Exiting keep-alive loop.")
+            while True: 
+                logger.info("🔄 Keep-alive loop running...")
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError: 
+            logger.info("Keep-alive loop cancelled.")
+        finally: 
+            logger.info("Exiting keep-alive loop.")
 
     async def shutdown(signal, loop, application):
         logger.info(f"Received exit signal {signal.name}...")
