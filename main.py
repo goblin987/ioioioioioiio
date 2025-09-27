@@ -34,7 +34,6 @@ from utils import (
     SECONDARY_ADMIN_IDS, WEBHOOK_URL,
     NOWPAYMENTS_IPN_SECRET,
     get_db_connection,
-    DATABASE_PATH,
     get_pending_deposit, remove_pending_deposit, FEE_ADJUSTMENT,
     send_message_with_retry,
     log_admin_action,
