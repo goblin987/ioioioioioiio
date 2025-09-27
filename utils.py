@@ -1174,7 +1174,7 @@ def init_db():
 
             # products table
             c.execute('''CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, city TEXT NOT NULL, district TEXT NOT NULL,
+                id SERIAL PRIMARY KEY, city TEXT NOT NULL, district TEXT NOT NULL,
                 product_type TEXT NOT NULL, size TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
                 added_by INTEGER, added_date TEXT, low_stock_threshold INTEGER DEFAULT 5,
@@ -1184,25 +1184,25 @@ def init_db():
             # Add new columns to existing products table if they don't exist
             try:
                 c.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5")
-            except sqlite3.OperationalError:
+            except psycopg2.OperationalError:
                 pass  # Column already exists
             try:
                 c.execute("ALTER TABLE products ADD COLUMN stock_alerts_enabled INTEGER DEFAULT 1")
-            except sqlite3.OperationalError:
+            except psycopg2.OperationalError:
                 pass  # Column already exists
             try:
                 c.execute("ALTER TABLE products ADD COLUMN last_stock_alert TEXT")
-            except sqlite3.OperationalError:
+            except psycopg2.OperationalError:
                 pass  # Column already exists
             # product_media table (Fixed: No UNIQUE constraint on file_path to prevent insertion errors)
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
                 media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             )''')
             # purchases table
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, product_id INTEGER,
+                id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, product_id INTEGER,
                 product_name TEXT NOT NULL, product_type TEXT NOT NULL, product_size TEXT NOT NULL,
                 price_paid REAL NOT NULL, city TEXT NOT NULL, district TEXT NOT NULL, purchase_date TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(user_id),
@@ -1210,13 +1210,13 @@ def init_db():
             )''')
             # reviews table
             c.execute('''CREATE TABLE IF NOT EXISTS reviews (
-                review_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                review_id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL,
                 review_text TEXT NOT NULL, review_date TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
             )''')
             # stock_alerts table - for tracking low stock notifications
             c.execute('''CREATE TABLE IF NOT EXISTS stock_alerts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 product_id INTEGER NOT NULL,
                 alert_type TEXT NOT NULL,
                 alert_message TEXT,
@@ -1228,7 +1228,7 @@ def init_db():
             
             # ab_tests table - for A/B testing framework
             c.execute('''CREATE TABLE IF NOT EXISTS ab_tests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 test_name TEXT NOT NULL UNIQUE,
                 description TEXT,
                 variant_a_config TEXT,
@@ -1242,7 +1242,7 @@ def init_db():
             
             # ab_test_assignments table - tracks which users see which variant
             c.execute('''CREATE TABLE IF NOT EXISTS ab_test_assignments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 test_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
                 variant TEXT NOT NULL,
@@ -1253,7 +1253,7 @@ def init_db():
             
             # ab_test_events table - tracks conversion events
             c.execute('''CREATE TABLE IF NOT EXISTS ab_test_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 test_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
                 event_type TEXT NOT NULL,
@@ -1265,7 +1265,7 @@ def init_db():
             
             # referral_codes table - for referral program
             c.execute('''CREATE TABLE IF NOT EXISTS referral_codes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 referral_code TEXT NOT NULL UNIQUE,
                 created_at TEXT NOT NULL,
@@ -1277,7 +1277,7 @@ def init_db():
             
             # referrals table - tracks successful referrals
             c.execute('''CREATE TABLE IF NOT EXISTS referrals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 referrer_user_id INTEGER NOT NULL,
                 referred_user_id INTEGER NOT NULL,
                 referral_code TEXT NOT NULL,
@@ -1293,7 +1293,7 @@ def init_db():
             
             # user_notifications table - for system notifications
             c.execute('''CREATE TABLE IF NOT EXISTS user_notifications (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 message TEXT NOT NULL,
                 notification_type TEXT NOT NULL,
@@ -1356,7 +1356,7 @@ def init_db():
 
             # discount_codes table
             c.execute('''CREATE TABLE IF NOT EXISTS discount_codes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL,
+                id SERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL,
                 discount_type TEXT NOT NULL CHECK(discount_type IN ('percentage', 'fixed')),
                 value REAL NOT NULL, is_active INTEGER DEFAULT 1 CHECK(is_active IN (0, 1)),
                 max_uses INTEGER DEFAULT NULL, uses_count INTEGER DEFAULT 0,
@@ -1366,7 +1366,7 @@ def init_db():
             
             # discount_code_usage table - Track individual user usage (allows reuse)
             c.execute('''CREATE TABLE IF NOT EXISTS discount_code_usage (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 code TEXT NOT NULL,
                 used_at TEXT NOT NULL,
@@ -1393,7 +1393,7 @@ def init_db():
                     logger.info("YOLO MODE: Migrating discount_code_usage table to allow code reuse...")
                     # Create new table without unique constraint
                     c.execute('''CREATE TABLE discount_code_usage_new (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        id SERIAL PRIMARY KEY,
                         user_id INTEGER NOT NULL,
                         code TEXT NOT NULL,
                         used_at TEXT NOT NULL,
@@ -1432,7 +1432,7 @@ def init_db():
 
             # Admin Log table
             c.execute('''CREATE TABLE IF NOT EXISTS admin_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 timestamp TEXT NOT NULL, admin_id INTEGER NOT NULL, target_user_id INTEGER,
                 action TEXT NOT NULL, reason TEXT, amount_change REAL DEFAULT NULL,
                 old_value TEXT, new_value TEXT
@@ -1443,12 +1443,12 @@ def init_db():
             )''')
             # Welcome Messages table
             c.execute('''CREATE TABLE IF NOT EXISTS welcome_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL,
+                id SERIAL PRIMARY KEY, name TEXT UNIQUE NOT NULL,
                 template_text TEXT NOT NULL, description TEXT
             )''')
             # Add description column if missing
             try: c.execute("ALTER TABLE welcome_messages ADD COLUMN description TEXT")
-            except sqlite3.OperationalError: pass # Ignore if already exists
+            except psycopg2.OperationalError: pass # Ignore if already exists
 
             # <<< ADDED: reseller_discounts table >>>
             c.execute('''CREATE TABLE IF NOT EXISTS reseller_discounts (
@@ -1475,7 +1475,7 @@ def init_db():
             for name, text, desc in initial_templates:
                 try:
                     c.execute("INSERT OR IGNORE INTO welcome_messages (name, template_text, description) VALUES (?, ?, ?)", (name, text, desc))
-                except sqlite3.Error as insert_e: logger.error(f"Error inserting template '{name}': {insert_e}")
+                except psycopg2.Error as insert_e: logger.error(f"Error inserting template '{name}': {insert_e}")
             changes_after = conn.total_changes # Get changes after loop
             inserted_count = changes_after - changes_before # Calculate the difference
 
@@ -1501,7 +1501,7 @@ def init_db():
                     logger.info("Migrating product_media table to remove UNIQUE constraint on file_path...")
                     # Create new table with proper schema
                     c.execute('''CREATE TABLE IF NOT EXISTS product_media_new (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL,
+                        id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
                         media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
                         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
                     )''')
@@ -1536,7 +1536,7 @@ def init_db():
 
             conn.commit()
             logger.info(f"Database schema at {DATABASE_PATH} initialized/verified successfully.")
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.critical(f"CRITICAL ERROR: Database initialization failed for {DATABASE_PATH}: {e}", exc_info=True)
         raise SystemExit("Database initialization failed.")
 
@@ -1562,10 +1562,10 @@ def add_pending_deposit(payment_id: str, user_id: int, currency: str, target_eur
             log_type = "direct purchase" if is_purchase else "refill"
             logger.info(f"Added pending {log_type} deposit {payment_id} for user {user_id} ({target_eur_amount:.2f} EUR / exp: {expected_crypto_amount} {currency}). Basket items: {len(basket_snapshot) if basket_snapshot else 0}.")
             return True
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         logger.warning(f"Attempted to add duplicate pending deposit ID: {payment_id}")
         return False
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error adding pending deposit {payment_id} for user {user_id}: {e}", exc_info=True)
         return False
 
@@ -1598,7 +1598,7 @@ def get_pending_deposit(payment_id: str):
                 return row_dict
             else:
                 return None
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error fetching pending deposit {payment_id}: {e}", exc_info=True)
         return None
 
@@ -1622,7 +1622,7 @@ def _unreserve_basket_items(basket_snapshot: list | None):
         conn.commit()
         total_released = sum(product_ids_to_release_counts.values())
         logger.info(f"Un-reserved {total_released} items due to failed/expired/cancelled payment.") # General log message
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error un-reserving items: {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
     finally:
@@ -1644,7 +1644,7 @@ def remove_pending_deposit(payment_id: str, trigger: str = "unknown"): # Added t
         else:
             # Reduce log level for "not found" as it can be normal (e.g., double webhook)
             logger.debug(f"No pending deposit record found to remove for payment ID: {payment_id} (Trigger: {trigger})")
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error removing pending deposit {payment_id} (Trigger: {trigger}): {e}", exc_info=True)
         return False # Indicate failure
 
@@ -1665,7 +1665,7 @@ def load_cities():
     cities_data = {}
     try:
         with get_db_connection() as conn: c = conn.cursor(); c.execute("SELECT id, name FROM cities ORDER BY name"); cities_data = {str(row['id']): row['name'] for row in c.fetchall()}
-    except sqlite3.Error as e: logger.error(f"Failed to load cities: {e}")
+    except psycopg2.Error as e: logger.error(f"Failed to load cities: {e}")
     return cities_data
 
 def load_districts():
@@ -1674,7 +1674,7 @@ def load_districts():
         with get_db_connection() as conn:
             c = conn.cursor(); c.execute("SELECT d.city_id, d.id, d.name FROM districts d ORDER BY d.city_id, d.name")
             for row in c.fetchall(): city_id_str = str(row['city_id']); districts_data.setdefault(city_id_str, {})[str(row['id'])] = row['name']
-    except sqlite3.Error as e: logger.error(f"Failed to load districts: {e}")
+    except psycopg2.Error as e: logger.error(f"Failed to load districts: {e}")
     return districts_data
 
 def load_product_types():
@@ -1684,7 +1684,7 @@ def load_product_types():
             c = conn.cursor()
             c.execute("SELECT name, COALESCE(emoji, ?) as emoji FROM product_types ORDER BY name", (DEFAULT_PRODUCT_EMOJI,))
             product_types_dict = {row['name']: row['emoji'] for row in c.fetchall()}
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"Failed to load product types and emojis: {e}")
     return product_types_dict
 
@@ -1769,7 +1769,7 @@ async def is_user_banned(user_id: int) -> bool:
             c.execute("SELECT is_banned FROM users WHERE user_id = ?", (user_id,))
             res = c.fetchone()
             return res and res['is_banned'] == 1
-        except sqlite3.Error as e:
+        except psycopg2.Error as e:
             if "database is locked" in str(e).lower() and attempt < max_retries - 1:
                 logger.warning(f"Database locked for ban check (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
                 await asyncio.sleep(retry_delay)
@@ -1958,7 +1958,7 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
         if not valid_items_userdata_list and context.user_data.get('applied_discount'):
             context.user_data.pop('applied_discount', None); logger.info(f"Cleared discount for user {user_id} as basket became empty.")
 
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"SQLite error clearing basket user {user_id}: {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
     except Exception as e:
@@ -1982,7 +1982,7 @@ def clear_all_expired_baskets():
         c_outer = conn_outer.cursor()
         c_outer.execute("SELECT user_id, basket FROM users WHERE basket IS NOT NULL AND basket != ''")
         users_to_process = c_outer.fetchall() # Fetch all relevant users
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"Failed to fetch users for basket clearing job: {e}", exc_info=True)
         return # Cannot proceed if user fetch fails
     finally:
@@ -2055,7 +2055,7 @@ def clear_all_expired_baskets():
 
         conn_update.commit() # Commit all updates together
 
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"SQLite error during batch updates in clear_all_expired_baskets: {e}", exc_info=True)
         if conn_update and conn_update.in_transaction: conn_update.rollback()
     except Exception as e:
@@ -2072,14 +2072,14 @@ def fetch_last_purchases(user_id, limit=10):
         with get_db_connection() as conn:
             c = conn.cursor(); c.execute("SELECT purchase_date, product_name, product_type, product_size, price_paid FROM purchases WHERE user_id = ? ORDER BY purchase_date DESC LIMIT ?", (user_id, limit))
             return [dict(row) for row in c.fetchall()]
-    except sqlite3.Error as e: logger.error(f"DB error fetching purchase history user {user_id}: {e}", exc_info=True); return []
+    except psycopg2.Error as e: logger.error(f"DB error fetching purchase history user {user_id}: {e}", exc_info=True); return []
 
 def fetch_reviews(offset=0, limit=5):
     try:
         with get_db_connection() as conn:
             c = conn.cursor(); c.execute("SELECT r.review_id, r.user_id, r.review_text, r.review_date, COALESCE(u.username, 'anonymous') as username FROM reviews r LEFT JOIN users u ON r.user_id = u.user_id ORDER BY r.review_date DESC LIMIT ? OFFSET ?", (limit, offset))
             return [dict(row) for row in c.fetchall()]
-    except sqlite3.Error as e: logger.error(f"Failed to fetch reviews (offset={offset}, limit={limit}): {e}", exc_info=True); return []
+    except psycopg2.Error as e: logger.error(f"Failed to fetch reviews (offset={offset}, limit={limit}): {e}", exc_info=True); return []
 
 
 # --- API Helpers ---
@@ -2386,7 +2386,7 @@ def fetch_user_ids_for_broadcast(target_type: str, target_value: str | int | Non
         else:
             logger.error(f"Unknown broadcast target type or missing value: type={target_type}, value={target_value}")
 
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error fetching users for broadcast ({target_type}, {target_value}): {e}", exc_info=True)
     except Exception as e:
         logger.error(f"Unexpected error fetching users for broadcast: {e}", exc_info=True)
@@ -2439,7 +2439,7 @@ def update_user_broadcast_status(user_id: int, success: bool):
             conn.commit()
             return  # Success, exit the retry loop
             
-        except sqlite3.Error as e:
+        except psycopg2.Error as e:
             logger.error(f"DB error updating broadcast status for user {user_id} (attempt {attempt+1}/{max_retries}): {e}")
             if conn and conn.in_transaction:
                 try:
@@ -2503,7 +2503,7 @@ def log_admin_action(admin_id: int, action: str, target_user_id: int | None = No
             ))
             conn.commit()
             logger.info(f"Admin Action Logged: Admin={admin_id}, Action='{action}', Target={target_user_id}, Reason='{reason}', Amount={amount_change}, Old='{old_value}', New='{new_value}'")
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"Failed to log admin action: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"Unexpected error logging admin action: {e}", exc_info=True)
@@ -2557,7 +2557,7 @@ def load_active_welcome_message() -> str:
                 logger.error("FATAL: Default welcome message template 'default' not found in DB! Using hardcoded default.")
                 return DEFAULT_WELCOME_MESSAGE
 
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error loading active welcome message: {e}", exc_info=True)
         return DEFAULT_WELCOME_MESSAGE
     except Exception as e:
@@ -2580,7 +2580,7 @@ def get_welcome_message_templates(limit: int | None = None, offset: int = 0) -> 
                 params.extend([limit, offset])
             c.execute(query, params)
             templates = [dict(row) for row in c.fetchall()]
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error fetching welcome message templates: {e}", exc_info=True)
     return templates
 
@@ -2594,7 +2594,7 @@ def get_welcome_message_template_count() -> int:
             c.execute("SELECT COUNT(*) FROM welcome_messages")
             result = c.fetchone()
             if result: count = result[0]
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error counting welcome message templates: {e}", exc_info=True)
     return count
 
@@ -2609,10 +2609,10 @@ def add_welcome_message_template(name: str, template_text: str, description: str
             conn.commit()
             logger.info(f"Added welcome message template: '{name}'")
             return True
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         logger.warning(f"Attempted to add duplicate welcome message template name: '{name}'")
         return False
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error adding welcome message template '{name}': {e}", exc_info=True)
         return False
 
@@ -2647,7 +2647,7 @@ def update_welcome_message_template(name: str, new_template_text: str | None = N
             else:
                 logger.warning(f"Welcome message template '{name}' not found for update.")
                 return False
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error updating welcome message template '{name}': {e}", exc_info=True)
         return False
 
@@ -2665,7 +2665,7 @@ def delete_welcome_message_template(name: str) -> bool:
             else:
                 logger.warning(f"Welcome message template '{name}' not found for deletion.")
                 return False
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error deleting welcome message template '{name}': {e}", exc_info=True)
         return False
 
@@ -2685,7 +2685,7 @@ def set_active_welcome_message(name: str) -> bool:
             conn.commit()
             logger.info(f"Set active welcome message template to: '{name}'")
             return True
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error setting active welcome message to '{name}': {e}", exc_info=True)
         return False
 
@@ -2808,7 +2808,7 @@ def get_expired_payments_for_notification():
                 'language': record['language'] or 'en'
             })
             
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error while getting expired payments for notification: {e}", exc_info=True)
     finally:
         if conn:
@@ -2876,7 +2876,7 @@ def clean_expired_pending_payments():
                 'basket_snapshot': basket_snapshot
             })
             
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"DB error while checking expired pending payments: {e}", exc_info=True)
         return
     finally:
