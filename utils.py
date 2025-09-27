@@ -1183,18 +1183,21 @@ def init_db():
             )''')
             
             # Add new columns to existing products table if they don't exist
-            try:
-                c.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5")
-            except psycopg2.errors.DuplicateColumn:
-                pass  # Column already exists
-            try:
-                c.execute("ALTER TABLE products ADD COLUMN stock_alerts_enabled INTEGER DEFAULT 1")
-            except psycopg2.errors.DuplicateColumn:
-                pass  # Column already exists
-            try:
-                c.execute("ALTER TABLE products ADD COLUMN last_stock_alert TEXT")
-            except psycopg2.errors.DuplicateColumn:
-                pass  # Column already exists
+            # Use separate transactions to avoid transaction abort issues
+            def safe_add_column(column_name, column_definition):
+                try:
+                    c.execute(f"ALTER TABLE products ADD COLUMN {column_name} {column_definition}")
+                    conn.commit()  # Commit each column addition separately
+                except psycopg2.errors.DuplicateColumn:
+                    conn.rollback()  # Rollback on duplicate column
+                    pass  # Column already exists
+                except Exception as e:
+                    conn.rollback()  # Rollback on any other error
+                    logger.warning(f"Could not add column {column_name}: {e}")
+            
+            safe_add_column("low_stock_threshold", "INTEGER DEFAULT 5")
+            safe_add_column("stock_alerts_enabled", "INTEGER DEFAULT 1")
+            safe_add_column("last_stock_alert", "TEXT")
             # product_media table (Fixed: No UNIQUE constraint on file_path to prevent insertion errors)
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
                 id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
