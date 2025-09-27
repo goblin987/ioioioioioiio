@@ -1128,11 +1128,18 @@ def get_ignore_conflict():
 def safe_alter_table(cursor, table_name, column_name, column_definition):
     """Safely adds a column to a PostgreSQL table."""
     try:
-        cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {column_name} {column_definition}")
+        logger.info(f"🔧 Adding column {column_name} to {table_name}...")
+        cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
+        logger.info(f"✅ Column {column_name} added to {table_name} successfully")
+    except psycopg2.errors.DuplicateColumn:
+        logger.info(f"ℹ️ Column {column_name} already exists in {table_name}, skipping")
+        pass  # Column already exists, ignore
     except psycopg2.OperationalError as e:
         if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+            logger.info(f"ℹ️ Column {column_name} already exists in {table_name}, skipping")
             pass  # Column already exists, ignore
         else:
+            logger.error(f"❌ Error adding column {column_name} to {table_name}: {e}")
             raise  # Re-raise other errors
 
 # --- Database Initialization ---
