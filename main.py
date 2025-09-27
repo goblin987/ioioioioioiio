@@ -1626,14 +1626,22 @@ def root():
 
 def main() -> None:
     global telegram_app, main_loop
-    logger.info("Starting bot...")
+    logger.info("🔧 Starting bot...")
+    logger.info("🔧 Initializing database...")
     init_db()
+    logger.info("✅ Database initialized successfully")
+    logger.info("🔧 Loading all data...")
     load_all_data()
+    logger.info("✅ All data loaded successfully")
+    logger.info("🔧 Setting up Telegram application...")
     defaults = Defaults(parse_mode=None, block=False)
     app_builder = ApplicationBuilder().token(TOKEN).defaults(defaults).job_queue(JobQueue())
     app_builder.post_init(post_init)
     app_builder.post_shutdown(post_shutdown)
     application = app_builder.build()
+    logger.info("✅ Telegram application built successfully")
+    
+    logger.info("🔧 Adding command handlers...")
     application.add_handler(CommandHandler("start", start_command_wrapper)) # Use wrapped start with ban check
     application.add_handler(CommandHandler("admin", admin_command_wrapper)) # Use wrapped admin with ban check
     application.add_handler(CallbackQueryHandler(handle_callback_query))
@@ -1642,8 +1650,11 @@ def main() -> None:
         handle_message
     ))
     application.add_error_handler(error_handler)
+    logger.info("✅ All handlers added successfully")
+    
     telegram_app = application
     main_loop = asyncio.get_event_loop()
+    logger.info("✅ Event loop created successfully")
     if BASKET_TIMEOUT > 0:
         job_queue = application.job_queue
         if job_queue:
@@ -1752,11 +1763,15 @@ def main() -> None:
         loop.stop()
 
     try:
+        logger.info("🔧 Starting main event loop...")
         main_loop.run_until_complete(setup_webhooks_and_run())
+        logger.info("✅ Main event loop completed successfully")
     except (KeyboardInterrupt, SystemExit) as e:
         logger.info(f"Shutdown initiated by {type(e).__name__}.")
     except Exception as e:
-        logger.critical(f"Critical error in main execution loop: {e}", exc_info=True)
+        logger.critical(f"❌ Critical error in main execution loop: {e}", exc_info=True)
+        logger.critical(f"❌ Error type: {type(e).__name__}")
+        logger.critical(f"❌ Error details: {str(e)}")
     finally:
         logger.info("Main loop finished or interrupted.")
         if main_loop.is_running():
