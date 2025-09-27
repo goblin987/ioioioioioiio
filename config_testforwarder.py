@@ -49,25 +49,26 @@ POSTGRES_URL = os.getenv('DATABASE_URL', f'postgresql://{POSTGRES_USER}:{POSTGRE
 
 # Persistent Storage Configuration
 PERSISTENT_DISK_PATH = '/mnt/data'  # Render persistent disk mount point (same as main bot)
-    
-    # Environment
-    ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
-    
-    # Forwarding Configuration
-    MAX_MESSAGES_PER_BATCH = 100
-    DELAY_BETWEEN_MESSAGES = 0.1
-    
-    # Error Handling Configuration - YOLO MODE OPTIMIZED
-    MAX_RETRY_ATTEMPTS = 5  # More aggressive retries
-    RETRY_DELAY_BASE = 1.5  # Faster retry intervals
-    CLIENT_VALIDATION_TIMEOUT = 15  # Faster validation
-    CONNECTION_TIMEOUT = 30  # Faster timeouts
-    
-    # Session Management - YOLO MODE
-    SESSION_VALIDATION_INTERVAL = 120  # 2 minutes - more frequent validation
-    AUTO_RECONNECT_ENABLED = True
-    AGGRESSIVE_MODE = True  # YOLO MODE FLAG
-    
+
+# Environment
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+# Forwarding Configuration
+MAX_MESSAGES_PER_BATCH = 100
+DELAY_BETWEEN_MESSAGES = 0.1
+
+# Error Handling Configuration - YOLO MODE OPTIMIZED
+MAX_RETRY_ATTEMPTS = 5  # More aggressive retries
+RETRY_DELAY_BASE = 1.5  # Faster retry intervals
+CLIENT_VALIDATION_TIMEOUT = 15  # Faster validation
+CONNECTION_TIMEOUT = 30  # Faster timeouts
+
+# Session Management - YOLO MODE
+SESSION_VALIDATION_INTERVAL = 120  # 2 minutes - more frequent validation
+AUTO_RECONNECT_ENABLED = True
+AGGRESSIVE_MODE = True  # YOLO MODE FLAG
+
+class Config:
     @classmethod
     def validate(cls):
         """Validate required configuration"""
