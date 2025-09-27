@@ -4438,10 +4438,14 @@ async def handle_enhanced_channel_link(update: Update, context: ContextTypes.DEF
 def init_enhanced_auto_ads_tables():
     """Initialize database tables for the auto ads system"""
     try:
+        logger.info("Starting auto ads table initialization...")
         conn = get_db_connection()
+        logger.info("Got database connection for auto ads...")
         c = conn.cursor()
+        logger.info("Got cursor for auto ads...")
         
         # Create basic auto ads tables
+        logger.info("Creating auto_ads_campaigns table...")
         c.execute("""
             CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
                 id SERIAL PRIMARY KEY,
@@ -4451,9 +4455,12 @@ def init_enhanced_auto_ads_tables():
                 is_active BOOLEAN DEFAULT TRUE
             )
         """)
+        logger.info("Table creation query executed...")
         
         conn.commit()
+        logger.info("Transaction committed...")
         conn.close()
+        logger.info("Connection closed...")
         logger.info("Auto ads system database tables initialized successfully")
         return True
     except Exception as e:
