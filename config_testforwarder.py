@@ -68,6 +68,14 @@ SESSION_VALIDATION_INTERVAL = 120  # 2 minutes - more frequent validation
 AUTO_RECONNECT_ENABLED = True
 AGGRESSIVE_MODE = True  # YOLO MODE FLAG
 
+# Add PostgreSQL attributes to Config class
+Config.POSTGRES_HOST = POSTGRES_HOST
+Config.POSTGRES_PORT = POSTGRES_PORT
+Config.POSTGRES_DB = POSTGRES_DB
+Config.POSTGRES_USER = POSTGRES_USER
+Config.POSTGRES_PASSWORD = POSTGRES_PASSWORD
+Config.POSTGRES_URL = POSTGRES_URL
+
 class Config:
     @classmethod
     def validate(cls):

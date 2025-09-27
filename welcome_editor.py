@@ -49,7 +49,7 @@ def init_welcome_tables():
         # Welcome messages table (using existing structure)
         c.execute("""
             CREATE TABLE IF NOT EXISTS welcome_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
                 template_text TEXT NOT NULL,
                 description TEXT,
@@ -61,7 +61,7 @@ def init_welcome_tables():
         # Start menu buttons configuration table
         c.execute("""
             CREATE TABLE IF NOT EXISTS start_menu_buttons (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 button_text TEXT NOT NULL,
                 callback_data TEXT NOT NULL,
                 row_position INTEGER DEFAULT 0,

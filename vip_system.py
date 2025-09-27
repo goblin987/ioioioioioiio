@@ -52,7 +52,7 @@ class VIPManager:
             
             # VIP levels configuration table
             c.execute('''CREATE TABLE IF NOT EXISTS vip_levels (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 level_name TEXT NOT NULL UNIQUE,
                 level_emoji TEXT NOT NULL,
                 min_purchases INTEGER NOT NULL,
@@ -67,7 +67,7 @@ class VIPManager:
             
             # VIP benefits table
             c.execute('''CREATE TABLE IF NOT EXISTS vip_benefits (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 vip_level_id INTEGER NOT NULL,
                 benefit_type TEXT NOT NULL,
                 benefit_value TEXT NOT NULL,
@@ -78,7 +78,7 @@ class VIPManager:
             
             # User VIP history table
             c.execute('''CREATE TABLE IF NOT EXISTS user_vip_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 old_level_name TEXT,
                 new_level_name TEXT NOT NULL,

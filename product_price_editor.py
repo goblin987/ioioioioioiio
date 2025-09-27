@@ -143,7 +143,7 @@ def init_price_editor_tables():
         # Price change log table
         c.execute("""
             CREATE TABLE IF NOT EXISTS price_change_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 product_id INTEGER NOT NULL,
                 old_price REAL NOT NULL,
                 new_price REAL NOT NULL,

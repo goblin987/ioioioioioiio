@@ -257,7 +257,7 @@ def init_interactive_welcome_tables():
         # Enhanced welcome messages table
         c.execute("""
             CREATE TABLE IF NOT EXISTS interactive_welcome_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
                 template_text TEXT NOT NULL,
                 category TEXT DEFAULT 'custom',
@@ -276,7 +276,7 @@ def init_interactive_welcome_tables():
         # Enhanced buttons table with visual properties
         c.execute("""
             CREATE TABLE IF NOT EXISTS interactive_start_buttons (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 button_text TEXT NOT NULL,
                 callback_data TEXT NOT NULL,
                 row_position INTEGER DEFAULT 0,
@@ -293,7 +293,7 @@ def init_interactive_welcome_tables():
         # Welcome editor sessions for real-time editing
         c.execute("""
             CREATE TABLE IF NOT EXISTS welcome_editor_sessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 admin_user_id INTEGER NOT NULL,
                 session_data TEXT,
                 last_preview TEXT,
