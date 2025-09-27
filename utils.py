@@ -1168,6 +1168,15 @@ def init_db():
                 broadcast_failed_count INTEGER DEFAULT 0
             )''')
             logger.info(f"✅ Users table created successfully")
+            
+            # Handle existing tables: ALTER user_id columns from INTEGER to BIGINT for Telegram compatibility
+            logger.info(f"🔧 Ensuring user_id columns are BIGINT for Telegram compatibility...")
+            try:
+                c.execute("ALTER TABLE users ALTER COLUMN user_id TYPE BIGINT")
+                logger.info(f"✅ Users.user_id converted to BIGINT")
+            except Exception as e:
+                logger.info(f"ℹ️ Users.user_id already BIGINT or conversion not needed: {e}")
+            
             # Note: All columns are already included in the CREATE TABLE statement above
             logger.info(f"✅ Users table columns are already complete")
 
@@ -1498,6 +1507,45 @@ def init_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_users_is_reseller ON users(is_reseller)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_reseller_discounts_user_id ON reseller_discounts(reseller_user_id)")
             # <<< END ADDED >>>
+            
+            # Handle existing tables: ALTER all user_id columns from INTEGER to BIGINT for Telegram compatibility
+            logger.info(f"🔧 Converting all user_id columns to BIGINT for existing tables...")
+            user_id_tables = [
+                "purchases", "reviews", "ab_test_assignments", "ab_test_events", 
+                "user_notifications", "discount_code_usage", "pending_deposits", "admin_log"
+            ]
+            
+            for table_name in user_id_tables:
+                try:
+                    c.execute(f"ALTER TABLE {table_name} ALTER COLUMN user_id TYPE BIGINT")
+                    logger.info(f"✅ {table_name}.user_id converted to BIGINT")
+                except Exception as e:
+                    logger.info(f"ℹ️ {table_name}.user_id already BIGINT or conversion not needed: {e}")
+            
+            # Handle referral tables with special user_id columns
+            try:
+                c.execute("ALTER TABLE referrals ALTER COLUMN referrer_user_id TYPE BIGINT")
+                c.execute("ALTER TABLE referrals ALTER COLUMN referred_user_id TYPE BIGINT")
+                logger.info(f"✅ referrals user_id columns converted to BIGINT")
+            except Exception as e:
+                logger.info(f"ℹ️ referrals user_id columns already BIGINT: {e}")
+            
+            # Handle admin_log admin_id and target_user_id
+            try:
+                c.execute("ALTER TABLE admin_log ALTER COLUMN admin_id TYPE BIGINT")
+                c.execute("ALTER TABLE admin_log ALTER COLUMN target_user_id TYPE BIGINT")
+                logger.info(f"✅ admin_log admin/target user_id columns converted to BIGINT")
+            except Exception as e:
+                logger.info(f"ℹ️ admin_log admin/target user_id columns already BIGINT: {e}")
+            
+            # Handle reseller_discounts
+            try:
+                c.execute("ALTER TABLE reseller_discounts ALTER COLUMN reseller_user_id TYPE BIGINT")
+                logger.info(f"✅ reseller_discounts.reseller_user_id converted to BIGINT")
+            except Exception as e:
+                logger.info(f"ℹ️ reseller_discounts.reseller_user_id already BIGINT: {e}")
+            
+            logger.info(f"✅ All user_id columns converted to BIGINT")
 
             logger.info(f"🔧 Committing all database changes...")
             conn.commit()
