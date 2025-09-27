@@ -1473,9 +1473,12 @@ def init_db():
             logger.info(f"🔧 Committing all database changes...")
             conn.commit()
             logger.info(f"✅ PostgreSQL database schema initialized/verified successfully.")
+            logger.info(f"🔧 About to return from init_db() function...")
     except psycopg2.Error as e:
         logger.critical(f"CRITICAL ERROR: PostgreSQL database initialization failed: {e}", exc_info=True)
         raise SystemExit("Database initialization failed.")
+    
+    logger.info(f"🔧 init_db() function completed successfully, returning to main...")
 
 
 # --- Pending Deposit DB Helpers (Synchronous - Modified) ---

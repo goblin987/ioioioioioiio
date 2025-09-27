@@ -1670,8 +1670,11 @@ def main() -> None:
     
     logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
-    load_all_data()
-    logger.info("✅ All data loaded successfully")
+    try:
+        load_all_data()
+        logger.info("✅ All data loaded successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to load data: {e}", exc_info=True)
     logger.info("🔧 Setting up Telegram application...")
     defaults = Defaults(parse_mode=None, block=False)
     app_builder = ApplicationBuilder().token(TOKEN).defaults(defaults).job_queue(JobQueue())
