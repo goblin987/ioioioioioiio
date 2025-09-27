@@ -1183,7 +1183,6 @@ def init_db():
                 id {get_auto_increment()}, 
                 city_id INTEGER NOT NULL, 
                 name {get_text_type()} NOT NULL,
-                FOREIGN KEY(city_id) REFERENCES cities(id) ON DELETE CASCADE, 
                 UNIQUE (city_id, name)
             )''')
             logger.info(f"✅ Districts table created successfully")
@@ -1211,12 +1210,11 @@ def init_db():
             # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
             # will be added later when needed to avoid startup delays
             logger.info(f"✅ Products table created with basic columns")
-            # product_media table (Fixed: No UNIQUE constraint on file_path to prevent insertion errors)
+            # product_media table (simplified without foreign key to avoid startup issues)
             logger.info(f"🔧 Creating product_media table...")
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
                 id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
-                media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
-                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
             )''')
             logger.info(f"✅ Product_media table created successfully")
             # purchases table
@@ -1224,16 +1222,13 @@ def init_db():
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (
                 id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, product_id INTEGER,
                 product_name TEXT NOT NULL, product_type TEXT NOT NULL, product_size TEXT NOT NULL,
-                price_paid REAL NOT NULL, city TEXT NOT NULL, district TEXT NOT NULL, purchase_date TEXT NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(user_id),
-                FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE SET NULL
+                price_paid REAL NOT NULL, city TEXT NOT NULL, district TEXT NOT NULL, purchase_date TEXT NOT NULL
             )''')
             logger.info(f"✅ Purchases table created successfully")
             # reviews table
             c.execute('''CREATE TABLE IF NOT EXISTS reviews (
                 review_id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL,
-                review_text TEXT NOT NULL, review_date TEXT NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                review_text TEXT NOT NULL, review_date TEXT NOT NULL
             )''')
             # stock_alerts table - for tracking low stock notifications
             c.execute('''CREATE TABLE IF NOT EXISTS stock_alerts (
@@ -1243,8 +1238,7 @@ def init_db():
                 alert_message TEXT,
                 created_at TEXT NOT NULL,
                 resolved_at TEXT,
-                notified_admins TEXT,
-                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                notified_admins TEXT
             )''')
             
             # ab_tests table - for A/B testing framework
@@ -1268,7 +1262,6 @@ def init_db():
                 user_id INTEGER NOT NULL,
                 variant TEXT NOT NULL,
                 assigned_at TEXT NOT NULL,
-                FOREIGN KEY (test_id) REFERENCES ab_tests(id) ON DELETE CASCADE,
                 UNIQUE(test_id, user_id)
             )''')
             
@@ -1280,8 +1273,7 @@ def init_db():
                 event_type TEXT NOT NULL,
                 event_value REAL,
                 created_at TEXT NOT NULL,
-                variant TEXT NOT NULL,
-                FOREIGN KEY (test_id) REFERENCES ab_tests(id) ON DELETE CASCADE
+                variant TEXT NOT NULL
             )''')
             
             # referral_codes table - for referral program
@@ -1292,8 +1284,7 @@ def init_db():
                 created_at TEXT NOT NULL,
                 is_active INTEGER DEFAULT 1,
                 total_referrals INTEGER DEFAULT 0,
-                total_rewards_earned REAL DEFAULT 0.0,
-                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                total_rewards_earned REAL DEFAULT 0.0
             )''')
             
             # referrals table - tracks successful referrals
@@ -1307,8 +1298,6 @@ def init_db():
                 referrer_reward REAL DEFAULT 0.0,
                 referred_reward REAL DEFAULT 0.0,
                 status TEXT DEFAULT 'pending',
-                FOREIGN KEY (referrer_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-                FOREIGN KEY (referred_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
                 UNIQUE(referred_user_id)
             )''')
             
@@ -1320,8 +1309,7 @@ def init_db():
                 notification_type TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 sent_at TEXT,
-                is_sent INTEGER DEFAULT 0,
-                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                is_sent INTEGER DEFAULT 0
             )''')
             
             # Initialize VIP system tables
@@ -1391,8 +1379,7 @@ def init_db():
                 user_id INTEGER NOT NULL,
                 code TEXT NOT NULL,
                 used_at TEXT NOT NULL,
-                discount_amount REAL NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                discount_amount REAL NOT NULL
             )''')
             
             # YOLO MODE: Bulletproof migration for discount code reuse
@@ -1418,8 +1405,7 @@ def init_db():
                         user_id INTEGER NOT NULL,
                         code TEXT NOT NULL,
                         used_at TEXT NOT NULL,
-                        discount_amount REAL NOT NULL,
-                        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                        discount_amount REAL NOT NULL
                     )''')
                     
                     # Copy all data (duplicates will be preserved)
@@ -1442,8 +1428,7 @@ def init_db():
                 currency TEXT NOT NULL, target_eur_amount REAL NOT NULL,
                 expected_crypto_amount REAL NOT NULL, created_at TEXT NOT NULL,
                 is_purchase INTEGER DEFAULT 0, basket_snapshot_json TEXT DEFAULT NULL,
-                discount_code_used TEXT DEFAULT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                discount_code_used TEXT DEFAULT NULL
             )''')
             # Add columns to pending_deposits if missing
             pending_cols = [col[1] for col in c.execute("PRAGMA table_info(pending_deposits)").fetchall()]
@@ -1476,9 +1461,7 @@ def init_db():
                 reseller_user_id INTEGER NOT NULL,
                 product_type TEXT NOT NULL,
                 discount_percentage REAL NOT NULL CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
-                PRIMARY KEY (reseller_user_id, product_type),
-                FOREIGN KEY (reseller_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-                FOREIGN KEY (product_type) REFERENCES product_types(name) ON DELETE CASCADE
+                PRIMARY KEY (reseller_user_id, product_type)
             )''')
             # <<< END ADDED >>>
 
@@ -1523,8 +1506,7 @@ def init_db():
                     # Create new table with proper schema
                     c.execute('''CREATE TABLE IF NOT EXISTS product_media_new (
                         id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
-                        media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
-                        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                        media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
                     )''')
                     # Copy data
                     c.execute("INSERT INTO product_media_new SELECT * FROM product_media")
