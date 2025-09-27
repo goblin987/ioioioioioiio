@@ -2,6 +2,7 @@ import time
 import os
 import logging
 import psycopg2
+import psycopg2.errors
 from psycopg2.extras import RealDictCursor
 import json
 import shutil
@@ -1184,15 +1185,15 @@ def init_db():
             # Add new columns to existing products table if they don't exist
             try:
                 c.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5")
-            except psycopg2.OperationalError:
+            except psycopg2.errors.DuplicateColumn:
                 pass  # Column already exists
             try:
                 c.execute("ALTER TABLE products ADD COLUMN stock_alerts_enabled INTEGER DEFAULT 1")
-            except psycopg2.OperationalError:
+            except psycopg2.errors.DuplicateColumn:
                 pass  # Column already exists
             try:
                 c.execute("ALTER TABLE products ADD COLUMN last_stock_alert TEXT")
-            except psycopg2.OperationalError:
+            except psycopg2.errors.DuplicateColumn:
                 pass  # Column already exists
             # product_media table (Fixed: No UNIQUE constraint on file_path to prevent insertion errors)
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
@@ -1535,9 +1536,9 @@ def init_db():
             # <<< END ADDED >>>
 
             conn.commit()
-            logger.info(f"Database schema at {DATABASE_PATH} initialized/verified successfully.")
+            logger.info(f"PostgreSQL database schema initialized/verified successfully.")
     except psycopg2.Error as e:
-        logger.critical(f"CRITICAL ERROR: Database initialization failed for {DATABASE_PATH}: {e}", exc_info=True)
+        logger.critical(f"CRITICAL ERROR: PostgreSQL database initialization failed: {e}", exc_info=True)
         raise SystemExit("Database initialization failed.")
 
 
