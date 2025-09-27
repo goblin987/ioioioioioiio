@@ -1167,13 +1167,8 @@ def init_db():
                 broadcast_failed_count INTEGER DEFAULT 0
             )''')
             logger.info(f"✅ Users table created successfully")
-            # Add missing columns safely
-            logger.info(f"🔧 Adding missing columns to users table...")
-            safe_alter_table(c, 'users', 'is_banned', f'{get_boolean_type()} DEFAULT FALSE')
-            safe_alter_table(c, 'users', 'is_reseller', f'{get_boolean_type()} DEFAULT FALSE')
-            safe_alter_table(c, 'users', 'last_active', f'{get_timestamp_type()} DEFAULT NULL')
-            safe_alter_table(c, 'users', 'broadcast_failed_count', 'INTEGER DEFAULT 0')
-            logger.info(f"✅ Users table columns updated successfully")
+            # Note: All columns are already included in the CREATE TABLE statement above
+            logger.info(f"✅ Users table columns are already complete")
 
             # cities table
             logger.info(f"🔧 Creating cities table...")
@@ -1200,11 +1195,8 @@ def init_db():
                 description {get_text_type()}
             )''')
             logger.info(f"✅ Product_types table created successfully")
-            # Add missing columns safely
-            logger.info(f"🔧 Adding missing columns to product_types table...")
-            safe_alter_table(c, 'product_types', 'emoji', f"{get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}'")
-            safe_alter_table(c, 'product_types', 'description', get_text_type())
-            logger.info(f"✅ Product_types table columns updated successfully")
+            # Note: All columns are already included in the CREATE TABLE statement above
+            logger.info(f"✅ Product_types table columns are already complete")
 
             # products table
             logger.info(f"🔧 Creating products table...")
