@@ -1481,7 +1481,8 @@ def init_db():
             logger.info("✅ Product_media table created successfully (migration skipped for PostgreSQL)")
 
             # Create Indices
-            c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
+            # Skip product_media index since we skipped the table creation
+            # c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id)")
             c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_districts_city_name ON districts(city_id, name)")
