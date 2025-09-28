@@ -549,41 +549,37 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # YOLO MODE: BACK TO ORIGINAL HORIZONTAL LAYOUT - NO PADDING
-    # [Product Name] [Option1] [Option2] [Option3] etc.
+    # YOLO MODE: BACK TO SIMPLE PRODUCT NAME BUTTONS ONLY
+    # Click product name → shows price/weight options
     
-    for product_type, type_products in product_groups.items():
-        # Remove duplicate products with same price and size
-        unique_products = {}
-        for product in type_products:
-            key = f"{product['price']:.2f}_{product['size']}"
-            if key not in unique_products:
-                unique_products[key] = product
-        
-        unique_products_list = list(unique_products.values())
-        
-        if unique_products_list:  # Only create row if there are unique products
-            row = []
-            emoji = get_product_emoji(product_type)
-            
-            # Product name button (clean, no padding - natural width)
-            product_name_btn = InlineKeyboardButton(
-                f"{emoji} {product_type}",
-                callback_data="ignore"  # Blank button that does nothing
-            )
-            row.append(product_name_btn)
-            
-            # Add unique clickable price/weight buttons to the right
-            for product in unique_products_list:
-                price_text = f"{product['price']:.0f}€ {product['size']}"
-                option_btn = InlineKeyboardButton(
-                    price_text,
-                    callback_data=f"minimalist_product_select|{product['id']}"
-                )
-                row.append(option_btn)
-            
-            # Add the complete row (product name + all its unique options)
-            keyboard.append(row)
+    # SAVED FOR SUPER-INTERACTIVE EDITOR (commented out):
+    # This was the horizontal layout with product names + prices on same row
+    # for product_type, type_products in product_groups.items():
+    #     unique_products = {}
+    #     for product in type_products:
+    #         key = f"{product['price']:.2f}_{product['size']}"
+    #         if key not in unique_products:
+    #             unique_products[key] = product
+    #     unique_products_list = list(unique_products.values())
+    #     if unique_products_list:
+    #         row = []
+    #         emoji = get_product_emoji(product_type)
+    #         product_name_btn = InlineKeyboardButton(f"{emoji} {product_type}", callback_data="ignore")
+    #         row.append(product_name_btn)
+    #         for product in unique_products_list:
+    #             price_text = f"{product['price']:.0f}€ {product['size']}"
+    #             option_btn = InlineKeyboardButton(price_text, callback_data=f"minimalist_product_select|{product['id']}")
+    #             row.append(option_btn)
+    #         keyboard.append(row)
+    
+    # CURRENT: Simple product name buttons only
+    for product_type in product_groups.keys():
+        emoji = get_product_emoji(product_type)
+        product_btn = InlineKeyboardButton(
+            f"{emoji} {product_type}",
+            callback_data=f"minimalist_product_type|{city_name}|{district_name}|{product_type}"
+        )
+        keyboard.append([product_btn])
     
     # Navigation buttons
     keyboard.extend([
