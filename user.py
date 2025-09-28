@@ -219,6 +219,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     username = user.username or user.first_name or f"User_{user_id}"
     
+    # Check if minimalist UI theme is active
+    try:
+        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome
+        active_theme = get_active_ui_theme()
+        
+        if active_theme['theme_name'] == 'minimalist':
+            logger.info(f"Using minimalist UI theme for user {user_id}")
+            return await handle_minimalist_welcome(update, context)
+    except ImportError:
+        logger.warning("Marketing promotions module not available, using default UI")
+    except Exception as e:
+        logger.error(f"Error checking UI theme: {e}")
+        # Continue with regular start flow if theme check fails
+    
     # Ban check is now handled in main.py start_command_wrapper
     # This check is kept for callback queries that might bypass the wrapper
     if is_callback and await is_user_banned(user_id):

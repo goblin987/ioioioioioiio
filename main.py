@@ -77,6 +77,15 @@ from user import (
     handle_single_item_discount_code_message
 )
 import admin # Import admin module
+import marketing_promotions # Import marketing and promotions module
+from marketing_promotions import (
+    init_marketing_tables, handle_marketing_promotions_menu, handle_ui_theme_designer,
+    handle_select_ui_theme, handle_minimalist_welcome, handle_minimalist_shop,
+    handle_minimalist_city_select, handle_minimalist_district_select, 
+    handle_minimalist_product_type, handle_minimalist_product_select,
+    handle_minimalist_pay_options, handle_minimalist_home, handle_minimalist_profile,
+    handle_minimalist_topup
+)
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
     handle_sales_select_period, handle_sales_run, handle_adm_city, handle_adm_dist,
@@ -812,6 +821,19 @@ def callback_query_router(func):
                 "price_district_product_select": handle_price_district_product_select,
                 "price_city_apply": handle_price_city_apply,
                 "price_district_apply": handle_price_district_apply,
+                # Marketing and UI Theme handlers
+                "marketing_promotions_menu": handle_marketing_promotions_menu,
+                "ui_theme_designer": handle_ui_theme_designer,
+                "select_ui_theme": handle_select_ui_theme,
+                "minimalist_shop": handle_minimalist_shop,
+                "minimalist_city_select": handle_minimalist_city_select,
+                "minimalist_district_select": handle_minimalist_district_select,
+                "minimalist_product_type": handle_minimalist_product_type,
+                "minimalist_product_select": handle_minimalist_product_select,
+                "minimalist_pay_options": handle_minimalist_pay_options,
+                "minimalist_home": handle_minimalist_home,
+                "minimalist_profile": handle_minimalist_profile,
+                "minimalist_topup": handle_minimalist_topup,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -1677,6 +1699,12 @@ def main() -> None:
         logger.info("✅ Price editor tables initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize price editor tables: {e}", exc_info=True)
+    
+    try:
+        init_marketing_tables()
+        logger.info("✅ Marketing and UI theme tables initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize marketing tables: {e}", exc_info=True)
     
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
