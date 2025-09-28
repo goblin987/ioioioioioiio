@@ -782,9 +782,9 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
         
         # Step 2: Atomically reserve the specific product with availability check
         # This prevents race conditions by ensuring reserved never exceeds available
-        update_result = c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (product_id_reserved,))
+        c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (product_id_reserved,))
         
-        if update_result.rowcount == 0:
+        if c.rowcount == 0:
             # Race condition: product was taken between SELECT and UPDATE
             conn.rollback()
             keyboard = [[InlineKeyboardButton(f"{EMOJI_BACK} {back_options_button}", callback_data=f"type|{city_id}|{dist_id}|{p_type}"), InlineKeyboardButton(f"{EMOJI_HOME} {home_button}", callback_data="back_start")]]
@@ -1475,8 +1475,8 @@ async def handle_remove_from_basket(update: Update, context: ContextTypes.DEFAUL
         conn = get_db_connection()
         c = conn.cursor(); c.execute("BEGIN")
         if item_removed_from_context:
-             update_result = c.execute("UPDATE products SET reserved = MAX(0, reserved - 1) WHERE id = %s", (product_id_to_remove,))
-             if update_result.rowcount > 0: logger.debug(f"Decremented reservation P{product_id_to_remove}.")
+             c.execute("UPDATE products SET reserved = MAX(0, reserved - 1) WHERE id = %s", (product_id_to_remove,))
+             if c.rowcount > 0: logger.debug(f"Decremented reservation P{product_id_to_remove}.")
              else: logger.warning(f"Could not find P{product_id_to_remove} to decrement reservation (maybe already cleared%s).")
         c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
         db_basket_result = c.fetchone(); db_basket_str = db_basket_result['basket'] if db_basket_result else ''
@@ -1911,8 +1911,8 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
         else:
             reserved_id = product_to_reserve['id']
             product_details_for_snapshot = dict(product_to_reserve) # Now contains enriched data
-            update_result = c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (reserved_id,))
-            if update_result.rowcount == 1:
+            c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (reserved_id,))
+            if c.rowcount == 1:
                 conn.commit()
                 logger.info(f"Successfully reserved product {reserved_id} for single item payment by user {user_id}.")
             else:
