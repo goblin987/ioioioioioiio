@@ -1165,9 +1165,23 @@ def init_db():
                 is_banned {get_boolean_type()} DEFAULT FALSE,
                 is_reseller {get_boolean_type()} DEFAULT FALSE,
                 last_active {get_timestamp_type()} DEFAULT NULL,
-                broadcast_failed_count INTEGER DEFAULT 0
+                broadcast_failed_count INTEGER DEFAULT 0,
+                referral_code {get_text_type()} DEFAULT NULL
             )''')
             logger.info(f"✅ Users table created successfully")
+            
+            # Add referral_code column if it doesn't exist
+            try:
+                logger.info(f"🔧 Adding referral_code column to users table...")
+                c.execute(f"ALTER TABLE users ADD COLUMN referral_code {get_text_type()} DEFAULT NULL")
+                conn.commit()
+                logger.info(f"✅ referral_code column added to users table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ referral_code column already exists in users table")
+                else:
+                    logger.warning(f"⚠️ Could not add referral_code column: {e}")
+                conn.rollback()
             
             # Handle existing tables: ALTER user_id columns from INTEGER to BIGINT for Telegram compatibility
             logger.info(f"🔧 CRITICAL: Ensuring user_id columns are BIGINT for Telegram compatibility...")

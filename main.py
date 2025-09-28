@@ -825,6 +825,12 @@ def callback_query_router(func):
                 "marketing_promotions_menu": handle_marketing_promotions_menu,
                 "ui_theme_designer": handle_ui_theme_designer,
                 "select_ui_theme": handle_select_ui_theme,
+                "preview_current_theme": handle_marketing_promotions_menu,  # Placeholder - redirect to main menu
+                "customize_active_theme": handle_ui_theme_designer,  # Placeholder - redirect to theme designer
+                "marketing_campaigns_menu": handle_marketing_promotions_menu,  # Placeholder - redirect to main menu
+                "promotion_codes_menu": handle_marketing_promotions_menu,  # Placeholder - redirect to main menu
+                "welcome_message_editor": admin.handle_adm_manage_welcome,  # Redirect to existing welcome editor
+                "stock_type_kava": admin.handle_adm_manage_types,  # Placeholder - redirect to product types management
                 "minimalist_shop": handle_minimalist_shop,
                 "minimalist_city_select": handle_minimalist_city_select,
                 "minimalist_district_select": handle_minimalist_district_select,
