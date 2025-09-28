@@ -1096,7 +1096,7 @@ async def handle_minimalist_profile(update: Update, context: ContextTypes.DEFAUL
         
         # Get user info
         c.execute("""
-            SELECT balance, total_purchases, created_at
+            SELECT balance, total_purchases
             FROM users 
             WHERE user_id = %s
         """, (user_id,))
@@ -1109,7 +1109,7 @@ async def handle_minimalist_profile(update: Update, context: ContextTypes.DEFAUL
         else:
             balance = user['balance']
             total_purchases = user['total_purchases'] or 0
-            member_since = user['created_at'].strftime("%B %Y") if user['created_at'] else "Unknown"
+            member_since = "Member"  # Since we don't have created_at column
         
     except Exception as e:
         logger.error(f"Error loading user profile: {e}")

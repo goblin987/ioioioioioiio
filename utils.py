@@ -1625,7 +1625,7 @@ def add_pending_deposit(payment_id: str, user_id: int, currency: str, target_eur
             """, (
                 payment_id, user_id, currency.lower(), target_eur_amount,
                 expected_crypto_amount, datetime.now(timezone.utc).isoformat(),
-                1 if is_purchase else 0, basket_json, discount_code
+                is_purchase, basket_json, discount_code
                 ))
             conn.commit()
             log_type = "direct purchase" if is_purchase else "refill"
