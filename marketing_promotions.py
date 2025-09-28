@@ -549,33 +549,53 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # CORRECT LAYOUT: Product name on left, clickable price/weight buttons on right
-    # Each row: [Product Name] [Price1] [Price2] [Price3] etc.
-    
-    for product_type, type_products in product_groups.items():
-        emoji = get_product_emoji(product_type)
-        
-        # Create row with product name on left + clickable options on right
-        row = []
-        
-        # First button: Product name (blank/non-clickable)
-        product_name_btn = InlineKeyboardButton(
-            f"{emoji} {product_type}",
-            callback_data="ignore"  # Blank button that does nothing
-        )
-        row.append(product_name_btn)
-        
-        # Add clickable price/weight buttons to the right
-        for product in type_products:
-            price_text = f"{product['price']:.0f}€ {product['size']}"
-            option_btn = InlineKeyboardButton(
-                price_text,
-                callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+    # STEP 1: Create symmetric first row with all product names
+    product_types = list(product_groups.keys())
+    if len(product_types) > 1:
+        # First row: All product names with equal width (symmetric)
+        product_names_row = []
+        for product_type in product_types:
+            emoji = get_product_emoji(product_type)
+            product_name_btn = InlineKeyboardButton(
+                f"{emoji} {product_type}",
+                callback_data="ignore"  # Blank button that does nothing
             )
-            row.append(option_btn)
+            product_names_row.append(product_name_btn)
+        keyboard.append(product_names_row)
+    
+    # STEP 2: Create rows for each product's options (remove duplicates)
+    for product_type, type_products in product_groups.items():
+        # Remove duplicate products with same price and size
+        unique_products = {}
+        for product in type_products:
+            key = f"{product['price']:.2f}_{product['size']}"
+            if key not in unique_products:
+                unique_products[key] = product
         
-        # Add the complete row (product name + all its options)
-        keyboard.append(row)
+        unique_products_list = list(unique_products.values())
+        
+        if unique_products_list:  # Only create row if there are unique products
+            row = []
+            
+            # If only one product type, include the name in the row
+            if len(product_types) == 1:
+                emoji = get_product_emoji(product_type)
+                product_name_btn = InlineKeyboardButton(
+                    f"{emoji} {product_type}",
+                    callback_data="ignore"
+                )
+                row.append(product_name_btn)
+            
+            # Add unique clickable price/weight buttons
+            for product in unique_products_list:
+                price_text = f"{product['price']:.0f}€ {product['size']}"
+                option_btn = InlineKeyboardButton(
+                    price_text,
+                    callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+                )
+                row.append(option_btn)
+            
+            keyboard.append(row)
     
     # Navigation buttons
     keyboard.extend([
