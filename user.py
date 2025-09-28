@@ -754,7 +754,7 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("BEGIN EXCLUSIVE")
+        c.execute("BEGIN")
         
         # Step 1: Find an available product
         c.execute("SELECT id FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
@@ -1885,7 +1885,7 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("BEGIN EXCLUSIVE")
+        c.execute("BEGIN")
         # MODIFIED: Fetch city, district, original_text for snapshot
         c.execute("SELECT id, name, price, size, product_type, city, district, original_text FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
         product_to_reserve = c.fetchone()
