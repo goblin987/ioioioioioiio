@@ -3436,7 +3436,7 @@ async def handle_bot_name_layout(update: Update, context: ContextTypes.DEFAULT_T
             return
         
         # Set state for receiving template name
-        context.user_data['awaiting_template_name'] = True
+        context.user_data['state'] = 'awaiting_template_name'
         
         msg = "📝 **NAME YOUR CUSTOM LAYOUT** 📝\n\n"
         msg += "🎨 **Create a Template**\n\n"
@@ -3466,7 +3466,7 @@ async def handle_template_name_message(update: Update, context: ContextTypes.DEF
     user_id = update.effective_user.id
     
     # Check if we're expecting a template name
-    if not context.user_data.get('awaiting_template_name'):
+    if context.user_data.get('state') != 'awaiting_template_name':
         return  # Not in naming mode
     
     if not is_primary_admin(user_id):
@@ -3515,7 +3515,7 @@ async def handle_template_name_message(update: Update, context: ContextTypes.DEF
             await update.message.reply_text(
                 "❌ **No Layouts Found**\n\nNo saved layouts to create template from.\n\nCreate some layouts first."
             )
-            context.user_data['awaiting_template_name'] = False
+            context.user_data['state'] = None
             return
         
         # Create template configuration
@@ -3543,7 +3543,7 @@ async def handle_template_name_message(update: Update, context: ContextTypes.DEF
         conn.commit()
         
         # Clear naming state
-        context.user_data['awaiting_template_name'] = False
+        context.user_data['state'] = None
         
         # Success message
         msg = "✅ **TEMPLATE CREATED** ✅\n\n"
@@ -3569,7 +3569,7 @@ async def handle_template_name_message(update: Update, context: ContextTypes.DEF
     except Exception as e:
         logger.error(f"Error creating template: {e}")
         await update.message.reply_text("❌ Error creating template. Please try again.")
-        context.user_data['awaiting_template_name'] = False
+        context.user_data['state'] = None
     finally:
         if conn:
             conn.close()
