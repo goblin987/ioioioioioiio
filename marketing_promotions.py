@@ -549,69 +549,33 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # IMPLEMENT VISUAL SYMMETRY as specified:
-    # 1. Product Type Row: Equal width buttons, calc(100% / N) where N = total products
-    # 2. Price/Weight Options: Equal width within each product, calc(100% / options_count)
+    # CORRECT LAYOUT: Product name on left, clickable price/weight buttons on right
+    # Each row: [Product Name] [Price1] [Price2] [Price3] etc.
     
-    # Step 1: Create Product Type Row (First Row) with perfect symmetry
-    product_types = list(product_groups.keys())
-    total_product_types = len(product_types)
-    
-    if total_product_types > 0:
-        # First row: Product type buttons with equal width (calc(100% / N))
-        product_type_row = []
-        for product_type in product_types:
-            emoji = get_product_emoji(product_type)
-            product_name_btn = InlineKeyboardButton(
-                f"{emoji} {product_type}",
-                callback_data="ignore"  # Blank button that does nothing
+    for product_type, type_products in product_groups.items():
+        emoji = get_product_emoji(product_type)
+        
+        # Create row with product name on left + clickable options on right
+        row = []
+        
+        # First button: Product name (blank/non-clickable)
+        product_name_btn = InlineKeyboardButton(
+            f"{emoji} {product_type}",
+            callback_data="ignore"  # Blank button that does nothing
+        )
+        row.append(product_name_btn)
+        
+        # Add clickable price/weight buttons to the right
+        for product in type_products:
+            price_text = f"{product['price']:.0f}€ {product['size']}"
+            option_btn = InlineKeyboardButton(
+                price_text,
+                callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
             )
-            product_type_row.append(product_name_btn)
+            row.append(option_btn)
         
-        # Add the symmetric product type row
-        keyboard.append(product_type_row)
-        
-        # Step 2: Create Price/Weight Options Rows with perfect symmetry
-        for product_type in product_types:
-            type_products = product_groups[product_type]
-            total_options = len(type_products)
-            
-            if total_options == 0:
-                continue
-                
-            # Create rows of price/weight options with equal width
-            # Each option gets calc(100% / options_count) width
-            
-            if total_options <= 4:
-                # Single row: all options fit in one row with equal width
-                options_row = []
-                for product in type_products:
-                    price_text = f"{product['price']:.0f}€ {product['size']}"
-                    option_btn = InlineKeyboardButton(
-                        price_text,
-                        callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
-                    )
-                    options_row.append(option_btn)
-                keyboard.append(options_row)
-                
-            else:
-                # Multiple rows: wrap to maintain symmetry
-                # Preferred: keep all options on single row if possible, otherwise balance across rows
-                options_per_row = min(4, total_options)  # Max 4 per row for readability
-                
-                for i in range(0, total_options, options_per_row):
-                    row_options = type_products[i:i + options_per_row]
-                    options_row = []
-                    
-                    for product in row_options:
-                        price_text = f"{product['price']:.0f}€ {product['size']}"
-                        option_btn = InlineKeyboardButton(
-                            price_text,
-                            callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
-                        )
-                        options_row.append(option_btn)
-                    
-                    keyboard.append(options_row)
+        # Add the complete row (product name + all its options)
+        keyboard.append(row)
     
     # Navigation buttons
     keyboard.extend([
