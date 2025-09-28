@@ -1226,13 +1226,13 @@ def init_db():
             # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
             # will be added later when needed to avoid startup delays
             logger.info(f"✅ Products table created with basic columns")
-            # product_media table (temporarily disabled to debug startup issue)
-            logger.info(f"🔧 Skipping product_media table creation for debugging...")
-            # c.execute('''CREATE TABLE IF NOT EXISTS product_media (
-            #     id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
-            #     media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
-            # )''')
-            logger.info(f"✅ Product_media table creation skipped")
+            # product_media table
+            logger.info(f"🔧 Creating product_media table...")
+            c.execute('''CREATE TABLE IF NOT EXISTS product_media (
+                id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
+                media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
+            )''')
+            logger.info(f"✅ Product_media table created successfully")
             # purchases table
             logger.info(f"🔧 Creating purchases table...")
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (
@@ -1496,8 +1496,7 @@ def init_db():
             logger.info("✅ Product_media table created successfully (migration skipped for PostgreSQL)")
 
             # Create Indices
-            # Skip product_media index since we skipped the table creation
-            # c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id)")
             c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_districts_city_name ON districts(city_id, name)")
