@@ -134,6 +134,21 @@ def init_marketing_tables():
         c.execute("CREATE INDEX IF NOT EXISTS idx_hot_deals_active ON hot_deals(is_active, priority)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_hot_deals_product ON hot_deals(product_id)")
         
+        # App info management table
+        c.execute('''CREATE TABLE IF NOT EXISTS app_info (
+            id SERIAL PRIMARY KEY,
+            info_title TEXT NOT NULL,
+            info_content TEXT NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            display_order INTEGER DEFAULT 0,
+            created_by BIGINT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        # Create index for app info
+        c.execute("CREATE INDEX IF NOT EXISTS idx_app_info_active ON app_info(is_active, display_order)")
+        
         # Insert default themes if not exists
         for theme_key, theme_data in UI_THEMES.items():
             c.execute("""
@@ -223,6 +238,7 @@ async def handle_marketing_promotions_menu(update: Update, context: ContextTypes
     keyboard = [
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="ui_theme_designer")],
         [InlineKeyboardButton("🔥 Hot Deals Manager", callback_data="admin_hot_deals_menu")],
+        [InlineKeyboardButton("ℹ️ App Info Manager", callback_data="admin_app_info_menu")],
         [InlineKeyboardButton("📝 Welcome Message Editor", callback_data="welcome_message_editor")],
         [InlineKeyboardButton("🎁 Promotion Codes", callback_data="promotion_codes_menu")],
         [InlineKeyboardButton("📊 Marketing Campaigns", callback_data="marketing_campaigns_menu")],
@@ -1839,22 +1855,47 @@ async def handle_modern_promotions(update: Update, context: ContextTypes.DEFAULT
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_modern_app(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Modern premium app info interface"""
+    """Modern app info interface - shows admin-configured info"""
     query = update.callback_query
     
-    msg = "📱 **PREMIUM APP INFO** 📱\n\n"
-    msg += "🚀 **VIP EXPERIENCE**\n\n"
-    msg += "💎 **Premium Features:**\n"
-    msg += "• 🏆 VIP customer support\n"
-    msg += "• ⚡ Lightning-fast delivery\n"
-    msg += "• 🔒 Secure premium payments\n"
-    msg += "• 🎯 Exclusive product access\n"
-    msg += "• 💰 Premium wallet system\n\n"
-    msg += "🌟 **Welcome to the premium experience!**"
+    # Get app info from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT info_title, info_content
+            FROM app_info 
+            WHERE is_active = TRUE
+            ORDER BY display_order ASC, created_at DESC
+            LIMIT 5
+        """)
+        info_items = c.fetchall()
+    except Exception as e:
+        logger.error(f"Error loading app info: {e}")
+        info_items = []
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "ℹ️ **APP INFORMATION** ℹ️\n\n"
+    
+    if info_items:
+        for info in info_items:
+            msg += f"📋 **{info['info_title']}**\n"
+            msg += f"{info['info_content']}\n\n"
+    else:
+        # Default content if no admin info is set
+        msg += "🎯 **About Our Service**\n\n"
+        msg += "💎 *Premium quality products*\n"
+        msg += "🚀 *Fast delivery service*\n"
+        msg += "🏆 *Excellent customer experience*\n"
+        msg += "🔒 *Secure transactions*\n\n"
+        msg += "🌟 **Contact admin to add custom info**"
     
     keyboard = [
-        [InlineKeyboardButton("🛍️ Start Premium Shopping", callback_data="modern_shop")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🛍️ Start Shopping", callback_data="modern_shop")],
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2166,5 +2207,212 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# YOLO MODE: APP INFO MANAGEMENT SYSTEM FOR ADMINS
+async def handle_admin_app_info_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Admin app info management menu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Get current app info count
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) as count FROM app_info WHERE is_active = TRUE")
+        active_info = c.fetchone()['count']
+    except Exception as e:
+        logger.error(f"Error getting app info count: {e}")
+        active_info = 0
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "ℹ️ **APP INFO MANAGER** ℹ️\n\n"
+    msg += "📱 **Manage App Information**\n\n"
+    msg += f"📊 **Active Info Items:** {active_info}\n\n"
+    msg += "🎯 *Create custom app information*\n"
+    msg += "📝 *Add your username, channel, contact info*\n"
+    msg += "💎 *Manage app details and descriptions*"
+    
+    keyboard = [
+        [InlineKeyboardButton("➕ Add New Info", callback_data="admin_add_app_info")],
+        [InlineKeyboardButton("📋 Manage Existing Info", callback_data="admin_manage_app_info")],
+        [InlineKeyboardButton("👀 Preview App Info", callback_data="modern_app")],
+        [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_add_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start adding new app info"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['state'] = 'awaiting_app_info_title'
+    
+    msg = "➕ **ADD NEW APP INFO** ➕\n\n"
+    msg += "📝 **Enter Info Title:**\n\n"
+    msg += "Examples:\n"
+    msg += "• Contact Information\n"
+    msg += "• Channel Links\n"
+    msg += "• Support Details\n"
+    msg += "• About Us\n\n"
+    msg += "🎯 **Type the title for this info section:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data="admin_app_info_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_manage_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Manage existing app info"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Get existing app info
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, info_title, info_content, is_active, display_order, created_at
+            FROM app_info
+            ORDER BY is_active DESC, display_order ASC, created_at DESC
+            LIMIT 10
+        """)
+        info_items = c.fetchall()
+    except Exception as e:
+        logger.error(f"Error loading app info: {e}")
+        info_items = []
+    finally:
+        if conn:
+            conn.close()
+    
+    if not info_items:
+        await query.edit_message_text(
+            "📋 **NO APP INFO FOUND** 📋\n\n"
+            "No app info created yet.\n"
+            "Create your first info item!",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("➕ Add New Info", callback_data="admin_add_app_info")],
+                [InlineKeyboardButton("⬅️ Back to App Info", callback_data="admin_app_info_menu")]
+            ]),
+            parse_mode='Markdown'
+        )
+        return
+    
+    msg = "📋 **MANAGE APP INFO** 📋\n\n"
+    msg += "🎯 **Current Info Items:**\n\n"
+    
+    keyboard = []
+    
+    for info in info_items:
+        status = "🟢" if info['is_active'] else "🔴"
+        title = info['info_title'][:30] + "..." if len(info['info_title']) > 30 else info['info_title']
+        
+        button_text = f"{status} {title}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"admin_edit_app_info|{info['id']}")])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("➕ Add New Info", callback_data="admin_add_app_info")],
+        [InlineKeyboardButton("⬅️ Back to App Info", callback_data="admin_app_info_menu")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_edit_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit existing app info"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid info selection", show_alert=True)
+        return
+    
+    info_id = params[0]
+    
+    # Get info details
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, info_title, info_content, is_active, display_order, created_at
+            FROM app_info WHERE id = %s
+        """, (info_id,))
+        info = c.fetchone()
+    except Exception as e:
+        logger.error(f"Error loading app info {info_id}: {e}")
+        await query.answer("Error loading info", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not info:
+        await query.answer("Info not found", show_alert=True)
+        return
+    
+    status_text = "🟢 Active" if info['is_active'] else "🔴 Inactive"
+    content_preview = info['info_content'][:100] + "..." if len(info['info_content']) > 100 else info['info_content']
+    
+    msg = f"✏️ **EDIT APP INFO** ✏️\n\n"
+    msg += f"📝 **Title:** {info['info_title']}\n"
+    msg += f"📊 **Status:** {status_text}\n"
+    msg += f"📅 **Created:** {info['created_at'].strftime('%Y-%m-%d %H:%M')}\n\n"
+    msg += f"📄 **Content Preview:**\n{content_preview}\n\n"
+    msg += "🎯 **Choose Action:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("✏️ Edit Content", callback_data=f"admin_edit_info_content|{info_id}")],
+        [InlineKeyboardButton("🔄 Toggle Status", callback_data=f"admin_toggle_info_status|{info_id}")],
+        [InlineKeyboardButton("🗑️ Delete Info", callback_data=f"admin_delete_app_info|{info_id}")],
+        [InlineKeyboardButton("⬅️ Back to List", callback_data="admin_manage_app_info")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_toggle_info_status(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle app info active status"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid info selection", show_alert=True)
+        return
+    
+    info_id = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Toggle status
+        c.execute("""
+            UPDATE app_info 
+            SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (info_id,))
+        
+        conn.commit()
+        await query.answer("✅ Status updated successfully!", show_alert=True)
+        
+        # Redirect back to edit screen
+        return await handle_admin_edit_app_info(update, context, [info_id])
+        
+    except Exception as e:
+        logger.error(f"Error toggling app info status: {e}")
+        await query.answer("❌ Error updating status", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 # --- END OF FILE marketing_promotions.py ---

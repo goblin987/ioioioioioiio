@@ -1071,6 +1071,38 @@ min_amount_cache = {}
 CACHE_EXPIRY_SECONDS = 900
 
 # --- Database Connection Helper ---
+def get_product_emoji(product_type):
+    """Get emoji for product type"""
+    emoji_map = {
+        'kava': '☕',
+        'coffee': '☕',
+        'tea': '🍵',
+        'chai': '🍵',
+        'energy': '⚡',
+        'drink': '🥤',
+        'food': '🍽️',
+        'snack': '🍿',
+        'sweet': '🍭',
+        'chocolate': '🍫',
+        'fruit': '🍎',
+        'juice': '🧃',
+        'water': '💧',
+        'supplement': '💊',
+        'vitamin': '💊',
+        'pienas': '🥛',
+        'milk': '🥛',
+        'arbata': '🍵',
+        'apples': '🍎',
+        'orange': '🍊'
+    }
+    
+    product_lower = product_type.lower()
+    for key, emoji in emoji_map.items():
+        if key in product_lower:
+            return emoji
+    
+    return '😃'  # Default emoji
+
 def get_db_connection():
     """Returns a connection to the PostgreSQL database."""
     logger.info(f"🔧 Attempting to connect to PostgreSQL...")

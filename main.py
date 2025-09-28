@@ -92,7 +92,8 @@ from marketing_promotions import (
     handle_modern_promotions, handle_modern_app, handle_modern_home,
     handle_admin_hot_deals_menu, handle_admin_add_hot_deal, handle_admin_hot_deal_product,
     handle_admin_deal_custom_price, handle_admin_deal_discount, handle_admin_deal_title_only,
-    handle_admin_manage_hot_deals
+    handle_admin_manage_hot_deals, handle_admin_app_info_menu, handle_admin_add_app_info,
+    handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -876,6 +877,12 @@ def callback_query_router(func):
                 "admin_deal_discount": handle_admin_deal_discount,
                 "admin_deal_title_only": handle_admin_deal_title_only,
                 "admin_manage_hot_deals": handle_admin_manage_hot_deals,
+                # App Info Management Handlers
+                "admin_app_info_menu": handle_admin_app_info_menu,
+                "admin_add_app_info": handle_admin_add_app_info,
+                "admin_manage_app_info": handle_admin_manage_app_info,
+                "admin_edit_app_info": handle_admin_edit_app_info,
+                "admin_toggle_info_status": handle_admin_toggle_info_status,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
