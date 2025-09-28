@@ -88,8 +88,8 @@ from marketing_promotions import (
     handle_modern_welcome, handle_modern_shop, handle_modern_city_select,
     handle_modern_district_select, handle_modern_product_type, handle_modern_product_select,
     handle_modern_pay_options, handle_modern_discount_code, handle_modern_deals,
-    handle_modern_profile, handle_modern_wallet, handle_modern_promotions,
-    handle_modern_app, handle_modern_home
+    handle_modern_deal_select, handle_modern_profile, handle_modern_wallet, 
+    handle_modern_promotions, handle_modern_app, handle_modern_home
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -859,6 +859,7 @@ def callback_query_router(func):
                 "modern_pay_options": handle_modern_pay_options,
                 "modern_discount_code": handle_modern_discount_code,
                 "modern_deals": handle_modern_deals,
+                "modern_deal_select": handle_modern_deal_select,
                 "modern_profile": handle_modern_profile,
                 "modern_wallet": handle_modern_wallet,
                 "modern_promotions": handle_modern_promotions,

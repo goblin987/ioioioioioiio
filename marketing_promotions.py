@@ -1279,11 +1279,27 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query if update.callback_query else None
     user_id = update.effective_user.id
     
-    # Premium modern card-style welcome with visual elements
-    msg = "🎯 **WELCOME TO PREMIUM STORE** 🎯\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║  🛍️  **LUXURY SHOPPING**  🛍️  ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    # Get user data for personalized welcome
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT username, balance FROM users WHERE user_id = %s", (user_id,))
+        user_data = c.fetchone()
+        username = user_data['username'] if user_data else "VIP Member"
+        balance = user_data['balance'] if user_data else 0.0
+    except Exception as e:
+        logger.error(f"Error getting user data: {e}")
+        username = "VIP Member"
+        balance = 0.0
+    finally:
+        if conn:
+            conn.close()
+    
+    # Premium modern welcome with user data (no ugly symbols)
+    msg = f"🎯 **WELCOME TO PREMIUM STORE** 🎯\n\n"
+    msg += f"👤 **Hello, {username}!**\n"
+    msg += f"💰 **Balance:** {balance:.2f} EUR\n\n"
     msg += "🔥 **What brings you here today?**\n\n"
     msg += "💎 *Premium quality guaranteed*\n"
     msg += "🚀 *Lightning-fast delivery*\n"
@@ -1315,9 +1331,7 @@ async def handle_modern_shop(update: Update, context: ContextTypes.DEFAULT_TYPE,
     query = update.callback_query
     
     msg = "🛍️ **PREMIUM MARKETPLACE** 🛍️\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║     🏙️ **DELIVERY ZONES**    ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🏙️ **DELIVERY ZONES**\n\n"
     msg += "📍 *Select your premium delivery location*\n\n"
     msg += "🚀 **Express delivery available**\n"
     msg += "💎 **Premium service guarantee**"
@@ -1347,9 +1361,7 @@ async def handle_modern_city_select(update: Update, context: ContextTypes.DEFAUL
     city_name = params[0]
     
     msg = f"🏙️ **{city_name.upper()} PREMIUM ZONE** 🏙️\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║    🏘️ **SELECT DISTRICT**    ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🏘️ **SELECT DISTRICT**\n\n"
     msg += "📍 *Choose your premium district*\n\n"
     msg += "🎯 **VIP service in all areas**\n"
     msg += "⚡ **Same-day delivery available**"
@@ -1401,9 +1413,7 @@ async def handle_modern_district_select(update: Update, context: ContextTypes.DE
     if not product_types:
         await query.edit_message_text(
             f"🚫 **PREMIUM CATALOG UNAVAILABLE**\n\n"
-            f"╔═══════════════════════════╗\n"
-            f"║  **{district_name.upper()}** - **{city_name.upper()}**  ║\n"
-            f"╚═══════════════════════════╝\n\n"
+            f"**{district_name.upper()}** - **{city_name.upper()}**\n\n"
             f"🔄 *Restocking premium items...*\n"
             f"📞 *Contact support for availability*",
             reply_markup=InlineKeyboardMarkup([
@@ -1415,9 +1425,7 @@ async def handle_modern_district_select(update: Update, context: ContextTypes.DE
         return
     
     msg = f"🏙️ **{city_name.upper()}** | 🏘️ **{district_name.upper()}**\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║   🛍️ **PREMIUM CATALOG**   ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🛍️ **PREMIUM CATALOG**\n\n"
     msg += "🎯 *Select your premium product*\n\n"
     msg += "💎 **Luxury collection available**\n"
     msg += "🏆 **Highest quality guaranteed**"
@@ -1479,9 +1487,7 @@ async def handle_modern_product_type(update: Update, context: ContextTypes.DEFAU
     if not variants:
         await query.edit_message_text(
             f"🚫 **PREMIUM VARIANT UNAVAILABLE**\n\n"
-            f"╔═══════════════════════════╗\n"
-            f"║  **{product_type.upper()} PREMIUM**  ║\n"
-            f"╚═══════════════════════════╝\n\n"
+            f"**{product_type.upper()} PREMIUM**\n\n"
             f"🔄 *Restocking premium variants...*\n"
             f"📞 *Contact VIP support*",
             reply_markup=InlineKeyboardMarkup([
@@ -1497,9 +1503,7 @@ async def handle_modern_product_type(update: Update, context: ContextTypes.DEFAU
     
     # Premium product variant display
     msg = f"🏙️ **{city_name.upper()}** | 🏘️ **{district_name.upper()}**\n\n"
-    msg += f"╔═══════════════════════════╗\n"
-    msg += f"║  {emoji} **{product_type.upper()} PREMIUM** {emoji}  ║\n"
-    msg += f"╚═══════════════════════════╝\n\n"
+    msg += f"{emoji} **{product_type.upper()} PREMIUM** {emoji}\n\n"
     msg += "💎 **Select your premium variant:**\n\n"
     msg += "🏆 *VIP quality guarantee*\n"
     msg += "⚡ *Express processing*"
@@ -1592,9 +1596,7 @@ async def handle_modern_product_select(update: Update, context: ContextTypes.DEF
     
     # Premium product details display
     msg = f"🏙️ **{city_name.upper()}** | 🏘️ **{district_name.upper()}**\n\n"
-    msg += f"╔═══════════════════════════╗\n"
-    msg += f"║  {emoji} **PREMIUM SELECTION** {emoji}  ║\n"
-    msg += f"╚═══════════════════════════╝\n\n"
+    msg += f"{emoji} **PREMIUM SELECTION** {emoji}\n\n"
     msg += f"🎯 **Product:** {product_type.title()}\n"
     msg += f"📏 **Size:** {size}\n"
     msg += f"💰 **Premium Price:** {price:.2f}€\n"
@@ -1646,33 +1648,90 @@ async def handle_modern_discount_code(update: Update, context: ContextTypes.DEFA
     await handle_apply_discount_single_pay(update, context, params)
 
 async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Modern hot deals interface"""
+    """Modern hot deals interface with REAL deals"""
     query = update.callback_query
     
-    msg = "🔥 **PREMIUM HOT DEALS** 🔥\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║   💥 **LIMITED TIME ONLY**   ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
-    msg += "🎯 *Exclusive VIP offers*\n"
-    msg += "⏰ *Limited quantity available*\n"
-    msg += "💎 *Premium products only*\n\n"
-    msg += "🚀 **Coming Soon - Stay Tuned!**"
+    # Get actual products with discounts/deals from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get products with lowest prices (hot deals)
+        c.execute("""
+            SELECT DISTINCT city, district, product_type, MIN(price) as min_price, 
+                   COUNT(*) as available_count
+            FROM products 
+            WHERE available > 0 
+            GROUP BY city, district, product_type
+            ORDER BY min_price ASC
+            LIMIT 10
+        """)
+        deals = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading hot deals: {e}")
+        deals = []
+    finally:
+        if conn:
+            conn.close()
     
-    keyboard = [
+    msg = "🔥 **PREMIUM HOT DEALS** 🔥\n\n"
+    msg += "💥 **LIMITED TIME OFFERS**\n\n"
+    
+    if deals:
+        msg += "🎯 *Exclusive VIP offers available now:*\n\n"
+        
+        keyboard = []
+        
+        # Show actual deals
+        from utils import get_product_emoji
+        for deal in deals[:5]:  # Show top 5 deals
+            city = deal['city']
+            district = deal['district']
+            product_type = deal['product_type']
+            price = deal['min_price']
+            count = deal['available_count']
+            
+            emoji = get_product_emoji(product_type)
+            deal_text = f"🔥 {emoji} {product_type.title()} - From {price:.2f}€"
+            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"modern_deal_select|{city}|{district}|{product_type}")])
+        
+        msg += f"⚡ **{len(deals)} hot deals available**\n"
+        msg += "💎 *Premium quality guaranteed*"
+        
+    else:
+        msg += "🔄 *Updating deals - check back soon!*\n"
+        msg += "💎 *Premium offers coming*"
+        keyboard = []
+    
+    keyboard.extend([
         [InlineKeyboardButton("🛍️ Browse Premium Shop", callback_data="modern_shop")],
         [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
-    ]
+    ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_deal_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle hot deal selection - redirect to product selection"""
+    query = update.callback_query
+    if not params or len(params) < 3:
+        await query.answer("Invalid deal selection", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1] 
+    product_type = params[2]
+    
+    # Redirect to product type selection for this deal
+    await handle_modern_product_type(update, context, [city_name, district_name, product_type])
 
 async def handle_modern_profile(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Modern premium profile interface"""
     query = update.callback_query
     
     msg = "👤 **VIP ACCOUNT DASHBOARD** 👤\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║   🏆 **PREMIUM MEMBER**    ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🏆 **PREMIUM MEMBER**\n\n"
     msg += "💎 *VIP status active*\n"
     msg += "🚀 *Premium features unlocked*\n"
     msg += "🏆 *Exclusive access granted*\n\n"
@@ -1690,9 +1749,7 @@ async def handle_modern_wallet(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     
     msg = "💰 **PREMIUM WALLET** 💰\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║   💎 **VIP BALANCE**      ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "💎 **VIP BALANCE**\n\n"
     msg += "🏆 *Premium payment methods*\n"
     msg += "⚡ *Instant transactions*\n"
     msg += "🔒 *Secure VIP processing*\n\n"
@@ -1710,9 +1767,7 @@ async def handle_modern_promotions(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     
     msg = "🎯 **VIP PROMOTIONS** 🎯\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║  🎁 **EXCLUSIVE OFFERS**   ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🎁 **EXCLUSIVE OFFERS**\n\n"
     msg += "💎 *VIP-only promotions*\n"
     msg += "🏆 *Premium member benefits*\n"
     msg += "🎁 *Exclusive reward system*\n\n"
@@ -1730,9 +1785,7 @@ async def handle_modern_app(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     query = update.callback_query
     
     msg = "📱 **PREMIUM APP INFO** 📱\n\n"
-    msg += "╔═══════════════════════════╗\n"
-    msg += "║   🚀 **VIP EXPERIENCE**    ║\n"
-    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🚀 **VIP EXPERIENCE**\n\n"
     msg += "💎 **Premium Features:**\n"
     msg += "• 🏆 VIP customer support\n"
     msg += "• ⚡ Lightning-fast delivery\n"
