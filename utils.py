@@ -1647,7 +1647,7 @@ def _unreserve_basket_items(basket_snapshot: list | None):
         logger.info(f"Un-reserved {total_released} items due to failed/expired/cancelled payment.") # General log message
     except psycopg2.Error as e:
         logger.error(f"DB error un-reserving items: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
     finally:
         if conn: conn.close()
 
@@ -2001,10 +2001,10 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
 
     except psycopg2.Error as e:
         logger.error(f"SQLite error clearing basket user {user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
     except Exception as e:
         logger.error(f"Unexpected error clearing basket user {user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
     finally:
         if conn: conn.close()
 
@@ -2090,7 +2090,7 @@ def clear_all_expired_baskets():
         if all_expired_product_counts:
             decrement_data = [(count, pid) for pid, count in all_expired_product_counts.items()]
             if decrement_data:
-                c_update.executemany("UPDATE products SET reserved = MAX(0, reserved - ?) WHERE id = ?", decrement_data)
+                c_update.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
                 total_released = sum(all_expired_product_counts.values())
                 logger.info(f"Scheduled clear: Released {total_released} expired product reservations.")
 
@@ -2408,7 +2408,7 @@ def fetch_user_ids_for_broadcast(target_type: str, target_value: str | int | Non
                         SELECT MAX(purchase_date)
                         FROM purchases p2
                         WHERE p1.user_id = p2.user_id
-                    ) AND p1.purchase_date < ?
+                    ) AND p1.purchase_date < %s
                 """, (cutoff_iso,))
                 inactive_users = {row['user_id'] for row in c.fetchall()}
 
@@ -2459,7 +2459,7 @@ def update_user_broadcast_status(user_id: int, success: bool):
                 current_time = datetime.now(timezone.utc).isoformat()
                 c.execute("""
                     UPDATE users 
-                    SET broadcast_failed_count = 0, last_active = ?
+                    SET broadcast_failed_count = 0, last_active = %s
                     WHERE user_id = %s
                 """, (current_time, user_id))
                 logger.debug(f"Reset broadcast failure count for user {user_id}")
@@ -2482,7 +2482,7 @@ def update_user_broadcast_status(user_id: int, success: bool):
             
         except psycopg2.Error as e:
             logger.error(f"DB error updating broadcast status for user {user_id} (attempt {attempt+1}/{max_retries}): {e}")
-            if conn and conn.in_transaction:
+            if conn and conn.status == 1:
                 try:
                     conn.rollback()
                 except:
@@ -2494,7 +2494,7 @@ def update_user_broadcast_status(user_id: int, success: bool):
                 logger.error(f"Failed to update broadcast status for user {user_id} after {max_retries} attempts")
         except Exception as e:
             logger.error(f"Unexpected error updating broadcast status for user {user_id} (attempt {attempt+1}/{max_retries}): {e}")
-            if conn and conn.in_transaction:
+            if conn and conn.status == 1:  # STATUS_IN_TRANSACTION
                 try:
                     conn.rollback()
                 except:
