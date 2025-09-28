@@ -718,7 +718,9 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
 
 {payment_id_label} `{helpers.escape_markdown(payment_id, version=2)}`
 
+🚨 **IMPORTANT EXPIRATION INFO:**
 {expires_at_label} {escaped_expiry}
+⏰ **Time Remaining:** **{helpers.escape_markdown(time_remaining_str, version=2)}**
 ⚠️ _{helpers.escape_markdown(invoice_payment_deadline, version=2)}_
 
 """
@@ -727,6 +729,35 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
         msg += f"\n{confirmation_note}"
 
         final_msg = msg.strip()
+
+        # --- Calculate time remaining for better user experience ---
+        time_remaining_str = "Unknown"
+        try:
+            from datetime import datetime, timezone
+            import pytz
+            
+            if expiration_date_str:
+                # Parse expiration time
+                if not expiration_date_str.endswith('Z') and '+' not in expiration_date_str and '-' not in expiration_date_str[10:]:
+                    expiration_date_str += 'Z'
+                expiry_dt = datetime.fromisoformat(expiration_date_str.replace('Z', '+00:00'))
+                
+                # Calculate time remaining
+                now = datetime.now(timezone.utc)
+                time_diff = expiry_dt - now
+                
+                if time_diff.total_seconds() > 0:
+                    minutes = int(time_diff.total_seconds() // 60)
+                    if minutes > 60:
+                        hours = minutes // 60
+                        remaining_minutes = minutes % 60
+                        time_remaining_str = f"{hours}h {remaining_minutes}m"
+                    else:
+                        time_remaining_str = f"{minutes} minutes"
+                else:
+                    time_remaining_str = "EXPIRED"
+        except Exception:
+            time_remaining_str = "Unknown"
 
         # --- Generate and send QR code ---
         qr_success = False
@@ -750,11 +781,18 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
             qr_img.save(qr_buffer, format='PNG')
             qr_buffer.seek(0)
             
+            # Enhanced QR code caption with expiration warning
+            qr_caption = f"📱 **Scan QR Code for Easy Payment**\n\n"
+            qr_caption += f"💰 **Amount:** `{pay_amount_display}` {pay_currency}\n"
+            qr_caption += f"📍 **Address:** `{pay_address}`\n"
+            qr_caption += f"⏰ **Valid for:** **{time_remaining_str}**\n\n"
+            qr_caption += f"⚠️ **Pay within {time_remaining_str} or invoice expires\\!**"
+            
             # Send QR code image first
             await context.bot.send_photo(
                 chat_id=chat_id,
                 photo=qr_buffer,
-                caption=f"📱 **Scan QR Code for Easy Payment**\n\n{pay_currency}: `{pay_amount_display}`\nAddress: `{pay_address}`",
+                caption=qr_caption,
                 parse_mode=ParseMode.MARKDOWN_V2
             )
             qr_success = True
