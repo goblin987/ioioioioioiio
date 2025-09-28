@@ -664,8 +664,8 @@ async def handle_minimalist_product_type(update: Update, context: ContextTypes.D
         available = variant['available']
         product_id = variant['id']
         
-        # Wide button with size and price
-        button_text = f"**{size}** - **{price:.2f}€**"
+        # Wide button with size and price (clean, no markdown symbols)
+        button_text = f"{size} - {price:.2f}€"
         callback_data = f"minimalist_product_select|{product_id}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
     
