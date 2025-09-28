@@ -1718,7 +1718,7 @@ def main() -> None:
     logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
     try:
-    load_all_data()
+        load_all_data()
         logger.info("✅ All data loaded successfully")
     except Exception as e:
         logger.error(f"❌ Failed to load data: {e}", exc_info=True)
