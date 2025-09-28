@@ -181,27 +181,38 @@ def init_marketing_tables():
         # Add unique constraint to menu_name if it doesn't exist (for existing databases)
         try:
             c.execute("ALTER TABLE bot_menu_layouts ADD CONSTRAINT unique_menu_name UNIQUE (menu_name)")
+            conn.commit()  # Commit this change immediately
             logger.info("✅ Added unique constraint to bot_menu_layouts.menu_name")
         except Exception as e:
+            conn.rollback()  # Rollback failed constraint addition
             if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
-                logger.info("✅ Unique constraint already exists on bot_menu_layouts.menu_name")
+                pass  # Silently ignore - constraint already exists
             else:
                 logger.warning(f"⚠️ Could not add unique constraint to menu_name: {e}")
-            # Don't rollback here, continue with initialization
+            # Continue with initialization
         
-        # Insert default themes if not exists
-        for theme_key, theme_data in UI_THEMES.items():
-            c.execute("""
-                INSERT INTO ui_themes (theme_name, is_active, welcome_message, button_layout, style_config)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (theme_name) DO NOTHING
-            """, (
-                theme_key,
-                theme_key == 'minimalist',  # Set minimalist as default active
-                f"Welcome to our store! 🛍️\n\nChoose an option below:",
-                str(theme_data['welcome_buttons']),
-                str(theme_data)
-            ))
+        # Insert default themes if not exists (with proper error handling)
+        try:
+            for theme_key, theme_data in UI_THEMES.items():
+                try:
+                    c.execute("""
+                        INSERT INTO ui_themes (theme_name, is_active, welcome_message, button_layout, style_config)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (theme_name) DO NOTHING
+                    """, (
+                        theme_key,
+                        theme_key == 'classic',  # Set classic as default active
+                        f"Welcome to our store! 🛍️\n\nChoose an option below:",
+                        str(theme_data['welcome_buttons']),
+                        str(theme_data)
+                    ))
+                except Exception as theme_error:
+                    logger.warning(f"⚠️ Could not insert theme {theme_key}: {theme_error}")
+                    conn.rollback()
+                    continue
+        except Exception as themes_error:
+            logger.warning(f"⚠️ Error processing themes: {themes_error}")
+            conn.rollback()
         
         conn.commit()
         logger.info("✅ Marketing and UI theme tables initialized successfully")
