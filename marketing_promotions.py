@@ -860,4 +860,113 @@ async def handle_minimalist_topup(update: Update, context: ContextTypes.DEFAULT_
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
+async def handle_user_ui_theme_selector(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Allow users to select their preferred UI theme"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Get current user preference
+    current_theme = context.user_data.get('ui_theme_preference', 'classic')
+    
+    msg = "🎨 **Choose Your UI Theme**\n\n"
+    msg += "**Select your preferred interface style:**\n\n"
+    
+    keyboard = []
+    
+    # Theme options for users
+    themes = {
+        'classic': {
+            'name': '📱 Classic Interface',
+            'description': 'Traditional bot interface with all features'
+        },
+        'minimalist': {
+            'name': '🍎 Minimalist (Apple Style)',
+            'description': 'Clean, simple interface with minimal buttons'
+        }
+    }
+    
+    for theme_key, theme_data in themes.items():
+        status = " ✅" if theme_key == current_theme else ""
+        button_text = f"{theme_data['name']}{status}"
+        callback_data = f"user_select_theme|{theme_key}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("👀 Preview Minimalist", callback_data="user_preview_minimalist")],
+        [InlineKeyboardButton("⬅️ Back to Menu", callback_data="back_start")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_user_select_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle user theme selection"""
+    query = update.callback_query
+    if not params:
+        await query.answer("Invalid theme selection", show_alert=True)
+        return
+    
+    theme_name = params[0]
+    user_id = query.from_user.id
+    
+    # Store user preference
+    context.user_data['ui_theme_preference'] = theme_name
+    
+    # Get theme info
+    theme_names = {
+        'classic': 'Classic Interface',
+        'minimalist': 'Minimalist (Apple Style)'
+    }
+    
+    selected_theme_name = theme_names.get(theme_name, theme_name)
+    
+    msg = f"✅ **Theme Selected!**\n\n"
+    msg += f"**Active Theme:** {selected_theme_name}\n\n"
+    
+    if theme_name == 'minimalist':
+        msg += "🍎 **Minimalist Features:**\n"
+        msg += "• Clean, Apple-style interface\n"
+        msg += "• Simplified navigation\n"
+        msg += "• Bold text formatting\n"
+        msg += "• Centered layout design\n\n"
+        msg += "Your interface will switch to minimalist mode when you return to the main menu."
+    else:
+        msg += "📱 **Classic Features:**\n"
+        msg += "• Full-featured interface\n"
+        msg += "• All bot functions accessible\n"
+        msg += "• Traditional button layout\n"
+        msg += "• Comprehensive options\n\n"
+        msg += "Your interface will use the classic mode."
+    
+    keyboard = [
+        [InlineKeyboardButton("🏠 Apply Theme (Go to Main Menu)", callback_data="back_start")],
+        [InlineKeyboardButton("🎨 Change Theme", callback_data="user_ui_theme_selector")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.answer(f"Theme changed to {selected_theme_name}!", show_alert=False)
+
+async def handle_user_preview_minimalist(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show preview of minimalist theme without switching"""
+    query = update.callback_query
+    
+    msg = "👀 **Minimalist Theme Preview**\n\n"
+    msg += "**🍎 Apple-Style Interface:**\n\n"
+    msg += "```\nWelcome to our store! 🛍️\n\nChoose an option below:\n\n[🛍️ Shop] [👤 Profile] [💳 Top Up]\n```\n\n"
+    msg += "**🛍️ Shopping Flow:**\n"
+    msg += "```\n🏙️ Choose a City\n\nSelect your location:\n\n[🏙️ Klaipeda]\n[🏙️ Vilnius]\n\n[🏠 Home]\n```\n\n"
+    msg += "**📱 Product Display:**\n"
+    msg += "```\n🏙️ klaipeda | 🏘️ naujamestis\n\n☕ kava - 2g\n\n💰 Price: 2.50 EUR\n🔢 Available: 1\n\n[💳 Pay Now]\n```\n\n"
+    msg += "**Features:**\n"
+    msg += "• Clean, centered layout\n"
+    msg += "• Bold formatting for prices\n"
+    msg += "• Wide buttons for options\n"
+    msg += "• Minimal, distraction-free design"
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Use Minimalist Theme", callback_data="user_select_theme|minimalist")],
+        [InlineKeyboardButton("⬅️ Back to Theme Selection", callback_data="user_ui_theme_selector")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
 # --- END OF FILE marketing_promotions.py ---

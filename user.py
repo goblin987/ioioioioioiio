@@ -200,7 +200,8 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
          InlineKeyboardButton(f"{EMOJI_REFILL} {top_up_button_text}", callback_data="refill")],
         [InlineKeyboardButton(f"{EMOJI_REVIEW} {reviews_button_text}", callback_data="reviews"),
          InlineKeyboardButton(f"{EMOJI_PRICELIST} {price_list_button_text}", callback_data="price_list"),
-         InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")]
+         InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")],
+        [InlineKeyboardButton("🎨 UI Theme", callback_data="user_ui_theme_selector")]
     ]
     if is_primary_admin(user_id):
         keyboard.insert(0, [InlineKeyboardButton(admin_button_text, callback_data="admin_menu")])
@@ -219,19 +220,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     username = user.username or user.first_name or f"User_{user_id}"
     
-    # Check if minimalist UI theme is active
-    try:
-        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome
-        active_theme = get_active_ui_theme()
-        
-        if active_theme['theme_name'] == 'minimalist':
+    # Check if user has selected a specific UI theme
+    user_theme_preference = context.user_data.get('ui_theme_preference')
+    
+    if user_theme_preference == 'minimalist':
+        try:
+            from marketing_promotions import handle_minimalist_welcome
             logger.info(f"Using minimalist UI theme for user {user_id}")
             return await handle_minimalist_welcome(update, context)
-    except ImportError:
-        logger.warning("Marketing promotions module not available, using default UI")
-    except Exception as e:
-        logger.error(f"Error checking UI theme: {e}")
-        # Continue with regular start flow if theme check fails
+        except ImportError:
+            logger.warning("Marketing promotions module not available, using default UI")
+        except Exception as e:
+            logger.error(f"Error loading minimalist UI: {e}")
+            # Continue with regular start flow if minimalist UI fails
     
     # Ban check is now handled in main.py start_command_wrapper
     # This check is kept for callback queries that might bypass the wrapper
