@@ -268,6 +268,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             conn = get_db_connection()
             c = conn.cursor()
+            
+            # DEBUG: Check table structure and user_id value
+            logger.info(f"🔧 DEBUG: user_id={user_id}, type={type(user_id)}, username={username}")
+            try:
+                c.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'user_id'")
+                col_info = c.fetchone()
+                logger.info(f"🔧 DEBUG: users.user_id column info: {col_info}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not check column info: {e}")
+            
             # Ensure user exists
             c.execute("""
                 INSERT INTO users (user_id, username, language, is_reseller) VALUES (%s, %s, 'en', FALSE)
