@@ -574,18 +574,18 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             row = []
             emoji = get_product_emoji(product_type)
             
-            # YOLO MODE: Force consistent width with invisible padding
+            # YOLO MODE: Use fixed-width format with minimal dots
             product_name_base = f"{emoji} {product_type}"
-            # Calculate target width (longest product name + some buffer)
-            target_width = max(20, longest_product_name_length + 2)
             
-            # Pad with invisible characters that still force width
+            # Force ALL buttons to be exactly 25 characters with small dots
+            target_width = 25
             if len(product_name_base) < target_width:
                 padding_needed = target_width - len(product_name_base)
-                # Use combination of thin space + zero-width space for invisible padding
-                padded_product_name = product_name_base + ("\u2009\u200B" * padding_needed)
+                # Use small dot character for padding - less ugly than underscores
+                padded_product_name = product_name_base + ("·" * padding_needed)
             else:
-                padded_product_name = product_name_base
+                # Truncate if too long and add dots
+                padded_product_name = product_name_base[:target_width-3] + "..."
             
             # Product name button with consistent width (blank/non-clickable)
             product_name_btn = InlineKeyboardButton(
