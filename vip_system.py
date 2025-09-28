@@ -60,7 +60,7 @@ class VIPManager:
                 level_order INTEGER NOT NULL,
                 benefits TEXT,
                 discount_percentage REAL DEFAULT 0.0,
-                is_active INTEGER DEFAULT 1,
+                is_active BOOLEAN DEFAULT TRUE,
                 created_at TEXT NOT NULL,
                 updated_at TEXT
             )''')
@@ -171,9 +171,9 @@ class VIPManager:
                 SELECT level_name, level_emoji, min_purchases, max_purchases, 
                        benefits, discount_percentage, level_order
                 FROM vip_levels 
-                WHERE is_active = 1 
-                AND min_purchases <= ?
-                AND (max_purchases IS NULL OR max_purchases >= ?)
+                WHERE is_active = TRUE 
+                AND min_purchases <= %s
+                AND (max_purchases IS NULL OR max_purchases >= %s)
                 ORDER BY level_order DESC
                 LIMIT 1
             """, (user_purchases, user_purchases))
@@ -458,7 +458,7 @@ class VIPManager:
                     vl.level_order
                 FROM vip_levels vl
                 CROSS JOIN users u
-                WHERE vl.is_active = 1
+                WHERE vl.is_active = TRUE
                 GROUP BY vl.id, vl.level_name, vl.level_emoji, vl.level_order
                 ORDER BY vl.level_order ASC
             """)

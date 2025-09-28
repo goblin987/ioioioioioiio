@@ -154,8 +154,8 @@ def get_stock_summary() -> Dict:
             SELECT 
                 COUNT(*) as total_products,
                 SUM(available) as total_stock,
-                COUNT(CASE WHEN available <= ? THEN 1 END) as critical_stock,
-                COUNT(CASE WHEN available <= ? AND available > ? THEN 1 END) as low_stock,
+                COUNT(CASE WHEN available <= %s THEN 1 END) as critical_stock,
+                COUNT(CASE WHEN available <= %s AND available > %s THEN 1 END) as low_stock,
                 COUNT(CASE WHEN available = 0 THEN 1 END) as out_of_stock
             FROM products
         """, (CRITICAL_STOCK_THRESHOLD, LOW_STOCK_THRESHOLD, CRITICAL_STOCK_THRESHOLD))

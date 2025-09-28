@@ -236,7 +236,7 @@ async def _prepare_and_confirm_drop(
 
     msg = (f"📦 Confirm New Drop\n\n🏙️ City: {city_name}\n🏘️ District: {dist_name}\n{type_emoji} Type: {type_name}\n"
            f"📏 Size: {size_name}\n💰 Price: {price_str} EUR\n📝 Details: {text_display}\n"
-           f"📸 Media Attached: {media_status}\n\nAdd this drop?")
+           f"📸 Media Attached: {media_status}\n\nAdd this drop%s")
     keyboard = [[InlineKeyboardButton("✅ Yes, Add Drop", callback_data="confirm_add_drop"),
                 InlineKeyboardButton("❌ No, Cancel", callback_data="cancel_add")]]
     await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
@@ -484,7 +484,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         res_products = c.fetchone(); active_products = res_products['count'] if res_products else 0
         c.execute("SELECT COALESCE(SUM(price_paid), 0.0) as total_sales FROM purchases")
         res_sales = c.fetchone(); total_sales_value = Decimal(str(res_sales['total_sales'])) if res_sales else Decimal('0.0')
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching admin dashboard data: {e}", exc_info=True)
         error_message = "❌ Error loading admin data."
         if query:
@@ -998,7 +998,7 @@ async def handle_sales_dashboard(update: Update, context: ContextTypes.DEFAULT_T
                 msg += f"Could not calculate range for {period_key}.\n\n"
                 continue
             # Use column names
-            c.execute("SELECT COALESCE(SUM(price_paid), 0.0) as total_revenue, COUNT(*) as total_units FROM purchases WHERE purchase_date BETWEEN ? AND ?", (start, end))
+            c.execute("SELECT COALESCE(SUM(price_paid), 0.0) as total_revenue, COUNT(*) as total_units FROM purchases WHERE purchase_date BETWEEN %s AND %s", (start, end))
             result = c.fetchone()
             revenue = result['total_revenue'] if result else 0.0
             units = result['total_units'] if result else 0
@@ -1010,7 +1010,7 @@ async def handle_sales_dashboard(update: Update, context: ContextTypes.DEFAULT_T
             msg += f"    Revenue: {revenue_str} EUR\n"
             msg += f"    Units Sold: {units}\n"
             msg += f"    Avg Order Value: {aov_str} EUR\n\n"
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error generating sales dashboard: {e}", exc_info=True)
         msg += "\n❌ Error fetching dashboard data."
     except Exception as e:
@@ -1064,7 +1064,7 @@ async def handle_sales_run(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         conn = get_db_connection() # Use helper
         # row_factory is set in helper
         c = conn.cursor()
-        base_query = "FROM purchases WHERE purchase_date BETWEEN ? AND ?"
+        base_query = "FROM purchases WHERE purchase_date BETWEEN %s AND %s"
         base_params = (start_time, end_time)
         if report_type == "main":
             c.execute(f"SELECT COALESCE(SUM(price_paid), 0.0) as total_revenue, COUNT(*) as total_units {base_query}", base_params)
@@ -1100,7 +1100,7 @@ async def handle_sales_run(update: Update, context: ContextTypes.DEFAULT_TYPE, p
                        COALESCE(SUM(pu.price_paid), 0.0) as prod_revenue,
                        COUNT(pu.id) as prod_units
                 FROM purchases pu
-                WHERE pu.purchase_date BETWEEN ? AND ?
+                WHERE pu.purchase_date BETWEEN %s AND %s
                 GROUP BY pu.product_name, pu.product_size, pu.product_type
                 ORDER BY prod_revenue DESC LIMIT 10
             """, base_params) # Simplified query relying on purchase record details
@@ -1113,7 +1113,7 @@ async def handle_sales_run(update: Update, context: ContextTypes.DEFAULT_TYPE, p
                     msg += f"{i+1}. {emoji} {row['product_name'] or 'N/A'} ({row['product_size'] or 'N/A'}): {format_currency(row['prod_revenue'])} EUR ({row['prod_units'] or 0} units)\n"
             else: msg += "No sales data for this period."
         else: msg = "❌ Unknown report type requested."
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error generating sales report '{report_type}' for '{period_key}': {e}", exc_info=True)
         msg = "❌ Error generating report due to database issue."
     except Exception as e:
@@ -1288,7 +1288,7 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
         logger.debug(f"Inserting product with params count: {len(insert_params)}") # Add debug log
         c.execute("""INSERT INTO products
                         (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                     VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)""", insert_params)
+                     VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s)""", insert_params)
         product_id = c.lastrowid
 
         if product_id and media_list and temp_dir:
@@ -1323,7 +1323,7 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
             
             # Insert all media records at once (outside the loop)
             if media_inserts:
-                c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (?, ?, ?, ?)", media_inserts)
+                c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (%s, %s, %s, %s)", media_inserts)
                 logger.info(f"Successfully inserted {len(media_inserts)} media records for bulk product {product_id}")
             else:
                 logger.warning(f"No media was inserted for product {product_id}. Media list: {media_list}, Temp dir: {temp_dir}")
@@ -1335,8 +1335,8 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
         add_another_callback = f"adm_add|{ctx_city_id}|{ctx_dist_id}|{ctx_p_type}" if all([ctx_city_id, ctx_dist_id, ctx_p_type]) else "admin_menu"
         keyboard = [ [InlineKeyboardButton("➕ Add Another Same Type", callback_data=add_another_callback)],
                      [InlineKeyboardButton("🔧 Admin Menu", callback_data="admin_menu"), InlineKeyboardButton("🏠 User Home", callback_data="back_start")] ]
-        await send_message_with_retry(context.bot, chat_id, "What next?", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-    except (sqlite3.Error, OSError, Exception) as e:
+        await send_message_with_retry(context.bot, chat_id, "What next%s", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    except (Exception, OSError, Exception) as e:
         try: conn.rollback() if conn and conn.in_transaction else None
         except Exception as rb_err: logger.error(f"Rollback failed: {rb_err}")
         logger.error(f"Error saving confirmed drop for user {user_id}: {e}", exc_info=True)
@@ -1809,7 +1809,7 @@ async def handle_adm_bulk_confirm_all(update: Update, context: ContextTypes.DEFA
         
         msg += f"{i}. {text_preview}{media_info}\n"
     
-    msg += f"\nProceed with creation?"
+    msg += f"\nProceed with creation%s"
     
     keyboard = [
         [InlineKeyboardButton("✅ Yes, Create All Products", callback_data="adm_bulk_execute_messages")],
@@ -1884,7 +1884,7 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
             
             c.execute("""INSERT INTO products
                             (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                         VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)""", insert_params)
+                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s)""", insert_params)
             product_id = c.lastrowid
             
             # Handle media for this product
@@ -1920,7 +1920,7 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
                 
                 # Insert all media records at once (outside the loop)
                 if media_inserts:
-                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (?, ?, ?, ?)", media_inserts)
+                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (%s, %s, %s, %s)", media_inserts)
                     logger.info(f"Successfully inserted {len(media_inserts)} media records for bulk product {product_id}")
                 else:
                     logger.warning(f"No media was inserted for product {product_id}. Media list: {media_list}, Temp dir: {temp_dir}")
@@ -2085,7 +2085,7 @@ async def handle_adm_delete_city(update: Update, context: ContextTypes.DEFAULT_T
         return await query.edit_message_text("Error: City not found.", parse_mode=None)
     context.user_data["confirm_action"] = f"delete_city|{city_id}"
     msg = (f"⚠️ Confirm Deletion\n\n"
-           f"Are you sure you want to delete city: {city_name}?\n\n"
+           f"Are you sure you want to delete city: {city_name}%s\n\n"
            f"🚨 This will permanently delete this city, all its districts, and all products listed within those districts!")
     keyboard = [[InlineKeyboardButton("✅ Yes, Delete City", callback_data="confirm_yes"),
                  InlineKeyboardButton("❌ No, Cancel", callback_data="adm_manage_cities")]]
@@ -2119,9 +2119,9 @@ async def handle_adm_manage_districts_city(update: Update, context: ContextTypes
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column names
-        c.execute("SELECT id, name FROM districts WHERE city_id = ? ORDER BY name", (int(city_id),))
+        c.execute("SELECT id, name FROM districts WHERE city_id = %s ORDER BY name", (int(city_id),))
         districts_in_city = {str(row['id']): row['name'] for row in c.fetchall()}
-    except (sqlite3.Error, ValueError) as e:
+    except (Exception, ValueError) as e:
         logger.error(f"Failed to reload districts for city {city_id}: {e}")
         districts_in_city = DISTRICTS.get(city_id, {}) # Fallback to potentially outdated global
     finally:
@@ -2179,9 +2179,9 @@ async def handle_adm_edit_district(update: Update, context: ContextTypes.DEFAULT
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT name FROM districts WHERE id = ? AND city_id = ?", (int(dist_id), int(city_id)))
+        c.execute("SELECT name FROM districts WHERE id = %s AND city_id = %s", (int(dist_id), int(city_id)))
         res = c.fetchone(); district_name = res['name'] if res else None
-    except (sqlite3.Error, ValueError) as e: logger.error(f"Failed to fetch district name for edit: {e}")
+    except (Exception, ValueError) as e: logger.error(f"Failed to fetch district name for edit: {e}")
     finally:
          if conn: conn.close()
     if not city_name or district_name is None:
@@ -2207,16 +2207,16 @@ async def handle_adm_remove_district(update: Update, context: ContextTypes.DEFAU
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT name FROM districts WHERE id = ? AND city_id = ?", (int(dist_id), int(city_id)))
+        c.execute("SELECT name FROM districts WHERE id = %s AND city_id = %s", (int(dist_id), int(city_id)))
         res = c.fetchone(); district_name = res['name'] if res else None
-    except (sqlite3.Error, ValueError) as e: logger.error(f"Failed to fetch district name for delete confirmation: {e}")
+    except (Exception, ValueError) as e: logger.error(f"Failed to fetch district name for delete confirmation: {e}")
     finally:
         if conn: conn.close()
     if not city_name or district_name is None:
         return await query.edit_message_text("Error: City/District not found.", parse_mode=None)
     context.user_data["confirm_action"] = f"remove_district|{city_id}|{dist_id}"
     msg = (f"⚠️ Confirm Deletion\n\n"
-           f"Are you sure you want to delete district: {district_name} from {city_name}?\n\n"
+           f"Are you sure you want to delete district: {district_name} from {city_name}%s\n\n"
            f"🚨 This will permanently delete this district and all products listed within it!")
     keyboard = [[InlineKeyboardButton("✅ Yes, Delete District", callback_data="confirm_yes"),
                  InlineKeyboardButton("❌ No, Cancel", callback_data=f"adm_manage_districts_city|{city_id}")]]
@@ -2279,7 +2279,7 @@ async def handle_adm_manage_products_dist(update: Update, context: ContextTypes.
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT DISTINCT product_type FROM products WHERE city = ? AND district = ? ORDER BY product_type", (city_name, district_name))
+        c.execute("SELECT DISTINCT product_type FROM products WHERE city = %s AND district = %s ORDER BY product_type", (city_name, district_name))
         product_types_in_dist = sorted([row['product_type'] for row in c.fetchall()])
         if not product_types_in_dist:
              keyboard = [[InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"adm_manage_products_city|{city_id}")]]
@@ -2293,7 +2293,7 @@ async def handle_adm_manage_products_dist(update: Update, context: ContextTypes.
         keyboard.append([InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"adm_manage_products_city|{city_id}")])
         await query.edit_message_text(f"🗑️ Manage Products in {city_name} / {district_name}\n\nSelect product type:",
                                 reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching product types for managing in {city_name}/{district_name}: {e}", exc_info=True)
         await query.edit_message_text("❌ Error fetching product types.", parse_mode=None)
     finally:
@@ -2320,7 +2320,7 @@ async def handle_adm_manage_products_type(update: Update, context: ContextTypes.
         # Use column names
         c.execute("""
             SELECT id, size, price, available, reserved, name
-            FROM products WHERE city = ? AND district = ? AND product_type = ?
+            FROM products WHERE city = %s AND district = %s AND product_type = %s
             ORDER BY size, price, id
         """, (city_name, district_name, p_type))
         products = c.fetchall()
@@ -2347,7 +2347,7 @@ async def handle_adm_manage_products_type(update: Update, context: ContextTypes.
         except telegram_error.BadRequest as e:
              if "message is not modified" not in str(e).lower(): logger.error(f"Error editing manage products type: {e}.")
              else: await query.answer() # Acknowledge if not modified
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching products for deletion: {e}", exc_info=True)
         await query.edit_message_text("❌ Error fetching products.", parse_mode=None)
     finally:
@@ -2373,7 +2373,7 @@ async def handle_adm_delete_prod(update: Update, context: ContextTypes.DEFAULT_T
             SELECT p.name, p.city, p.district, p.product_type, p.size, p.price, ci.id as city_id, di.id as dist_id
             FROM products p LEFT JOIN cities ci ON p.city = ci.name
             LEFT JOIN districts di ON p.district = di.name AND ci.id = di.city_id
-            WHERE p.id = ?
+            WHERE p.id = %s
         """, (product_id,))
         result = c.fetchone()
         if result:
@@ -2386,13 +2386,13 @@ async def handle_adm_delete_prod(update: Update, context: ContextTypes.DEFAULT_T
             else: logger.warning(f"Could not retrieve full details for product {product_id} during delete confirmation.")
         else:
             return await query.edit_message_text("Error: Product not found.", parse_mode=None)
-    except sqlite3.Error as e:
+    except Exception as e:
          logger.warning(f"Could not fetch full details for product {product_id} for delete confirmation: {e}")
     finally:
         if conn: conn.close() # Close connection if opened
 
     context.user_data["confirm_action"] = f"confirm_remove_product|{product_id}"
-    msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to permanently delete this specific product instance?\n"
+    msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to permanently delete this specific product instance%s\n"
            f"Product ID: {product_id}\nDetails: {product_details}\n\n🚨 This action is irreversible!")
     keyboard = [[InlineKeyboardButton("✅ Yes, Delete Product", callback_data="confirm_yes"),
                  InlineKeyboardButton("❌ No, Cancel", callback_data=back_callback)]] # Use dynamic back callback
@@ -2429,10 +2429,10 @@ async def handle_adm_reassign_type_start(update: Update, context: ContextTypes.D
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute("SELECT COUNT(*) as count FROM products WHERE product_type = ?", (type_name,))
+            c.execute("SELECT COUNT(*) as count FROM products WHERE product_type = %s", (type_name,))
             result = c.fetchone()
             product_count = result['count'] if result else 0
-        except sqlite3.Error as e:
+        except Exception as e:
             logger.error(f"Error counting products for type {type_name}: {e}")
         finally:
             if conn: conn.close()
@@ -2512,16 +2512,16 @@ async def handle_adm_reassign_confirm(update: Update, context: ContextTypes.DEFA
         c = conn.cursor()
         
         # Count products that will be reassigned
-        c.execute("SELECT COUNT(*) as count FROM products WHERE product_type = ?", (old_type_name,))
+        c.execute("SELECT COUNT(*) as count FROM products WHERE product_type = %s", (old_type_name,))
         result = c.fetchone()
         product_count = result['count'] if result else 0
         
         # Count reseller discounts that will be affected
-        c.execute("SELECT COUNT(*) as count FROM reseller_discounts WHERE product_type = ?", (old_type_name,))
+        c.execute("SELECT COUNT(*) as count FROM reseller_discounts WHERE product_type = %s", (old_type_name,))
         result = c.fetchone()
         reseller_discount_count = result['count'] if result else 0
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"Error counting items for reassignment: {e}")
         return await query.edit_message_text(
             "❌ Database error checking reassignment impact.",
@@ -2594,11 +2594,11 @@ async def handle_adm_edit_type_menu(update: Update, context: ContextTypes.DEFAUL
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT description FROM product_types WHERE name = ?", (type_name,))
+        c.execute("SELECT description FROM product_types WHERE name = %s", (type_name,))
         res = c.fetchone()
         if res: current_description = res['description'] or "(Description not set)"
         else: current_description = "(Type not found in DB)"
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"Error fetching description for type {type_name}: {e}")
         current_description = "(DB Error fetching description)"
     finally:
@@ -2608,7 +2608,7 @@ async def handle_adm_edit_type_menu(update: Update, context: ContextTypes.DEFAUL
     safe_name = type_name # No Markdown V2 here
     safe_desc = current_description # No Markdown V2 here
 
-    msg_template = lang_data.get("admin_edit_type_menu", "🧩 Editing Type: {type_name}\n\nCurrent Emoji: {emoji}\nDescription: {description}\n\nWhat would you like to do?")
+    msg_template = lang_data.get("admin_edit_type_menu", "🧩 Editing Type: {type_name}\n\nCurrent Emoji: {emoji}\nDescription: {description}\n\nWhat would you like to do%s")
     msg = msg_template.format(type_name=safe_name, emoji=current_emoji, description=safe_desc)
 
     change_emoji_button_text = lang_data.get("admin_edit_type_emoji_button", "✏️ Change Emoji")
@@ -2721,12 +2721,12 @@ async def handle_adm_delete_type(update: Update, context: ContextTypes.DEFAULT_T
         else:
             # No usage, proceed with normal delete confirmation
             context.user_data["confirm_action"] = f"delete_type|{type_name_to_delete}" # Normal delete
-            msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to delete product type: {type_name_to_delete}?\n\n"
+            msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to delete product type: {type_name_to_delete}%s\n\n"
                    f"🚨 This action is irreversible!")
             keyboard = [[InlineKeyboardButton("✅ Yes, Delete Type", callback_data="confirm_yes"),
                          InlineKeyboardButton("❌ No, Cancel", callback_data="adm_manage_types")]]
             await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error checking product type usage for '{type_name_to_delete}': {e}", exc_info=True)
         await query.edit_message_text("❌ Error checking type usage.", parse_mode=None)
     finally:
@@ -2755,14 +2755,14 @@ async def handle_confirm_force_delete_prompt(update: Update, context: ContextTyp
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM products WHERE product_type = ?", (type_name,))
+        c.execute("SELECT COUNT(*) FROM products WHERE product_type = %s", (type_name,))
         product_count_res = c.fetchone()
         if product_count_res: product_count = product_count_res[0]
 
-        c.execute("SELECT COUNT(*) FROM reseller_discounts WHERE product_type = ?", (type_name,))
+        c.execute("SELECT COUNT(*) FROM reseller_discounts WHERE product_type = %s", (type_name,))
         reseller_discount_count_res = c.fetchone()
         if reseller_discount_count_res: reseller_discount_count = reseller_discount_count_res[0]
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching counts for force delete confirmation of '{type_name}': {e}")
         await query.edit_message_text("Error fetching item counts for confirmation. Cannot proceed.", parse_mode=None)
         return
@@ -2776,7 +2776,7 @@ async def handle_confirm_force_delete_prompt(update: Update, context: ContextTyp
 
 
     msg = (f"🚨🚨🚨 FINAL CONFIRMATION 🚨🚨🚨\n\n"
-           f"Are you ABSOLUTELY SURE you want to delete product type '{type_name}'?\n\n"
+           f"Are you ABSOLUTELY SURE you want to delete product type '{type_name}'%s\n\n"
            f"This will also PERMANENTLY DELETE:\n"
            f"  • All {usage_details} linked to this type.\n"
            f"  • All media associated with those products.\n\n"
@@ -2844,7 +2844,7 @@ async def handle_adm_manage_discounts(update: Update, context: ContextTypes.DEFA
                      logger.error(f"Error editing discount list (Fallback): {fallback_e}")
                      await query.answer("Error updating list.", show_alert=True)
              else: await query.answer() # Ignore not modified
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error loading discount codes: {e}", exc_info=True)
         await query.edit_message_text("❌ Error loading discount codes.", parse_mode=None)
     except Exception as e:
@@ -2864,18 +2864,18 @@ async def handle_adm_toggle_discount(update: Update, context: ContextTypes.DEFAU
         code_id = int(params[0])
         conn = get_db_connection() # Use helper
         c = conn.cursor()
-        c.execute("SELECT is_active FROM discount_codes WHERE id = ?", (code_id,))
+        c.execute("SELECT is_active FROM discount_codes WHERE id = %s", (code_id,))
         result = c.fetchone()
         if not result: return await query.answer("Code not found.", show_alert=True)
         current_status = result['is_active']
         new_status = 0 if current_status == 1 else 1
-        c.execute("UPDATE discount_codes SET is_active = ? WHERE id = ?", (new_status, code_id))
+        c.execute("UPDATE discount_codes SET is_active = %s WHERE id = %s", (new_status, code_id))
         conn.commit()
         action = 'deactivated' if new_status == 0 else 'activated'
         logger.info(f"Admin {query.from_user.id} {action} discount code ID {code_id}.")
         await query.answer(f"Code {action} successfully.")
         await handle_adm_manage_discounts(update, context) # Refresh list
-    except (sqlite3.Error, ValueError) as e:
+    except (Exception, ValueError) as e:
         logger.error(f"Error toggling discount code {params[0]}: {e}", exc_info=True)
         await query.answer("Error updating code status.", show_alert=True)
     finally:
@@ -2892,17 +2892,17 @@ async def handle_adm_delete_discount(update: Update, context: ContextTypes.DEFAU
         code_id = int(params[0])
         conn = get_db_connection() # Use helper
         c = conn.cursor()
-        c.execute("SELECT code FROM discount_codes WHERE id = ?", (code_id,))
+        c.execute("SELECT code FROM discount_codes WHERE id = %s", (code_id,))
         result = c.fetchone()
         if not result: return await query.answer("Code not found.", show_alert=True)
         code_text = result['code']
         context.user_data["confirm_action"] = f"delete_discount|{code_id}"
-        msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to permanently delete discount code: `{helpers.escape_markdown(code_text, version=2)}`?\n\n"
+        msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to permanently delete discount code: `{helpers.escape_markdown(code_text, version=2)}`%s\n\n"
                f"🚨 This action is irreversible!")
         keyboard = [[InlineKeyboardButton("✅ Yes, Delete Code", callback_data="confirm_yes"),
                      InlineKeyboardButton("❌ No, Cancel", callback_data="adm_manage_discounts")]]
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN_V2)
-    except (sqlite3.Error, ValueError) as e:
+    except (Exception, ValueError) as e:
         logger.error(f"Error preparing delete confirmation for discount code {params[0]}: {e}", exc_info=True)
         await query.answer("Error fetching code details.", show_alert=True)
     except telegram_error.BadRequest as e_tg:
@@ -2970,7 +2970,7 @@ async def process_discount_code_input(update, context, code_text):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT code FROM discount_codes WHERE UPPER(code) = ?", (code_text.upper(),))
+        c.execute("SELECT code FROM discount_codes WHERE UPPER(code) = %s", (code_text.upper(),))
         existing = c.fetchone()
         if existing:
             error_msg = f"❌ Code '{code_text}' already exists. Please choose a different one."
@@ -2980,7 +2980,7 @@ async def process_discount_code_input(update, context, code_text):
             else:
                 await send_message_with_retry(context.bot, chat_id, error_msg, parse_mode=None)
             return
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error checking existing discount codes: {e}")
         error_msg = "❌ Database error. Please try again."
         if query:
@@ -3085,7 +3085,7 @@ async def handle_adm_discount_value_message(update: Update, context: ContextType
         # Insert new discount code
         c.execute("""
             INSERT INTO discount_codes (code, discount_type, value, is_active, max_uses, uses_count, created_date)
-            VALUES (?, ?, ?, 1, NULL, 0, ?)
+            VALUES (%s, %s, %s, 1, NULL, 0, %s)
         """, (discount_info['code'], discount_info['type'], value, datetime.now(timezone.utc).isoformat()))
         
         conn.commit()
@@ -3099,7 +3099,7 @@ async def handle_adm_discount_value_message(update: Update, context: ContextType
         
         logger.info(f"Admin {user_id} created discount code '{discount_info['code']}' ({discount_info['type']}: {value})")
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error creating discount code: {e}", exc_info=True)
         await send_message_with_retry(context.bot, chat_id, "❌ Database error creating discount code.", parse_mode=None)
         
@@ -3266,7 +3266,7 @@ async def handle_adm_manage_reviews(update: Update, context: ContextTypes.DEFAUL
             review_id = review.get('review_id', 'N/A')
             try:
                 date_str = review.get('review_date', '')
-                formatted_date = "???"
+                formatted_date = "%s%s%s"
                 if date_str:
                     try: formatted_date = datetime.fromisoformat(date_str.replace('Z','+00:00')).strftime("%Y-%m-%d") # Handle Z for UTC
                     except ValueError: pass
@@ -3314,7 +3314,7 @@ async def handle_adm_delete_review_confirm(update: Update, context: ContextTypes
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT review_text FROM reviews WHERE review_id = ?", (review_id,))
+        c.execute("SELECT review_text FROM reviews WHERE review_id = %s", (review_id,))
         result = c.fetchone()
         if result: review_text_snippet = result['review_text'][:100]
         else:
@@ -3322,11 +3322,11 @@ async def handle_adm_delete_review_confirm(update: Update, context: ContextTypes
             try: await query.edit_message_text("Error: Review not found.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back to Reviews", callback_data="adm_manage_reviews|0")]]), parse_mode=None)
             except telegram_error.BadRequest: pass
             return
-    except sqlite3.Error as e: logger.warning(f"Could not fetch review text for confirmation (ID {review_id}): {e}")
+    except Exception as e: logger.warning(f"Could not fetch review text for confirmation (ID {review_id}): {e}")
     finally:
         if conn: conn.close() # Close connection if opened
     context.user_data["confirm_action"] = f"delete_review|{review_id}"
-    msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to permanently delete review ID {review_id}?\n\n"
+    msg = (f"⚠️ Confirm Deletion\n\nAre you sure you want to permanently delete review ID {review_id}%s\n\n"
            f"Preview: {review_text_snippet}{'...' if len(review_text_snippet) >= 100 else ''}\n\n"
            f"🚨 This action is irreversible!")
     keyboard = [[InlineKeyboardButton("✅ Yes, Delete Review", callback_data="confirm_yes"),
@@ -3548,7 +3548,7 @@ async def handle_adm_broadcast_message(update: Update, context: ContextTypes.DEF
     else:
         preview_msg += "📝 Text: (media only)"
     
-    preview_msg += "\n\n⚠️ Are you sure you want to send this broadcast?"
+    preview_msg += "\n\n⚠️ Are you sure you want to send this broadcast%s"
     
     keyboard = [
         [InlineKeyboardButton("✅ Yes, Send Broadcast", callback_data="confirm_broadcast")],
@@ -3788,7 +3788,7 @@ async def handle_adm_clear_reservations_confirm(update: Update, context: Context
 
     context.user_data["confirm_action"] = "clear_all_reservations"
     msg = (f"⚠️ Confirm Action: Clear All Reservations\n\n"
-           f"Are you sure you want to clear ALL product reservations and empty ALL user baskets?\n\n"
+           f"Are you sure you want to clear ALL product reservations and empty ALL user baskets%s\n\n"
            f"🚨 This action cannot be undone and will affect all users!")
     keyboard = [[InlineKeyboardButton("✅ Yes, Clear Reservations", callback_data="confirm_yes"),
                  InlineKeyboardButton("❌ No, Cancel", callback_data="admin_menu")]]
@@ -3829,48 +3829,48 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
              city_id_str = action_params[0]; city_id_int = int(city_id_str)
              city_name = CITIES.get(city_id_str)
              if city_name:
-                 c.execute("SELECT id FROM products WHERE city = ?", (city_name,))
+                 c.execute("SELECT id FROM products WHERE city = %s", (city_name,))
                  product_ids_to_delete = [row['id'] for row in c.fetchall()] # Use column name
                  logger.info(f"Admin Action (delete_city): Deleting city '{city_name}'. Associated product IDs to be deleted: {product_ids_to_delete}")
                  if product_ids_to_delete:
-                     placeholders = ','.join('?' * len(product_ids_to_delete))
+                     placeholders = ','.join('%s' * len(product_ids_to_delete))
                      c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_to_delete)
                      for pid in product_ids_to_delete:
                           media_dir_to_del = os.path.join(MEDIA_DIR, str(pid))
                           if await asyncio.to_thread(os.path.exists, media_dir_to_del):
                               asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_del, ignore_errors=True))
                               logger.info(f"Scheduled deletion of media dir: {media_dir_to_del}")
-                 c.execute("DELETE FROM products WHERE city = ?", (city_name,)) # Actual product deletion
-                 c.execute("DELETE FROM districts WHERE city_id = ?", (city_id_int,))
-                 delete_city_result = c.execute("DELETE FROM cities WHERE id = ?", (city_id_int,))
+                 c.execute("DELETE FROM products WHERE city = %s", (city_name,)) # Actual product deletion
+                 c.execute("DELETE FROM districts WHERE city_id = %s", (city_id_int,))
+                 delete_city_result = c.execute("DELETE FROM cities WHERE id = %s", (city_id_int,))
                  if delete_city_result.rowcount > 0:
                      conn.commit(); load_all_data()
                      success_msg = f"✅ City '{city_name}' and contents deleted!"
                      next_callback = "adm_manage_cities"
                  else: conn.rollback(); success_msg = f"❌ Error: City '{city_name}' not found."
-             else: conn.rollback(); success_msg = "❌ Error: City not found (already deleted?)."
+             else: conn.rollback(); success_msg = "❌ Error: City not found (already deleted%s)."
         # --- Delete District Logic ---
         elif action_type == "remove_district":
              if len(action_params) < 2: raise ValueError("Missing city/dist_id")
              city_id_str, dist_id_str = action_params[0], action_params[1]
              city_id_int, dist_id_int = int(city_id_str), int(dist_id_str)
              city_name = CITIES.get(city_id_str)
-             c.execute("SELECT name FROM districts WHERE id = ? AND city_id = ?", (dist_id_int, city_id_int))
+             c.execute("SELECT name FROM districts WHERE id = %s AND city_id = %s", (dist_id_int, city_id_int))
              dist_res = c.fetchone(); district_name = dist_res['name'] if dist_res else None # Use column name
              if city_name and district_name:
-                 c.execute("SELECT id FROM products WHERE city = ? AND district = ?", (city_name, district_name))
+                 c.execute("SELECT id FROM products WHERE city = %s AND district = %s", (city_name, district_name))
                  product_ids_to_delete = [row['id'] for row in c.fetchall()] # Use column name
                  logger.info(f"Admin Action (remove_district): Deleting district '{district_name}' in '{city_name}'. Associated product IDs to be deleted: {product_ids_to_delete}")
                  if product_ids_to_delete:
-                     placeholders = ','.join('?' * len(product_ids_to_delete))
+                     placeholders = ','.join('%s' * len(product_ids_to_delete))
                      c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_to_delete)
                      for pid in product_ids_to_delete:
                           media_dir_to_del = os.path.join(MEDIA_DIR, str(pid))
                           if await asyncio.to_thread(os.path.exists, media_dir_to_del):
                               asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_del, ignore_errors=True))
                               logger.info(f"Scheduled deletion of media dir: {media_dir_to_del}")
-                 c.execute("DELETE FROM products WHERE city = ? AND district = ?", (city_name, district_name)) # Actual product deletion
-                 delete_dist_result = c.execute("DELETE FROM districts WHERE id = ? AND city_id = ?", (dist_id_int, city_id_int))
+                 c.execute("DELETE FROM products WHERE city = %s AND district = %s", (city_name, district_name)) # Actual product deletion
+                 delete_dist_result = c.execute("DELETE FROM districts WHERE id = %s AND city_id = %s", (dist_id_int, city_id_int))
                  if delete_dist_result.rowcount > 0:
                      conn.commit(); load_all_data()
                      success_msg = f"✅ District '{district_name}' removed from {city_name}!"
@@ -3881,11 +3881,11 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "confirm_remove_product":
              if not action_params: raise ValueError("Missing product_id")
              product_id = int(action_params[0])
-             c.execute("SELECT ci.id as city_id, di.id as dist_id, p.product_type FROM products p LEFT JOIN cities ci ON p.city = ci.name LEFT JOIN districts di ON p.district = di.name AND ci.id = di.city_id WHERE p.id = ?", (product_id,))
+             c.execute("SELECT ci.id as city_id, di.id as dist_id, p.product_type FROM products p LEFT JOIN cities ci ON p.city = ci.name LEFT JOIN districts di ON p.district = di.name AND ci.id = di.city_id WHERE p.id = %s", (product_id,))
              back_details_tuple = c.fetchone() # Result is already a Row object
              logger.info(f"Admin Action (confirm_remove_product): Deleting product ID {product_id}")
-             c.execute("DELETE FROM product_media WHERE product_id = ?", (product_id,))
-             delete_prod_result = c.execute("DELETE FROM products WHERE id = ?", (product_id,)) # Actual product deletion
+             c.execute("DELETE FROM product_media WHERE product_id = %s", (product_id,))
+             delete_prod_result = c.execute("DELETE FROM products WHERE id = %s", (product_id,)) # Actual product deletion
              if delete_prod_result.rowcount > 0:
                   conn.commit()
                   success_msg = f"✅ Product ID {product_id} removed!"
@@ -3908,7 +3908,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
               result = c.fetchone()
               reseller_discount_count = result['count']
               if product_count == 0 and reseller_discount_count == 0:
-                  delete_type_result = c.execute("DELETE FROM product_types WHERE name = ?", (type_name,))
+                  delete_type_result = c.execute("DELETE FROM product_types WHERE name = %s", (type_name,))
                   if delete_type_result.rowcount > 0:
                        conn.commit(); load_all_data()
                        success_msg = f"✅ Type '{type_name}' deleted!"
@@ -3930,11 +3930,11 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
             user_specific_data.pop('force_delete_type_name', None)
             logger.warning(f"Admin {user_id} initiated FORCE DELETE for type '{type_name}' and all associated data.")
 
-            c.execute("SELECT id FROM products WHERE product_type = ?", (type_name,))
+            c.execute("SELECT id FROM products WHERE product_type = %s", (type_name,))
             product_ids_to_delete_media_for = [row['id'] for row in c.fetchall()]
 
             if product_ids_to_delete_media_for:
-                placeholders = ','.join('?' * len(product_ids_to_delete_media_for))
+                placeholders = ','.join('%s' * len(product_ids_to_delete_media_for))
                 c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_to_delete_media_for)
                 logger.info(f"Force delete: Deleted media entries for {len(product_ids_to_delete_media_for)} products of type '{type_name}'.")
                 for pid in product_ids_to_delete_media_for:
@@ -3943,11 +3943,11 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                         asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_del, ignore_errors=True))
                         logger.info(f"Force delete: Scheduled deletion of media dir: {media_dir_to_del}")
 
-            delete_products_res = c.execute("DELETE FROM products WHERE product_type = ?", (type_name,))
+            delete_products_res = c.execute("DELETE FROM products WHERE product_type = %s", (type_name,))
             products_deleted_count = delete_products_res.rowcount if delete_products_res else 0
-            delete_discounts_res = c.execute("DELETE FROM reseller_discounts WHERE product_type = ?", (type_name,))
+            delete_discounts_res = c.execute("DELETE FROM reseller_discounts WHERE product_type = %s", (type_name,))
             discounts_deleted_count = delete_discounts_res.rowcount if delete_discounts_res else 0
-            delete_type_res = c.execute("DELETE FROM product_types WHERE name = ?", (type_name,))
+            delete_type_res = c.execute("DELETE FROM product_types WHERE name = %s", (type_name,))
 
             if delete_type_res.rowcount > 0:
                 conn.commit(); load_all_data()
@@ -3974,19 +3974,19 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                 next_callback = "adm_reassign_type_start"
             else:
                 logger.info(f"Admin {user_id} confirmed reassignment from '{old_type_name}' to '{new_type_name}'.")
-                update_products_res = c.execute("UPDATE products SET product_type = ? WHERE product_type = ?", (new_type_name, old_type_name))
+                update_products_res = c.execute("UPDATE products SET product_type = %s WHERE product_type = %s", (new_type_name, old_type_name))
                 products_reassigned = update_products_res.rowcount if update_products_res else 0
                 reseller_reassigned = 0
                 try:
-                    update_reseller_res = c.execute("UPDATE reseller_discounts SET product_type = ? WHERE product_type = ?", (new_type_name, old_type_name))
+                    update_reseller_res = c.execute("UPDATE reseller_discounts SET product_type = %s WHERE product_type = %s", (new_type_name, old_type_name))
                     reseller_reassigned = update_reseller_res.rowcount if update_reseller_res else 0
                 except sqlite3.IntegrityError as ie:
                     logger.warning(f"IntegrityError reassigning reseller_discounts from '{old_type_name}' to '{new_type_name}': {ie}. Deleting old conflicting rules.")
-                    delete_conflicting_reseller_rules = c.execute("DELETE FROM reseller_discounts WHERE product_type = ?", (old_type_name,))
+                    delete_conflicting_reseller_rules = c.execute("DELETE FROM reseller_discounts WHERE product_type = %s", (old_type_name,))
                     reseller_reassigned = delete_conflicting_reseller_rules.rowcount if delete_conflicting_reseller_rules else 0
                     logger.info(f"Deleted {reseller_reassigned} discount rules for old type '{old_type_name}' due to conflict on reassign.")
 
-                delete_type_res = c.execute("DELETE FROM product_types WHERE name = ?", (old_type_name,))
+                delete_type_res = c.execute("DELETE FROM product_types WHERE name = %s", (old_type_name,))
                 type_deleted = delete_type_res.rowcount > 0
 
                 if type_deleted:
@@ -4004,9 +4004,9 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "delete_discount":
              if not action_params: raise ValueError("Missing discount_id")
              code_id = int(action_params[0])
-             c.execute("SELECT code FROM discount_codes WHERE id = ?", (code_id,))
+             c.execute("SELECT code FROM discount_codes WHERE id = %s", (code_id,))
              code_res = c.fetchone(); code_text = code_res['code'] if code_res else f"ID {code_id}"
-             delete_disc_result = c.execute("DELETE FROM discount_codes WHERE id = ?", (code_id,))
+             delete_disc_result = c.execute("DELETE FROM discount_codes WHERE id = %s", (code_id,))
              if delete_disc_result.rowcount > 0:
                  conn.commit(); success_msg = f"✅ Discount code {code_text} deleted!"
                  next_callback = "adm_manage_discounts"
@@ -4015,7 +4015,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "delete_review":
             if not action_params: raise ValueError("Missing review_id")
             review_id = int(action_params[0])
-            delete_rev_result = c.execute("DELETE FROM reviews WHERE review_id = ?", (review_id,))
+            delete_rev_result = c.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
             if delete_rev_result.rowcount > 0:
                 conn.commit(); success_msg = f"✅ Review ID {review_id} deleted!"
                 next_callback = "adm_manage_reviews|0"
@@ -4024,7 +4024,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "delete_welcome_template":
             if not action_params: raise ValueError("Missing template_name")
             name_to_delete = action_params[0]
-            delete_wm_result = c.execute("DELETE FROM welcome_messages WHERE name = ?", (name_to_delete,))
+            delete_wm_result = c.execute("DELETE FROM welcome_messages WHERE name = %s", (name_to_delete,))
             if delete_wm_result.rowcount > 0:
                  conn.commit(); success_msg = f"✅ Welcome template '{name_to_delete}' deleted!"
                  next_callback = "adm_manage_welcome|0"
@@ -4033,8 +4033,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "reset_default_welcome":
             try:
                 built_in_text = LANGUAGES['en']['welcome']
-                c.execute("UPDATE welcome_messages SET template_text = ? WHERE name = ?", (built_in_text, "default"))
-                c.execute("INSERT OR REPLACE INTO bot_settings (setting_key, setting_value) VALUES (?, ?)",
+                c.execute("UPDATE welcome_messages SET template_text = %s WHERE name = %s", (built_in_text, "default"))
+                c.execute("INSERT INTO bot_settings (setting_key, setting_value) VALUES (%s, %s) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value",
                           ("active_welcome_message_name", "default"))
                 conn.commit(); success_msg = "✅ 'default' welcome template reset and activated."
             except Exception as reset_e:
@@ -4046,9 +4046,9 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
             if len(action_params) < 2: raise ValueError("Missing reseller_id or product_type")
             try:
                 reseller_id = int(action_params[0]); product_type = action_params[1]
-                c.execute("SELECT discount_percentage FROM reseller_discounts WHERE reseller_user_id = ? AND product_type = ?", (reseller_id, product_type))
+                c.execute("SELECT discount_percentage FROM reseller_discounts WHERE reseller_user_id = %s AND product_type = %s", (reseller_id, product_type))
                 old_res = c.fetchone(); old_value = old_res['discount_percentage'] if old_res else None
-                delete_res_result = c.execute("DELETE FROM reseller_discounts WHERE reseller_user_id = ? AND product_type = ?", (reseller_id, product_type))
+                delete_res_result = c.execute("DELETE FROM reseller_discounts WHERE reseller_user_id = %s AND product_type = %s", (reseller_id, product_type))
                 if delete_res_result.rowcount > 0:
                     conn.commit(); log_admin_action(user_id, ACTION_RESELLER_DISCOUNT_DELETE, reseller_id, reason=f"Type: {product_type}", old_value=old_value)
                     success_msg = f"✅ Reseller discount rule deleted for {product_type}."
@@ -4077,9 +4077,9 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         except telegram_error.BadRequest: pass
 
         keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data=next_callback)]]
-        await send_message_with_retry(context.bot, chat_id, "Action complete. What next?", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+        await send_message_with_retry(context.bot, chat_id, "Action complete. What next%s", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
 
-    except (sqlite3.Error, ValueError, OSError, Exception) as e:
+    except (Exception, ValueError, OSError, Exception) as e:
         logger.error(f"Error executing confirmed action '{action}': {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
         error_text = str(e)
@@ -4110,10 +4110,10 @@ async def handle_adm_edit_welcome_text(update: Update, context: ContextTypes.DEF
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT template_text FROM welcome_messages WHERE name = ?", (template_name,))
+        c.execute("SELECT template_text FROM welcome_messages WHERE name = %s", (template_name,))
         row = c.fetchone()
         if row: current_text = row['template_text']
-    except sqlite3.Error as e: logger.error(f"DB error fetching text for edit: {e}")
+    except Exception as e: logger.error(f"DB error fetching text for edit: {e}")
     finally:
          if conn: conn.close()
 
@@ -4155,9 +4155,9 @@ async def handle_adm_edit_welcome_desc(update: Update, context: ContextTypes.DEF
     conn = None
     try:
         conn = get_db_connection(); c = conn.cursor()
-        c.execute("SELECT description FROM welcome_messages WHERE name = ?", (template_name,))
+        c.execute("SELECT description FROM welcome_messages WHERE name = %s", (template_name,))
         row = c.fetchone(); current_desc = row['description'] or ""
-    except sqlite3.Error as e: logger.error(f"DB error fetching desc for edit: {e}")
+    except Exception as e: logger.error(f"DB error fetching desc for edit: {e}")
     finally:
         if conn: conn.close()
 
@@ -4189,9 +4189,9 @@ async def handle_adm_delete_welcome_confirm(update: Update, context: ContextType
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = ?", ("active_welcome_message_name",))
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("active_welcome_message_name",))
         row = c.fetchone(); active_template_name = row['setting_value'] if row else "default" # Use column name
-    except sqlite3.Error as e: logger.error(f"DB error checking template status for delete: {e}")
+    except Exception as e: logger.error(f"DB error checking template status for delete: {e}")
     finally:
          if conn: conn.close()
 
@@ -4207,7 +4207,7 @@ async def handle_adm_delete_welcome_confirm(update: Update, context: ContextType
 
     context.user_data["confirm_action"] = f"delete_welcome_template|{template_name}"
     title = lang_data.get("welcome_delete_confirm_title", "⚠️ Confirm Deletion")
-    text_template = lang_data.get("welcome_delete_confirm_text", "Are you sure you want to delete the welcome message template named '{name}'?")
+    text_template = lang_data.get("welcome_delete_confirm_text", "Are you sure you want to delete the welcome message template named '{name}'%s")
     msg = f"{title}\n\n{text_template.format(name=template_name)}"
 
     keyboard = [
@@ -4225,7 +4225,7 @@ async def handle_reset_default_welcome(update: Update, context: ContextTypes.DEF
 
     context.user_data["confirm_action"] = "reset_default_welcome"
     title = lang_data.get("welcome_reset_confirm_title", "⚠️ Confirm Reset")
-    text = lang_data.get("welcome_reset_confirm_text", "Are you sure you want to reset the text of the 'default' template to the built-in version and activate it?")
+    text = lang_data.get("welcome_reset_confirm_text", "Are you sure you want to reset the text of the 'default' template to the built-in version and activate it%s")
     msg = f"{title}\n\n{text}"
 
     keyboard = [
@@ -4260,13 +4260,13 @@ async def handle_adm_welcome_template_name_message(update: Update, context: Cont
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT 1 FROM welcome_messages WHERE name = ?", (template_name,))
+        c.execute("SELECT 1 FROM welcome_messages WHERE name = %s", (template_name,))
         if c.fetchone():
             lang, lang_data = _get_lang_data(context)
             error_msg = lang_data.get("welcome_add_name_exists", "❌ Error: A template with the name '{name}' already exists.")
             await send_message_with_retry(context.bot, chat_id, error_msg.format(name=template_name), parse_mode=None)
             return
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error checking template name '{template_name}': {e}")
         await send_message_with_retry(context.bot, chat_id, "❌ Database error checking template name.", parse_mode=None)
         return
@@ -4337,11 +4337,11 @@ async def handle_adm_welcome_template_text_message(update: Update, context: Cont
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute("SELECT description FROM welcome_messages WHERE name = ?", (template_name,))
+            c.execute("SELECT description FROM welcome_messages WHERE name = %s", (template_name,))
             row = c.fetchone()
             if row:
                 current_description = row['description']
-        except sqlite3.Error as e:
+        except Exception as e:
             logger.error(f"DB error fetching description for '{template_name}': {e}")
         finally:
             if conn: conn.close()
@@ -4399,11 +4399,11 @@ async def handle_adm_welcome_description_message(update: Update, context: Contex
         try:
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute("SELECT template_text FROM welcome_messages WHERE name = ?", (template_name,))
+            c.execute("SELECT template_text FROM welcome_messages WHERE name = %s", (template_name,))
             row = c.fetchone()
             if row:
                 current_text = row['template_text']
-        except sqlite3.Error as e:
+        except Exception as e:
             logger.error(f"DB error fetching text for '{template_name}': {e}")
         finally:
             if conn: conn.close()
@@ -4487,7 +4487,7 @@ async def _show_welcome_preview(update: Update, context: ContextTypes.DEFAULT_TY
     title = lang_data.get("welcome_preview_title", "--- Welcome Message Preview ---")
     name_label = lang_data.get("welcome_preview_name", "Name")
     desc_label = lang_data.get("welcome_preview_desc", "Desc")
-    confirm_prompt = lang_data.get("welcome_preview_confirm", "Save this template?")
+    confirm_prompt = lang_data.get("welcome_preview_confirm", "Save this template%s")
 
     msg = f"{title}\n\n"
     msg += f"{name_label}: {template_name}\n"
@@ -4593,7 +4593,7 @@ async def handle_adm_add_city_message(update: Update, context: ContextTypes.DEFA
     try:
         conn = get_db_connection() # Use helper
         c = conn.cursor()
-        c.execute("INSERT INTO cities (name) VALUES (?)", (text,))
+        c.execute("INSERT INTO cities (name) VALUES (%s)", (text,))
         new_city_id = c.lastrowid
         conn.commit()
         load_all_data() # Reload global data
@@ -4603,7 +4603,7 @@ async def handle_adm_add_city_message(update: Update, context: ContextTypes.DEFA
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except sqlite3.IntegrityError:
         await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{text}' already exists.", parse_mode=None)
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error adding city '{text}': {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add city.", parse_mode=None)
@@ -4631,7 +4631,7 @@ async def handle_adm_add_district_message(update: Update, context: ContextTypes.
         city_id_int = int(city_id_str)
         conn = get_db_connection() # Use helper
         c = conn.cursor()
-        c.execute("INSERT INTO districts (city_id, name) VALUES (?, ?)", (city_id_int, text))
+        c.execute("INSERT INTO districts (city_id, name) VALUES (%s, %s)", (city_id_int, text))
         conn.commit()
         load_all_data() # Reload global data
         context.user_data.pop("state", None); context.user_data.pop("admin_add_district_city_id", None)
@@ -4640,7 +4640,7 @@ async def handle_adm_add_district_message(update: Update, context: ContextTypes.
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except sqlite3.IntegrityError:
         await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{text}' already exists in {city_name}.", parse_mode=None)
-    except (sqlite3.Error, ValueError) as e:
+    except (Exception, ValueError) as e:
         logger.error(f"DB/Value error adding district '{text}' to city {city_id_str}: {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add district.", parse_mode=None)
@@ -4665,9 +4665,9 @@ async def handle_adm_edit_district_message(update: Update, context: ContextTypes
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT name FROM districts WHERE id = ? AND city_id = ?", (int(dist_id_str), int(city_id_str)))
+        c.execute("SELECT name FROM districts WHERE id = %s AND city_id = %s", (int(dist_id_str), int(city_id_str)))
         res = c.fetchone(); old_district_name = res['name'] if res else None
-    except (sqlite3.Error, ValueError) as e: logger.error(f"Failed to fetch old district name for edit: {e}")
+    except (Exception, ValueError) as e: logger.error(f"Failed to fetch old district name for edit: {e}")
     finally:
         if conn: conn.close() # Close connection if opened
     if not city_id_str or not dist_id_str or not city_name or old_district_name is None:
@@ -4686,9 +4686,9 @@ async def handle_adm_edit_district_message(update: Update, context: ContextTypes
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         c.execute("BEGIN")
-        c.execute("UPDATE districts SET name = ? WHERE id = ? AND city_id = ?", (new_name, dist_id_int, city_id_int))
+        c.execute("UPDATE districts SET name = %s WHERE id = %s AND city_id = %s", (new_name, dist_id_int, city_id_int))
         # Update products table as well
-        c.execute("UPDATE products SET district = ? WHERE district = ? AND city = ?", (new_name, old_district_name, city_name))
+        c.execute("UPDATE products SET district = %s WHERE district = %s AND city = %s", (new_name, old_district_name, city_name))
         conn.commit()
         load_all_data() # Reload global data
         context.user_data.pop("state", None); context.user_data.pop("edit_city_id", None); context.user_data.pop("edit_district_id", None)
@@ -4697,7 +4697,7 @@ async def handle_adm_edit_district_message(update: Update, context: ContextTypes
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except sqlite3.IntegrityError:
         await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{new_name}' already exists.", parse_mode=None)
-    except (sqlite3.Error, ValueError) as e:
+    except (Exception, ValueError) as e:
         logger.error(f"DB/Value error updating district {dist_id_str}: {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to update district.", parse_mode=None)
@@ -4721,9 +4721,9 @@ async def handle_adm_edit_city_message(update: Update, context: ContextTypes.DEF
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT name FROM cities WHERE id = ?", (int(city_id_str),))
+        c.execute("SELECT name FROM cities WHERE id = %s", (int(city_id_str),))
         res = c.fetchone(); old_name = res['name'] if res else None
-    except (sqlite3.Error, ValueError) as e: logger.error(f"Failed to fetch old city name for edit: {e}")
+    except (Exception, ValueError) as e: logger.error(f"Failed to fetch old city name for edit: {e}")
     finally:
         if conn: conn.close() # Close connection if opened
     if not city_id_str or old_name is None:
@@ -4742,9 +4742,9 @@ async def handle_adm_edit_city_message(update: Update, context: ContextTypes.DEF
         conn = get_db_connection() # Use helper
         c = conn.cursor()
         c.execute("BEGIN")
-        c.execute("UPDATE cities SET name = ? WHERE id = ?", (new_name, city_id_int))
+        c.execute("UPDATE cities SET name = %s WHERE id = %s", (new_name, city_id_int))
         # Update products table as well
-        c.execute("UPDATE products SET city = ? WHERE city = ?", (new_name, old_name))
+        c.execute("UPDATE products SET city = %s WHERE city = %s", (new_name, old_name))
         conn.commit()
         load_all_data() # Reload global data
         context.user_data.pop("state", None); context.user_data.pop("edit_city_id", None)
@@ -4753,7 +4753,7 @@ async def handle_adm_edit_city_message(update: Update, context: ContextTypes.DEF
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except sqlite3.IntegrityError:
         await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{new_name}' already exists.", parse_mode=None)
-    except (sqlite3.Error, ValueError) as e:
+    except (Exception, ValueError) as e:
         logger.error(f"DB/Value error updating city {city_id_str}: {e}", exc_info=True)
         if conn and conn.in_transaction: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to update city.", parse_mode=None)
@@ -4838,21 +4838,21 @@ async def display_user_search_results(bot, chat_id: int, user_info: dict):
         c = conn.cursor()
         
         # Get counts for different sections
-        c.execute("SELECT COUNT(*) as count FROM purchases WHERE user_id = ?", (user_id,))
+        c.execute("SELECT COUNT(*) as count FROM purchases WHERE user_id = %s", (user_id,))
         total_purchases_count = c.fetchone()['count']
         
-        c.execute("SELECT COUNT(*) as count FROM pending_deposits WHERE user_id = ?", (user_id,))
+        c.execute("SELECT COUNT(*) as count FROM pending_deposits WHERE user_id = %s", (user_id,))
         pending_deposits_count = c.fetchone()['count']
         
-        c.execute("SELECT COUNT(*) as count FROM admin_log WHERE target_user_id = ?", (user_id,))
+        c.execute("SELECT COUNT(*) as count FROM admin_log WHERE target_user_id = %s", (user_id,))
         admin_actions_count = c.fetchone()['count']
         
         # Calculate total spent
-        c.execute("SELECT COALESCE(SUM(price_paid), 0.0) as total_spent FROM purchases WHERE user_id = ?", (user_id,))
+        c.execute("SELECT COALESCE(SUM(price_paid), 0.0) as total_spent FROM purchases WHERE user_id = %s", (user_id,))
         total_spent_result = c.fetchone()
         total_spent = Decimal(str(total_spent_result['total_spent'])) if total_spent_result else Decimal('0.0')
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching user overview for {user_id}: {e}", exc_info=True)
         await send_message_with_retry(bot, chat_id, "❌ Error fetching user details.", parse_mode=None)
         return
@@ -5005,7 +5005,7 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
             
             c.execute("""INSERT INTO products
                             (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                         VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)""", insert_params)
+                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s)""", insert_params)
             product_id = c.lastrowid
             
             # Handle media for this product
@@ -5041,7 +5041,7 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
                 
                 # Insert all media records at once (outside the loop)
                 if media_inserts:
-                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (?, ?, ?, ?)", media_inserts)
+                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (%s, %s, %s, %s)", media_inserts)
                     logger.info(f"Successfully inserted {len(media_inserts)} media records for bulk product {product_id}")
                 else:
                     logger.warning(f"No media was inserted for product {product_id}. Media list: {media_list}, Temp dir: {temp_dir}")
@@ -5251,7 +5251,7 @@ async def handle_adm_new_type_description_message(update: Update, context: Conte
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("INSERT INTO product_types (name, emoji, description) VALUES (?, ?, ?)", 
+        c.execute("INSERT INTO product_types (name, emoji, description) VALUES (%s, %s, %s)", 
                   (type_name, emoji, description))
         conn.commit()
         load_all_data()  # Reload data
@@ -5284,7 +5284,7 @@ async def handle_adm_new_type_description_message(update: Update, context: Conte
         await send_message_with_retry(context.bot, update.effective_chat.id, 
             success_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error creating product type '{type_name}': {e}", exc_info=True)
         await send_message_with_retry(context.bot, update.effective_chat.id, 
             "❌ Database error creating product type. Please try again.", parse_mode=None)
@@ -5321,7 +5321,7 @@ async def handle_adm_edit_type_emoji_message(update: Update, context: ContextTyp
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("UPDATE product_types SET emoji = ? WHERE name = ?", (emoji, type_name))
+        c.execute("UPDATE product_types SET emoji = %s WHERE name = %s", (emoji, type_name))
         
         if c.rowcount > 0:
             conn.commit()
@@ -5336,7 +5336,7 @@ async def handle_adm_edit_type_emoji_message(update: Update, context: ContextTyp
             
             # Show updated type info
             current_description = ""
-            c.execute("SELECT description FROM product_types WHERE name = ?", (type_name,))
+            c.execute("SELECT description FROM product_types WHERE name = %s", (type_name,))
             res = c.fetchone()
             if res: current_description = res['description'] or "(Description not set)"
             
@@ -5352,13 +5352,13 @@ async def handle_adm_edit_type_emoji_message(update: Update, context: ContextTyp
                 f"🧩 Editing Type: {type_name}\n\n"
                 f"Current Emoji: {emoji}\n"
                 f"Description: {current_description}\n\n"
-                f"What would you like to do?", 
+                f"What would you like to do%s", 
                 reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
         else:
             await send_message_with_retry(context.bot, update.effective_chat.id, 
                 f"❌ Error: Product type '{type_name}' not found.", parse_mode=None)
             context.user_data.pop("state", None)
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error updating emoji for type '{type_name}': {e}", exc_info=True)
         await send_message_with_retry(context.bot, update.effective_chat.id, 
             "❌ Database error updating emoji. Please try again.", parse_mode=None)
@@ -5427,14 +5427,14 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         
         if search_by_id:
             # Search by User ID
-            c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE user_id = ?", (user_id_search,))
+            c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE user_id = %s", (user_id_search,))
         else:
             # Search by username (case insensitive)
-            c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE LOWER(username) = LOWER(?)", (search_term,))
+            c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE LOWER(username) = LOWER(%s)", (search_term,))
         
         user_info = c.fetchone()
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error searching for user '{search_term}': {e}")
         await send_message_with_retry(context.bot, chat_id, "❌ Database error during search.", parse_mode=None)
         return
@@ -5458,7 +5458,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         ]
         await send_message_with_retry(
             context.bot, chat_id, 
-            "What would you like to do?", 
+            "What would you like to do%s", 
             reply_markup=InlineKeyboardMarkup(keyboard), 
             parse_mode=None
         )
@@ -5485,7 +5485,7 @@ async def handle_adm_user_deposits(update: Update, context: ContextTypes.DEFAULT
         c = conn.cursor()
         
         # Get user info
-        c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
         user_result = c.fetchone()
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
@@ -5496,12 +5496,12 @@ async def handle_adm_user_deposits(update: Update, context: ContextTypes.DEFAULT
         c.execute("""
             SELECT payment_id, currency, target_eur_amount, expected_crypto_amount, created_at, is_purchase
             FROM pending_deposits 
-            WHERE user_id = ? 
+            WHERE user_id = %s 
             ORDER BY created_at DESC
         """, (user_id,))
         deposits = c.fetchall()
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching deposits for user {user_id}: {e}", exc_info=True)
         await query.answer("Database error.", show_alert=True)
         return
@@ -5560,7 +5560,7 @@ async def handle_adm_user_purchases(update: Update, context: ContextTypes.DEFAUL
         c = conn.cursor()
         
         # Get user info
-        c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
         user_result = c.fetchone()
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
@@ -5568,20 +5568,20 @@ async def handle_adm_user_purchases(update: Update, context: ContextTypes.DEFAUL
         username = user_result['username'] or f"ID_{user_id}"
         
         # Get total count
-        c.execute("SELECT COUNT(*) as count FROM purchases WHERE user_id = ?", (user_id,))
+        c.execute("SELECT COUNT(*) as count FROM purchases WHERE user_id = %s", (user_id,))
         total_count = c.fetchone()['count']
         
         # Get purchases for this page
         c.execute("""
             SELECT purchase_date, product_name, product_type, product_size, price_paid, city, district
             FROM purchases 
-            WHERE user_id = ? 
+            WHERE user_id = %s 
             ORDER BY purchase_date DESC 
-            LIMIT ? OFFSET ?
+            LIMIT %s OFFSET %s
         """, (user_id, limit, offset))
         purchases = c.fetchall()
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching purchases for user {user_id}: {e}", exc_info=True)
         await query.answer("Database error.", show_alert=True)
         return
@@ -5654,7 +5654,7 @@ async def handle_adm_user_actions(update: Update, context: ContextTypes.DEFAULT_
         c = conn.cursor()
         
         # Get user info
-        c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
         user_result = c.fetchone()
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
@@ -5662,20 +5662,20 @@ async def handle_adm_user_actions(update: Update, context: ContextTypes.DEFAULT_
         username = user_result['username'] or f"ID_{user_id}"
         
         # Get total count
-        c.execute("SELECT COUNT(*) as count FROM admin_log WHERE target_user_id = ?", (user_id,))
+        c.execute("SELECT COUNT(*) as count FROM admin_log WHERE target_user_id = %s", (user_id,))
         total_count = c.fetchone()['count']
         
         # Get actions for this page
         c.execute("""
             SELECT timestamp, action, reason, amount_change, old_value, new_value
             FROM admin_log 
-            WHERE target_user_id = ? 
+            WHERE target_user_id = %s 
             ORDER BY timestamp DESC 
-            LIMIT ? OFFSET ?
+            LIMIT %s OFFSET %s
         """, (user_id, limit, offset))
         actions = c.fetchall()
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching admin actions for user {user_id}: {e}", exc_info=True)
         await query.answer("Database error.", show_alert=True)
         return
@@ -5745,7 +5745,7 @@ async def handle_adm_user_discounts(update: Update, context: ContextTypes.DEFAUL
         c = conn.cursor()
         
         # Get user info
-        c.execute("SELECT username, is_reseller FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT username, is_reseller FROM users WHERE user_id = %s", (user_id,))
         user_result = c.fetchone()
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
@@ -5760,12 +5760,12 @@ async def handle_adm_user_discounts(update: Update, context: ContextTypes.DEFAUL
         c.execute("""
             SELECT product_type, discount_percentage 
             FROM reseller_discounts 
-            WHERE reseller_user_id = ? 
+            WHERE reseller_user_id = %s 
             ORDER BY product_type
         """, (user_id,))
         discounts = c.fetchall()
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching discounts for user {user_id}: {e}", exc_info=True)
         await query.answer("Database error.", show_alert=True)
         return
@@ -5807,13 +5807,13 @@ async def handle_adm_user_overview(update: Update, context: ContextTypes.DEFAULT
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE user_id = %s", (user_id,))
         user_info = c.fetchone()
         
         if not user_info:
             return await query.answer("User not found.", show_alert=True)
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching user info for overview {user_id}: {e}", exc_info=True)
         await query.answer("Database error.", show_alert=True)
         return
@@ -5847,11 +5847,11 @@ async def handle_adm_manage_welcome(update: Update, context: ContextTypes.DEFAUL
         conn = get_db_connection()
         c = conn.cursor()
         # Use column name
-        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = ?", ("active_welcome_message_name",))
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("active_welcome_message_name",))
         setting_row = c.fetchone()
         if setting_row and setting_row['setting_value']: # Check if value is not None/empty
             active_template_name = setting_row['setting_value'] # Use column name
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching active welcome template name: {e}")
     finally:
         if conn: conn.close()
@@ -5863,7 +5863,7 @@ async def handle_adm_manage_welcome(update: Update, context: ContextTypes.DEFAUL
     keyboard = []
 
     if not templates and offset == 0:
-        msg_parts.append("\nNo custom templates found. Add one?")
+        msg_parts.append("\nNo custom templates found. Add one%s")
     else:
         for template in templates:
             name = template['name']
@@ -5966,14 +5966,14 @@ async def handle_adm_edit_welcome(update: Update, context: ContextTypes.DEFAULT_
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT template_text, description FROM welcome_messages WHERE name = ?", (template_name,))
+        c.execute("SELECT template_text, description FROM welcome_messages WHERE name = %s", (template_name,))
         row = c.fetchone()
         if not row:
              await query.answer("Template not found.", show_alert=True)
              return await handle_adm_manage_welcome(update, context, params=[str(offset)])
         current_text = row['template_text']
         current_description = row['description'] or ""
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching template '{template_name}' for edit options: {e}")
         await query.answer("Error fetching template details.", show_alert=True)
         return await handle_adm_manage_welcome(update, context, params=[str(offset)])
@@ -6022,10 +6022,10 @@ async def handle_adm_edit_welcome_text(update: Update, context: ContextTypes.DEF
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT template_text FROM welcome_messages WHERE name = ?", (template_name,))
+        c.execute("SELECT template_text FROM welcome_messages WHERE name = %s", (template_name,))
         row = c.fetchone()
         if row: current_text = row['template_text']
-    except sqlite3.Error as e: logger.error(f"DB error fetching text for edit: {e}")
+    except Exception as e: logger.error(f"DB error fetching text for edit: {e}")
     finally:
          if conn: conn.close()
 
@@ -6067,9 +6067,9 @@ async def handle_adm_edit_welcome_desc(update: Update, context: ContextTypes.DEF
     conn = None
     try:
         conn = get_db_connection(); c = conn.cursor()
-        c.execute("SELECT description FROM welcome_messages WHERE name = ?", (template_name,))
+        c.execute("SELECT description FROM welcome_messages WHERE name = %s", (template_name,))
         row = c.fetchone(); current_desc = row['description'] or ""
-    except sqlite3.Error as e: logger.error(f"DB error fetching desc for edit: {e}")
+    except Exception as e: logger.error(f"DB error fetching desc for edit: {e}")
     finally:
         if conn: conn.close()
 
@@ -6101,9 +6101,9 @@ async def handle_adm_delete_welcome_confirm(update: Update, context: ContextType
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = ?", ("active_welcome_message_name",))
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("active_welcome_message_name",))
         row = c.fetchone(); active_template_name = row['setting_value'] if row else "default" # Use column name
-    except sqlite3.Error as e: logger.error(f"DB error checking template status for delete: {e}")
+    except Exception as e: logger.error(f"DB error checking template status for delete: {e}")
     finally:
          if conn: conn.close()
 
@@ -6119,7 +6119,7 @@ async def handle_adm_delete_welcome_confirm(update: Update, context: ContextType
 
     context.user_data["confirm_action"] = f"delete_welcome_template|{template_name}"
     title = lang_data.get("welcome_delete_confirm_title", "⚠️ Confirm Deletion")
-    text_template = lang_data.get("welcome_delete_confirm_text", "Are you sure you want to delete the welcome message template named '{name}'?")
+    text_template = lang_data.get("welcome_delete_confirm_text", "Are you sure you want to delete the welcome message template named '{name}'%s")
     msg = f"{title}\n\n{text_template.format(name=template_name)}"
 
     keyboard = [
@@ -6136,7 +6136,7 @@ async def handle_reset_default_welcome(update: Update, context: ContextTypes.DEF
 
     context.user_data["confirm_action"] = "reset_default_welcome"
     title = lang_data.get("welcome_reset_confirm_title", "⚠️ Confirm Reset")
-    text = lang_data.get("welcome_reset_confirm_text", "Are you sure you want to reset the text of the 'default' template to the built-in version and activate it?")
+    text = lang_data.get("welcome_reset_confirm_text", "Are you sure you want to reset the text of the 'default' template to the built-in version and activate it%s")
     msg = f"{title}\n\n{text}"
 
     keyboard = [
@@ -6200,9 +6200,9 @@ def get_welcome_message_templates(limit=10, offset=0):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT name, description FROM welcome_messages ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
+        c.execute("SELECT name, description FROM welcome_messages ORDER BY name LIMIT %s OFFSET %s", (limit, offset))
         return c.fetchall()
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching welcome templates: {e}")
         return []
     finally:
@@ -6217,7 +6217,7 @@ def get_welcome_message_template_count():
         c.execute("SELECT COUNT(*) as count FROM welcome_messages")
         result = c.fetchone()
         return result['count'] if result else 0
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error counting welcome templates: {e}")
         return 0
     finally:
@@ -6229,11 +6229,11 @@ def set_active_welcome_message(template_name):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("INSERT OR REPLACE INTO bot_settings (setting_key, setting_value) VALUES (?, ?)",
+        c.execute("INSERT INTO bot_settings (setting_key, setting_value) VALUES (%s, %s) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value",
                   ("active_welcome_message_name", template_name))
         conn.commit()
         return True
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error setting active welcome template: {e}")
         return False
     finally:
@@ -6245,11 +6245,11 @@ def add_welcome_message_template(name, text, description=None):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("INSERT INTO welcome_messages (name, template_text, description) VALUES (?, ?, ?)",
+        c.execute("INSERT INTO welcome_messages (name, template_text, description) VALUES (%s, %s, %s)",
                   (name, text, description))
         conn.commit()
         return True
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error adding welcome template: {e}")
         return False
     finally:
@@ -6261,11 +6261,11 @@ def update_welcome_message_template(name, text, description=None):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("UPDATE welcome_messages SET template_text = ?, description = ? WHERE name = ?",
+        c.execute("UPDATE welcome_messages SET template_text = %s, description = %s WHERE name = %s",
                   (text, description, name))
         conn.commit()
         return c.rowcount > 0
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error updating welcome template: {e}")
         return False
     finally:
@@ -6298,7 +6298,7 @@ async def handle_adm_debug_reseller_discount(update: Update, context: ContextTyp
         c = conn.cursor()
         
         # Get user info
-        c.execute("SELECT username, is_reseller FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT username, is_reseller FROM users WHERE user_id = %s", (user_id,))
         user_result = c.fetchone()
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
@@ -6314,7 +6314,7 @@ async def handle_adm_debug_reseller_discount(update: Update, context: ContextTyp
         
         if is_reseller == 1:
             # Get all discount records
-            c.execute("SELECT product_type, discount_percentage FROM reseller_discounts WHERE reseller_user_id = ? ORDER BY product_type", (user_id,))
+            c.execute("SELECT product_type, discount_percentage FROM reseller_discounts WHERE reseller_user_id = %s ORDER BY product_type", (user_id,))
             discount_records = c.fetchall()
             
             msg += f"Discount Records ({len(discount_records)}):\n"
@@ -6390,12 +6390,12 @@ async def handle_adm_recent_purchases(update: Update, context: ContextTypes.DEFA
             FROM purchases p
             LEFT JOIN users u ON p.user_id = u.user_id
             ORDER BY p.purchase_date DESC
-            LIMIT ? OFFSET ?
+            LIMIT %s OFFSET %s
         """, (purchases_per_page, offset))
         
         recent_purchases = c.fetchall()
         
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"DB error fetching recent purchases: {e}", exc_info=True)
         await query.edit_message_text("❌ Database error fetching purchases.", parse_mode=None)
         return

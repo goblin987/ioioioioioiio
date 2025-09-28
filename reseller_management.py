@@ -41,7 +41,7 @@ async def get_reseller_discount_with_connection(cursor, user_id: int, product_ty
         # Enhanced logging for debugging
         logger.info(f"Checking reseller discount for user {user_id}, product type '{product_type}'")
         
-        cursor.execute("SELECT is_reseller FROM users WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT is_reseller FROM users WHERE user_id = %s", (user_id,))
         res = cursor.fetchone()
         
         if not res:
@@ -55,7 +55,7 @@ async def get_reseller_discount_with_connection(cursor, user_id: int, product_ty
             # User is a reseller, get their discount for this product type
             cursor.execute("""
                 SELECT discount_percentage FROM reseller_discounts 
-                WHERE reseller_user_id = ? AND product_type = ?
+                WHERE reseller_user_id = %s AND product_type = %s
             """, (user_id, product_type))
             
             discount_result = cursor.fetchone()
@@ -91,7 +91,7 @@ def get_reseller_discount(user_id: int, product_type: str) -> Decimal:
             # Enhanced logging for debugging
             logger.info(f"Checking reseller discount for user {user_id}, product type '{product_type}'")
             
-            c.execute("SELECT is_reseller FROM users WHERE user_id = ?", (user_id,))
+            c.execute("SELECT is_reseller FROM users WHERE user_id = %s", (user_id,))
             res = c.fetchone()
             
             if not res:
@@ -103,13 +103,13 @@ def get_reseller_discount(user_id: int, product_type: str) -> Decimal:
             
             if res and res['is_reseller'] == 1:
                 # Check what discount records exist for this user
-                c.execute("SELECT product_type, discount_percentage FROM reseller_discounts WHERE reseller_user_id = ?", (user_id,))
+                c.execute("SELECT product_type, discount_percentage FROM reseller_discounts WHERE reseller_user_id = %s", (user_id,))
                 all_discounts = c.fetchall()
                 logger.info(f"User {user_id} has {len(all_discounts)} discount records: {[(d['product_type'], d['discount_percentage']) for d in all_discounts]}")
                 
                 c.execute("""
                     SELECT discount_percentage FROM reseller_discounts
-                    WHERE reseller_user_id = ? AND product_type = ?
+                    WHERE reseller_user_id = %s AND product_type = %s
                 """, (user_id, product_type))
                 discount_res = c.fetchone()
                 if discount_res:
@@ -197,7 +197,7 @@ async def handle_reseller_manage_id_message(update: Update, context: ContextType
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT user_id, username, is_reseller FROM users WHERE user_id = ?", (target_user_id,))
+        c.execute("SELECT user_id, username, is_reseller FROM users WHERE user_id = %s", (target_user_id,))
         user_info = c.fetchone()
     except sqlite3.Error as e:
         logger.error(f"DB error fetching user {target_user_id} for reseller check: {e}")
@@ -250,7 +250,7 @@ async def handle_reseller_toggle_status(update: Update, context: ContextTypes.DE
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username, is_reseller FROM users WHERE user_id = ?", (target_user_id,))
+        c.execute("SELECT username, is_reseller FROM users WHERE user_id = %s", (target_user_id,))
         user_data = c.fetchone()
         if not user_data:
             await query.answer("User not found.", show_alert=True)
@@ -260,7 +260,7 @@ async def handle_reseller_toggle_status(update: Update, context: ContextTypes.DE
         current_status = user_data['is_reseller']
         username = user_data['username'] or f"ID_{target_user_id}"
         new_status = 0 if current_status == 1 else 1
-        c.execute("UPDATE users SET is_reseller = ? WHERE user_id = ?", (new_status, target_user_id))
+        c.execute("UPDATE users SET is_reseller = %s WHERE user_id = %s", (new_status, target_user_id))
         conn.commit()
 
         # Log action using constants from utils
@@ -314,11 +314,11 @@ async def handle_manage_reseller_discounts_select_reseller(update: Update, conte
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT COUNT(*) as count FROM users WHERE is_reseller = 1")
+        c.execute("SELECT COUNT(*) as count FROM users WHERE is_reseller = TRUE")
         count_res = c.fetchone(); total_resellers = count_res['count'] if count_res else 0
         c.execute("""
             SELECT user_id, username FROM users
-            WHERE is_reseller = 1 ORDER BY user_id DESC LIMIT ? OFFSET ?
+            WHERE is_reseller = TRUE ORDER BY user_id DESC LIMIT %s OFFSET %s
         """, (USERS_PER_PAGE_DISCOUNT_SELECT, offset)) # Use specific constant
         resellers = c.fetchall()
     except sqlite3.Error as e:
@@ -378,11 +378,11 @@ async def handle_manage_specific_reseller_discounts(update: Update, context: Con
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username FROM users WHERE user_id = ?", (target_reseller_id,))
+        c.execute("SELECT username FROM users WHERE user_id = %s", (target_reseller_id,))
         user_res = c.fetchone(); username = user_res['username'] if user_res and user_res['username'] else username
         c.execute("""
             SELECT product_type, discount_percentage FROM reseller_discounts
-            WHERE reseller_user_id = ? ORDER BY product_type
+            WHERE reseller_user_id = %s ORDER BY product_type
         """, (target_reseller_id,))
         discounts = c.fetchall()
     except sqlite3.Error as e:
@@ -559,13 +559,13 @@ async def handle_reseller_percent_message(update: Update, context: ContextTypes.
             c.execute("BEGIN")
 
             if mode == 'edit':
-                c.execute("SELECT discount_percentage FROM reseller_discounts WHERE reseller_user_id = ? AND product_type = ?", (target_user_id, product_type))
+                c.execute("SELECT discount_percentage FROM reseller_discounts WHERE reseller_user_id = %s AND product_type = %s", (target_user_id, product_type))
                 old_res = c.fetchone()
                 old_value = old_res['discount_percentage'] if old_res else None
 
             # Use INSERT OR REPLACE for both add and edit to simplify logic
             # If it's an 'edit' but the row doesn't exist, it becomes an 'add'
-            sql = "INSERT OR REPLACE INTO reseller_discounts (reseller_user_id, product_type, discount_percentage) VALUES (?, ?, ?)"
+            sql = "INSERT OR REPLACE INTO reseller_discounts (reseller_user_id, product_type, discount_percentage) VALUES (%s, %s, %s)"
             # Use quantize before converting to float for DB storage if needed, or store as TEXT
             # Storing as REAL (float) is generally fine for percentages if precision issues are acceptable,
             # but TEXT is safer if exact Decimal values are critical. Let's stick with REAL for now.
@@ -624,7 +624,7 @@ async def handle_reseller_delete_discount_confirm(update: Update, context: Conte
     context.user_data["confirm_action"] = f"confirm_delete_reseller_discount|{target_reseller_id}|{product_type}"
 
     msg = (f"⚠️ Confirm Deletion\n\n"
-           f"Delete the discount rule for {emoji} {product_type} for user ID {target_reseller_id}?\n\n"
+           f"Delete the discount rule for {emoji} {product_type} for user ID {target_reseller_id}%s\n\n"
            f"🚨 This action is irreversible!")
     keyboard = [[InlineKeyboardButton("✅ Yes, Delete Rule", callback_data="confirm_yes"),
                  InlineKeyboardButton("❌ No, Cancel", callback_data=f"reseller_manage_specific|{target_reseller_id}")]]

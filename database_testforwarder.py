@@ -116,7 +116,7 @@ class Database:
                     destination_chat_id TEXT,
                     config_name TEXT,
                     config_data TEXT,
-                    is_active BOOLEAN DEFAULT 1,
+                    is_active BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users (user_id),
                     FOREIGN KEY (account_id) REFERENCES telegram_accounts (id)

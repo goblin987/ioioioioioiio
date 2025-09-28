@@ -162,7 +162,7 @@ async def handle_viewer_added_products(update: Update, context: ContextTypes.DEF
             SELECT p.id, p.city, p.district, p.product_type, p.size, p.price,
                    p.original_text, p.added_date,
                    (SELECT COUNT(*) FROM product_media pm WHERE pm.product_id = p.id) as media_count
-            FROM products p ORDER BY p.id DESC LIMIT ? OFFSET ?
+            FROM products p ORDER BY p.id DESC LIMIT %s OFFSET %s
         """, (PRODUCTS_PER_PAGE_LOG, offset))
         products = c.fetchall()
 
@@ -266,7 +266,7 @@ async def handle_viewer_view_product_media(update: Update, context: ContextTypes
         # row_factory set in helper
         c = conn.cursor()
         # Use column names
-        c.execute("SELECT name, original_text FROM products WHERE id = ?", (product_id,))
+        c.execute("SELECT name, original_text FROM products WHERE id = %s", (product_id,))
         prod_info = c.fetchone()
         if prod_info:
              original_text = prod_info['original_text'] or ""
@@ -277,7 +277,7 @@ async def handle_viewer_view_product_media(update: Update, context: ContextTypes
             except telegram_error.BadRequest: pass
             return
         # Use column names
-        c.execute("SELECT media_type, telegram_file_id, file_path FROM product_media WHERE product_id = ?", (product_id,))
+        c.execute("SELECT media_type, telegram_file_id, file_path FROM product_media WHERE product_id = %s", (product_id,))
         media_items = c.fetchall()
 
     except sqlite3.Error as e:
@@ -441,12 +441,12 @@ async def _display_user_list(update: Update, context: ContextTypes.DEFAULT_TYPE,
         count_res = c.fetchone(); total_users = count_res['count'] if count_res else 0
 
         # Fetch users, excluding all primary admins
-        primary_admin_ids_str = ','.join(['?' for _ in PRIMARY_ADMIN_IDS]) if PRIMARY_ADMIN_IDS else '0'
+        primary_admin_ids_str = ','.join(['%s' for _ in PRIMARY_ADMIN_IDS]) if PRIMARY_ADMIN_IDS else '0'
         c.execute(f"""
             SELECT user_id, username, balance, total_purchases, is_banned
             FROM users
             WHERE user_id NOT IN ({primary_admin_ids_str})
-            ORDER BY user_id DESC LIMIT ? OFFSET ?
+            ORDER BY user_id DESC LIMIT %s OFFSET %s
         """, PRIMARY_ADMIN_IDS + [USERS_PER_PAGE, offset])
         users = c.fetchall()
 
@@ -518,7 +518,7 @@ async def handle_view_user_profile(update: Update, context: ContextTypes.DEFAULT
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT user_id, username, balance, total_purchases, is_banned FROM users WHERE user_id = ?", (target_user_id,))
+        c.execute("SELECT user_id, username, balance, total_purchases, is_banned FROM users WHERE user_id = %s", (target_user_id,))
         user_data = c.fetchone()
 
         if not user_data:
@@ -536,9 +536,9 @@ async def handle_view_user_profile(update: Update, context: ContextTypes.DEFAULT
         c.execute("""
             SELECT purchase_date, product_name, product_type, product_size, price_paid
             FROM purchases
-            WHERE user_id = ?
+            WHERE user_id = %s
             ORDER BY purchase_date DESC
-            LIMIT ?
+            LIMIT %s
         """, (target_user_id, history_limit))
         recent_purchases = c.fetchall()
 
@@ -570,7 +570,7 @@ async def handle_view_user_profile(update: Update, context: ContextTypes.DEFAULT
                     dt_obj = datetime.fromisoformat(purchase['purchase_date'].replace('Z', '+00:00'))
                     if dt_obj.tzinfo is None: dt_obj = dt_obj.replace(tzinfo=timezone.utc)
                     date_str = dt_obj.strftime('%y-%m-%d %H:%M')
-                except (ValueError, TypeError): date_str = "???"
+                except (ValueError, TypeError): date_str = "%s%s%s"
                 p_type = purchase['product_type']
                 p_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
                 p_name = purchase['product_name'] or 'N/A'
@@ -621,7 +621,7 @@ async def handle_adjust_balance_start(update: Update, context: ContextTypes.DEFA
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username FROM users WHERE user_id=?", (target_user_id,))
+        c.execute("SELECT username FROM users WHERE user_id=%s", (target_user_id,))
         res = c.fetchone()
         if res and res['username']: username = res['username']
     except Exception as e: logger.warning(f"Could not fetch username for balance adjust prompt {target_user_id}: {e}")
@@ -721,15 +721,15 @@ async def handle_adjust_balance_reason_message(update: Update, context: ContextT
         c = conn.cursor()
         c.execute("BEGIN")
         # Get old balance before update for logging
-        c.execute("SELECT balance FROM users WHERE user_id=?", (target_user_id,))
+        c.execute("SELECT balance FROM users WHERE user_id=%s", (target_user_id,))
         old_balance_res = c.fetchone(); old_balance_float = old_balance_res['balance'] if old_balance_res else 0.0
         # Update balance
-        update_res = c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount_float, target_user_id))
+        update_res = c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float, target_user_id))
         if update_res.rowcount == 0:
-             logger.error(f"Failed to adjust balance for user {target_user_id} (not found?).")
+             logger.error(f"Failed to adjust balance for user {target_user_id} (not found%s).")
              conn.rollback(); raise sqlite3.Error("User not found during balance update.")
         # Fetch new balance
-        c.execute("SELECT balance FROM users WHERE user_id = ?", (target_user_id,))
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (target_user_id,))
         new_balance_res = c.fetchone(); new_balance_float = new_balance_res['balance'] if new_balance_res else old_balance_float + amount_float
         conn.commit()
 
@@ -786,7 +786,7 @@ async def handle_toggle_ban_user(update: Update, context: ContextTypes.DEFAULT_T
         conn = get_db_connection()
         c = conn.cursor()
         # Get current ban status and username
-        c.execute("SELECT username, is_banned FROM users WHERE user_id = ?", (target_user_id,))
+        c.execute("SELECT username, is_banned FROM users WHERE user_id = %s", (target_user_id,))
         user_info = c.fetchone()
         if not user_info:
             await query.answer("User not found.", show_alert=True)
@@ -798,7 +798,7 @@ async def handle_toggle_ban_user(update: Update, context: ContextTypes.DEFAULT_T
         new_ban_status = 1 if current_ban_status == 0 else 0 # Toggle
 
         # Update DB
-        c.execute("UPDATE users SET is_banned = ? WHERE user_id = ?", (new_ban_status, target_user_id))
+        c.execute("UPDATE users SET is_banned = %s WHERE user_id = %s", (new_ban_status, target_user_id))
         conn.commit()
 
         action = "BAN_USER" if new_ban_status == 1 else "UNBAN_USER"

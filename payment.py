@@ -405,7 +405,7 @@ async def create_nowpayments_payment(
         )
         if not add_success:
              logger.error(f"Failed to add pending deposit to DB for payment_id {payment_data['payment_id']} (user {user_id}).")
-             # Attempt to cancel invoice? NOWPayments doesn't have a standard cancel API. Manual intervention needed if DB fails.
+             # Attempt to cancel invoice%s NOWPayments doesn't have a standard cancel API. Manual intervention needed if DB fails.
              return {'error': 'pending_db_error'}
 
         logger.info(f"Successfully created NOWPayments {log_type} invoice {payment_data['payment_id']} for user {user_id}.")
@@ -765,7 +765,7 @@ async def process_successful_refill(user_id: int, amount_to_add_eur: Decimal, pa
     try:
         conn_lang = get_db_connection()
         c_lang = conn_lang.cursor()
-        c_lang.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+        c_lang.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
         lang_res = c_lang.fetchone()
         if lang_res and lang_res['language'] in LANGUAGES:
             user_lang = lang_res['language']
@@ -816,7 +816,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
 
         # Pre-validate all products before processing
         product_ids = [item['product_id'] for item in basket_snapshot]
-        placeholders = ','.join('?' * len(product_ids))
+        placeholders = ','.join('%s' * len(product_ids))
         c.execute(f"""
             SELECT id, available, reserved FROM products 
             WHERE id IN ({placeholders})
@@ -841,7 +841,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
             product_id = item_snapshot['product_id']
             
             # Decrement stock with better error handling
-            avail_update = c.execute("UPDATE products SET available = available - 1 WHERE id = ? AND available > 0", (product_id,))
+            avail_update = c.execute("UPDATE products SET available = available - 1 WHERE id = %s AND available > 0", (product_id,))
             
             if avail_update.rowcount == 0:
                 logger.error(f"Failed to decrement stock for product {product_id} for user {user_id}")
@@ -877,7 +877,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 try:
                     from vip_system import process_vip_level_up
                     # Get updated purchase count
-                    c.execute("SELECT total_purchases FROM users WHERE user_id = ?", (user_id,))
+                    c.execute("SELECT total_purchases FROM users WHERE user_id = %s", (user_id,))
                     user_result = c.fetchone()
                     if user_result:
                         new_purchase_count = user_result['total_purchases']
@@ -914,20 +914,20 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
             if chat_id: await send_message_with_retry(context.bot, chat_id, lang_data.get("error_processing_purchase_contact_support", "❌ Error processing purchase."), parse_mode=None)
             return False
 
-        c.executemany("INSERT INTO purchases (user_id, product_id, product_name, product_type, product_size, price_paid, city, district, purchase_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", purchases_to_insert)
-        c.execute("UPDATE users SET total_purchases = total_purchases + ? WHERE user_id = ?", (len(purchases_to_insert), user_id))
+        c.executemany("INSERT INTO purchases (user_id, product_id, product_name, product_type, product_size, price_paid, city, district, purchase_date) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", purchases_to_insert)
+        c.execute("UPDATE users SET total_purchases = total_purchases + %s WHERE user_id = %s", (len(purchases_to_insert), user_id))
         if discount_code_used:
             # Atomically increment discount code usage only if limit not exceeded
             # This prevents race conditions where multiple users use the same code simultaneously
             update_result = c.execute("""
                 UPDATE discount_codes 
                 SET uses_count = uses_count + 1 
-                WHERE code = ? AND (max_uses IS NULL OR uses_count < max_uses)
+                WHERE code = %s AND (max_uses IS NULL OR uses_count < max_uses)
             """, (discount_code_used,))
             
             if update_result.rowcount == 0:
                 # Check why the update failed
-                c.execute("SELECT uses_count, max_uses FROM discount_codes WHERE code = ?", (discount_code_used,))
+                c.execute("SELECT uses_count, max_uses FROM discount_codes WHERE code = %s", (discount_code_used,))
                 code_check = c.fetchone()
                 if code_check:
                     if code_check['max_uses'] is not None and code_check['uses_count'] >= code_check['max_uses']:
@@ -938,7 +938,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                     logger.warning(f"Discount code '{discount_code_used}' not found in database during payment finalization for user {user_id}")
             else:
                 logger.info(f"Successfully incremented usage count for discount code '{discount_code_used}' for user {user_id}")
-        c.execute("UPDATE users SET basket = '' WHERE user_id = ?", (user_id,))
+        c.execute("UPDATE users SET basket = '' WHERE user_id = %s", (user_id,))
         conn.commit()
         db_update_successful = True
         logger.info(f"Finalized purchase DB update user {user_id}. Processed {len(purchases_to_insert)} items. General Discount: {discount_code_used or 'None'}. Total Paid (after reseller disc): {total_price_paid_decimal:.2f} EUR")
@@ -964,7 +964,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
             try:
                 conn_media = get_db_connection()
                 c_media = conn_media.cursor()
-                media_placeholders = ','.join('?' * len(processed_product_ids))
+                media_placeholders = ','.join('%s' * len(processed_product_ids))
                 c_media.execute(f"SELECT product_id, media_type, telegram_file_id, file_path FROM product_media WHERE product_id IN ({media_placeholders})", processed_product_ids)
                 media_rows = c_media.fetchall()
                 logger.info(f"Fetched {len(media_rows)} media records for products {processed_product_ids} for user {user_id}")
@@ -1175,11 +1175,11 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 logger.info(f"Purchase Finalization: Attempting to delete product records AFTER media delivery for user {user_id}. IDs: {processed_product_ids}")
                 
                 # Delete product media records first
-                media_delete_placeholders = ','.join('?' * len(processed_product_ids))
+                media_delete_placeholders = ','.join('%s' * len(processed_product_ids))
                 c_del.execute(f"DELETE FROM product_media WHERE product_id IN ({media_delete_placeholders})", processed_product_ids)
                 
                 # Delete product records  
-                delete_result = c_del.executemany("DELETE FROM products WHERE id = ?", ids_tuple_list)
+                delete_result = c_del.executemany("DELETE FROM products WHERE id = %s", ids_tuple_list)
                 conn_del.commit()
                 deleted_count = delete_result.rowcount
                 logger.info(f"Deleted {deleted_count} purchased product records and their media records for user {user_id}. IDs: {processed_product_ids}")
@@ -1234,7 +1234,7 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
         # Use IMMEDIATE instead of EXCLUSIVE to reduce lock conflicts
         c.execute("BEGIN IMMEDIATE")
         # 1. Verify balance
-        c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         current_balance_result = c.fetchone()
         if not current_balance_result or Decimal(str(current_balance_result['balance'])) < amount_to_deduct:
              logger.warning(f"Insufficient balance user {user_id}. Needed: {amount_to_deduct:.2f}")
@@ -1248,7 +1248,7 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
              return False
         # 2. Deduct balance
         amount_float_to_deduct = float(amount_to_deduct)
-        update_res = c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount_float_to_deduct, user_id))
+        update_res = c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s", (amount_float_to_deduct, user_id))
         if update_res.rowcount == 0: logger.error(f"Failed to deduct balance user {user_id}."); conn.rollback(); return False
 
         conn.commit() # Commit balance deduction *before* finalizing items
@@ -1273,7 +1273,7 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
             try:
                 refund_conn = get_db_connection()
                 refund_c = refund_conn.cursor()
-                refund_c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount_float_to_deduct, user_id))
+                refund_c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float_to_deduct, user_id))
                 refund_conn.commit()
                 logger.info(f"Successfully refunded {amount_float_to_deduct} EUR to user {user_id} after finalization failure.")
                 if chat_id: await send_message_with_retry(context.bot, chat_id, error_processing_purchase_contact_support + " Balance refunded.", parse_mode=None)
@@ -1352,16 +1352,16 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
         logger.info(f"Attempting to credit balance for user {user_id} by {amount_float:.2f} EUR. Reason: {reason}")
 
         # Get old balance for logging
-        c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         old_balance_res = c.fetchone(); old_balance_float = old_balance_res['balance'] if old_balance_res else 0.0
 
-        update_result = c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount_float, user_id))
+        update_result = c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float, user_id))
         if update_result.rowcount == 0:
             logger.error(f"User {user_id} not found during balance credit update. Reason: {reason}")
             conn.rollback()
             return False
 
-        c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         new_balance_result = c.fetchone()
         if new_balance_result:
              new_balance_decimal = Decimal(str(new_balance_result['balance']))
@@ -1393,7 +1393,7 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
                 try:
                     conn_lang = get_db_connection()
                     c_lang = conn_lang.cursor()
-                    c_lang.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+                    c_lang.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
                     lang_res = c_lang.fetchone()
                     if lang_res and lang_res['language'] in LANGUAGES: lang = lang_res['language']
                 except Exception as lang_e: logger.warning(f"Could not fetch user lang for credit msg: {lang_e}")

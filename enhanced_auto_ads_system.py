@@ -398,7 +398,7 @@ async def handle_enhanced_auto_ads_menu(update: Update, context: ContextTypes.DE
     if not TELETHON_AVAILABLE:
         msg += "⚠️ **Telethon not available** - Install telethon for full functionality\n\n"
     
-    msg += "**🎯 What would you like to do?**"
+    msg += "**🎯 What would you like to do%s**"
     
     keyboard = [
         [
@@ -713,7 +713,7 @@ async def save_userbot_account(details: Dict[str, str], session_data: str) -> bo
         c.execute("""
             INSERT INTO userbot_accounts 
             (account_name, phone_number, api_id, api_hash, session_string)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             details['account_name'],
             details.get('phone_number'),
@@ -956,7 +956,7 @@ async def save_channel(channel_info: Dict[str, str]) -> bool:
         c.execute("""
             INSERT INTO enhanced_channels 
             (channel_name, channel_id, channel_username, channel_url)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (
             channel_info['name'],
             channel_info['id'],
