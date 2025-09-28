@@ -93,7 +93,10 @@ from marketing_promotions import (
     handle_admin_hot_deals_menu, handle_admin_add_hot_deal, handle_admin_hot_deal_product,
     handle_admin_deal_custom_price, handle_admin_deal_discount, handle_admin_deal_title_only,
     handle_admin_manage_hot_deals, handle_admin_app_info_menu, handle_admin_add_app_info,
-    handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status
+    handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status,
+    handle_admin_bot_look_editor, handle_bot_look_presets, handle_bot_preset_select,
+    handle_bot_look_custom, handle_bot_edit_menu, handle_bot_select_button,
+    handle_bot_place_button, handle_bot_remove_button, handle_bot_add_row, handle_bot_save_menu
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -883,6 +886,18 @@ def callback_query_router(func):
                 "admin_manage_app_info": handle_admin_manage_app_info,
                 "admin_edit_app_info": handle_admin_edit_app_info,
                 "admin_toggle_info_status": handle_admin_toggle_info_status,
+                # Visual Button Board Editor Handlers
+                "admin_bot_look_editor": handle_admin_bot_look_editor,
+                "bot_look_presets": handle_bot_look_presets,
+                "bot_preset_select": handle_bot_preset_select,
+                "bot_look_custom": handle_bot_look_custom,
+                "bot_edit_menu": handle_bot_edit_menu,
+                "bot_select_button": handle_bot_select_button,
+                "bot_place_button": handle_bot_place_button,
+                "bot_remove_button": handle_bot_remove_button,
+                "bot_add_row": handle_bot_add_row,
+                "bot_save_menu": handle_bot_save_menu,
+                "bot_noop": handle_marketing_promotions_menu,  # Placeholder for separator buttons
             }
 
             target_func = KNOWN_HANDLERS.get(command)

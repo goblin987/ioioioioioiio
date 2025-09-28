@@ -149,6 +149,35 @@ def init_marketing_tables():
         # Create index for app info
         c.execute("CREATE INDEX IF NOT EXISTS idx_app_info_active ON app_info(is_active, display_order)")
         
+        # Bot layout customization tables
+        c.execute('''CREATE TABLE IF NOT EXISTS bot_layout_templates (
+            id SERIAL PRIMARY KEY,
+            template_name TEXT NOT NULL UNIQUE,
+            template_description TEXT,
+            layout_config TEXT NOT NULL,
+            is_preset BOOLEAN DEFAULT FALSE,
+            is_active BOOLEAN DEFAULT FALSE,
+            created_by BIGINT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        c.execute('''CREATE TABLE IF NOT EXISTS bot_menu_layouts (
+            id SERIAL PRIMARY KEY,
+            menu_name TEXT NOT NULL,
+            menu_display_name TEXT NOT NULL,
+            button_layout TEXT NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            template_id INTEGER,
+            created_by BIGINT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        # Create indexes for bot layout
+        c.execute("CREATE INDEX IF NOT EXISTS idx_layout_templates_active ON bot_layout_templates(is_active)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_menu_layouts_active ON bot_menu_layouts(is_active, menu_name)")
+        
         # Insert default themes if not exists
         for theme_key, theme_data in UI_THEMES.items():
             c.execute("""
@@ -237,6 +266,7 @@ async def handle_marketing_promotions_menu(update: Update, context: ContextTypes
     
     keyboard = [
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="ui_theme_designer")],
+        [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="admin_bot_look_editor")],
         [InlineKeyboardButton("🔥 Hot Deals Manager", callback_data="admin_hot_deals_menu")],
         [InlineKeyboardButton("ℹ️ App Info Manager", callback_data="admin_app_info_menu")],
         [InlineKeyboardButton("📝 Welcome Message Editor", callback_data="welcome_message_editor")],
@@ -2411,6 +2441,517 @@ async def handle_admin_toggle_info_status(update: Update, context: ContextTypes.
     except Exception as e:
         logger.error(f"Error toggling app info status: {e}")
         await query.answer("❌ Error updating status", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+# YOLO MODE: VISUAL BUTTON BOARD EDITOR SYSTEM
+# Available buttons for different menu types
+AVAILABLE_BUTTONS = {
+    'start_menu': [
+        {'text': '🛍️ Shop', 'callback': 'shop', 'emoji': '🛍️'},
+        {'text': '👤 Profile', 'callback': 'profile', 'emoji': '👤'},
+        {'text': '💳 Top Up', 'callback': 'topup', 'emoji': '💳'},
+        {'text': '💰 Wallet', 'callback': 'wallet', 'emoji': '💰'},
+        {'text': '📊 Stats', 'callback': 'stats', 'emoji': '📊'},
+        {'text': '🎮 Games', 'callback': 'games', 'emoji': '🎮'},
+        {'text': '🔥 Hot Deals', 'callback': 'deals', 'emoji': '🔥'},
+        {'text': 'ℹ️ Info', 'callback': 'info', 'emoji': 'ℹ️'},
+        {'text': '⚙️ Settings', 'callback': 'settings', 'emoji': '⚙️'},
+        {'text': '🎁 Promotions', 'callback': 'promotions', 'emoji': '🎁'},
+        {'text': '📞 Support', 'callback': 'support', 'emoji': '📞'},
+        {'text': '🏆 Leaderboard', 'callback': 'leaderboard', 'emoji': '🏆'}
+    ],
+    'city_menu': [
+        {'text': '🏙️ Vilnius', 'callback': 'city_vilnius', 'emoji': '🏙️'},
+        {'text': '🏙️ Kaunas', 'callback': 'city_kaunas', 'emoji': '🏙️'},
+        {'text': '🏙️ Klaipeda', 'callback': 'city_klaipeda', 'emoji': '🏙️'},
+        {'text': '🏙️ Siauliai', 'callback': 'city_siauliai', 'emoji': '🏙️'},
+        {'text': '⬅️ Back', 'callback': 'back', 'emoji': '⬅️'},
+        {'text': '🏠 Home', 'callback': 'home', 'emoji': '🏠'}
+    ],
+    'district_menu': [
+        {'text': '🏘️ Centras', 'callback': 'district_centras', 'emoji': '🏘️'},
+        {'text': '🏘️ Naujamestis', 'callback': 'district_naujamestis', 'emoji': '🏘️'},
+        {'text': '🏘️ Senamiestis', 'callback': 'district_senamiestis', 'emoji': '🏘️'},
+        {'text': '⬅️ Back to Cities', 'callback': 'back_cities', 'emoji': '⬅️'},
+        {'text': '🏠 Home', 'callback': 'home', 'emoji': '🏠'}
+    ],
+    'payment_menu': [
+        {'text': '💳 Pay Now', 'callback': 'pay_now', 'emoji': '💳'},
+        {'text': '🎫 Discount Code', 'callback': 'discount', 'emoji': '🎫'},
+        {'text': '💰 Add to Wallet', 'callback': 'add_wallet', 'emoji': '💰'},
+        {'text': '🛒 Add to Cart', 'callback': 'add_cart', 'emoji': '🛒'},
+        {'text': '⬅️ Back', 'callback': 'back', 'emoji': '⬅️'},
+        {'text': '🏠 Home', 'callback': 'home', 'emoji': '🏠'}
+    ]
+}
+
+# Preset templates
+PRESET_TEMPLATES = {
+    'classic': {
+        'name': 'Classic Layout',
+        'description': 'Traditional 3-button layout',
+        'menus': {
+            'start_menu': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
+            'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
+            'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+        }
+    },
+    'modern': {
+        'name': 'Modern Grid',
+        'description': '2x2 grid layout with deals',
+        'menus': {
+            'start_menu': [['🛍️ Shop', '🔥 Hot Deals'], ['👤 Profile', '💳 Top Up']],
+            'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
+            'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+        }
+    },
+    'gaming': {
+        'name': 'Gaming Focus',
+        'description': 'Gaming-oriented layout',
+        'menus': {
+            'start_menu': [['🛍️ Shop', '🎮 Games'], ['🏆 Leaderboard', '🔥 Hot Deals'], ['👤 Profile', '💳 Top Up']],
+            'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
+            'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+        }
+    }
+}
+
+async def handle_admin_bot_look_editor(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Main bot look editor - choice between presets and custom"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🎛️ **EDIT BOT LOOK** 🎛️\n\n"
+    msg += "🎨 **Customize Your Bot's Interface**\n\n"
+    msg += "Choose how you want to design your bot:\n\n"
+    msg += "📋 **Preset Templates** - Quick setup with professional layouts\n"
+    msg += "🎨 **Make Your Own** - Full custom visual editor\n\n"
+    msg += "💡 *You can customize button layouts for all menus*"
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 Preset Templates", callback_data="bot_look_presets")],
+        [InlineKeyboardButton("🎨 Make Your Own", callback_data="bot_look_custom")],
+        [InlineKeyboardButton("👀 Preview Current Layout", callback_data="bot_look_preview")],
+        [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_look_presets(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show preset template options"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📋 **PRESET TEMPLATES** 📋\n\n"
+    msg += "🎯 **Choose a Professional Layout:**\n\n"
+    
+    keyboard = []
+    
+    for template_key, template_data in PRESET_TEMPLATES.items():
+        msg += f"**{template_data['name']}**\n"
+        msg += f"*{template_data['description']}*\n\n"
+        
+        keyboard.append([InlineKeyboardButton(
+            f"📋 {template_data['name']}", 
+            callback_data=f"bot_preset_select|{template_key}"
+        )])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("🎨 Make Your Own Instead", callback_data="bot_look_custom")],
+        [InlineKeyboardButton("⬅️ Back to Bot Look", callback_data="admin_bot_look_editor")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_preset_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply selected preset template"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid template selection", show_alert=True)
+        return
+    
+    template_key = params[0]
+    template_data = PRESET_TEMPLATES.get(template_key)
+    
+    if not template_data:
+        await query.answer("Template not found", show_alert=True)
+        return
+    
+    # Save template to database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Deactivate all existing templates
+        c.execute("UPDATE bot_layout_templates SET is_active = FALSE")
+        
+        # Insert new template
+        import json
+        c.execute("""
+            INSERT INTO bot_layout_templates 
+            (template_name, template_description, layout_config, is_preset, is_active, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            template_data['name'],
+            template_data['description'],
+            json.dumps(template_data['menus']),
+            True,
+            True,
+            query.from_user.id
+        ))
+        
+        # Save individual menu layouts
+        c.execute("DELETE FROM bot_menu_layouts WHERE created_by = %s", (query.from_user.id,))
+        
+        for menu_name, layout in template_data['menus'].items():
+            display_name = menu_name.replace('_', ' ').title()
+            c.execute("""
+                INSERT INTO bot_menu_layouts 
+                (menu_name, menu_display_name, button_layout, created_by)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                menu_name,
+                display_name,
+                json.dumps(layout),
+                query.from_user.id
+            ))
+        
+        conn.commit()
+        
+        msg = f"✅ **TEMPLATE APPLIED** ✅\n\n"
+        msg += f"🎨 **{template_data['name']}** has been applied!\n\n"
+        msg += f"📱 *{template_data['description']}*\n\n"
+        msg += "Your bot now uses this layout for all menus.\n"
+        msg += "You can still customize individual menus if needed."
+        
+        keyboard = [
+            [InlineKeyboardButton("🎨 Customize Further", callback_data="bot_look_custom")],
+            [InlineKeyboardButton("👀 Preview Layout", callback_data="bot_look_preview")],
+            [InlineKeyboardButton("⬅️ Back to Templates", callback_data="bot_look_presets")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error applying preset template: {e}")
+        await query.answer("❌ Error applying template", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_bot_look_custom(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start custom menu editing - select which menu to edit"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🎨 **MAKE YOUR OWN LAYOUT** 🎨\n\n"
+    msg += "🎯 **Select Menu to Customize:**\n\n"
+    msg += "Edit each menu's button layout using our visual editor.\n"
+    msg += "You can arrange buttons in rows (max 4 per row).\n\n"
+    msg += "**Available Menus:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("🏠 Start Menu", callback_data="bot_edit_menu|start_menu")],
+        [InlineKeyboardButton("🏙️ Choose City Menu", callback_data="bot_edit_menu|city_menu")],
+        [InlineKeyboardButton("🏘️ Choose District Menu", callback_data="bot_edit_menu|district_menu")],
+        [InlineKeyboardButton("💳 Payment Menu", callback_data="bot_edit_menu|payment_menu")],
+        [InlineKeyboardButton("💾 Save All Changes", callback_data="bot_save_layout")],
+        [InlineKeyboardButton("⬅️ Back to Bot Look", callback_data="admin_bot_look_editor")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_edit_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Visual button board editor for specific menu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu selection", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    available_buttons = AVAILABLE_BUTTONS.get(menu_type, [])
+    
+    # Get current layout from context or database
+    current_layout = context.user_data.get(f'editing_layout_{menu_type}', [[]])
+    
+    # Ensure we have at least one empty row
+    if not current_layout or not any(current_layout):
+        current_layout = [[]]
+    
+    menu_display_name = menu_type.replace('_', ' ').title()
+    
+    msg = f"🎛️ **EDITING: {menu_display_name}** 🎛️\n\n"
+    msg += "🎯 **How to Use:**\n"
+    msg += "1️⃣ Click a button from the top board to select it\n"
+    msg += "2️⃣ Click an empty slot below to place it\n"
+    msg += "3️⃣ Max 4 buttons per row\n\n"
+    
+    # Header: Available buttons board
+    msg += "📋 **Available Buttons:**\n"
+    
+    keyboard = []
+    
+    # Create header board with available buttons (2 per row for readability)
+    header_rows = []
+    for i in range(0, len(available_buttons), 2):
+        row = []
+        for j in range(2):
+            if i + j < len(available_buttons):
+                btn = available_buttons[i + j]
+                row.append(InlineKeyboardButton(
+                    f"📌 {btn['text']}", 
+                    callback_data=f"bot_select_button|{menu_type}|{i+j}"
+                ))
+        header_rows.append(row)
+    
+    keyboard.extend(header_rows)
+    
+    # Visual split line
+    keyboard.append([InlineKeyboardButton("--- 📍 Placement Area Below ---", callback_data="bot_noop")])
+    
+    # Current layout preview with placement slots
+    for row_idx, row in enumerate(current_layout):
+        layout_row = []
+        
+        # Add existing buttons in this row
+        for btn_idx, button_text in enumerate(row):
+            layout_row.append(InlineKeyboardButton(
+                f"✅ {button_text}", 
+                callback_data=f"bot_remove_button|{menu_type}|{row_idx}|{btn_idx}"
+            ))
+        
+        # Add empty slots if row has less than 4 buttons
+        while len(layout_row) < 4:
+            slot_idx = len(layout_row)
+            layout_row.append(InlineKeyboardButton(
+                "➕ Empty", 
+                callback_data=f"bot_place_button|{menu_type}|{row_idx}|{slot_idx}"
+            ))
+        
+        keyboard.append(layout_row)
+    
+    # Add new row button if we have less than 6 rows
+    if len(current_layout) < 6:
+        keyboard.append([InlineKeyboardButton("➕ Add New Row", callback_data=f"bot_add_row|{menu_type}")])
+    
+    # Control buttons
+    keyboard.extend([
+        [InlineKeyboardButton("💾 Save Menu", callback_data=f"bot_save_menu|{menu_type}")],
+        [InlineKeyboardButton("🗑️ Clear All", callback_data=f"bot_clear_menu|{menu_type}")],
+        [InlineKeyboardButton("⬅️ Back to Menu List", callback_data="bot_look_custom")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_select_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select a button from the available buttons board"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid button selection", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    button_idx = int(params[1])
+    
+    available_buttons = AVAILABLE_BUTTONS.get(menu_type, [])
+    if button_idx >= len(available_buttons):
+        await query.answer("Button not found", show_alert=True)
+        return
+    
+    selected_button = available_buttons[button_idx]
+    context.user_data['selected_button'] = selected_button['text']
+    
+    await query.answer(f"✅ Selected: {selected_button['text']}\nNow click an empty slot to place it!", show_alert=True)
+
+async def handle_bot_place_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Place selected button in the layout"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 3:
+        await query.answer("Invalid placement", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    row_idx = int(params[1])
+    slot_idx = int(params[2])
+    
+    selected_button = context.user_data.get('selected_button')
+    if not selected_button:
+        await query.answer("❌ No button selected! Click a button from the top board first.", show_alert=True)
+        return
+    
+    # Get current layout
+    current_layout = context.user_data.get(f'editing_layout_{menu_type}', [[]])
+    
+    # Ensure we have enough rows
+    while len(current_layout) <= row_idx:
+        current_layout.append([])
+    
+    # Ensure we have enough slots in the row
+    while len(current_layout[row_idx]) <= slot_idx:
+        current_layout[row_idx].append("")
+    
+    # Place the button
+    current_layout[row_idx][slot_idx] = selected_button
+    
+    # Remove empty strings from the end of rows
+    for row in current_layout:
+        while row and row[-1] == "":
+            row.pop()
+    
+    # Save layout
+    context.user_data[f'editing_layout_{menu_type}'] = current_layout
+    context.user_data['selected_button'] = None  # Clear selection
+    
+    await query.answer(f"✅ Placed: {selected_button}", show_alert=True)
+    
+    # Refresh the editor
+    return await handle_bot_edit_menu(update, context, [menu_type])
+
+async def handle_bot_remove_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Remove button from layout"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 3:
+        await query.answer("Invalid removal", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    row_idx = int(params[1])
+    btn_idx = int(params[2])
+    
+    # Get current layout
+    current_layout = context.user_data.get(f'editing_layout_{menu_type}', [[]])
+    
+    if row_idx < len(current_layout) and btn_idx < len(current_layout[row_idx]):
+        removed_button = current_layout[row_idx][btn_idx]
+        current_layout[row_idx].pop(btn_idx)
+        
+        # Remove empty rows
+        current_layout = [row for row in current_layout if row]
+        if not current_layout:
+            current_layout = [[]]
+        
+        context.user_data[f'editing_layout_{menu_type}'] = current_layout
+        
+        await query.answer(f"🗑️ Removed: {removed_button}", show_alert=True)
+        
+        # Refresh the editor
+        return await handle_bot_edit_menu(update, context, [menu_type])
+    
+    await query.answer("❌ Button not found", show_alert=True)
+
+async def handle_bot_add_row(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Add new empty row to layout"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu type", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    
+    # Get current layout
+    current_layout = context.user_data.get(f'editing_layout_{menu_type}', [[]])
+    
+    if len(current_layout) < 6:  # Max 6 rows
+        current_layout.append([])
+        context.user_data[f'editing_layout_{menu_type}'] = current_layout
+        
+        await query.answer("✅ Added new row", show_alert=True)
+        
+        # Refresh the editor
+        return await handle_bot_edit_menu(update, context, [menu_type])
+    
+    await query.answer("❌ Maximum 6 rows allowed", show_alert=True)
+
+async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save current menu layout"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu type", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    current_layout = context.user_data.get(f'editing_layout_{menu_type}', [[]])
+    
+    # Clean up layout (remove empty rows and buttons)
+    cleaned_layout = []
+    for row in current_layout:
+        cleaned_row = [btn for btn in row if btn and btn.strip()]
+        if cleaned_row:
+            cleaned_layout.append(cleaned_row)
+    
+    if not cleaned_layout:
+        await query.answer("❌ Cannot save empty layout", show_alert=True)
+        return
+    
+    # Save to database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        import json
+        menu_display_name = menu_type.replace('_', ' ').title()
+        
+        # Update or insert menu layout
+        c.execute("""
+            INSERT INTO bot_menu_layouts 
+            (menu_name, menu_display_name, button_layout, created_by)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (menu_name) 
+            DO UPDATE SET 
+                button_layout = EXCLUDED.button_layout,
+                updated_at = CURRENT_TIMESTAMP
+        """, (
+            menu_type,
+            menu_display_name,
+            json.dumps(cleaned_layout),
+            query.from_user.id
+        ))
+        
+        conn.commit()
+        
+        await query.answer(f"✅ {menu_display_name} saved successfully!", show_alert=True)
+        
+        # Clear editing data
+        if f'editing_layout_{menu_type}' in context.user_data:
+            del context.user_data[f'editing_layout_{menu_type}']
+        
+        # Return to menu list
+        return await handle_bot_look_custom(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error saving menu layout: {e}")
+        await query.answer("❌ Error saving menu", show_alert=True)
     finally:
         if conn:
             conn.close()
