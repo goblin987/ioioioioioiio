@@ -219,14 +219,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     username = user.username or user.first_name or f"User_{user_id}"
     
-    # Check if admin has activated minimalist UI theme
+    # Check if admin has activated custom UI theme
     try:
-        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome
+        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome, handle_modern_welcome
         active_theme = get_active_ui_theme()
         
         if active_theme and active_theme.get('theme_name') == 'minimalist':
             logger.info(f"Using admin-configured minimalist UI theme for user {user_id}")
             return await handle_minimalist_welcome(update, context)
+        elif active_theme and active_theme.get('theme_name') == 'modern':
+            logger.info(f"Using admin-configured modern UI theme for user {user_id}")
+            return await handle_modern_welcome(update, context)
         else:
             logger.info(f"Using classic interface for user {user_id} (active theme: {active_theme.get('theme_name', 'classic')})")
     except ImportError:

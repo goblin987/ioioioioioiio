@@ -1271,4 +1271,485 @@ async def handle_user_preview_minimalist(update: Update, context: ContextTypes.D
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
+# YOLO MODE: MODERN CARD STYLE UI IMPLEMENTATION
+# Full creative freedom - premium visual experience with card-style design
+
+async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern card-style welcome interface with premium visual design"""
+    query = update.callback_query if update.callback_query else None
+    user_id = update.effective_user.id
+    
+    # Premium modern card-style welcome with visual elements
+    msg = "🎯 **WELCOME TO PREMIUM STORE** 🎯\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║  🛍️  **LUXURY SHOPPING**  🛍️  ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🔥 **What brings you here today?**\n\n"
+    msg += "💎 *Premium quality guaranteed*\n"
+    msg += "🚀 *Lightning-fast delivery*\n"
+    msg += "🏆 *VIP customer experience*"
+    
+    keyboard = []
+    
+    # Add admin panel for primary admins
+    if is_primary_admin(user_id):
+        keyboard.append([InlineKeyboardButton("🔧 Admin Control Center", callback_data="admin_menu")])
+    
+    # Modern premium button layout
+    keyboard.extend([
+        [InlineKeyboardButton("🛍️ Shop Now", callback_data="modern_shop"),
+         InlineKeyboardButton("🔥 Hot Deals", callback_data="modern_deals")],
+        [InlineKeyboardButton("👤 My Account", callback_data="modern_profile"),
+         InlineKeyboardButton("💰 Wallet", callback_data="modern_wallet")],
+        [InlineKeyboardButton("🎯 Promotions", callback_data="modern_promotions"),
+         InlineKeyboardButton("📱 App Info", callback_data="modern_app")]
+    ])
+    
+    if query:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    else:
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_shop(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern card-style shop interface with premium city selection"""
+    query = update.callback_query
+    
+    msg = "🛍️ **PREMIUM MARKETPLACE** 🛍️\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║     🏙️ **DELIVERY ZONES**    ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "📍 *Select your premium delivery location*\n\n"
+    msg += "🚀 **Express delivery available**\n"
+    msg += "💎 **Premium service guarantee**"
+    
+    # Get cities from utils
+    from utils import CITIES
+    keyboard = []
+    
+    # Create premium city selection cards
+    for city_id, city_name in CITIES.items():
+        keyboard.append([InlineKeyboardButton(f"🏙️ {city_name.title()} Premium Zone", callback_data=f"modern_city_select|{city_name}")])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("⬅️ Back to Home", callback_data="modern_home")],
+        [InlineKeyboardButton("🔥 Today's Specials", callback_data="modern_deals")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_city_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern card-style district selection with premium zones"""
+    query = update.callback_query
+    if not params:
+        await query.answer("Invalid city selection", show_alert=True)
+        return
+    
+    city_name = params[0]
+    
+    msg = f"🏙️ **{city_name.upper()} PREMIUM ZONE** 🏙️\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║    🏘️ **SELECT DISTRICT**    ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "📍 *Choose your premium district*\n\n"
+    msg += "🎯 **VIP service in all areas**\n"
+    msg += "⚡ **Same-day delivery available**"
+    
+    # Get districts from utils
+    from utils import DISTRICTS
+    keyboard = []
+    
+    city_districts = DISTRICTS.get(city_name, {})
+    for district_id, district_name in city_districts.items():
+        keyboard.append([InlineKeyboardButton(f"🏘️ {district_name} VIP Zone", callback_data=f"modern_district_select|{city_name}|{district_name}")])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("⬅️ Back to Cities", callback_data="modern_shop")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_district_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern card-style product catalog with premium presentation"""
+    query = update.callback_query
+    if not params or len(params) < 2:
+        await query.answer("Invalid district selection", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1]
+    
+    # Get products from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT DISTINCT product_type FROM products 
+            WHERE city = %s AND district = %s AND available > 0
+            ORDER BY product_type
+        """, (city_name, district_name))
+        product_types = [row['product_type'] for row in c.fetchall()]
+    except Exception as e:
+        logger.error(f"Error loading products: {e}")
+        await query.answer("Error loading premium catalog", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not product_types:
+        await query.edit_message_text(
+            f"🚫 **PREMIUM CATALOG UNAVAILABLE**\n\n"
+            f"╔═══════════════════════════╗\n"
+            f"║  **{district_name.upper()}** - **{city_name.upper()}**  ║\n"
+            f"╚═══════════════════════════╝\n\n"
+            f"🔄 *Restocking premium items...*\n"
+            f"📞 *Contact support for availability*",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"modern_city_select|{city_name}")],
+                [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+            ]),
+            parse_mode='Markdown'
+        )
+        return
+    
+    msg = f"🏙️ **{city_name.upper()}** | 🏘️ **{district_name.upper()}**\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║   🛍️ **PREMIUM CATALOG**   ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🎯 *Select your premium product*\n\n"
+    msg += "💎 **Luxury collection available**\n"
+    msg += "🏆 **Highest quality guaranteed**"
+    
+    keyboard = []
+    
+    # Get product emoji function
+    from utils import get_product_emoji
+    
+    # Create premium product catalog cards
+    for product_type in product_types:
+        emoji = get_product_emoji(product_type)
+        keyboard.append([InlineKeyboardButton(f"{emoji} {product_type.title()} Premium", callback_data=f"modern_product_type|{city_name}|{district_name}|{product_type}")])
+    
+    keyboard.extend([
+        [InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"modern_city_select|{city_name}")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_product_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern card-style product variants with premium pricing display"""
+    query = update.callback_query
+    if not params or len(params) < 3:
+        await query.answer("Invalid product selection", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1]
+    product_type = params[2]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all variants of this product type
+        c.execute("""
+            SELECT 
+                id,
+                size,
+                price,
+                available
+            FROM products 
+            WHERE city = %s AND district = %s AND product_type = %s AND available > 0
+            ORDER BY price
+        """, (city_name, district_name, product_type))
+        variants = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading product variants: {e}")
+        await query.answer("Error loading premium variants", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not variants:
+        await query.edit_message_text(
+            f"🚫 **PREMIUM VARIANT UNAVAILABLE**\n\n"
+            f"╔═══════════════════════════╗\n"
+            f"║  **{product_type.upper()} PREMIUM**  ║\n"
+            f"╚═══════════════════════════╝\n\n"
+            f"🔄 *Restocking premium variants...*\n"
+            f"📞 *Contact VIP support*",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back to Catalog", callback_data=f"modern_district_select|{city_name}|{district_name}")],
+                [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+            ]),
+            parse_mode='Markdown'
+        )
+        return
+    
+    from utils import get_product_emoji
+    emoji = get_product_emoji(product_type)
+    
+    # Premium product variant display
+    msg = f"🏙️ **{city_name.upper()}** | 🏘️ **{district_name.upper()}**\n\n"
+    msg += f"╔═══════════════════════════╗\n"
+    msg += f"║  {emoji} **{product_type.upper()} PREMIUM** {emoji}  ║\n"
+    msg += f"╚═══════════════════════════╝\n\n"
+    msg += "💎 **Select your premium variant:**\n\n"
+    msg += "🏆 *VIP quality guarantee*\n"
+    msg += "⚡ *Express processing*"
+    
+    keyboard = []
+    
+    # Deduplicate variants by size and price
+    unique_variants = {}
+    for variant in variants:
+        size = variant['size']
+        price = variant['price']
+        key = f"{size}_{price:.2f}"
+        
+        if key not in unique_variants:
+            unique_variants[key] = variant
+    
+    # Create premium variant cards
+    for variant in unique_variants.values():
+        size = variant['size']
+        price = variant['price']
+        available = variant['available']
+        product_id = variant['id']
+        
+        # Premium pricing display
+        button_text = f"💎 {size} - {price:.2f}€ Premium"
+        callback_data = f"modern_product_select|{product_id}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    # Premium navigation
+    keyboard.extend([
+        [InlineKeyboardButton("⬅️ Back to Catalog", callback_data=f"modern_district_select|{city_name}|{district_name}")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_product_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern card-style product details with premium purchase options"""
+    query = update.callback_query
+    if not params:
+        await query.answer("Invalid product selection", show_alert=True)
+        return
+    
+    product_id = params[0]
+    
+    # Get product details from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, city, district, product_type, size, price, available, name, original_text
+            FROM products WHERE id = %s
+        """, (product_id,))
+        product = c.fetchone()
+    except Exception as e:
+        logger.error(f"Error loading product {product_id}: {e}")
+        await query.answer("Error loading premium product", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+            
+    if not product:
+        await query.answer("Premium product not found", show_alert=True)
+        return
+        
+    city_name = product['city']
+    district_name = product['district']
+    product_type = product['product_type']
+    size = product['size']
+    price = product['price']
+    available = product['available']
+    
+    # Store product selection for purchase
+    context.user_data['selected_product_id'] = product_id
+    product_dict = {
+        'id': product_id,
+        'city': city_name,
+        'district': district_name,
+        'product_type': product_type,
+        'size': size,
+        'price': price,
+        'available': available
+    }
+    context.user_data['selected_product'] = product_dict
+    
+    from utils import get_product_emoji
+    emoji = get_product_emoji(product_type)
+    
+    # Premium product details display
+    msg = f"🏙️ **{city_name.upper()}** | 🏘️ **{district_name.upper()}**\n\n"
+    msg += f"╔═══════════════════════════╗\n"
+    msg += f"║  {emoji} **PREMIUM SELECTION** {emoji}  ║\n"
+    msg += f"╚═══════════════════════════╝\n\n"
+    msg += f"🎯 **Product:** {product_type.title()}\n"
+    msg += f"📏 **Size:** {size}\n"
+    msg += f"💰 **Premium Price:** {price:.2f}€\n"
+    msg += f"📦 **Available:** {available} units\n\n"
+    msg += f"🏆 **VIP Quality Guarantee**\n"
+    msg += f"⚡ **Express Processing Ready**"
+    
+    keyboard = [
+        [InlineKeyboardButton("💳 Premium Purchase", callback_data=f"modern_pay_options|{product_id}")],
+        [InlineKeyboardButton("🎫 Apply VIP Code", callback_data=f"modern_discount_code|{product_id}")],
+        [InlineKeyboardButton("⬅️ Back to Variants", callback_data=f"modern_product_type|{city_name}|{district_name}|{product_type}"),
+         InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_pay_options(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern premium payment processing"""
+    # Use existing payment system with modern styling
+    from user import handle_pay_single_item
+    
+    # Get product details from context
+    product = context.user_data.get('selected_product')
+    if not product:
+        await update.callback_query.answer("Product selection lost", show_alert=True)
+        return
+    
+    # Convert to format expected by handle_pay_single_item
+    city_id = product['city']
+    district_id = product['district']
+    product_type = product['product_type']
+    size = product['size']
+    price = product['price']
+    
+    new_params = [city_id, district_id, product_type, size, price]
+    await handle_pay_single_item(update, context, new_params)
+
+async def handle_modern_discount_code(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern premium discount code application"""
+    # Use existing discount system
+    from user import handle_apply_discount_single_pay
+    
+    # Get product details from context
+    product = context.user_data.get('selected_product')
+    if not product:
+        await update.callback_query.answer("Product selection lost", show_alert=True)
+        return
+    
+    await handle_apply_discount_single_pay(update, context, params)
+
+async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern hot deals interface"""
+    query = update.callback_query
+    
+    msg = "🔥 **PREMIUM HOT DEALS** 🔥\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║   💥 **LIMITED TIME ONLY**   ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🎯 *Exclusive VIP offers*\n"
+    msg += "⏰ *Limited quantity available*\n"
+    msg += "💎 *Premium products only*\n\n"
+    msg += "🚀 **Coming Soon - Stay Tuned!**"
+    
+    keyboard = [
+        [InlineKeyboardButton("🛍️ Browse Premium Shop", callback_data="modern_shop")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_profile(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern premium profile interface"""
+    query = update.callback_query
+    
+    msg = "👤 **VIP ACCOUNT DASHBOARD** 👤\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║   🏆 **PREMIUM MEMBER**    ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "💎 *VIP status active*\n"
+    msg += "🚀 *Premium features unlocked*\n"
+    msg += "🏆 *Exclusive access granted*\n\n"
+    msg += "📊 **Account details coming soon**"
+    
+    keyboard = [
+        [InlineKeyboardButton("💰 Premium Wallet", callback_data="modern_wallet")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern premium wallet interface"""
+    query = update.callback_query
+    
+    msg = "💰 **PREMIUM WALLET** 💰\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║   💎 **VIP BALANCE**      ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "🏆 *Premium payment methods*\n"
+    msg += "⚡ *Instant transactions*\n"
+    msg += "🔒 *Secure VIP processing*\n\n"
+    msg += "💳 **Wallet features coming soon**"
+    
+    keyboard = [
+        [InlineKeyboardButton("👤 Back to Profile", callback_data="modern_profile")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_promotions(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern premium promotions interface"""
+    query = update.callback_query
+    
+    msg = "🎯 **VIP PROMOTIONS** 🎯\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║  🎁 **EXCLUSIVE OFFERS**   ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "💎 *VIP-only promotions*\n"
+    msg += "🏆 *Premium member benefits*\n"
+    msg += "🎁 *Exclusive reward system*\n\n"
+    msg += "🚀 **Premium rewards coming soon**"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔥 Hot Deals", callback_data="modern_deals")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_app(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Modern premium app info interface"""
+    query = update.callback_query
+    
+    msg = "📱 **PREMIUM APP INFO** 📱\n\n"
+    msg += "╔═══════════════════════════╗\n"
+    msg += "║   🚀 **VIP EXPERIENCE**    ║\n"
+    msg += "╚═══════════════════════════╝\n\n"
+    msg += "💎 **Premium Features:**\n"
+    msg += "• 🏆 VIP customer support\n"
+    msg += "• ⚡ Lightning-fast delivery\n"
+    msg += "• 🔒 Secure premium payments\n"
+    msg += "• 🎯 Exclusive product access\n"
+    msg += "• 💰 Premium wallet system\n\n"
+    msg += "🌟 **Welcome to the premium experience!**"
+    
+    keyboard = [
+        [InlineKeyboardButton("🛍️ Start Premium Shopping", callback_data="modern_shop")],
+        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_modern_home(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Return to modern premium home"""
+    return await handle_modern_welcome(update, context, params)
+
 # --- END OF FILE marketing_promotions.py ---

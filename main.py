@@ -84,7 +84,12 @@ from marketing_promotions import (
     handle_minimalist_city_select, handle_minimalist_district_select, 
     handle_minimalist_product_type, handle_minimalist_product_select,
     handle_minimalist_pay_options, handle_minimalist_discount_code,
-    handle_minimalist_home, handle_minimalist_profile, handle_minimalist_topup
+    handle_minimalist_home, handle_minimalist_profile, handle_minimalist_topup,
+    handle_modern_welcome, handle_modern_shop, handle_modern_city_select,
+    handle_modern_district_select, handle_modern_product_type, handle_modern_product_select,
+    handle_modern_pay_options, handle_modern_discount_code, handle_modern_deals,
+    handle_modern_profile, handle_modern_wallet, handle_modern_promotions,
+    handle_modern_app, handle_modern_home
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -844,6 +849,21 @@ def callback_query_router(func):
                 "minimalist_home": handle_minimalist_home,
                 "minimalist_profile": handle_minimalist_profile,
                 "minimalist_topup": handle_minimalist_topup,
+                # Modern UI Theme Handlers
+                "modern_welcome": handle_modern_welcome,
+                "modern_shop": handle_modern_shop,
+                "modern_city_select": handle_modern_city_select,
+                "modern_district_select": handle_modern_district_select,
+                "modern_product_type": handle_modern_product_type,
+                "modern_product_select": handle_modern_product_select,
+                "modern_pay_options": handle_modern_pay_options,
+                "modern_discount_code": handle_modern_discount_code,
+                "modern_deals": handle_modern_deals,
+                "modern_profile": handle_modern_profile,
+                "modern_wallet": handle_modern_wallet,
+                "modern_promotions": handle_modern_promotions,
+                "modern_app": handle_modern_app,
+                "modern_home": handle_modern_home,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
