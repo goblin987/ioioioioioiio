@@ -167,6 +167,7 @@ def init_marketing_tables():
             menu_name TEXT NOT NULL UNIQUE,
             menu_display_name TEXT NOT NULL,
             button_layout TEXT NOT NULL,
+            header_message TEXT DEFAULT NULL,
             is_active BOOLEAN DEFAULT TRUE,
             template_id INTEGER,
             created_by BIGINT NOT NULL,
@@ -190,6 +191,18 @@ def init_marketing_tables():
             else:
                 logger.warning(f"⚠️ Could not add unique constraint to menu_name: {e}")
             # Continue with initialization
+        
+        # Add header_message column if it doesn't exist
+        try:
+            c.execute("ALTER TABLE bot_menu_layouts ADD COLUMN header_message TEXT DEFAULT NULL")
+            conn.commit()
+            logger.info("✅ Added header_message column to bot_menu_layouts")
+        except Exception as e:
+            conn.rollback()
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                pass
+            else:
+                logger.warning(f"⚠️ Could not add header_message column: {e}")
         
         # Insert default themes if not exists (with proper error handling)
         try:
@@ -1244,6 +1257,103 @@ def map_button_text_to_callback(button_text):
     }
     
     return button_mapping.get(button_text, 'noop')  # Default to noop if not found
+
+def get_available_variables(menu_name):
+    """Get available dynamic variables for a specific menu"""
+    # Base variables available in all menus
+    base_variables = {
+        '{user_mention}': 'User\'s name or @username',
+        '{user_first_name}': 'User\'s first name',
+        '{user_id}': 'User\'s Telegram ID',
+        '{balance}': 'User\'s current balance',
+        '{total_purchases}': 'User\'s total purchase count'
+    }
+    
+    # Menu-specific variables
+    menu_variables = {
+        'start_menu': {
+            '{vip_level}': 'User\'s VIP level status',
+            '{referral_code}': 'User\'s referral code',
+            '{last_purchase}': 'Date of last purchase',
+            '{basket_count}': 'Items in current basket'
+        },
+        'city_menu': {
+            '{available_cities}': 'Number of available cities',
+            '{selected_city}': 'Currently selected city'
+        },
+        'district_menu': {
+            '{city_name}': 'Selected city name',
+            '{available_districts}': 'Number of districts in city'
+        },
+        'payment_menu': {
+            '{item_name}': 'Selected product name',
+            '{item_price}': 'Product price',
+            '{item_size}': 'Product size/weight',
+            '{discount_available}': 'Available discount percentage'
+        }
+    }
+    
+    # Combine base and menu-specific variables
+    all_variables = base_variables.copy()
+    if menu_name in menu_variables:
+        all_variables.update(menu_variables[menu_name])
+    
+    return all_variables
+
+def get_default_header_message(menu_name):
+    """Get default header message for a menu"""
+    default_messages = {
+        'start_menu': 'Welcome back, {user_mention}! 💰 Balance: {balance} EUR\n\nChoose an option:',
+        'city_menu': '🏙️ Choose Your City\n\nSelect a city to browse products:',
+        'district_menu': '🏘️ {city_name} Districts\n\nSelect a district:',
+        'payment_menu': '💳 Payment Options\n\n{item_name} - {item_size}\nPrice: {item_price} EUR'
+    }
+    
+    return default_messages.get(menu_name, f'{menu_name.replace("_", " ").title()}\n\nChoose an option:')
+
+def process_dynamic_variables(message, user_data=None, context_data=None):
+    """Process dynamic variables in a message"""
+    if not message:
+        return message
+    
+    # Default user data if not provided
+    if not user_data:
+        user_data = {
+            'user_mention': 'User',
+            'user_first_name': 'User',
+            'user_id': '123456789',
+            'balance': '0.00',
+            'total_purchases': '0',
+            'vip_level': 'Standard',
+            'referral_code': 'REF123',
+            'last_purchase': 'Never',
+            'basket_count': '0'
+        }
+    
+    # Default context data if not provided
+    if not context_data:
+        context_data = {
+            'available_cities': '4',
+            'selected_city': 'Vilnius',
+            'city_name': 'Vilnius',
+            'available_districts': '3',
+            'item_name': 'Product',
+            'item_price': '10.00',
+            'item_size': '1g',
+            'discount_available': '0'
+        }
+    
+    # Combine all data
+    all_data = {**user_data, **context_data}
+    
+    # Replace variables in message
+    processed_message = message
+    for variable, value in all_data.items():
+        placeholder = f'{{{variable}}}'
+        if placeholder in processed_message:
+            processed_message = processed_message.replace(placeholder, str(value))
+    
+    return processed_message
 
 def get_product_emoji(product_type):
     """Get emoji for product type"""
@@ -2957,7 +3067,33 @@ async def handle_bot_edit_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     
     menu_display_name = menu_type.replace('_', ' ').title()
     
+    # Get current header message from context or database
+    current_header = context.user_data.get(f'editing_header_{menu_type}')
+    if not current_header:
+        # Try to load from database
+        conn = None
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT header_message FROM bot_menu_layouts WHERE menu_name = %s AND created_by = %s", 
+                     (menu_type, query.from_user.id))
+            result = c.fetchone()
+            current_header = result['header_message'] if result else get_default_header_message(menu_type)
+        except Exception as e:
+            logger.error(f"Error loading header message: {e}")
+            current_header = get_default_header_message(menu_type)
+        finally:
+            if conn:
+                conn.close()
+    
     msg = f"🎛️ **EDITING: {menu_display_name}** 🎛️\n\n"
+    
+    # Header Message Section
+    msg += "💬 **Header Message / Welcome Text:**\n"
+    processed_header = process_dynamic_variables(current_header)
+    msg += f"```\n{processed_header}\n```\n"
+    msg += "📝 _Click 'Edit Header' to customize this message_\n\n"
+    
     msg += "🎯 **How to Use:**\n"
     msg += "1️⃣ Click a button from the top board to select it\n"
     msg += "2️⃣ Click an empty slot below to place it\n"
@@ -3013,12 +3149,182 @@ async def handle_bot_edit_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     
     # Control buttons
     keyboard.extend([
+        [InlineKeyboardButton("📝 Edit Header", callback_data=f"bot_edit_header|{menu_type}"),
+         InlineKeyboardButton("🔧 Variables", callback_data=f"bot_show_variables|{menu_type}")],
         [InlineKeyboardButton("💾 Save Menu", callback_data=f"bot_save_menu|{menu_type}")],
         [InlineKeyboardButton("🗑️ Clear All", callback_data=f"bot_clear_menu|{menu_type}")],
         [InlineKeyboardButton("⬅️ Back to Menu List", callback_data="bot_look_custom")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_edit_header(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit header message for a menu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu selection", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    menu_display_name = menu_type.replace('_', ' ').title()
+    
+    # Get current header message
+    current_header = context.user_data.get(f'editing_header_{menu_type}')
+    if not current_header:
+        # Try to load from database
+        conn = None
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT header_message FROM bot_menu_layouts WHERE menu_name = %s AND created_by = %s", 
+                     (menu_type, query.from_user.id))
+            result = c.fetchone()
+            current_header = result['header_message'] if result else get_default_header_message(menu_type)
+        except Exception as e:
+            logger.error(f"Error loading header message: {e}")
+            current_header = get_default_header_message(menu_type)
+        finally:
+            if conn:
+                conn.close()
+    
+    # Set state for receiving new header message
+    context.user_data['state'] = 'awaiting_header_message'
+    context.user_data['editing_header_menu'] = menu_type
+    
+    msg = f"📝 **EDIT HEADER MESSAGE** 📝\n\n"
+    msg += f"🎛️ **Menu:** {menu_display_name}\n\n"
+    msg += f"**Current Header:**\n```\n{current_header}\n```\n\n"
+    msg += f"**Preview with Variables:**\n"
+    processed_header = process_dynamic_variables(current_header)
+    msg += f"```\n{processed_header}\n```\n\n"
+    msg += f"💬 **Type your new header message:**\n"
+    msg += f"• Use variables like `{{user_mention}}`, `{{balance}}`, etc.\n"
+    msg += f"• Use \\n for line breaks\n"
+    msg += f"• Click 'Variables' to see all available options"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔧 Show Variables", callback_data=f"bot_show_variables|{menu_type}")],
+        [InlineKeyboardButton("🔄 Reset to Default", callback_data=f"bot_reset_header|{menu_type}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"bot_edit_menu|{menu_type}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_show_variables(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show available variables for a menu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu selection", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    menu_display_name = menu_type.replace('_', ' ').title()
+    available_vars = get_available_variables(menu_type)
+    
+    msg = f"🔧 **AVAILABLE VARIABLES** 🔧\n\n"
+    msg += f"🎛️ **Menu:** {menu_display_name}\n\n"
+    msg += f"📋 **Variables you can use:**\n\n"
+    
+    for variable, description in available_vars.items():
+        msg += f"`{variable}` - {description}\n"
+    
+    msg += f"\n💡 **Usage Examples:**\n"
+    msg += f"• `Welcome back, {{user_mention}}!`\n"
+    msg += f"• `Balance: {{balance}} EUR`\n"
+    msg += f"• `You are a {{vip_level}} member`\n\n"
+    msg += f"📝 **Copy and paste variables into your header message**"
+    
+    keyboard = [
+        [InlineKeyboardButton("📝 Edit Header", callback_data=f"bot_edit_header|{menu_type}")],
+        [InlineKeyboardButton("⬅️ Back to Editor", callback_data=f"bot_edit_menu|{menu_type}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_bot_reset_header(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Reset header message to default"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu selection", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    default_header = get_default_header_message(menu_type)
+    
+    # Store in context
+    context.user_data[f'editing_header_{menu_type}'] = default_header
+    
+    await query.answer("✅ Header reset to default!", show_alert=True)
+    
+    # Return to header editor
+    await handle_bot_edit_header(update, context, params)
+
+async def handle_header_message_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle header message input from admin"""
+    user_id = update.effective_user.id
+    
+    # Check if we're expecting a header message
+    if context.user_data.get('state') != 'awaiting_header_message':
+        return  # Not in header editing mode
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    menu_type = context.user_data.get('editing_header_menu')
+    if not menu_type:
+        await update.message.reply_text("❌ Error: Menu type not found. Please try again.")
+        context.user_data['state'] = None
+        return
+    
+    new_header = update.message.text.strip()
+    
+    # Validate header message
+    if not new_header:
+        await update.message.reply_text(
+            "❌ **Empty Message**\n\nHeader message cannot be empty.\n\n💬 **Try again:**"
+        )
+        return
+    
+    if len(new_header) > 1000:
+        await update.message.reply_text(
+            "❌ **Message Too Long**\n\nHeader message must be 1000 characters or less.\n\n💬 **Try again:**"
+        )
+        return
+    
+    # Store the new header message in context
+    context.user_data[f'editing_header_{menu_type}'] = new_header
+    
+    # Clear state
+    context.user_data['state'] = None
+    context.user_data['editing_header_menu'] = None
+    
+    # Show preview and success message
+    processed_header = process_dynamic_variables(new_header)
+    
+    msg = "✅ **HEADER MESSAGE UPDATED** ✅\n\n"
+    msg += f"**Your Message:**\n```\n{new_header}\n```\n\n"
+    msg += f"**Preview with Variables:**\n```\n{processed_header}\n```\n\n"
+    msg += f"💾 **Don't forget to save your menu!**"
+    
+    keyboard = [
+        [InlineKeyboardButton("⬅️ Back to Editor", callback_data=f"bot_edit_menu|{menu_type}")],
+        [InlineKeyboardButton("💾 Save Menu Now", callback_data=f"bot_save_menu|{menu_type}")]
+    ]
+    
+    await update.message.reply_text(
+        msg, 
+        reply_markup=InlineKeyboardMarkup(keyboard), 
+        parse_mode='Markdown'
+    )
 
 async def handle_bot_select_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Select a button from the available buttons board"""
@@ -3163,6 +3469,7 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     
     menu_type = params[0]
     current_layout = context.user_data.get(f'editing_layout_{menu_type}', [[]])
+    current_header = context.user_data.get(f'editing_header_{menu_type}')
     
     # Clean up layout (remove empty rows and buttons)
     cleaned_layout = []
@@ -3174,6 +3481,10 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     if not cleaned_layout:
         await query.answer("❌ Cannot save empty layout", show_alert=True)
         return
+    
+    # Use default header if none set
+    if not current_header:
+        current_header = get_default_header_message(menu_type)
     
     # Save to database
     conn = None
@@ -3188,16 +3499,18 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             c.execute("""
                 INSERT INTO bot_menu_layouts 
-                (menu_name, menu_display_name, button_layout, created_by)
-                VALUES (%s, %s, %s, %s)
+                (menu_name, menu_display_name, button_layout, header_message, created_by)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (menu_name) 
                 DO UPDATE SET 
                     button_layout = EXCLUDED.button_layout,
+                    header_message = EXCLUDED.header_message,
                     updated_at = CURRENT_TIMESTAMP
             """, (
                 menu_type,
                 menu_display_name,
                 json.dumps(cleaned_layout),
+                current_header,
                 query.from_user.id
             ))
         except Exception as conflict_error:
@@ -3210,19 +3523,20 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
                 # Update existing
                 c.execute("""
                     UPDATE bot_menu_layouts 
-                    SET button_layout = %s, updated_at = CURRENT_TIMESTAMP
+                    SET button_layout = %s, header_message = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE menu_name = %s
-                """, (json.dumps(cleaned_layout), menu_type))
+                """, (json.dumps(cleaned_layout), current_header, menu_type))
             else:
                 # Insert new
                 c.execute("""
                     INSERT INTO bot_menu_layouts 
-                    (menu_name, menu_display_name, button_layout, created_by)
-                    VALUES (%s, %s, %s, %s)
+                    (menu_name, menu_display_name, button_layout, header_message, created_by)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (
                     menu_type,
                     menu_display_name,
                     json.dumps(cleaned_layout),
+                    current_header,
                     query.from_user.id
                 ))
         
