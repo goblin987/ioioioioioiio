@@ -89,7 +89,10 @@ from marketing_promotions import (
     handle_modern_district_select, handle_modern_product_type, handle_modern_product_select,
     handle_modern_pay_options, handle_modern_discount_code, handle_modern_deals,
     handle_modern_deal_select, handle_modern_profile, handle_modern_wallet, 
-    handle_modern_promotions, handle_modern_app, handle_modern_home
+    handle_modern_promotions, handle_modern_app, handle_modern_home,
+    handle_admin_hot_deals_menu, handle_admin_add_hot_deal, handle_admin_hot_deal_product,
+    handle_admin_deal_custom_price, handle_admin_deal_discount, handle_admin_deal_title_only,
+    handle_admin_manage_hot_deals
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -865,6 +868,14 @@ def callback_query_router(func):
                 "modern_promotions": handle_modern_promotions,
                 "modern_app": handle_modern_app,
                 "modern_home": handle_modern_home,
+                # Hot Deals Management Handlers
+                "admin_hot_deals_menu": handle_admin_hot_deals_menu,
+                "admin_add_hot_deal": handle_admin_add_hot_deal,
+                "admin_hot_deal_product": handle_admin_hot_deal_product,
+                "admin_deal_custom_price": handle_admin_deal_custom_price,
+                "admin_deal_discount": handle_admin_deal_discount,
+                "admin_deal_title_only": handle_admin_deal_title_only,
+                "admin_manage_hot_deals": handle_admin_manage_hot_deals,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
