@@ -97,7 +97,8 @@ from marketing_promotions import (
     handle_admin_bot_look_editor, handle_bot_look_presets, handle_bot_preset_select,
     handle_bot_look_custom, handle_bot_edit_menu, handle_bot_select_button,
     handle_bot_place_button, handle_bot_remove_button, handle_bot_add_row, handle_bot_save_menu,
-    handle_bot_clear_menu, handle_bot_save_layout, handle_bot_look_preview
+    handle_bot_clear_menu, handle_bot_save_layout, handle_bot_look_preview, handle_bot_name_layout,
+    handle_bot_custom_select, handle_template_name_message
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -901,6 +902,8 @@ def callback_query_router(func):
                 "bot_clear_menu": handle_bot_clear_menu,
                 "bot_save_layout": handle_bot_save_layout,
                 "bot_look_preview": handle_bot_look_preview,
+                "bot_name_layout": handle_bot_name_layout,
+                "bot_custom_select": handle_bot_custom_select,
                 "bot_noop": handle_marketing_promotions_menu,  # Placeholder for separator buttons
             }
 
@@ -1013,6 +1016,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_bulk_price': admin.handle_adm_bulk_price_message,
         'awaiting_bulk_drop_details': admin.handle_adm_bulk_drop_details_message,
         'awaiting_bulk_messages': admin.handle_adm_bulk_drop_details_message,
+        
+        # Template naming handler (from marketing_promotions.py)
+        'awaiting_template_name': handle_template_name_message,
 
         # User Management States (from viewer_admin.py)
         'awaiting_balance_adjustment_amount': handle_adjust_balance_amount_message,

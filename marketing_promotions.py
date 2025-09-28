@@ -2671,10 +2671,11 @@ async def handle_bot_look_presets(update: Update, context: ContextTypes.DEFAULT_
         return await query.answer("Access denied.", show_alert=True)
     
     msg = "📋 **PRESET TEMPLATES** 📋\n\n"
-    msg += "🎯 **Choose a Professional Layout:**\n\n"
     
     keyboard = []
     
+    # Add built-in preset templates
+    msg += "🎯 **Built-in Professional Layouts:**\n\n"
     for template_key, template_data in PRESET_TEMPLATES.items():
         msg += f"**{template_data['name']}**\n"
         msg += f"*{template_data['description']}*\n\n"
@@ -2683,6 +2684,42 @@ async def handle_bot_look_presets(update: Update, context: ContextTypes.DEFAULT_
             f"📋 {template_data['name']}", 
             callback_data=f"bot_preset_select|{template_key}"
         )])
+    
+    # Add custom templates from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT template_name, template_description, created_by
+            FROM bot_layout_templates 
+            WHERE is_preset = FALSE
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+        
+        custom_templates = c.fetchall()
+        
+        if custom_templates:
+            msg += "\n🎨 **Your Custom Templates:**\n\n"
+            for template in custom_templates:
+                template_name = template['template_name']
+                description = template['template_description'] or "Custom layout"
+                
+                msg += f"**{template_name}**\n"
+                msg += f"*{description}*\n\n"
+                
+                keyboard.append([InlineKeyboardButton(
+                    f"🎨 {template_name}", 
+                    callback_data=f"bot_custom_select|{template_name}"
+                )])
+    
+    except Exception as e:
+        logger.error(f"Error loading custom templates: {e}")
+    finally:
+        if conn:
+            conn.close()
     
     keyboard.extend([
         [InlineKeyboardButton("🎨 Make Your Own Instead", callback_data="bot_look_custom")],
@@ -2784,6 +2821,92 @@ async def handle_bot_preset_select(update: Update, context: ContextTypes.DEFAULT
         
     except Exception as e:
         logger.error(f"Error applying preset template: {e}")
+        await query.answer("❌ Error applying template", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_bot_custom_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply selected custom template"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid template selection", show_alert=True)
+        return
+    
+    template_name = params[0]
+    
+    # Load custom template from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT template_name, template_description, layout_config
+            FROM bot_layout_templates 
+            WHERE template_name = %s AND is_preset = FALSE
+        """, (template_name,))
+        
+        template = c.fetchone()
+        
+        if not template:
+            await query.answer("Template not found", show_alert=True)
+            return
+        
+        import json
+        layout_config = json.loads(template['layout_config'])
+        
+        # Clear existing menu layouts for this admin
+        c.execute("DELETE FROM bot_menu_layouts WHERE created_by = %s", (query.from_user.id,))
+        
+        # Apply custom template layouts
+        applied_menus = []
+        for menu_name, menu_config in layout_config.items():
+            display_name = menu_config.get('display_name', menu_name.replace('_', ' ').title())
+            button_layout = menu_config.get('button_layout', [])
+            
+            try:
+                c.execute("""
+                    INSERT INTO bot_menu_layouts 
+                    (menu_name, menu_display_name, button_layout, created_by)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    menu_name,
+                    display_name,
+                    json.dumps(button_layout),
+                    query.from_user.id
+                ))
+                applied_menus.append(display_name)
+            except Exception as menu_error:
+                logger.error(f"Error applying menu {menu_name}: {menu_error}")
+        
+        conn.commit()
+        
+        msg = f"✅ **CUSTOM TEMPLATE APPLIED** ✅\n\n"
+        msg += f"🎨 **Template:** `{template_name}`\n"
+        msg += f"📋 **Applied Menus:** {len(applied_menus)}\n\n"
+        
+        if applied_menus:
+            msg += "**Menus Updated:**\n"
+            for menu in applied_menus:
+                msg += f"• {menu}\n"
+        
+        msg += f"\n🚀 **Your custom layout is now active!**\n"
+        msg += f"📱 **Test it:** Type `/start` to see your layout"
+        
+        keyboard = [
+            [InlineKeyboardButton("🎨 Customize Further", callback_data="bot_look_custom")],
+            [InlineKeyboardButton("👀 Preview Layout", callback_data="bot_look_preview")],
+            [InlineKeyboardButton("⬅️ Back to Templates", callback_data="bot_look_presets")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error applying custom template: {e}")
         await query.answer("❌ Error applying template", show_alert=True)
     finally:
         if conn:
@@ -3256,8 +3379,8 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
             msg += f"🎨 **Saved {len(saved_menus)} menus:**\n"
             for menu in saved_menus:
                 msg += f"• {menu}\n"
-            msg += f"\n🚀 **Your bot now uses these custom layouts!**\n"
-            msg += f"📱 **Test it:** Type `/start` to see your new UI"
+            msg += f"\n🎯 **Next Step: Name Your Custom Layout**\n"
+            msg += f"Give your custom layout a name to save it as a template!"
         elif saved_menus and errors:
             msg = "⚠️ **PARTIALLY SAVED** ⚠️\n\n"
             msg += f"✅ **Saved {len(saved_menus)} menus:**\n"
@@ -3277,8 +3400,9 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
             msg += "Edit some menus first, then save."
         
         keyboard = [
-            [InlineKeyboardButton("🎨 Continue Editing", callback_data="bot_look_custom")],
+            [InlineKeyboardButton("📝 Name This Layout", callback_data="bot_name_layout")],
             [InlineKeyboardButton("👀 Preview Layouts", callback_data="bot_look_preview")],
+            [InlineKeyboardButton("🎨 Continue Editing", callback_data="bot_look_custom")],
             [InlineKeyboardButton("⬅️ Back to Bot Look", callback_data="admin_bot_look_editor")]
         ]
         
@@ -3287,6 +3411,165 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         logger.error(f"Error in global save: {e}")
         await query.answer("❌ Error saving layouts", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_bot_name_layout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Prompt admin to name their custom layout"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Check if there are saved layouts to name
+    menu_types = ['start_menu', 'city_menu', 'district_menu', 'payment_menu']
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("SELECT COUNT(*) as count FROM bot_menu_layouts WHERE created_by = %s", (query.from_user.id,))
+        existing_layouts_count = c.fetchone()['count']
+        
+        if existing_layouts_count == 0:
+            await query.answer("❌ No layouts to name. Create some layouts first.", show_alert=True)
+            return
+        
+        # Set state for receiving template name
+        context.user_data['awaiting_template_name'] = True
+        
+        msg = "📝 **NAME YOUR CUSTOM LAYOUT** 📝\n\n"
+        msg += "🎨 **Create a Template**\n\n"
+        msg += "Give your custom layout a **unique name** to save it as a reusable template.\n\n"
+        msg += "**Examples:**\n"
+        msg += "• `Gaming Layout`\n"
+        msg += "• `Minimalist Design`\n"
+        msg += "• `VIP Customer UI`\n"
+        msg += "• `Quick Access Menu`\n\n"
+        msg += "💬 **Type your template name:**"
+        
+        keyboard = [
+            [InlineKeyboardButton("❌ Cancel", callback_data="bot_look_custom")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error in name layout: {e}")
+        await query.answer("❌ Error starting naming process", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_template_name_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle template name input from admin"""
+    user_id = update.effective_user.id
+    
+    # Check if we're expecting a template name
+    if not context.user_data.get('awaiting_template_name'):
+        return  # Not in naming mode
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    template_name = update.message.text.strip()
+    
+    # Validate template name
+    if not template_name or len(template_name) < 2:
+        await update.message.reply_text(
+            "❌ **Invalid Name**\n\nTemplate name must be at least 2 characters long.\n\n💬 **Try again:**"
+        )
+        return
+    
+    if len(template_name) > 50:
+        await update.message.reply_text(
+            "❌ **Name Too Long**\n\nTemplate name must be 50 characters or less.\n\n💬 **Try again:**"
+        )
+        return
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Check if template name already exists
+        c.execute("SELECT id FROM bot_layout_templates WHERE template_name = %s", (template_name,))
+        existing = c.fetchone()
+        
+        if existing:
+            await update.message.reply_text(
+                f"❌ **Name Already Exists**\n\nA template named `{template_name}` already exists.\n\n💬 **Choose a different name:**"
+            )
+            return
+        
+        # Get current layouts to save as template
+        c.execute("""
+            SELECT menu_name, menu_display_name, button_layout
+            FROM bot_menu_layouts 
+            WHERE created_by = %s AND is_active = TRUE
+        """, (user_id,))
+        
+        layouts = c.fetchall()
+        
+        if not layouts:
+            await update.message.reply_text(
+                "❌ **No Layouts Found**\n\nNo saved layouts to create template from.\n\nCreate some layouts first."
+            )
+            context.user_data['awaiting_template_name'] = False
+            return
+        
+        # Create template configuration
+        import json
+        template_config = {}
+        for layout in layouts:
+            template_config[layout['menu_name']] = {
+                'display_name': layout['menu_display_name'],
+                'button_layout': json.loads(layout['button_layout'])
+            }
+        
+        # Save as template
+        c.execute("""
+            INSERT INTO bot_layout_templates 
+            (template_name, template_description, layout_config, is_preset, created_by)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            template_name,
+            f"Custom template created by admin",
+            json.dumps(template_config),
+            False,  # Not a preset, it's custom
+            user_id
+        ))
+        
+        conn.commit()
+        
+        # Clear naming state
+        context.user_data['awaiting_template_name'] = False
+        
+        # Success message
+        msg = "✅ **TEMPLATE CREATED** ✅\n\n"
+        msg += f"🎨 **Template Name:** `{template_name}`\n"
+        msg += f"📋 **Saved Menus:** {len(layouts)}\n\n"
+        msg += "🚀 **Your template is now available in:**\n"
+        msg += "• **UI Theme Designer** → **Preset Templates**\n"
+        msg += "• **Edit Bot Look** → **Preset Templates**\n\n"
+        msg += "📱 **Test your layout:** Type `/start` to see it in action!"
+        
+        keyboard = [
+            [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="ui_theme_designer")],
+            [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="admin_bot_look_editor")],
+            [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
+        ]
+        
+        await update.message.reply_text(
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating template: {e}")
+        await update.message.reply_text("❌ Error creating template. Please try again.")
+        context.user_data['awaiting_template_name'] = False
     finally:
         if conn:
             conn.close()
