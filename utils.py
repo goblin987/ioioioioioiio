@@ -1524,51 +1524,65 @@ def init_db():
             for table_name in user_id_tables:
                 try:
                     c.execute(f"ALTER TABLE {table_name} ALTER COLUMN user_id TYPE BIGINT")
+                    conn.commit()  # Commit successful ALTER
                     logger.info(f"✅ {table_name}.user_id converted to BIGINT")
                 except Exception as e:
+                    conn.rollback()  # Rollback failed transaction
                     logger.info(f"ℹ️ {table_name}.user_id already BIGINT or conversion not needed: {e}")
             
             # Handle referral tables with special user_id columns
             try:
                 c.execute("ALTER TABLE referrals ALTER COLUMN referrer_user_id TYPE BIGINT")
                 c.execute("ALTER TABLE referrals ALTER COLUMN referred_user_id TYPE BIGINT")
+                conn.commit()  # Commit successful ALTER
                 logger.info(f"✅ referrals user_id columns converted to BIGINT")
             except Exception as e:
+                conn.rollback()  # Rollback failed transaction
                 logger.info(f"ℹ️ referrals user_id columns already BIGINT: {e}")
             
             # Handle admin_log admin_id and target_user_id
             try:
                 c.execute("ALTER TABLE admin_log ALTER COLUMN admin_id TYPE BIGINT")
                 c.execute("ALTER TABLE admin_log ALTER COLUMN target_user_id TYPE BIGINT")
+                conn.commit()  # Commit successful ALTER
                 logger.info(f"✅ admin_log admin/target user_id columns converted to BIGINT")
             except Exception as e:
+                conn.rollback()  # Rollback failed transaction
                 logger.info(f"ℹ️ admin_log admin/target user_id columns already BIGINT: {e}")
             
             # Handle reseller_discounts
             try:
                 c.execute("ALTER TABLE reseller_discounts ALTER COLUMN reseller_user_id TYPE BIGINT")
+                conn.commit()  # Commit successful ALTER
                 logger.info(f"✅ reseller_discounts.reseller_user_id converted to BIGINT")
             except Exception as e:
+                conn.rollback()  # Rollback failed transaction
                 logger.info(f"ℹ️ reseller_discounts.reseller_user_id already BIGINT: {e}")
             
             # Handle products table added_by column
             try:
                 c.execute("ALTER TABLE products ALTER COLUMN added_by TYPE BIGINT")
+                conn.commit()  # Commit successful ALTER
                 logger.info(f"✅ products.added_by converted to BIGINT")
             except Exception as e:
+                conn.rollback()  # Rollback failed transaction
                 logger.info(f"ℹ️ products.added_by already BIGINT: {e}")
             
-            # Verify products.added_by column type
-            c.execute("""
-                SELECT column_name, data_type 
-                FROM information_schema.columns 
-                WHERE table_name = 'products' AND column_name = 'added_by'
-            """)
-            col_info = c.fetchone()
-            if col_info:
-                logger.info(f"🔍 products.added_by column type: {col_info['data_type']}")
-            else:
-                logger.warning(f"⚠️ products.added_by column not found!")
+            # Verify products.added_by column type (in a new transaction)
+            try:
+                c.execute("""
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'products' AND column_name = 'added_by'
+                """)
+                col_info = c.fetchone()
+                if col_info:
+                    logger.info(f"🔍 products.added_by column type: {col_info['data_type']}")
+                else:
+                    logger.warning(f"⚠️ products.added_by column not found!")
+            except Exception as e:
+                conn.rollback()  # Rollback if verification fails
+                logger.warning(f"⚠️ Could not verify products.added_by column type: {e}")
             
             logger.info(f"✅ All user_id columns converted to BIGINT")
 
