@@ -169,7 +169,12 @@ try:
         handle_price_new_price_message, handle_price_set_quick, handle_price_show_all_products,
         handle_price_change_history, handle_price_bulk_updates, handle_price_bulk_increase,
         handle_price_bulk_decrease, handle_price_bulk_apply, handle_price_city_products,
-        handle_price_category_products, init_price_editor_tables
+        handle_price_category_products, init_price_editor_tables,
+        # New handlers for the redesigned price editor
+        handle_price_bulk_all_locations, handle_price_bulk_select, handle_price_edit_by_city_district,
+        handle_price_city_select, handle_price_city_district_select, handle_price_district_select,
+        handle_price_city_product_select, handle_price_district_product_select,
+        handle_price_city_apply, handle_price_district_apply
     )
 except ImportError:
     import logging
@@ -796,6 +801,17 @@ def callback_query_router(func):
                 "price_bulk_apply": handle_price_bulk_apply,
                 "price_city_products": handle_price_city_products,
                 "price_category_products": handle_price_category_products,
+                # New redesigned price editor handlers
+                "price_bulk_all_locations": handle_price_bulk_all_locations,
+                "price_bulk_select": handle_price_bulk_select,
+                "price_edit_by_city_district": handle_price_edit_by_city_district,
+                "price_city_select": handle_price_city_select,
+                "price_city_district_select": handle_price_city_district_select,
+                "price_district_select": handle_price_district_select,
+                "price_city_product_select": handle_price_city_product_select,
+                "price_district_product_select": handle_price_district_product_select,
+                "price_city_apply": handle_price_city_apply,
+                "price_district_apply": handle_price_district_apply,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
