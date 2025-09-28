@@ -1219,7 +1219,7 @@ def init_db():
                 id SERIAL PRIMARY KEY, city TEXT NOT NULL, district TEXT NOT NULL,
                 product_type TEXT NOT NULL, size TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
-                added_by INTEGER, added_date TEXT
+                added_by BIGINT, added_date TEXT
             )''')
             logger.info(f"✅ Products table created successfully")
             
@@ -1550,6 +1550,13 @@ def init_db():
                 logger.info(f"✅ reseller_discounts.reseller_user_id converted to BIGINT")
             except Exception as e:
                 logger.info(f"ℹ️ reseller_discounts.reseller_user_id already BIGINT: {e}")
+            
+            # Handle products table added_by column
+            try:
+                c.execute("ALTER TABLE products ALTER COLUMN added_by TYPE BIGINT")
+                logger.info(f"✅ products.added_by converted to BIGINT")
+            except Exception as e:
+                logger.info(f"ℹ️ products.added_by already BIGINT: {e}")
             
             logger.info(f"✅ All user_id columns converted to BIGINT")
 

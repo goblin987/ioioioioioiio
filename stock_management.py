@@ -48,7 +48,7 @@ async def check_low_stock_alerts():
             WHERE stock_alerts_enabled = 1 
             AND available > 0 
             AND available <= low_stock_threshold
-            AND (last_stock_alert IS NULL OR last_stock_alert < ?)
+            AND (last_stock_alert IS NULL OR last_stock_alert < %s)
             ORDER BY available ASC
         """, (cooldown_time.isoformat(),))
         
@@ -113,7 +113,7 @@ async def check_low_stock_alerts():
             c.execute("""
                 INSERT INTO stock_alerts 
                 (product_id, alert_type, alert_message, created_at, notified_admins)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             """, (
                 product['id'],
                 'critical' if product['available'] <= CRITICAL_STOCK_THRESHOLD else 'low',
@@ -124,7 +124,7 @@ async def check_low_stock_alerts():
             
             # Update last alert time
             c.execute("""
-                UPDATE products SET last_stock_alert = ? WHERE id = ?
+                UPDATE products SET last_stock_alert = %s WHERE id = %s
             """, (now.isoformat(), product['id']))
         
         conn.commit()
@@ -166,7 +166,7 @@ def get_stock_summary() -> Dict:
         c.execute("""
             SELECT city, district, product_type, size, available, price
             FROM products 
-            WHERE available > 0 AND available <= ?
+            WHERE available > 0 AND available <= %s
             ORDER BY available ASC
             LIMIT 10
         """, (LOW_STOCK_THRESHOLD,))
@@ -197,7 +197,7 @@ async def update_stock_threshold(product_id: int, threshold: int) -> bool:
         c = conn.cursor()
         
         c.execute("""
-            UPDATE products SET low_stock_threshold = ? WHERE id = ?
+            UPDATE products SET low_stock_threshold = %s WHERE id = %s
         """, (threshold, product_id))
         
         if c.rowcount > 0:
@@ -225,7 +225,7 @@ async def toggle_stock_alerts(product_id: int, enabled: bool) -> bool:
         c = conn.cursor()
         
         c.execute("""
-            UPDATE products SET stock_alerts_enabled = ? WHERE id = ?
+            UPDATE products SET stock_alerts_enabled = %s WHERE id = %s
         """, (1 if enabled else 0, product_id))
         
         if c.rowcount > 0:
@@ -871,7 +871,7 @@ async def handle_stock_confirm_reset(update: Update, context: ContextTypes.DEFAU
         c = conn.cursor()
         
         # Reset all thresholds to default
-        c.execute("UPDATE products SET low_stock_threshold = ?", (LOW_STOCK_THRESHOLD,))
+        c.execute("UPDATE products SET low_stock_threshold = %s", (LOW_STOCK_THRESHOLD,))
         updated_count = c.rowcount
         conn.commit()
         

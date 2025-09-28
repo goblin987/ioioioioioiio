@@ -5200,10 +5200,13 @@ async def handle_adm_new_type_name_message(update: Update, context: ContextTypes
     context.user_data["new_type_name"] = type_name
     context.user_data["state"] = "awaiting_new_type_emoji"
     
-    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="adm_manage_types")]]
+    keyboard = [
+        [InlineKeyboardButton("⏭️ Skip Emoji", callback_data="adm_skip_type_emoji")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="adm_manage_types")]
+    ]
     await send_message_with_retry(context.bot, update.effective_chat.id, 
         f"🧩 Product Type: {type_name}\n\n"
-        "✍️ Please reply with a single emoji for this product type:", 
+        "✍️ Please reply with an emoji for this product type, or click 'Skip Emoji' to use default:", 
         reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
 
 async def handle_adm_new_type_emoji_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -5233,6 +5236,24 @@ async def handle_adm_new_type_emoji_message(update: Update, context: ContextType
         f"🧩 Product Type: {emoji} {type_name}\n\n"
         "📝 Please reply with a description for this product type (or send 'skip' to leave empty):", 
         reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+
+async def handle_adm_skip_type_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handles skipping emoji selection for new product type."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Use default emoji and proceed to description
+    type_name = context.user_data.get("new_type_name", "Unknown")
+    context.user_data["new_type_emoji"] = "🧩"  # Default emoji
+    context.user_data["state"] = "awaiting_new_type_description"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="adm_manage_types")]]
+    await query.edit_message_text(
+        f"🧩 Product Type: 🧩 {type_name}\n\n"
+        "📝 Please reply with a description for this product type (or send 'skip' to leave empty):", 
+        reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    await query.answer("Using default emoji 🧩")
 
 async def handle_adm_new_type_description_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles new product type description input and creates the type."""
