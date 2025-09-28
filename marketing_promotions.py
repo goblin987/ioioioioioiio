@@ -328,11 +328,18 @@ async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAUL
     msg = theme['welcome_message']
     
     # Create clean, centered button layout - 2 rows as requested
-    keyboard = [
+    keyboard = []
+    
+    # Add admin panel button for admins at the top
+    if is_primary_admin(user_id):
+        keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
+    
+    # Add regular user buttons
+    keyboard.extend([
         [InlineKeyboardButton("🛍️ Shop", callback_data="minimalist_shop")],
         [InlineKeyboardButton("👤 Profile", callback_data="minimalist_profile"), 
          InlineKeyboardButton("💳 Top Up", callback_data="minimalist_topup")]
-    ]
+    ])
     
     await send_message_with_retry(
         context.bot, chat_id, msg, 
@@ -807,8 +814,10 @@ async def handle_minimalist_product_select(update: Update, context: ContextTypes
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_minimalist_pay_options(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Show payment options: balance or discount code"""
+    """Handle Pay Now - check balance and process payment"""
     query = update.callback_query
+    user_id = query.from_user.id
+    
     if not params:
         await query.answer("Invalid payment selection", show_alert=True)
         return
@@ -820,20 +829,210 @@ async def handle_minimalist_pay_options(update: Update, context: ContextTypes.DE
         await query.answer("Product selection expired", show_alert=True)
         return
     
-    emoji = get_product_emoji(product['product_type'])
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get user balance
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        user_result = c.fetchone()
+        user_balance = user_result['balance'] if user_result else 0.0
+        
+        # Check if user has sufficient balance
+        product_price = float(product['price'])
+        
+        if user_balance >= product_price:
+            # User has sufficient balance - process payment with balance
+            await process_balance_payment(query, context, product, user_balance)
+        else:
+            # User doesn't have sufficient balance - show crypto payment options
+            await show_crypto_payment_options(query, context, product, user_balance)
+            
+    except Exception as e:
+        logger.error(f"Error processing payment for user {user_id}: {e}")
+        await query.answer("Payment error occurred", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def process_balance_payment(query, context, product, user_balance):
+    """Process payment using user's balance"""
+    user_id = query.from_user.id
+    product_id = product['id']
+    product_price = float(product['price'])
     
-    msg = f"💳 **Payment Options**\n\n"
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN")
+        
+        # Reserve the product
+        c.execute("""
+            UPDATE products 
+            SET reserved = reserved + 1 
+            WHERE id = %s AND available > reserved
+        """, (product_id,))
+        
+        if c.rowcount == 0:
+            await query.answer("Product no longer available", show_alert=True)
+            return
+        
+        # Deduct from user balance
+        new_balance = user_balance - product_price
+        c.execute("""
+            UPDATE users 
+            SET balance = %s, total_purchases = total_purchases + 1 
+            WHERE user_id = %s
+        """, (new_balance, user_id))
+        
+        # Record the purchase
+        c.execute("""
+            INSERT INTO purchases (user_id, product_id, price, payment_method, status)
+            VALUES (%s, %s, %s, 'balance', 'completed')
+        """, (user_id, product_id, product_price))
+        
+        # Reduce product availability
+        c.execute("""
+            UPDATE products 
+            SET available = available - 1, reserved = reserved - 1
+            WHERE id = %s
+        """, (product_id,))
+        
+        conn.commit()
+        
+        # Send product to user
+        await send_product_to_user(query, context, product, new_balance)
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Error processing balance payment: {e}")
+        await query.answer("Payment failed", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def show_crypto_payment_options(query, context, product, user_balance):
+    """Show crypto payment options when balance is insufficient"""
+    emoji = get_product_emoji(product['product_type'])
+    product_price = float(product['price'])
+    needed = product_price - user_balance
+    
+    msg = f"💳 **Crypto Payment Required**\n\n"
     msg += f"{emoji} **{product['product_type']} {product['size']}**\n"
-    msg += f"💰 **Price:** **{product['price']:.2f} EUR**\n\n"
-    msg += "**Choose payment method:**"
+    msg += f"💰 **Price:** **{product_price:.2f} EUR**\n"
+    msg += f"💳 **Your Balance:** **{user_balance:.2f} EUR**\n"
+    msg += f"💸 **Need to Pay:** **{needed:.2f} EUR**\n\n"
+    msg += "**Choose cryptocurrency:**"
     
     keyboard = [
-        [InlineKeyboardButton("💳 Buy Now", callback_data=f"minimalist_buy_now|{product_id}")],
-        [InlineKeyboardButton("🎁 Enter Discount Code", callback_data=f"minimalist_discount_code|{product_id}")],
-        [InlineKeyboardButton("⬅️ Back", callback_data=f"minimalist_product_select|{product_id}")]
+        [InlineKeyboardButton("₿ Bitcoin", callback_data=f"minimalist_crypto_pay|{product['id']}|bitcoin")],
+        [InlineKeyboardButton("💎 Ethereum", callback_data=f"minimalist_crypto_pay|{product['id']}|ethereum")],
+        [InlineKeyboardButton("🪙 Litecoin", callback_data=f"minimalist_crypto_pay|{product['id']}|litecoin")],
+        [InlineKeyboardButton("⬅️ Back", callback_data=f"minimalist_product_select|{product['id']}")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def send_product_to_user(query, context, product, new_balance):
+    """Send product information to user after successful payment"""
+    user_id = query.from_user.id
+    emoji = get_product_emoji(product['product_type'])
+    
+    msg = f"✅ **Payment Successful!**\n\n"
+    msg += f"{emoji} **Product:** {product['product_type']} {product['size']}\n"
+    msg += f"💰 **Paid:** {product['price']:.2f} EUR\n"
+    msg += f"💳 **New Balance:** {new_balance:.2f} EUR\n\n"
+    msg += f"📦 **Your Product Details:**\n"
+    msg += f"🏙️ **Location:** {product['city']} → {product['district']}\n"
+    msg += f"📱 **Order ID:** #{product['id']}\n\n"
+    msg += "**Thank you for your purchase!** 🎉\n"
+    msg += "Your product is ready for pickup at the specified location."
+    
+    keyboard = [
+        [InlineKeyboardButton("🛍️ Shop More", callback_data="minimalist_shop")],
+        [InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_minimalist_discount_code(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle discount code application"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not params:
+        await query.answer("Invalid discount request", show_alert=True)
+        return
+    
+    product_id = int(params[0])
+    product = context.user_data.get('selected_product')
+    
+    if not product:
+        await query.answer("Product selection expired", show_alert=True)
+        return
+    
+    # Set state for discount code input
+    context.user_data['state'] = 'awaiting_discount_code'
+    context.user_data['discount_product_id'] = product_id
+    
+    emoji = get_product_emoji(product['product_type'])
+    
+    msg = f"🎫 **Enter Discount Code**\n\n"
+    msg += f"{emoji} **{product['product_type']} {product['size']}**\n"
+    msg += f"💰 **Original Price:** **{product['price']:.2f} EUR**\n\n"
+    msg += "**Please send your discount code:**\n"
+    msg += "• Normal discount codes\n"
+    msg += "• Reseller discounts\n" 
+    msg += "• VIP level discounts\n"
+    msg += "• Custom promotional codes"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"minimalist_product_select|{product_id}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_minimalist_crypto_pay(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle crypto payment selection"""
+    query = update.callback_query
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid crypto payment selection", show_alert=True)
+        return
+    
+    product_id = int(params[0])
+    crypto_type = params[1]
+    product = context.user_data.get('selected_product')
+    
+    if not product:
+        await query.answer("Product selection expired", show_alert=True)
+        return
+    
+    emoji = get_product_emoji(product['product_type'])
+    crypto_emoji = {"bitcoin": "₿", "ethereum": "💎", "litecoin": "🪙"}.get(crypto_type, "💰")
+    
+    msg = f"💳 **Crypto Payment**\n\n"
+    msg += f"{emoji} **{product['product_type']} {product['size']}**\n"
+    msg += f"💰 **Price:** **{product['price']:.2f} EUR**\n"
+    msg += f"{crypto_emoji} **Payment Method:** **{crypto_type.title()}**\n\n"
+    msg += "**Payment Instructions:**\n"
+    msg += "1. A payment invoice will be generated\n"
+    msg += "2. Send the exact amount to the provided address\n"
+    msg += "3. Product will be delivered after confirmation\n\n"
+    msg += "**Processing payment...**"
+    
+    keyboard = [
+        [InlineKeyboardButton("⬅️ Back to Payment", callback_data=f"minimalist_pay_options|{product_id}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    
+    # Here you would integrate with your crypto payment processor
+    # For now, we'll show a placeholder message
+    await query.answer("Crypto payment integration needed", show_alert=True)
 
 def get_product_emoji(product_type):
     """Get emoji for product type"""

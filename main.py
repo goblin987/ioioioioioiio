@@ -83,8 +83,8 @@ from marketing_promotions import (
     handle_select_ui_theme, handle_minimalist_welcome, handle_minimalist_shop,
     handle_minimalist_city_select, handle_minimalist_district_select, 
     handle_minimalist_product_type, handle_minimalist_product_select,
-    handle_minimalist_pay_options, handle_minimalist_home, handle_minimalist_profile,
-    handle_minimalist_topup
+    handle_minimalist_pay_options, handle_minimalist_discount_code, handle_minimalist_crypto_pay,
+    handle_minimalist_home, handle_minimalist_profile, handle_minimalist_topup
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -839,7 +839,8 @@ def callback_query_router(func):
                 "minimalist_product_type": handle_minimalist_product_type,
                 "minimalist_product_select": handle_minimalist_product_select,
                 "minimalist_pay_options": handle_minimalist_pay_options,
-                "minimalist_discount_code": handle_marketing_promotions_menu,  # Placeholder for discount code
+                "minimalist_discount_code": handle_minimalist_discount_code,
+                "minimalist_crypto_pay": handle_minimalist_crypto_pay,
                 "minimalist_home": handle_minimalist_home,
                 "minimalist_profile": handle_minimalist_profile,
                 "minimalist_topup": handle_minimalist_topup,
