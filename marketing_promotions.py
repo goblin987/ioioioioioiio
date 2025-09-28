@@ -163,21 +163,21 @@ def get_active_ui_theme():
                 'style_config': eval(result['style_config']) if result['style_config'] else {}
             }
         else:
-            # Return default minimalist theme
+            # Return default classic theme (original interface)
             return {
-                'theme_name': 'minimalist',
+                'theme_name': 'classic',
                 'welcome_message': "Welcome to our store! 🛍️\n\nChoose an option below:",
                 'button_layout': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
-                'style_config': UI_THEMES['minimalist']
+                'style_config': UI_THEMES['classic']
             }
             
     except Exception as e:
         logger.error(f"Error getting active UI theme: {e}")
         return {
-            'theme_name': 'minimalist',
+            'theme_name': 'classic',
             'welcome_message': "Welcome to our store! 🛍️\n\nChoose an option below:",
             'button_layout': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
-            'style_config': UI_THEMES['minimalist']
+            'style_config': UI_THEMES['classic']
         }
     finally:
         if conn:
