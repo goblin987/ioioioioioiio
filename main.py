@@ -84,8 +84,7 @@ from marketing_promotions import (
     handle_minimalist_city_select, handle_minimalist_district_select, 
     handle_minimalist_product_type, handle_minimalist_product_select,
     handle_minimalist_pay_options, handle_minimalist_home, handle_minimalist_profile,
-    handle_minimalist_topup, handle_user_ui_theme_selector, handle_user_select_theme,
-    handle_user_preview_minimalist
+    handle_minimalist_topup
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -835,10 +834,6 @@ def callback_query_router(func):
                 "minimalist_home": handle_minimalist_home,
                 "minimalist_profile": handle_minimalist_profile,
                 "minimalist_topup": handle_minimalist_topup,
-                # User UI theme selection handlers
-                "user_ui_theme_selector": handle_user_ui_theme_selector,
-                "user_select_theme": handle_user_select_theme,
-                "user_preview_minimalist": handle_user_preview_minimalist,
             }
 
             target_func = KNOWN_HANDLERS.get(command)
@@ -1006,7 +1001,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Handle document uploads
                 bot = get_testforwarder_bot()
                 await bot.handle_document(update, context)
-    else:
+            else:
                 await handle_testforwarder_message(update, context)
             return  # If testforwarder handled it, don't process further
         except Exception as e:
