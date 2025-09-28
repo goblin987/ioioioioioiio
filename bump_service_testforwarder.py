@@ -422,9 +422,12 @@ class BumpService:
                 )
             ''')
             
-            # Add missing columns to existing tables if they don't exist
-            cursor.execute("PRAGMA table_info(ad_campaigns)")
-            columns = [column[1] for column in cursor.fetchall()]
+            # Add missing columns to existing tables if they don't exist (PostgreSQL version)
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'ad_campaigns' AND table_schema = 'public'
+            """)
+            columns = [row[0] for row in cursor.fetchall()]
             if 'buttons' not in columns:
                 cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN buttons TEXT')
                 logger.info("Added buttons column to ad_campaigns table")

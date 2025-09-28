@@ -948,7 +948,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error sending ban message to user {user_id}: {e}")
         return
     
-    # Always try testforwarder bot first for text messages and documents
+    # Check for admin/user state handlers FIRST
+    handler_func = STATE_HANDLERS.get(state)
+    if handler_func:
+        logger.info(f"🔍 STATE: Handling state '{state}' for user {user_id}")
+        await handler_func(update, context)
+        return
+    
+    # If no state handler, try testforwarder bot for text messages and documents
     if update.message and (update.message.text or update.message.document):
         logger.info(f"🔍 MESSAGE: Routing to testforwarder bot for user {user_id}")
         try:
@@ -962,12 +969,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
-    # Fallback to state handlers if testforwarder didn't handle it
-    handler_func = STATE_HANDLERS.get(state)
-    if handler_func:
-        await handler_func(update, context)
-    else:
-        logger.debug(f"No handler found for user {user_id} in state: {state}")
+    # No handler found
+    logger.debug(f"No handler found for user {user_id} in state: {state}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
