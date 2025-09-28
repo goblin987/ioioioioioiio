@@ -646,8 +646,19 @@ async def handle_minimalist_product_type(update: Update, context: ContextTypes.D
     
     keyboard = []
     
-    # Create size/price buttons - wide buttons as requested
+    # YOLO MODE: Deduplicate variants by size and price (like original version)
+    unique_variants = {}
     for variant in variants:
+        size = variant['size']
+        price = variant['price']
+        key = f"{size}_{price:.2f}"  # Create unique key for size+price combo
+        
+        # Only keep first occurrence of each size+price combination
+        if key not in unique_variants:
+            unique_variants[key] = variant
+    
+    # Create size/price buttons - wide buttons as requested
+    for variant in unique_variants.values():
         size = variant['size']
         price = variant['price']
         available = variant['available']
