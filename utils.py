@@ -1170,12 +1170,18 @@ def init_db():
             logger.info(f"✅ Users table created successfully")
             
             # Handle existing tables: ALTER user_id columns from INTEGER to BIGINT for Telegram compatibility
-            logger.info(f"🔧 Ensuring user_id columns are BIGINT for Telegram compatibility...")
+            logger.info(f"🔧 CRITICAL: Ensuring user_id columns are BIGINT for Telegram compatibility...")
             try:
+                logger.info(f"🔧 EXECUTING: ALTER TABLE users ALTER COLUMN user_id TYPE BIGINT")
                 c.execute("ALTER TABLE users ALTER COLUMN user_id TYPE BIGINT")
-                logger.info(f"✅ Users.user_id converted to BIGINT")
+                conn.commit()  # Ensure the ALTER TABLE is committed immediately
+                logger.info(f"✅ SUCCESS: Users.user_id converted to BIGINT and committed")
             except Exception as e:
-                logger.info(f"ℹ️ Users.user_id already BIGINT or conversion not needed: {e}")
+                logger.error(f"❌ FAILED: Users.user_id conversion failed: {e}")
+                logger.error(f"❌ ERROR TYPE: {type(e).__name__}")
+                logger.error(f"❌ ERROR DETAILS: {str(e)}")
+                # Don't silently ignore - this is critical!
+                conn.rollback()  # Rollback on failure
             
             # Note: All columns are already included in the CREATE TABLE statement above
             logger.info(f"✅ Users table columns are already complete")
@@ -2830,8 +2836,8 @@ def get_expired_payments_for_notification():
             SELECT pd.user_id, u.language
             FROM pending_deposits pd
             JOIN users u ON pd.user_id = u.user_id
-            WHERE pd.is_purchase = 1 
-            AND pd.created_at < ? 
+            WHERE pd.is_purchase = TRUE 
+            AND pd.created_at < %s 
             ORDER BY pd.created_at
         """, (cutoff_datetime.isoformat(),))
         
@@ -2874,8 +2880,8 @@ def clean_expired_pending_payments():
         c.execute("""
             SELECT payment_id, user_id, basket_snapshot_json, created_at
             FROM pending_deposits 
-            WHERE is_purchase = 1 
-            AND created_at < ? 
+            WHERE is_purchase = TRUE 
+            AND created_at < %s 
             ORDER BY created_at
         """, (cutoff_datetime.isoformat(),))
         
