@@ -193,7 +193,29 @@ async def _prepare_and_confirm_drop(
                 try:
                     logger.info(f"Downloading media {i+1}/{len(collected_media_info)} ({file_id}) to {temp_file_path}")
                     file_obj = await context.bot.get_file(file_id)
-                    await file_obj.download_to_drive(custom_path=temp_file_path)
+                    
+                    # Add timeout and retry logic for media download
+                    max_retries = 3
+                    timeout_seconds = 30
+                    
+                    for retry in range(max_retries):
+                        try:
+                            # Use asyncio.wait_for to add timeout
+                            await asyncio.wait_for(
+                                file_obj.download_to_drive(custom_path=temp_file_path),
+                                timeout=timeout_seconds
+                            )
+                            break  # Success, exit retry loop
+                        except asyncio.TimeoutError:
+                            logger.warning(f"Media download timeout (attempt {retry + 1}/{max_retries}) for {file_id}")
+                            if retry == max_retries - 1:
+                                raise IOError(f"Media download timed out after {max_retries} attempts ({timeout_seconds}s each)")
+                        except Exception as e:
+                            logger.warning(f"Media download error (attempt {retry + 1}/{max_retries}) for {file_id}: {e}")
+                            if retry == max_retries - 1:
+                                raise
+                            await asyncio.sleep(1)  # Brief delay before retry
+                    
                     if not await asyncio.to_thread(os.path.exists, temp_file_path) or await asyncio.to_thread(os.path.getsize, temp_file_path) == 0:
                         raise IOError(f"Downloaded file {temp_file_path} is missing or empty.")
                     media_list_for_db.append({"type": media_type, "path": temp_file_path, "file_id": file_id})
@@ -1863,7 +1885,11 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
                     else: file_extension = ".bin"
                 
                 temp_file_path = os.path.join(temp_dir, f"media_{i}_{int(time.time())}{file_extension}")
-                await file_obj.download_to_drive(temp_file_path)
+                # Add timeout for media download
+                await asyncio.wait_for(
+                    file_obj.download_to_drive(temp_file_path),
+                    timeout=30
+                )
                 media_item["path"] = temp_file_path
             except Exception as e:
                 logger.error(f"Error downloading media for bulk operation: {e}")
@@ -3219,8 +3245,11 @@ async def handle_adm_bot_media_message(update: Update, context: ContextTypes.DEF
         # Ensure media directory exists
         await asyncio.to_thread(os.makedirs, MEDIA_DIR, exist_ok=True)
         
-        # Download the file
-        await file_obj.download_to_drive(media_path)
+        # Download the file with timeout
+        await asyncio.wait_for(
+            file_obj.download_to_drive(media_path),
+            timeout=30
+        )
         
         # Save bot media configuration
         await save_bot_media_config(media_type, media_path)
@@ -5002,7 +5031,11 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
                             else: file_extension = ".bin"
                         
                         temp_file_path = os.path.join(temp_dir, f"media_{j}_{int(time.time())}{file_extension}")
-                        await file_obj.download_to_drive(temp_file_path)
+                        # Add timeout for media download
+                        await asyncio.wait_for(
+                            file_obj.download_to_drive(temp_file_path),
+                            timeout=30
+                        )
                         media_item["path"] = temp_file_path
                     except Exception as e:
                         logger.error(f"Error downloading media for bulk message {message_number}: {e}")
