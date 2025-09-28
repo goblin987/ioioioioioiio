@@ -549,54 +549,69 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # Create product grid as requested - each row has product name + weight/price buttons
-    for product_type, type_products in product_groups.items():
-        emoji = get_product_emoji(product_type)
-        
-        # Create row for this product type
-        row = []
-        
-        # First button: Product name (acts as header/identifier - blank button)
-        product_name_btn = InlineKeyboardButton(
-            f"{emoji} {product_type}", 
-            callback_data="ignore"  # Blank button that does nothing
-        )
-        row.append(product_name_btn)
-        
-        # Add weight/price buttons for this product type (max 3-4 per row to fit)
-        weight_buttons = []
-        for product in type_products[:3]:  # Limit to 3 variants per row for clean layout
-            price_text = f"{product['price']:.0f}€ {product['size']}"
-            weight_btn = InlineKeyboardButton(
-                price_text,
-                callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+    # IMPLEMENT VISUAL SYMMETRY as specified:
+    # 1. Product Type Row: Equal width buttons, calc(100% / N) where N = total products
+    # 2. Price/Weight Options: Equal width within each product, calc(100% / options_count)
+    
+    # Step 1: Create Product Type Row (First Row) with perfect symmetry
+    product_types = list(product_groups.keys())
+    total_product_types = len(product_types)
+    
+    if total_product_types > 0:
+        # First row: Product type buttons with equal width (calc(100% / N))
+        product_type_row = []
+        for product_type in product_types:
+            emoji = get_product_emoji(product_type)
+            product_name_btn = InlineKeyboardButton(
+                f"{emoji} {product_type}",
+                callback_data="ignore"  # Blank button that does nothing
             )
-            weight_buttons.append(weight_btn)
+            product_type_row.append(product_name_btn)
         
-        # Add the row with product name + weight/price options
-        if weight_buttons:
-            keyboard.append([product_name_btn] + weight_buttons)
-        else:
-            keyboard.append([product_name_btn])
+        # Add the symmetric product type row
+        keyboard.append(product_type_row)
         
-        # If there are more than 3 variants, add additional rows
-        remaining_products = type_products[3:]
-        while remaining_products:
-            extra_row = []
-            # Add empty space for alignment
-            extra_row.append(InlineKeyboardButton("   ", callback_data="ignore"))
+        # Step 2: Create Price/Weight Options Rows with perfect symmetry
+        for product_type in product_types:
+            type_products = product_groups[product_type]
+            total_options = len(type_products)
             
-            # Add next batch of weight/price buttons
-            for product in remaining_products[:3]:
-                price_text = f"{product['price']:.0f}€ {product['size']}"
-                weight_btn = InlineKeyboardButton(
-                    price_text,
-                    callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
-                )
-                extra_row.append(weight_btn)
+            if total_options == 0:
+                continue
+                
+            # Create rows of price/weight options with equal width
+            # Each option gets calc(100% / options_count) width
             
-            keyboard.append(extra_row)
-            remaining_products = remaining_products[3:]
+            if total_options <= 4:
+                # Single row: all options fit in one row with equal width
+                options_row = []
+                for product in type_products:
+                    price_text = f"{product['price']:.0f}€ {product['size']}"
+                    option_btn = InlineKeyboardButton(
+                        price_text,
+                        callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+                    )
+                    options_row.append(option_btn)
+                keyboard.append(options_row)
+                
+            else:
+                # Multiple rows: wrap to maintain symmetry
+                # Preferred: keep all options on single row if possible, otherwise balance across rows
+                options_per_row = min(4, total_options)  # Max 4 per row for readability
+                
+                for i in range(0, total_options, options_per_row):
+                    row_options = type_products[i:i + options_per_row]
+                    options_row = []
+                    
+                    for product in row_options:
+                        price_text = f"{product['price']:.0f}€ {product['size']}"
+                        option_btn = InlineKeyboardButton(
+                            price_text,
+                            callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+                        )
+                        options_row.append(option_btn)
+                    
+                    keyboard.append(options_row)
     
     # Navigation buttons
     keyboard.extend([
@@ -915,26 +930,65 @@ async def process_minimalist_balance_payment(query, context, product, user_balan
             conn.close()
 
 async def show_minimalist_crypto_options(query, context, product, user_balance):
-    """Show crypto payment options when balance is insufficient"""
-    emoji = get_product_emoji(product['product_type'])
+    """Show crypto payment options using the original working function"""
+    from user import SUPPORTED_CRYPTO, format_currency
+    from utils import is_currency_supported
+    
+    # Set up context for single item payment 
     product_price = float(product['price'])
-    needed = product_price - user_balance
-    
-    msg = f"💳 **Crypto Payment Required**\n\n"
-    msg += f"{emoji} **{product['product_type']} {product['size']}**\n"
-    msg += f"💰 **Price:** **{product_price:.2f} EUR**\n"
-    msg += f"💳 **Your Balance:** **{user_balance:.2f} EUR**\n"
-    msg += f"💸 **Need to Pay:** **{needed:.2f} EUR**\n\n"
-    msg += "**Choose cryptocurrency:**"
-    
-    keyboard = [
-        [InlineKeyboardButton("₿ Bitcoin", callback_data=f"select_basket_crypto|btc")],
-        [InlineKeyboardButton("💎 Ethereum", callback_data=f"select_basket_crypto|eth")],
-        [InlineKeyboardButton("🪙 Litecoin", callback_data=f"select_basket_crypto|ltc")],
-        [InlineKeyboardButton("⬅️ Back", callback_data=f"minimalist_product_select|{product['id']}")]
+    context.user_data['single_item_pay_final_eur'] = product_price
+    context.user_data['single_item_pay_snapshot'] = {
+        'product_id': product['id'],
+        'price': product_price,
+        'name': product['product_type'],
+        'size': product['size'],
+        'city': product['city'],
+        'district': product['district']
+    }
+    context.user_data['single_item_pay_back_params'] = [
+        product['city'], product['district'], product['product_type'], 
+        product['size'], str(product_price)
     ]
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    # Build crypto buttons using the original working logic
+    asset_buttons = []
+    row = []
+    supported_currencies = {}
+    
+    # Validate each currency against NOWPayments API (same as original)
+    for code, display_name in SUPPORTED_CRYPTO.items():
+        if is_currency_supported(code):
+            supported_currencies[code] = display_name
+        else:
+            logger.warning(f"Currency {code} not supported by NOWPayments API")
+    
+    # If no currencies are supported, show error
+    if not supported_currencies:
+        logger.error("No supported currencies found from NOWPayments API")
+        msg = "❌ No payment methods available at the moment. Please try again later."
+        back_callback = f"minimalist_product_select|{product['city']}|{product['district']}|{product['product_type']}|{product['size']}|{product['price']}"
+        kb = [[InlineKeyboardButton("⬅️ Back", callback_data=back_callback)]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=None)
+        return
+    
+    # Build buttons for supported currencies (same layout as original)
+    for code, display_name in supported_currencies.items():
+        row.append(InlineKeyboardButton(display_name, callback_data=f"select_basket_crypto|{code}"))
+        if len(row) >= 3:  # 3 buttons per row like original
+            asset_buttons.append(row)
+            row = []
+    if row: 
+        asset_buttons.append(row)
+
+    # Add back button - use the consistent navigation
+    back_callback = f"minimalist_district_select|{product['city']}|{product['district']}"
+    asset_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data=back_callback)])
+
+    # Use the original message format
+    amount_str = format_currency(product_price)
+    prompt_msg = f"Choose crypto to pay {amount_str} EUR for your items:"
+
+    await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(asset_buttons), parse_mode=None)
 
 async def send_minimalist_success_message(query, context, product, new_balance):
     """Send success message after payment"""
