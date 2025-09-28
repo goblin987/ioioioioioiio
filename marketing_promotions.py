@@ -327,18 +327,12 @@ async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAUL
     # Format minimalist welcome message
     msg = theme['welcome_message']
     
-    # Create clean, centered button layout
-    keyboard = []
-    for button_row in theme['button_layout']:
-        row = []
-        for button_text in button_row:
-            if button_text == '🛍️ Shop':
-                row.append(InlineKeyboardButton(button_text, callback_data="minimalist_shop"))
-            elif button_text == '👤 Profile':
-                row.append(InlineKeyboardButton(button_text, callback_data="minimalist_profile"))
-            elif button_text == '💳 Top Up':
-                row.append(InlineKeyboardButton(button_text, callback_data="minimalist_topup"))
-        keyboard.append(row)
+    # Create clean, centered button layout - 2 rows as requested
+    keyboard = [
+        [InlineKeyboardButton("🛍️ Shop", callback_data="minimalist_shop")],
+        [InlineKeyboardButton("👤 Profile", callback_data="minimalist_profile"), 
+         InlineKeyboardButton("💳 Top Up", callback_data="minimalist_topup")]
+    ]
     
     await send_message_with_retry(
         context.bot, chat_id, msg, 
@@ -478,10 +472,10 @@ async def handle_minimalist_city_select(update: Update, context: ContextTypes.DE
         callback_data = f"minimalist_district_select|{city_name}|{district_name}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
     
-    # Navigation buttons
-    keyboard.extend([
-        [InlineKeyboardButton("⬅️ Back to Cities", callback_data="minimalist_shop")],
-        [InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")]
+    # Navigation buttons on same row as requested
+    keyboard.append([
+        InlineKeyboardButton("⬅️ Back to Cities", callback_data="minimalist_shop"),
+        InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -555,10 +549,10 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         # Create row for this product type
         row = []
         
-        # First button: Product name (acts as header/identifier)
+        # First button: Product name (acts as header/identifier - blank button)
         product_name_btn = InlineKeyboardButton(
             f"{emoji} {product_type}", 
-            callback_data=f"minimalist_product_info|{product_type}"  # Info callback
+            callback_data="ignore"  # Blank button that does nothing
         )
         row.append(product_name_btn)
         
@@ -583,7 +577,7 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         while remaining_products:
             extra_row = []
             # Add empty space for alignment
-            extra_row.append(InlineKeyboardButton(" ", callback_data="ignore"))
+            extra_row.append(InlineKeyboardButton("   ", callback_data="ignore"))
             
             # Add next batch of weight/price buttons
             for product in remaining_products[:3]:
@@ -802,21 +796,13 @@ async def handle_minimalist_product_select(update: Update, context: ContextTypes
     # Check if user has sufficient balance
     has_balance = user_balance >= price
     
-    keyboard = []
-    
-    if has_balance:
-        # User has sufficient balance - show direct pay button
-        keyboard.append([InlineKeyboardButton("💳 Pay Now", callback_data=f"minimalist_pay_options|{product_id}")])
-    else:
-        # User needs to pay with crypto or top up
-        keyboard.append([InlineKeyboardButton("💳 Pay with Crypto", callback_data=f"minimalist_crypto_payment|{product_id}")])
-        keyboard.append([InlineKeyboardButton("💰 Top Up Balance", callback_data="minimalist_topup")])
-    
-    # Navigation
-    keyboard.extend([
-        [InlineKeyboardButton("⬅️ Back to Products", callback_data=f"minimalist_district_select|{city_name}|{district_name}")],
-        [InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")]
-    ])
+    # 4-button layout as requested: Pay Now, Apply Discount, Back to Products, Home
+    keyboard = [
+        [InlineKeyboardButton("💳 Pay Now", callback_data=f"minimalist_pay_options|{product_id}")],
+        [InlineKeyboardButton("🎫 Apply Discount Code", callback_data=f"minimalist_discount_code|{product_id}")],
+        [InlineKeyboardButton("⬅️ Back to Products", callback_data=f"minimalist_district_select|{city_name}|{district_name}"),
+         InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")]
+    ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
