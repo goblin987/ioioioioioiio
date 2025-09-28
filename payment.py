@@ -685,6 +685,35 @@ async def display_nowpayments_invoice(update: Update, context: ContextTypes.DEFA
         target_eur_display = format_currency(Decimal(str(target_eur_orig))) if target_eur_orig else "N/A"
         expiry_time_display = format_expiration_time(expiration_date_str)
 
+        # --- Calculate time remaining for better user experience ---
+        time_remaining_str = "Unknown"
+        try:
+            from datetime import datetime, timezone
+            import pytz
+            
+            if expiration_date_str:
+                # Parse expiration time
+                if not expiration_date_str.endswith('Z') and '+' not in expiration_date_str and '-' not in expiration_date_str[10:]:
+                    expiration_date_str += 'Z'
+                expiry_dt = datetime.fromisoformat(expiration_date_str.replace('Z', '+00:00'))
+                
+                # Calculate time remaining
+                now = datetime.now(timezone.utc)
+                time_diff = expiry_dt - now
+                
+                if time_diff.total_seconds() > 0:
+                    minutes = int(time_diff.total_seconds() // 60)
+                    if minutes > 60:
+                        hours = minutes // 60
+                        remaining_minutes = minutes % 60
+                        time_remaining_str = f"{hours}h {remaining_minutes}m"
+                    else:
+                        time_remaining_str = f"{minutes} minutes"
+                else:
+                    time_remaining_str = "EXPIRED"
+        except Exception:
+            time_remaining_str = "Unknown"
+
         invoice_title_template = lang_data.get("invoice_title_purchase", "*Payment Invoice Created*") if is_purchase_invoice else lang_data.get("invoice_title_refill", "*Top\\-Up Invoice Created*")
         amount_label = lang_data.get("amount_label", "*Amount:*")
         payment_address_label = lang_data.get("payment_address_label", "*Payment Address:*")
@@ -729,35 +758,6 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
         msg += f"\n{confirmation_note}"
 
         final_msg = msg.strip()
-
-        # --- Calculate time remaining for better user experience ---
-        time_remaining_str = "Unknown"
-        try:
-            from datetime import datetime, timezone
-            import pytz
-            
-            if expiration_date_str:
-                # Parse expiration time
-                if not expiration_date_str.endswith('Z') and '+' not in expiration_date_str and '-' not in expiration_date_str[10:]:
-                    expiration_date_str += 'Z'
-                expiry_dt = datetime.fromisoformat(expiration_date_str.replace('Z', '+00:00'))
-                
-                # Calculate time remaining
-                now = datetime.now(timezone.utc)
-                time_diff = expiry_dt - now
-                
-                if time_diff.total_seconds() > 0:
-                    minutes = int(time_diff.total_seconds() // 60)
-                    if minutes > 60:
-                        hours = minutes // 60
-                        remaining_minutes = minutes % 60
-                        time_remaining_str = f"{hours}h {remaining_minutes}m"
-                    else:
-                        time_remaining_str = f"{minutes} minutes"
-                else:
-                    time_remaining_str = "EXPIRED"
-        except Exception:
-            time_remaining_str = "Unknown"
 
         # --- Generate and send QR code ---
         qr_success = False
