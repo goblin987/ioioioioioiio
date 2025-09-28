@@ -65,6 +65,15 @@ class VIPManager:
                 updated_at TEXT
             )''')
             
+            # YOLO MODE: Force convert is_active column to BOOLEAN if it exists as INTEGER
+            try:
+                c.execute("ALTER TABLE vip_levels ALTER COLUMN is_active TYPE BOOLEAN USING is_active::BOOLEAN")
+                conn.commit()
+                logger.info("✅ VIP levels is_active column converted to BOOLEAN")
+            except Exception as e:
+                logger.info(f"VIP levels is_active column conversion: {e} (may already be correct type)")
+                conn.rollback()
+            
             # VIP benefits table
             c.execute('''CREATE TABLE IF NOT EXISTS vip_benefits (
                 id SERIAL PRIMARY KEY,

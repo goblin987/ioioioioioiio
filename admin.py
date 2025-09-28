@@ -1337,7 +1337,7 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
                      [InlineKeyboardButton("🔧 Admin Menu", callback_data="admin_menu"), InlineKeyboardButton("🏠 User Home", callback_data="back_start")] ]
         await send_message_with_retry(context.bot, chat_id, "What next%s", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except (Exception, OSError, Exception) as e:
-        try: conn.rollback() if conn and conn.in_transaction else None
+        try: conn.rollback() if conn and conn.status == 1 else None
         except Exception as rb_err: logger.error(f"Rollback failed: {rb_err}")
         logger.error(f"Error saving confirmed drop for user {user_id}: {e}", exc_info=True)
         await query.edit_message_text("❌ Error: Failed to save the drop. Please check logs and try again.", parse_mode=None)
@@ -4081,7 +4081,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
 
     except (Exception, ValueError, OSError, Exception) as e:
         logger.error(f"Error executing confirmed action '{action}': {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
         error_text = str(e)
         try: await query.edit_message_text(f"❌ An error occurred: {error_text}", parse_mode=None)
         except Exception as edit_err: logger.error(f"Failed to edit message with error: {edit_err}")
@@ -4593,19 +4593,25 @@ async def handle_adm_add_city_message(update: Update, context: ContextTypes.DEFA
     try:
         conn = get_db_connection() # Use helper
         c = conn.cursor()
-        c.execute("INSERT INTO cities (name) VALUES (%s)", (text,))
-        new_city_id = c.lastrowid
+        c.execute("INSERT INTO cities (name) VALUES (%s) RETURNING id", (text,))
+        new_city_result = c.fetchone()
+        new_city_id = new_city_result['id'] if new_city_result else None
         conn.commit()
         load_all_data() # Reload global data
         context.user_data.pop("state", None)
         success_text = f"✅ City '{text}' added successfully!"
         keyboard = [[InlineKeyboardButton("⬅️ Manage Cities", callback_data="adm_manage_cities")]]
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-    except sqlite3.IntegrityError:
-        await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{text}' already exists.", parse_mode=None)
+    except Exception as integrity_e:
+        if "unique" in str(integrity_e).lower() or "duplicate" in str(integrity_e).lower():
+            await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{text}' already exists.", parse_mode=None)
+        else:
+            logger.error(f"DB error adding city '{text}': {integrity_e}", exc_info=True)
+            await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add city.", parse_mode=None)
+        if conn and conn.status == 1: conn.rollback()
     except Exception as e:
         logger.error(f"DB error adding city '{text}': {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add city.", parse_mode=None)
         context.user_data.pop("state", None)
     finally:
@@ -4638,11 +4644,15 @@ async def handle_adm_add_district_message(update: Update, context: ContextTypes.
         success_text = f"✅ District '{text}' added to {city_name}!"
         keyboard = [[InlineKeyboardButton("⬅️ Manage Districts", callback_data=f"adm_manage_districts_city|{city_id_str}")]]
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-    except sqlite3.IntegrityError:
-        await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{text}' already exists in {city_name}.", parse_mode=None)
+    except Exception as integrity_e:
+        if "unique" in str(integrity_e).lower() or "duplicate" in str(integrity_e).lower():
+            await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{text}' already exists in {city_name}.", parse_mode=None)
+        else:
+            logger.error(f"DB error adding district '{text}': {integrity_e}", exc_info=True)
+            await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add district.", parse_mode=None)
     except (Exception, ValueError) as e:
         logger.error(f"DB/Value error adding district '{text}' to city {city_id_str}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add district.", parse_mode=None)
         context.user_data.pop("state", None); context.user_data.pop("admin_add_district_city_id", None)
     finally:
@@ -4699,7 +4709,7 @@ async def handle_adm_edit_district_message(update: Update, context: ContextTypes
         await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{new_name}' already exists.", parse_mode=None)
     except (Exception, ValueError) as e:
         logger.error(f"DB/Value error updating district {dist_id_str}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to update district.", parse_mode=None)
         context.user_data.pop("state", None); context.user_data.pop("edit_city_id", None); context.user_data.pop("edit_district_id", None)
     finally:
@@ -4755,7 +4765,7 @@ async def handle_adm_edit_city_message(update: Update, context: ContextTypes.DEF
         await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{new_name}' already exists.", parse_mode=None)
     except (Exception, ValueError) as e:
         logger.error(f"DB/Value error updating city {city_id_str}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn and conn.status == 1: conn.rollback()
         await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to update city.", parse_mode=None)
         context.user_data.pop("state", None); context.user_data.pop("edit_city_id", None)
     finally:

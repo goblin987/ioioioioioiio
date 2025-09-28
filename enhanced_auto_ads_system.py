@@ -261,7 +261,7 @@ def init_enhanced_auto_ads_tables():
         # Enhanced userbot accounts table
         c.execute("""
             CREATE TABLE IF NOT EXISTS userbot_accounts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 account_name TEXT NOT NULL,
                 phone_number TEXT,
                 api_id TEXT NOT NULL,
@@ -279,7 +279,7 @@ def init_enhanced_auto_ads_tables():
         # Enhanced auto ads campaigns with userbot support
         c.execute("""
             CREATE TABLE IF NOT EXISTS enhanced_auto_ads_campaigns (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 campaign_name TEXT NOT NULL,
                 userbot_account_id INTEGER,
                 content_text TEXT,
@@ -302,7 +302,7 @@ def init_enhanced_auto_ads_tables():
         # Enhanced channel management
         c.execute("""
             CREATE TABLE IF NOT EXISTS enhanced_channels (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 channel_name TEXT NOT NULL,
                 channel_id TEXT NOT NULL,
                 channel_username TEXT,
@@ -318,7 +318,7 @@ def init_enhanced_auto_ads_tables():
         # Campaign execution logs
         c.execute("""
             CREATE TABLE IF NOT EXISTS campaign_execution_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 campaign_id INTEGER NOT NULL,
                 channel_id TEXT NOT NULL,
                 execution_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

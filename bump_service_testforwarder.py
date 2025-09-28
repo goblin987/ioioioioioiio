@@ -382,7 +382,7 @@ class BumpService:
             # Ad campaigns table - Enhanced for multi-userbot support
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS ad_campaigns (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     user_id BIGINT,
                     account_id INTEGER,
                     campaign_name TEXT,
@@ -409,7 +409,7 @@ class BumpService:
             # Campaign execution logs for spam avoidance
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS campaign_execution_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     campaign_id INTEGER,
                     account_id INTEGER,
                     execution_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -462,7 +462,7 @@ class BumpService:
             # Ad performance tracking
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS ad_performance (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     campaign_id INTEGER,
                     user_id BIGINT,
                     target_chat TEXT,

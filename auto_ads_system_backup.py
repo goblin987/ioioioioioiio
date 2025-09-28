@@ -106,7 +106,7 @@ class AutoAdsDatabase:
             
             # Campaigns table
             c.execute('''CREATE TABLE IF NOT EXISTS auto_campaigns (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 campaign_type TEXT NOT NULL,
                 message TEXT NOT NULL,
@@ -126,7 +126,7 @@ class AutoAdsDatabase:
             
             # Campaign templates table
             c.execute('''CREATE TABLE IF NOT EXISTS campaign_templates (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 template_type TEXT NOT NULL,
                 message_template TEXT NOT NULL,
@@ -138,7 +138,7 @@ class AutoAdsDatabase:
             
             # Campaign logs table
             c.execute('''CREATE TABLE IF NOT EXISTS campaign_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 campaign_id INTEGER NOT NULL,
                 target_channel TEXT NOT NULL,
                 message_sent TEXT,
@@ -150,7 +150,7 @@ class AutoAdsDatabase:
             
             # Target channels table
             c.execute('''CREATE TABLE IF NOT EXISTS target_channels (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 channel_id TEXT NOT NULL UNIQUE,
                 channel_name TEXT NOT NULL,
                 channel_type TEXT DEFAULT 'channel',
