@@ -574,11 +574,17 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             row = []
             emoji = get_product_emoji(product_type)
             
-            # Create product name with consistent width using non-breaking spaces
+            # YOLO MODE: Force consistent width with visible padding
             product_name_base = f"{emoji} {product_type}"
-            spaces_needed = longest_product_name_length - len(product_name_base)
-            # Use non-breaking spaces (U+00A0) for padding - more reliable than regular spaces
-            padded_product_name = product_name_base + ("\u00A0" * spaces_needed)
+            # Calculate target width (longest product name + some buffer)
+            target_width = max(20, longest_product_name_length + 2)
+            
+            # Pad with underscores to force exact width - Telegram MUST respect this
+            if len(product_name_base) < target_width:
+                padding_needed = target_width - len(product_name_base)
+                padded_product_name = product_name_base + ("_" * padding_needed)
+            else:
+                padded_product_name = product_name_base
             
             # Product name button with consistent width (blank/non-clickable)
             product_name_btn = InlineKeyboardButton(
