@@ -392,13 +392,13 @@ class BumpService:
                     schedule_time TEXT,
                     buttons TEXT,
                     target_mode TEXT,
-                    is_active BOOLEAN DEFAULT 1,
-                    immediate_start BOOLEAN DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    immediate_start BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_run TIMESTAMP,
                     total_sends INTEGER DEFAULT 0,
                     additional_accounts TEXT,  -- JSON array of {account_id, delay_minutes, content_variation}
-                    spam_avoidance_enabled BOOLEAN DEFAULT 1,
+                    spam_avoidance_enabled BOOLEAN DEFAULT TRUE,
                     timing_variation_minutes INTEGER DEFAULT 5,
                     content_variations TEXT,  -- JSON array of message variations
                     FOREIGN KEY (user_id) REFERENCES users (user_id),
@@ -432,13 +432,13 @@ class BumpService:
                 cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN target_mode TEXT')
                 logger.info("Added target_mode column to ad_campaigns table")
             if 'immediate_start' not in columns:
-                cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN immediate_start BOOLEAN DEFAULT 0')
+                cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN immediate_start BOOLEAN DEFAULT FALSE')
                 logger.info("Added immediate_start column to ad_campaigns table")
             if 'additional_accounts' not in columns:
                 cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN additional_accounts TEXT')
                 logger.info("Added additional_accounts column to ad_campaigns table")
             if 'spam_avoidance_enabled' not in columns:
-                cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN spam_avoidance_enabled BOOLEAN DEFAULT 1')
+                cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN spam_avoidance_enabled BOOLEAN DEFAULT TRUE')
                 logger.info("Added spam_avoidance_enabled column to ad_campaigns table")
             if 'timing_variation_minutes' not in columns:
                 cursor.execute('ALTER TABLE ad_campaigns ADD COLUMN timing_variation_minutes INTEGER DEFAULT 5')

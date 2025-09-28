@@ -67,11 +67,22 @@ class VIPManager:
             
             # YOLO MODE: Force convert is_active column to BOOLEAN if it exists as INTEGER
             try:
-                c.execute("ALTER TABLE vip_levels ALTER COLUMN is_active TYPE BOOLEAN USING is_active::BOOLEAN")
-                conn.commit()
-                logger.info("✅ VIP levels is_active column converted to BOOLEAN")
+                # First check current column type
+                c.execute("SELECT data_type FROM information_schema.columns WHERE table_name = 'vip_levels' AND column_name = 'is_active'")
+                result = c.fetchone()
+                if result and result['data_type'] == 'integer':
+                    logger.info("🔧 VIP levels is_active column is INTEGER, converting to BOOLEAN...")
+                    # Drop and recreate the column with proper type
+                    c.execute("ALTER TABLE vip_levels DROP COLUMN IF EXISTS is_active")
+                    c.execute("ALTER TABLE vip_levels ADD COLUMN is_active BOOLEAN DEFAULT TRUE")
+                    # Update any existing records to have is_active = TRUE
+                    c.execute("UPDATE vip_levels SET is_active = TRUE WHERE is_active IS NULL")
+                    conn.commit()
+                    logger.info("✅ VIP levels is_active column converted to BOOLEAN")
+                else:
+                    logger.info(f"VIP levels is_active column type: {result['data_type'] if result else 'unknown'}")
             except Exception as e:
-                logger.info(f"VIP levels is_active column conversion: {e} (may already be correct type)")
+                logger.error(f"VIP levels is_active column conversion failed: {e}", exc_info=True)
                 conn.rollback()
             
             # VIP benefits table
