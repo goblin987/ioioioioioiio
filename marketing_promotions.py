@@ -549,21 +549,9 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # STEP 1: Create symmetric first row with all product names
-    product_types = list(product_groups.keys())
-    if len(product_types) > 1:
-        # First row: All product names with equal width (symmetric)
-        product_names_row = []
-        for product_type in product_types:
-            emoji = get_product_emoji(product_type)
-            product_name_btn = InlineKeyboardButton(
-                f"{emoji} {product_type}",
-                callback_data="ignore"  # Blank button that does nothing
-            )
-            product_names_row.append(product_name_btn)
-        keyboard.append(product_names_row)
+    # CORRECT LAYOUT: Each product name on left with same width, options on right
+    # [Product Name] [Option1] [Option2] [Option3] etc.
     
-    # STEP 2: Create rows for each product's options (remove duplicates)
     for product_type, type_products in product_groups.items():
         # Remove duplicate products with same price and size
         unique_products = {}
@@ -576,17 +564,16 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         
         if unique_products_list:  # Only create row if there are unique products
             row = []
+            emoji = get_product_emoji(product_type)
             
-            # If only one product type, include the name in the row
-            if len(product_types) == 1:
-                emoji = get_product_emoji(product_type)
-                product_name_btn = InlineKeyboardButton(
-                    f"{emoji} {product_type}",
-                    callback_data="ignore"
-                )
-                row.append(product_name_btn)
+            # Product name button with consistent width (blank/non-clickable)
+            product_name_btn = InlineKeyboardButton(
+                f"{emoji} {product_type}",
+                callback_data="ignore"  # Blank button that does nothing
+            )
+            row.append(product_name_btn)
             
-            # Add unique clickable price/weight buttons
+            # Add unique clickable price/weight buttons to the right
             for product in unique_products_list:
                 price_text = f"{product['price']:.0f}€ {product['size']}"
                 option_btn = InlineKeyboardButton(
@@ -595,6 +582,7 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
                 )
                 row.append(option_btn)
             
+            # Add the complete row (product name + all its unique options)
             keyboard.append(row)
     
     # Navigation buttons
