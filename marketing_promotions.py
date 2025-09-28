@@ -3170,4 +3170,80 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
         if conn:
             conn.close()
 
+async def handle_bot_look_preview(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Preview current bot layout configurations"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Get current saved layouts from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT menu_name, menu_display_name, button_layout, updated_at
+            FROM bot_menu_layouts 
+            WHERE is_active = TRUE
+            ORDER BY 
+                CASE menu_name 
+                    WHEN 'start_menu' THEN 1
+                    WHEN 'city_menu' THEN 2
+                    WHEN 'district_menu' THEN 3
+                    WHEN 'payment_menu' THEN 4
+                    ELSE 5
+                END
+        """)
+        layouts = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading layout preview: {e}")
+        layouts = []
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "👀 **LAYOUT PREVIEW** 👀\n\n"
+    
+    if layouts:
+        msg += f"🎨 **Current Bot Layouts ({len(layouts)} menus):**\n\n"
+        
+        import json
+        for layout in layouts:
+            menu_name = layout['menu_display_name']
+            try:
+                button_layout = json.loads(layout['button_layout'])
+                updated = layout['updated_at'].strftime('%Y-%m-%d %H:%M') if layout['updated_at'] else 'Unknown'
+                
+                msg += f"**📋 {menu_name}:**\n"
+                
+                # Show button layout preview
+                for row_idx, row in enumerate(button_layout):
+                    if row:  # Only show non-empty rows
+                        row_text = " | ".join([f"`{btn}`" for btn in row])
+                        msg += f"Row {row_idx + 1}: {row_text}\n"
+                
+                msg += f"*Updated: {updated}*\n\n"
+                
+            except Exception as parse_error:
+                logger.warning(f"Error parsing layout for {menu_name}: {parse_error}")
+                msg += f"**📋 {menu_name}:** *(Error loading layout)*\n\n"
+    else:
+        msg += "ℹ️ **No Custom Layouts Found**\n\n"
+        msg += "No custom button layouts have been saved yet.\n"
+        msg += "The bot is using default layouts.\n\n"
+        msg += "**To create custom layouts:**\n"
+        msg += "1. Go to 🎨 Make Your Own\n"
+        msg += "2. Edit menu layouts\n"
+        msg += "3. Save your changes"
+    
+    keyboard = [
+        [InlineKeyboardButton("🎨 Edit Layouts", callback_data="bot_look_custom")],
+        [InlineKeyboardButton("📋 Use Preset", callback_data="bot_look_presets")],
+        [InlineKeyboardButton("⬅️ Back to Bot Look", callback_data="admin_bot_look_editor")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
 # --- END OF FILE marketing_promotions.py ---
