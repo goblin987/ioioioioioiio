@@ -194,7 +194,8 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     price_list_button_text = lang_data.get("price_list_button", "Price List")
     language_button_text = lang_data.get("language_button", "Language")
     admin_button_text = lang_data.get("admin_button", "🔧 Admin Panel")
-    keyboard = [
+    # Default keyboard layout
+    default_keyboard = [
         [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],
         [InlineKeyboardButton(f"{EMOJI_PROFILE} {profile_button_text}", callback_data="profile"),
          InlineKeyboardButton(f"{EMOJI_REFILL} {top_up_button_text}", callback_data="refill")],
@@ -202,6 +203,20 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
          InlineKeyboardButton(f"{EMOJI_PRICELIST} {price_list_button_text}", callback_data="price_list"),
          InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")]
     ]
+    
+    # Try to apply custom layout if available
+    try:
+        from marketing_promotions import apply_custom_layout_to_keyboard
+        keyboard = apply_custom_layout_to_keyboard('start_menu', default_keyboard)
+        logger.info(f"Applied custom start menu layout for user {user_id}")
+    except ImportError:
+        keyboard = default_keyboard
+        logger.debug("Marketing promotions module not available, using default keyboard")
+    except Exception as e:
+        keyboard = default_keyboard
+        logger.warning(f"Error applying custom layout for user {user_id}: {e}")
+    
+    # Add admin button if user is admin
     if is_primary_admin(user_id):
         keyboard.insert(0, [InlineKeyboardButton(admin_button_text, callback_data="admin_menu")])
 

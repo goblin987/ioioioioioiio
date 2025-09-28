@@ -1146,6 +1146,105 @@ async def handle_minimalist_discount_code(update: Update, context: ContextTypes.
     await handle_apply_discount_single_pay(update, context, params)
 
 
+def get_custom_layout(menu_name):
+    """Get custom button layout for a specific menu"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT button_layout 
+            FROM bot_menu_layouts 
+            WHERE menu_name = %s AND is_active = TRUE
+            ORDER BY updated_at DESC
+            LIMIT 1
+        """, (menu_name,))
+        
+        result = c.fetchone()
+        if result:
+            import json
+            return json.loads(result['button_layout'])
+        
+        return None  # No custom layout found
+        
+    except Exception as e:
+        logger.error(f"Error loading custom layout for {menu_name}: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+def apply_custom_layout_to_keyboard(menu_name, default_keyboard):
+    """Apply custom layout to keyboard if available, otherwise return default"""
+    custom_layout = get_custom_layout(menu_name)
+    
+    if not custom_layout:
+        return default_keyboard  # Return original if no custom layout
+    
+    try:
+        # Convert custom layout to InlineKeyboardMarkup
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        
+        custom_keyboard = []
+        for row in custom_layout:
+            keyboard_row = []
+            for button_text in row:
+                # Map button text to callback data
+                callback_data = map_button_text_to_callback(button_text)
+                keyboard_row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+            if keyboard_row:  # Only add non-empty rows
+                custom_keyboard.append(keyboard_row)
+        
+        return custom_keyboard
+        
+    except Exception as e:
+        logger.error(f"Error applying custom layout for {menu_name}: {e}")
+        return default_keyboard  # Return original on error
+
+def map_button_text_to_callback(button_text):
+    """Map button text to appropriate callback data"""
+    # Mapping of button text to callback data
+    button_mapping = {
+        # Start menu buttons
+        '🛍️ Shop': 'shop',
+        '👤 Profile': 'profile', 
+        '💳 Top Up': 'topup',
+        '💰 Wallet': 'wallet',
+        '📊 Stats': 'stats',
+        '🎮 Games': 'games',
+        '🔥 Hot Deals': 'deals',
+        'ℹ️ Info': 'info',
+        '⚙️ Settings': 'settings',
+        '🎁 Promotions': 'promotions',
+        '📞 Support': 'support',
+        '🏆 Leaderboard': 'leaderboard',
+        
+        # City menu buttons
+        '🏙️ Vilnius': 'city_vilnius',
+        '🏙️ Kaunas': 'city_kaunas', 
+        '🏙️ Klaipeda': 'city_klaipeda',
+        '🏙️ Siauliai': 'city_siauliai',
+        
+        # District menu buttons
+        '🏘️ Centras': 'district_centras',
+        '🏘️ Naujamestis': 'district_naujamestis',
+        '🏘️ Senamiestis': 'district_senamiestis',
+        
+        # Payment menu buttons
+        '💳 Pay Now': 'pay_now',
+        '🎫 Discount Code': 'discount_code',
+        '💰 Add to Wallet': 'add_wallet',
+        '🛒 Add to Cart': 'add_cart',
+        
+        # Navigation buttons
+        '⬅️ Back': 'back',
+        '🏠 Home': 'home',
+        '⬅️ Back to Cities': 'back_cities',
+    }
+    
+    return button_mapping.get(button_text, 'noop')  # Default to noop if not found
+
 def get_product_emoji(product_type):
     """Get emoji for product type"""
     emoji_map = {
@@ -3008,9 +3107,8 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         
         await query.answer(f"✅ {menu_display_name} saved successfully!", show_alert=True)
         
-        # Clear editing data
-        if f'editing_layout_{menu_type}' in context.user_data:
-            del context.user_data[f'editing_layout_{menu_type}']
+        # DON'T clear editing data - keep it for global save
+        # The editing context will be cleared by global save or when user exits
         
         # Return to menu list
         return await handle_bot_look_custom(update, context)
@@ -3048,7 +3146,7 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    # Get all editing layouts from context
+    # Get all editing layouts from context AND check for existing saved layouts
     menu_types = ['start_menu', 'city_menu', 'district_menu', 'payment_menu']
     saved_menus = []
     errors = []
@@ -3059,6 +3157,28 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
         c = conn.cursor()
         
         import json
+        
+        # Check if there are ANY editing contexts or existing saved layouts
+        has_editing_data = any(f'editing_layout_{menu_type}' in context.user_data for menu_type in menu_types)
+        
+        # Also check for existing saved layouts in database
+        c.execute("SELECT COUNT(*) as count FROM bot_menu_layouts WHERE created_by = %s", (query.from_user.id,))
+        existing_layouts_count = c.fetchone()['count']
+        
+        if not has_editing_data and existing_layouts_count == 0:
+            # No editing data and no existing layouts
+            msg = "ℹ️ **NO CHANGES TO SAVE** ℹ️\n\n"
+            msg += "No menu layouts were found in editing mode and no existing layouts found.\n"
+            msg += "Edit some menus first, then save."
+            
+            keyboard = [
+                [InlineKeyboardButton("🎨 Continue Editing", callback_data="bot_look_custom")],
+                [InlineKeyboardButton("📋 Use Preset Template", callback_data="bot_look_presets")],
+                [InlineKeyboardButton("⬅️ Back to Bot Look", callback_data="admin_bot_look_editor")]
+            ]
+            
+            await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+            return
         
         for menu_type in menu_types:
             layout_key = f'editing_layout_{menu_type}'
@@ -3136,7 +3256,8 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
             msg += f"🎨 **Saved {len(saved_menus)} menus:**\n"
             for menu in saved_menus:
                 msg += f"• {menu}\n"
-            msg += "\nYour bot now uses these custom layouts!"
+            msg += f"\n🚀 **Your bot now uses these custom layouts!**\n"
+            msg += f"📱 **Test it:** Type `/start` to see your new UI"
         elif saved_menus and errors:
             msg = "⚠️ **PARTIALLY SAVED** ⚠️\n\n"
             msg += f"✅ **Saved {len(saved_menus)} menus:**\n"
