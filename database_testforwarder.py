@@ -81,7 +81,7 @@ class Database:
             # Users table
             cursor.execute(f'''
                 CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY,
+                    user_id BIGINT PRIMARY KEY,
                     username {get_text_type()},
                     first_name {get_text_type()},
                     last_name {get_text_type()},
@@ -94,7 +94,7 @@ class Database:
             cursor.execute(f'''
                 CREATE TABLE IF NOT EXISTS telegram_accounts (
                     id {get_auto_increment()},
-                    user_id INTEGER,
+                    user_id BIGINT,
                     account_name {get_text_type()},
                     phone_number {get_text_type()},
                     api_id {get_text_type()},
@@ -110,7 +110,7 @@ class Database:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS forwarding_configs (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER,
+                    user_id BIGINT,
                     account_id INTEGER,
                     source_chat_id TEXT,
                     destination_chat_id TEXT,
@@ -127,7 +127,7 @@ class Database:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS message_logs (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER,
+                    user_id BIGINT,
                     account_id INTEGER,
                     source_message_id INTEGER,
                     destination_message_id INTEGER,

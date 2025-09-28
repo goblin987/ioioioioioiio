@@ -28,7 +28,7 @@ def init_referral_tables():
         # referral_codes table - for referral program
         c.execute('''CREATE TABLE IF NOT EXISTS referral_codes (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL,
+            user_id BIGINT NOT NULL,
             referral_code TEXT NOT NULL UNIQUE,
             created_at TEXT NOT NULL,
             is_active INTEGER DEFAULT 1,
@@ -40,8 +40,8 @@ def init_referral_tables():
         # referrals table - tracks successful referrals
         c.execute('''CREATE TABLE IF NOT EXISTS referrals (
             id SERIAL PRIMARY KEY,
-            referrer_user_id INTEGER NOT NULL,
-            referred_user_id INTEGER NOT NULL,
+            referrer_user_id BIGINT NOT NULL,
+            referred_user_id BIGINT NOT NULL,
             referral_code TEXT NOT NULL,
             created_at TEXT NOT NULL,
             first_purchase_at TEXT,

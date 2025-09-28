@@ -294,7 +294,7 @@ def init_interactive_welcome_tables():
         c.execute("""
             CREATE TABLE IF NOT EXISTS welcome_editor_sessions (
                 id SERIAL PRIMARY KEY,
-                admin_user_id INTEGER NOT NULL,
+                admin_user_id BIGINT NOT NULL,
                 session_data TEXT,
                 last_preview TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

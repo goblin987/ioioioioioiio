@@ -383,7 +383,7 @@ class BumpService:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS ad_campaigns (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
+                    user_id BIGINT,
                     account_id INTEGER,
                     campaign_name TEXT,
                     ad_content TEXT,
@@ -464,7 +464,7 @@ class BumpService:
                 CREATE TABLE IF NOT EXISTS ad_performance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     campaign_id INTEGER,
-                    user_id INTEGER,
+                    user_id BIGINT,
                     target_chat TEXT,
                     message_id INTEGER,
                     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

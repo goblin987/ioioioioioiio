@@ -148,7 +148,7 @@ def init_price_editor_tables():
                 product_id INTEGER NOT NULL,
                 old_price REAL NOT NULL,
                 new_price REAL NOT NULL,
-                changed_by_admin_id INTEGER NOT NULL,
+                changed_by_admin_id BIGINT NOT NULL,
                 change_reason TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE

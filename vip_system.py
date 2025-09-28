@@ -79,7 +79,7 @@ class VIPManager:
             # User VIP history table
             c.execute('''CREATE TABLE IF NOT EXISTS user_vip_history (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
                 old_level_name TEXT,
                 new_level_name TEXT NOT NULL,
                 level_up_date TEXT NOT NULL,
