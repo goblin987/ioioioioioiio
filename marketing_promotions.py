@@ -574,15 +574,16 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             row = []
             emoji = get_product_emoji(product_type)
             
-            # YOLO MODE: Force consistent width with visible padding
+            # YOLO MODE: Force consistent width with invisible padding
             product_name_base = f"{emoji} {product_type}"
             # Calculate target width (longest product name + some buffer)
             target_width = max(20, longest_product_name_length + 2)
             
-            # Pad with underscores to force exact width - Telegram MUST respect this
+            # Pad with invisible characters that still force width
             if len(product_name_base) < target_width:
                 padding_needed = target_width - len(product_name_base)
-                padded_product_name = product_name_base + ("_" * padding_needed)
+                # Use combination of thin space + zero-width space for invisible padding
+                padded_product_name = product_name_base + ("\u2009\u200B" * padding_needed)
             else:
                 padded_product_name = product_name_base
             
