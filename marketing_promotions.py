@@ -3415,7 +3415,7 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
         if conn:
             conn.close()
 
-async def handle_bot_name_layout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_bot_name_layout(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Prompt admin to name their custom layout"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
