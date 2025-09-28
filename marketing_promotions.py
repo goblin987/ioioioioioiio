@@ -549,16 +549,8 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # STEP 1: Find the longest product name for consistent button width
-    longest_product_name_length = 0
-    for product_type in product_groups.keys():
-        emoji = get_product_emoji(product_type)
-        name_with_emoji = f"{emoji} {product_type}"
-        if len(name_with_emoji) > longest_product_name_length:
-            longest_product_name_length = len(name_with_emoji)
-    
-    # STEP 2: Create grid with consistent product name button width
-    # [Product Name (padded)] [Option1] [Option2] [Option3] etc.
+    # YOLO MODE: COMPLETELY DIFFERENT APPROACH - VERTICAL LAYOUT
+    # Create separate rows for product names and their options
     
     for product_type, type_products in product_groups.items():
         # Remove duplicate products with same price and size
@@ -571,41 +563,25 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         unique_products_list = list(unique_products.values())
         
         if unique_products_list:  # Only create row if there are unique products
-            row = []
             emoji = get_product_emoji(product_type)
             
-            # YOLO MODE: Use fixed-width format with minimal dots
-            product_name_base = f"{emoji} {product_type}"
-            
-            # Force ALL buttons to be exactly 25 characters with small dots
-            target_width = 25
-            if len(product_name_base) < target_width:
-                padding_needed = target_width - len(product_name_base)
-                # Use small dot character for padding - less ugly than underscores
-                padded_product_name = product_name_base + ("·" * padding_needed)
-            else:
-                # Truncate if too long and add dots
-                padded_product_name = product_name_base[:target_width-3] + "..."
-            
-            # Product name button with consistent width (blank/non-clickable)
+            # Row 1: Just the product name (clean, no padding)
             product_name_btn = InlineKeyboardButton(
-                padded_product_name,
+                f"{emoji} {product_type}",
                 callback_data="ignore"  # Blank button that does nothing
             )
-            row.append(product_name_btn)
+            keyboard.append([product_name_btn])
             
-            # Add unique clickable price/weight buttons to the right
+            # Row 2: All price options for this product
+            price_row = []
             for product in unique_products_list:
                 price_text = f"{product['price']:.0f}€ {product['size']}"
-                # Use product ID to avoid callback_data length limit (64 bytes)
                 option_btn = InlineKeyboardButton(
                     price_text,
                     callback_data=f"minimalist_product_select|{product['id']}"
                 )
-                row.append(option_btn)
-            
-            # Add the complete row (product name + all its unique options)
-            keyboard.append(row)
+                price_row.append(option_btn)
+            keyboard.append(price_row)
     
     # Navigation buttons
     keyboard.extend([
