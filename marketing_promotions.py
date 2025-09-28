@@ -574,10 +574,11 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             row = []
             emoji = get_product_emoji(product_type)
             
-            # Create product name with consistent width (pad with spaces)
+            # Create product name with consistent width using non-breaking spaces
             product_name_base = f"{emoji} {product_type}"
             spaces_needed = longest_product_name_length - len(product_name_base)
-            padded_product_name = product_name_base + (" " * spaces_needed)
+            # Use non-breaking spaces (U+00A0) for padding - more reliable than regular spaces
+            padded_product_name = product_name_base + ("\u00A0" * spaces_needed)
             
             # Product name button with consistent width (blank/non-clickable)
             product_name_btn = InlineKeyboardButton(
