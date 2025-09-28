@@ -655,7 +655,7 @@ async def handle_select_basket_crypto(update: Update, context: ContextTypes.DEFA
 
 # --- Display NOWPayments Invoice (with Cancel Button fix) ---
 async def display_nowpayments_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE, payment_data: dict):
-    """Displays the NOWPayments invoice details with improved formatting and a specific cancel button."""
+    """Displays the NOWPayments invoice details with QR code and improved formatting."""
     query = update.callback_query
     chat_id = query.message.chat_id
     lang = context.user_data.get("lang", "en")
@@ -728,13 +728,58 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
 
         final_msg = msg.strip()
 
+        # --- Generate and send QR code ---
+        qr_success = False
+        try:
+            # Create payment URI for QR code (standard format for crypto wallets)
+            payment_uri = f"{pay_currency.lower()}:{pay_address}?amount={pay_amount_display}"
+            
+            # Generate QR code
+            import qrcode
+            from io import BytesIO
+            
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(payment_uri)
+            qr.make(fit=True)
+            
+            # Create QR code image
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Save to BytesIO
+            qr_buffer = BytesIO()
+            qr_img.save(qr_buffer, format='PNG')
+            qr_buffer.seek(0)
+            
+            # Send QR code image first
+            await context.bot.send_photo(
+                chat_id=chat_id,
+                photo=qr_buffer,
+                caption=f"📱 **Scan QR Code for Easy Payment**\n\n{pay_currency}: `{pay_amount_display}`\nAddress: `{pay_address}`",
+                parse_mode=ParseMode.MARKDOWN_V2
+            )
+            qr_success = True
+            logger.info(f"QR code sent successfully for payment {payment_id}")
+            
+        except Exception as qr_error:
+            logger.warning(f"Failed to generate/send QR code for payment {payment_id}: {qr_error}")
+            # Continue without QR code
+
         # --- Cancel button only ---
         keyboard = [[InlineKeyboardButton(f"❌ {cancel_payment_button_text}", callback_data="cancel_crypto_payment")]]
 
-        await query.edit_message_text(
-            final_msg, reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True
-        )
+        # Send invoice details (after QR code if successful)
+        if qr_success:
+            # Edit the original message with invoice details
+            await query.edit_message_text(
+                final_msg, reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True
+            )
+        else:
+            # Send as new message if QR failed
+            await query.edit_message_text(
+                final_msg, reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True
+            )
     except (ValueError, KeyError, TypeError) as e:
         logger.error(f"Error formatting or displaying NOWPayments invoice: {e}. Data: {payment_data}", exc_info=True)
         error_display_msg = lang_data.get("error_preparing_payment", "❌ An error occurred while preparing the payment details. Please try again later.")
