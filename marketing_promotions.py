@@ -549,8 +549,8 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # YOLO MODE: COMPLETELY DIFFERENT APPROACH - VERTICAL LAYOUT
-    # Create separate rows for product names and their options
+    # YOLO MODE: BACK TO ORIGINAL HORIZONTAL LAYOUT - NO PADDING
+    # [Product Name] [Option1] [Option2] [Option3] etc.
     
     for product_type, type_products in product_groups.items():
         # Remove duplicate products with same price and size
@@ -563,25 +563,27 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         unique_products_list = list(unique_products.values())
         
         if unique_products_list:  # Only create row if there are unique products
+            row = []
             emoji = get_product_emoji(product_type)
             
-            # Row 1: Just the product name (clean, no padding)
+            # Product name button (clean, no padding - natural width)
             product_name_btn = InlineKeyboardButton(
                 f"{emoji} {product_type}",
                 callback_data="ignore"  # Blank button that does nothing
             )
-            keyboard.append([product_name_btn])
+            row.append(product_name_btn)
             
-            # Row 2: All price options for this product
-            price_row = []
+            # Add unique clickable price/weight buttons to the right
             for product in unique_products_list:
                 price_text = f"{product['price']:.0f}€ {product['size']}"
                 option_btn = InlineKeyboardButton(
                     price_text,
                     callback_data=f"minimalist_product_select|{product['id']}"
                 )
-                price_row.append(option_btn)
-            keyboard.append(price_row)
+                row.append(option_btn)
+            
+            # Add the complete row (product name + all its unique options)
+            keyboard.append(row)
     
     # Navigation buttons
     keyboard.extend([
