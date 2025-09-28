@@ -906,21 +906,25 @@ async def show_minimalist_crypto_options(query, context, product, user_balance):
     from user import SUPPORTED_CRYPTO, format_currency
     from utils import is_currency_supported
     
-    # Set up context for single item payment 
+    # Set up context for basket payment (what handle_select_basket_crypto expects)
     product_price = float(product['price'])
-    context.user_data['single_item_pay_final_eur'] = product_price
-    context.user_data['single_item_pay_snapshot'] = {
+    
+    # Create basket-style snapshot for the single product
+    basket_snapshot = [{
         'product_id': product['id'],
         'price': product_price,
         'name': product['product_type'],
         'size': product['size'],
+        'product_type': product['product_type'],
         'city': product['city'],
-        'district': product['district']
-    }
-    context.user_data['single_item_pay_back_params'] = [
-        product['city'], product['district'], product['product_type'], 
-        product['size'], str(product_price)
-    ]
+        'district': product['district'],
+        'original_text': product.get('original_text', '')
+    }]
+    
+    # Set the context variables that handle_select_basket_crypto expects
+    context.user_data['basket_pay_snapshot'] = basket_snapshot
+    context.user_data['basket_pay_total_eur'] = product_price
+    context.user_data['basket_pay_discount_code'] = None  # No discount for direct purchase
     
     # Build crypto buttons using the original working logic
     asset_buttons = []
@@ -938,7 +942,7 @@ async def show_minimalist_crypto_options(query, context, product, user_balance):
     if not supported_currencies:
         logger.error("No supported currencies found from NOWPayments API")
         msg = "❌ No payment methods available at the moment. Please try again later."
-        back_callback = f"minimalist_product_select|{product['city']}|{product['district']}|{product['product_type']}|{product['size']}|{product['price']}"
+        back_callback = f"minimalist_district_select|{product['city']}|{product['district']}"
         kb = [[InlineKeyboardButton("⬅️ Back", callback_data=back_callback)]]
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=None)
         return
