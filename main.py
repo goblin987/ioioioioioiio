@@ -831,6 +831,8 @@ def callback_query_router(func):
                 "promotion_codes_menu": handle_marketing_promotions_menu,  # Placeholder - redirect to main menu
                 "welcome_message_editor": admin.handle_adm_manage_welcome,  # Redirect to existing welcome editor
                 "stock_type_kava": admin.handle_adm_manage_types,  # Placeholder - redirect to product types management
+                "minimalist_product_info": handle_marketing_promotions_menu,  # Placeholder - show product info
+                "ignore": handle_marketing_promotions_menu,  # Ignore spacer buttons - redirect to main menu
                 "minimalist_shop": handle_minimalist_shop,
                 "minimalist_city_select": handle_minimalist_city_select,
                 "minimalist_district_select": handle_minimalist_district_select,

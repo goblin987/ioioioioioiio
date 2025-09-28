@@ -487,7 +487,7 @@ async def handle_minimalist_city_select(update: Update, context: ContextTypes.DE
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_minimalist_district_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle district selection - show products in clean grid layout"""
+    """Handle district selection - show products in clean grid layout as requested"""
     query = update.callback_query
     if not params or len(params) < 2:
         await query.answer("Invalid district selection", show_alert=True)
@@ -501,7 +501,7 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get all products in this district grouped by type
+        # Get all products in this district
         c.execute("""
             SELECT 
                 product_type,
@@ -511,7 +511,7 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
                 id
             FROM products 
             WHERE city = %s AND district = %s AND available > 0
-            ORDER BY product_type, size
+            ORDER BY product_type, price, size
         """, (city_name, district_name))
         products = c.fetchall()
         
@@ -534,7 +534,7 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
         )
         return
     
-    # Group products by type for clean display
+    # Group products by type for grid layout
     product_groups = {}
     for product in products:
         product_type = product['product_type']
@@ -542,30 +542,60 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             product_groups[product_type] = []
         product_groups[product_type].append(product)
     
-    # Create clean, Apple-style product grid
-    msg = f"🏙️ **{city_name}** | 🏘️ **{district_name}**\n\n"
+    # Create header message
+    msg = f"🏙️ **{city_name}** | 🏘️ **{district_name}**\n"
     msg += "**Select product type:**\n\n"
     
     keyboard = []
     
-    # Create product type buttons in grid layout
+    # Create product grid as requested - each row has product name + weight/price buttons
     for product_type, type_products in product_groups.items():
-        # Find emoji for product type (you can customize this)
         emoji = get_product_emoji(product_type)
         
-        # Show price range for this type
-        prices = [p['price'] for p in type_products]
-        min_price = min(prices)
-        max_price = max(prices)
+        # Create row for this product type
+        row = []
         
-        if min_price == max_price:
-            price_text = f"{min_price:.2f}€"
+        # First button: Product name (acts as header/identifier)
+        product_name_btn = InlineKeyboardButton(
+            f"{emoji} {product_type}", 
+            callback_data=f"minimalist_product_info|{product_type}"  # Info callback
+        )
+        row.append(product_name_btn)
+        
+        # Add weight/price buttons for this product type (max 3-4 per row to fit)
+        weight_buttons = []
+        for product in type_products[:3]:  # Limit to 3 variants per row for clean layout
+            price_text = f"{product['price']:.0f}€ {product['size']}"
+            weight_btn = InlineKeyboardButton(
+                price_text,
+                callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+            )
+            weight_buttons.append(weight_btn)
+        
+        # Add the row with product name + weight/price options
+        if weight_buttons:
+            keyboard.append([product_name_btn] + weight_buttons)
         else:
-            price_text = f"{min_price:.2f}€-{max_price:.2f}€"
+            keyboard.append([product_name_btn])
         
-        button_text = f"{emoji} {product_type}"
-        callback_data = f"minimalist_product_type|{city_name}|{district_name}|{product_type}"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+        # If there are more than 3 variants, add additional rows
+        remaining_products = type_products[3:]
+        while remaining_products:
+            extra_row = []
+            # Add empty space for alignment
+            extra_row.append(InlineKeyboardButton(" ", callback_data="ignore"))
+            
+            # Add next batch of weight/price buttons
+            for product in remaining_products[:3]:
+                price_text = f"{product['price']:.0f}€ {product['size']}"
+                weight_btn = InlineKeyboardButton(
+                    price_text,
+                    callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+                )
+                extra_row.append(weight_btn)
+            
+            keyboard.append(extra_row)
+            remaining_products = remaining_products[3:]
     
     # Navigation buttons
     keyboard.extend([
@@ -659,35 +689,90 @@ async def handle_minimalist_product_select(update: Update, context: ContextTypes
         await query.answer("Invalid product selection", show_alert=True)
         return
     
-    product_id = int(params[0])
+    # Handle both old format (product_id) and new format (city|district|type|size|price)
+    if len(params) == 1:
+        # Old format: just product_id
+        product_id = int(params[0])
+        
+        # Get product details from database
+        conn = None
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("""
+                SELECT id, city, district, product_type, size, price, available, name, original_text
+                FROM products WHERE id = %s
+            """, (product_id,))
+            product = c.fetchone()
+        except Exception as e:
+            logger.error(f"Error loading product {product_id}: {e}")
+            await query.answer("Error loading product", show_alert=True)
+            return
+        finally:
+            if conn:
+                conn.close()
+                
+        if not product:
+            await query.answer("Product not found", show_alert=True)
+            return
+            
+        city_name = product['city']
+        district_name = product['district']
+        product_type = product['product_type']
+        size = product['size']
+        price = product['price']
+        available = product['available']
+        
+    elif len(params) == 5:
+        # New format: city|district|type|size|price
+        city_name = params[0]
+        district_name = params[1]
+        product_type = params[2]
+        size = params[3]
+        price = float(params[4])
+        
+        # Find the specific product
+        conn = None
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("""
+                SELECT id, available, name, original_text
+                FROM products 
+                WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s
+                ORDER BY id LIMIT 1
+            """, (city_name, district_name, product_type, size, price))
+            product = c.fetchone()
+        except Exception as e:
+            logger.error(f"Error loading product {city_name}-{district_name}-{product_type}-{size}-{price}: {e}")
+            await query.answer("Error loading product", show_alert=True)
+            return
+        finally:
+            if conn:
+                conn.close()
+                
+        if not product:
+            await query.answer("Product not found", show_alert=True)
+            return
+            
+        product_id = product['id']
+        available = product['available']
+    else:
+        await query.answer("Invalid product selection format", show_alert=True)
+        return
     
+    # Get user balance
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        
-        # Get product details
-        c.execute("""
-            SELECT 
-                id, city, district, product_type, size, price, available,
-                name, original_text
-            FROM products 
-            WHERE id = %s AND available > 0
-        """, (product_id,))
-        product = c.fetchone()
-        
-        if not product:
-            await query.answer("Product not found or unavailable", show_alert=True)
-            return
-        
-        # Get user balance
         c.execute("SELECT balance FROM users WHERE user_id = %s", (query.from_user.id,))
         user_result = c.fetchone()
         user_balance = user_result['balance'] if user_result else 0.0
         
     except Exception as e:
-        logger.error(f"Error loading product details: {e}")
-        await query.answer("Error loading product", show_alert=True)
+        logger.error(f"Error loading user balance: {e}")
+        await query.answer("Error loading user data", show_alert=True)
         return
     finally:
         if conn:
@@ -695,18 +780,27 @@ async def handle_minimalist_product_select(update: Update, context: ContextTypes
     
     # Store product selection for purchase
     context.user_data['selected_product_id'] = product_id
-    context.user_data['selected_product'] = dict(product)
+    product_dict = {
+        'id': product_id,
+        'city': city_name,
+        'district': district_name,
+        'product_type': product_type,
+        'size': size,
+        'price': price,
+        'available': available
+    }
+    context.user_data['selected_product'] = product_dict
     
-    emoji = get_product_emoji(product['product_type'])
+    emoji = get_product_emoji(product_type)
     
     # Clean, minimal product details as requested
-    msg = f"🏙️ **{product['city']}** | 🏘️ **{product['district']}**\n\n"
-    msg += f"{emoji} **{product['product_type']}** - **{product['size']}**\n\n"
-    msg += f"💰 **Price:** **{product['price']:.2f} EUR**\n"
-    msg += f"🔢 **Available:** **{product['available']}**\n\n"
+    msg = f"🏙️ **{city_name}** | 🏘️ **{district_name}**\n\n"
+    msg += f"{emoji} **{product_type}** - **{size}**\n\n"
+    msg += f"💰 **Price:** **{price:.2f} EUR**\n"
+    msg += f"🔢 **Available:** **{available}**\n\n"
     
     # Check if user has sufficient balance
-    has_balance = user_balance >= product['price']
+    has_balance = user_balance >= price
     
     keyboard = []
     
@@ -720,7 +814,7 @@ async def handle_minimalist_product_select(update: Update, context: ContextTypes
     
     # Navigation
     keyboard.extend([
-        [InlineKeyboardButton("⬅️ Back to Products", callback_data=f"minimalist_product_type|{product['city']}|{product['district']}|{product['product_type']}")],
+        [InlineKeyboardButton("⬅️ Back to Products", callback_data=f"minimalist_district_select|{city_name}|{district_name}")],
         [InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")]
     ])
     
