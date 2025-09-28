@@ -46,6 +46,18 @@ class Config:
     POSTGRES_USER = os.getenv('POSTGRES_USER', 'postgres')
     POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
     POSTGRES_URL = os.getenv('POSTGRES_URL')
+    
+    # Validation method
+    @classmethod
+    def validate(cls):
+        """Validate required configuration"""
+        required_vars = ['BOT_TOKEN']
+        missing_vars = [var for var in required_vars if not getattr(cls, var)]
+        
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        return True
 
 # Persistent Storage Configuration
 PERSISTENT_DISK_PATH = '/mnt/data'  # Render persistent disk mount point (same as main bot)
@@ -67,17 +79,3 @@ CONNECTION_TIMEOUT = 30  # Faster timeouts
 SESSION_VALIDATION_INTERVAL = 120  # 2 minutes - more frequent validation
 AUTO_RECONNECT_ENABLED = True
 AGGRESSIVE_MODE = True  # YOLO MODE FLAG
-
-# Note: PostgreSQL configuration is already included in the Config class above
-
-class Config:
-    @classmethod
-    def validate(cls):
-        """Validate required configuration"""
-        required_vars = ['BOT_TOKEN']
-        missing_vars = [var for var in required_vars if not getattr(cls, var)]
-        
-        if missing_vars:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-        
-        return True

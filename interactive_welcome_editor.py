@@ -367,7 +367,7 @@ async def handle_interactive_welcome_editor(update: Update, context: ContextType
         c.execute("""
             SELECT name, category, tone, usage_count, rating
             FROM interactive_welcome_messages 
-            WHERE is_active = 1 
+            WHERE is_active = TRUE 
             LIMIT 1
         """)
         active_msg = c.fetchone()
@@ -625,7 +625,7 @@ async def handle_interactive_live_preview(update: Update, context: ContextTypes.
         # Get active welcome message
         c.execute("""
             SELECT template_text, name FROM interactive_welcome_messages 
-            WHERE is_active = 1 LIMIT 1
+            WHERE is_active = TRUE LIMIT 1
         """)
         active_template = c.fetchone()
         

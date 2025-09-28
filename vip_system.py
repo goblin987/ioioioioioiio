@@ -231,8 +231,8 @@ class VIPManager:
             c.execute("""
                 SELECT level_name, level_emoji, min_purchases, benefits, discount_percentage
                 FROM vip_levels 
-                WHERE is_active = 1 
-                AND min_purchases > ?
+                WHERE is_active = TRUE 
+                AND min_purchases > %s
                 ORDER BY level_order ASC
                 LIMIT 1
             """, (user_purchases,))
