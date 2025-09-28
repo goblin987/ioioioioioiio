@@ -549,8 +549,16 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # CORRECT LAYOUT: Each product name on left with same width, options on right
-    # [Product Name] [Option1] [Option2] [Option3] etc.
+    # STEP 1: Find the longest product name for consistent button width
+    longest_product_name_length = 0
+    for product_type in product_groups.keys():
+        emoji = get_product_emoji(product_type)
+        name_with_emoji = f"{emoji} {product_type}"
+        if len(name_with_emoji) > longest_product_name_length:
+            longest_product_name_length = len(name_with_emoji)
+    
+    # STEP 2: Create grid with consistent product name button width
+    # [Product Name (padded)] [Option1] [Option2] [Option3] etc.
     
     for product_type, type_products in product_groups.items():
         # Remove duplicate products with same price and size
@@ -566,9 +574,14 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             row = []
             emoji = get_product_emoji(product_type)
             
+            # Create product name with consistent width (pad with spaces)
+            product_name_base = f"{emoji} {product_type}"
+            spaces_needed = longest_product_name_length - len(product_name_base)
+            padded_product_name = product_name_base + (" " * spaces_needed)
+            
             # Product name button with consistent width (blank/non-clickable)
             product_name_btn = InlineKeyboardButton(
-                f"{emoji} {product_type}",
+                padded_product_name,
                 callback_data="ignore"  # Blank button that does nothing
             )
             row.append(product_name_btn)
