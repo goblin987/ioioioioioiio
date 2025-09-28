@@ -814,7 +814,7 @@ async def handle_minimalist_product_select(update: Update, context: ContextTypes
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_minimalist_pay_options(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle Pay Now - use existing payment system"""
+    """Handle Pay Now - direct payment processing without intermediate screen"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -829,46 +829,133 @@ async def handle_minimalist_pay_options(update: Update, context: ContextTypes.DE
         await query.answer("Product selection expired", show_alert=True)
         return
     
-    # Convert to the format expected by the existing payment system
-    # The existing system expects: city_id, dist_id, p_type, size, price_str
-    city_name = product['city']
-    district_name = product['district']
-    product_type = product['product_type'] 
-    size = product['size']
-    price = str(product['price'])
+    await query.answer("⏳ Processing payment...")
     
-    # Find city_id and district_id from the names
-    city_id = None
-    district_id = None
+    # Check user balance first
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get user balance
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        user_result = c.fetchone()
+        user_balance = user_result['balance'] if user_result else 0.0
+        product_price = float(product['price'])
+        
+        if user_balance >= product_price:
+            # User has sufficient balance - process payment directly
+            await process_minimalist_balance_payment(query, context, product, user_balance)
+        else:
+            # User doesn't have sufficient balance - show crypto payment options
+            await show_minimalist_crypto_options(query, context, product, user_balance)
+            
+    except Exception as e:
+        logger.error(f"Error processing minimalist payment for user {user_id}: {e}")
+        await query.answer("Payment error occurred", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def process_minimalist_balance_payment(query, context, product, user_balance):
+    """Process payment directly using user's balance"""
+    user_id = query.from_user.id
+    product_price = float(product['price'])
     
-    # Import the existing data structures
-    from utils import CITIES, DISTRICTS
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN")
+        
+        # Reserve the product
+        c.execute("""
+            UPDATE products 
+            SET reserved = reserved + 1 
+            WHERE id = %s AND available > reserved
+        """, (product['id'],))
+        
+        if c.rowcount == 0:
+            await query.edit_message_text("❌ Sorry, this item was just taken by another user!", parse_mode=None)
+            return
+        
+        # Deduct from user balance
+        new_balance = user_balance - product_price
+        c.execute("""
+            UPDATE users 
+            SET balance = %s, total_purchases = total_purchases + 1 
+            WHERE user_id = %s
+        """, (new_balance, user_id))
+        
+        # Record the purchase
+        c.execute("""
+            INSERT INTO purchases (user_id, product_id, price, payment_method, status)
+            VALUES (%s, %s, %s, 'balance', 'completed')
+        """, (user_id, product['id'], product_price))
+        
+        # Reduce product availability
+        c.execute("""
+            UPDATE products 
+            SET available = available - 1, reserved = reserved - 1
+            WHERE id = %s
+        """, (product['id'],))
+        
+        conn.commit()
+        
+        # Send success message with product details
+        await send_minimalist_success_message(query, context, product, new_balance)
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Error processing balance payment: {e}")
+        await query.edit_message_text("❌ Payment failed. Please try again.", parse_mode=None)
+    finally:
+        if conn:
+            conn.close()
+
+async def show_minimalist_crypto_options(query, context, product, user_balance):
+    """Show crypto payment options when balance is insufficient"""
+    emoji = get_product_emoji(product['product_type'])
+    product_price = float(product['price'])
+    needed = product_price - user_balance
     
-    # Find city_id
-    for c_id, c_name in CITIES.items():
-        if c_name == city_name:
-            city_id = c_id
-            break
+    msg = f"💳 **Crypto Payment Required**\n\n"
+    msg += f"{emoji} **{product['product_type']} {product['size']}**\n"
+    msg += f"💰 **Price:** **{product_price:.2f} EUR**\n"
+    msg += f"💳 **Your Balance:** **{user_balance:.2f} EUR**\n"
+    msg += f"💸 **Need to Pay:** **{needed:.2f} EUR**\n\n"
+    msg += "**Choose cryptocurrency:**"
     
-    # Find district_id
-    if city_id:
-        for d_id, d_name in DISTRICTS.get(city_id, {}).items():
-            if d_name == district_name:
-                district_id = d_id
-                break
+    keyboard = [
+        [InlineKeyboardButton("₿ Bitcoin", callback_data=f"select_basket_crypto|btc")],
+        [InlineKeyboardButton("💎 Ethereum", callback_data=f"select_basket_crypto|eth")],
+        [InlineKeyboardButton("🪙 Litecoin", callback_data=f"select_basket_crypto|ltc")],
+        [InlineKeyboardButton("⬅️ Back", callback_data=f"minimalist_product_select|{product['id']}")]
+    ]
     
-    if not city_id or not district_id:
-        await query.answer("Location data error", show_alert=True)
-        return
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def send_minimalist_success_message(query, context, product, new_balance):
+    """Send success message after payment"""
+    emoji = get_product_emoji(product['product_type'])
     
-    # Use the existing payment system
-    from user import handle_pay_single_item
+    msg = f"✅ **Payment Successful!**\n\n"
+    msg += f"{emoji} **Product:** {product['product_type']} {product['size']}\n"
+    msg += f"💰 **Paid:** {product['price']:.2f} EUR\n"
+    msg += f"💳 **New Balance:** {new_balance:.2f} EUR\n\n"
+    msg += f"📦 **Your Product Details:**\n"
+    msg += f"🏙️ **Location:** {product['city']} → {product['district']}\n"
+    msg += f"📱 **Order ID:** #{product['id']}\n\n"
+    msg += "**Thank you for your purchase!** 🎉\n"
+    msg += "Your product is ready for pickup at the specified location."
     
-    # Create new params in the format expected by handle_pay_single_item
-    new_params = [city_id, district_id, product_type, size, price]
+    keyboard = [
+        [InlineKeyboardButton("🛍️ Shop More", callback_data="minimalist_shop")],
+        [InlineKeyboardButton("🏠 Home", callback_data="minimalist_home")]
+    ]
     
-    # Call the existing payment handler
-    await handle_pay_single_item(update, context, new_params)
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 
 async def handle_minimalist_discount_code(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
