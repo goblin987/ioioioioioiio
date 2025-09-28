@@ -164,7 +164,7 @@ def init_marketing_tables():
         
         c.execute('''CREATE TABLE IF NOT EXISTS bot_menu_layouts (
             id SERIAL PRIMARY KEY,
-            menu_name TEXT NOT NULL,
+            menu_name TEXT NOT NULL UNIQUE,
             menu_display_name TEXT NOT NULL,
             button_layout TEXT NOT NULL,
             is_active BOOLEAN DEFAULT TRUE,
@@ -177,6 +177,17 @@ def init_marketing_tables():
         # Create indexes for bot layout
         c.execute("CREATE INDEX IF NOT EXISTS idx_layout_templates_active ON bot_layout_templates(is_active)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_menu_layouts_active ON bot_menu_layouts(is_active, menu_name)")
+        
+        # Add unique constraint to menu_name if it doesn't exist (for existing databases)
+        try:
+            c.execute("ALTER TABLE bot_menu_layouts ADD CONSTRAINT unique_menu_name UNIQUE (menu_name)")
+            logger.info("✅ Added unique constraint to bot_menu_layouts.menu_name")
+        except Exception as e:
+            if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
+                logger.info("✅ Unique constraint already exists on bot_menu_layouts.menu_name")
+            else:
+                logger.warning(f"⚠️ Could not add unique constraint to menu_name: {e}")
+            # Don't rollback here, continue with initialization
         
         # Insert default themes if not exists
         for theme_key, theme_data in UI_THEMES.items():
@@ -2611,21 +2622,39 @@ async def handle_bot_preset_select(update: Update, context: ContextTypes.DEFAULT
             query.from_user.id
         ))
         
-        # Save individual menu layouts
+        # Save individual menu layouts (clear existing first)
         c.execute("DELETE FROM bot_menu_layouts WHERE created_by = %s", (query.from_user.id,))
         
         for menu_name, layout in template_data['menus'].items():
             display_name = menu_name.replace('_', ' ').title()
-            c.execute("""
-                INSERT INTO bot_menu_layouts 
-                (menu_name, menu_display_name, button_layout, created_by)
-                VALUES (%s, %s, %s, %s)
-            """, (
-                menu_name,
-                display_name,
-                json.dumps(layout),
-                query.from_user.id
-            ))
+            try:
+                c.execute("""
+                    INSERT INTO bot_menu_layouts 
+                    (menu_name, menu_display_name, button_layout, created_by)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (menu_name) 
+                    DO UPDATE SET 
+                        button_layout = EXCLUDED.button_layout,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (
+                    menu_name,
+                    display_name,
+                    json.dumps(layout),
+                    query.from_user.id
+                ))
+            except Exception as conflict_error:
+                logger.warning(f"ON CONFLICT failed for template menu {menu_name}, using simple INSERT: {conflict_error}")
+                # Fallback: simple insert (since we deleted existing ones above)
+                c.execute("""
+                    INSERT INTO bot_menu_layouts 
+                    (menu_name, menu_display_name, button_layout, created_by)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    menu_name,
+                    display_name,
+                    json.dumps(layout),
+                    query.from_user.id
+                ))
         
         conn.commit()
         
@@ -2922,21 +2951,47 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         import json
         menu_display_name = menu_type.replace('_', ' ').title()
         
-        # Update or insert menu layout
-        c.execute("""
-            INSERT INTO bot_menu_layouts 
-            (menu_name, menu_display_name, button_layout, created_by)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (menu_name) 
-            DO UPDATE SET 
-                button_layout = EXCLUDED.button_layout,
-                updated_at = CURRENT_TIMESTAMP
-        """, (
-            menu_type,
-            menu_display_name,
-            json.dumps(cleaned_layout),
-            query.from_user.id
-        ))
+        # Update or insert menu layout (with fallback for databases without unique constraint)
+        try:
+            c.execute("""
+                INSERT INTO bot_menu_layouts 
+                (menu_name, menu_display_name, button_layout, created_by)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (menu_name) 
+                DO UPDATE SET 
+                    button_layout = EXCLUDED.button_layout,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                menu_type,
+                menu_display_name,
+                json.dumps(cleaned_layout),
+                query.from_user.id
+            ))
+        except Exception as conflict_error:
+            logger.warning(f"ON CONFLICT failed, trying manual upsert: {conflict_error}")
+            # Fallback: manual check and update/insert
+            c.execute("SELECT id FROM bot_menu_layouts WHERE menu_name = %s", (menu_type,))
+            existing = c.fetchone()
+            
+            if existing:
+                # Update existing
+                c.execute("""
+                    UPDATE bot_menu_layouts 
+                    SET button_layout = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE menu_name = %s
+                """, (json.dumps(cleaned_layout), menu_type))
+            else:
+                # Insert new
+                c.execute("""
+                    INSERT INTO bot_menu_layouts 
+                    (menu_name, menu_display_name, button_layout, created_by)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    menu_type,
+                    menu_display_name,
+                    json.dumps(cleaned_layout),
+                    query.from_user.id
+                ))
         
         conn.commit()
         
