@@ -553,6 +553,7 @@ def callback_query_router(func):
                 "adm_manage_products_dist": admin.handle_adm_manage_products_dist, "adm_manage_products_type": admin.handle_adm_manage_products_type,
                 "adm_delete_prod": admin.handle_adm_delete_prod,
                 "adm_manage_types": admin.handle_adm_manage_types,
+                "adm_skip_type_emoji": admin.handle_adm_skip_type_emoji,
                 "adm_edit_type_menu": admin.handle_adm_edit_type_menu,
                 "adm_change_type_emoji": admin.handle_adm_change_type_emoji,
                 "adm_change_type_name": admin.handle_adm_change_type_name,

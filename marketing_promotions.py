@@ -576,9 +576,10 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
             # Add unique clickable price/weight buttons to the right
             for product in unique_products_list:
                 price_text = f"{product['price']:.0f}€ {product['size']}"
+                # Use product ID to avoid callback_data length limit (64 bytes)
                 option_btn = InlineKeyboardButton(
                     price_text,
-                    callback_data=f"minimalist_product_select|{city_name}|{district_name}|{product_type}|{product['size']}|{product['price']}"
+                    callback_data=f"minimalist_product_select|{product['id']}"
                 )
                 row.append(option_btn)
             
