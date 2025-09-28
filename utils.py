@@ -1558,6 +1558,18 @@ def init_db():
             except Exception as e:
                 logger.info(f"ℹ️ products.added_by already BIGINT: {e}")
             
+            # Verify products.added_by column type
+            c.execute("""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = 'products' AND column_name = 'added_by'
+            """)
+            col_info = c.fetchone()
+            if col_info:
+                logger.info(f"🔍 products.added_by column type: {col_info['data_type']}")
+            else:
+                logger.warning(f"⚠️ products.added_by column not found!")
+            
             logger.info(f"✅ All user_id columns converted to BIGINT")
 
             logger.info(f"🔧 Committing all database changes...")

@@ -1283,13 +1283,16 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
     try:
         conn = get_db_connection(); c = conn.cursor(); c.execute("BEGIN")
         insert_params = (
-            city, district, p_type, size, product_name, price, original_text, ADMIN_ID, datetime.now(timezone.utc).isoformat()
+            city, district, p_type, size, product_name, price, 1, 0, original_text, ADMIN_ID, datetime.now(timezone.utc).isoformat()
         )
+        logger.info(f"🔧 INSERT PARAMS: {insert_params}")
+        logger.info(f"🔧 ADMIN_ID type: {type(ADMIN_ID)}, value: {ADMIN_ID}")
         logger.debug(f"Inserting product with params count: {len(insert_params)}") # Add debug log
         c.execute("""INSERT INTO products
                         (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                     VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s)""", insert_params)
-        product_id = c.lastrowid
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", insert_params)
+        result = c.fetchone()
+        product_id = result['id'] if result else None
 
         if product_id and media_list and temp_dir:
             final_media_dir = os.path.join(MEDIA_DIR, str(product_id))
