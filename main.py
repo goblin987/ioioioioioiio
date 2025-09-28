@@ -96,7 +96,8 @@ from marketing_promotions import (
     handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status,
     handle_admin_bot_look_editor, handle_bot_look_presets, handle_bot_preset_select,
     handle_bot_look_custom, handle_bot_edit_menu, handle_bot_select_button,
-    handle_bot_place_button, handle_bot_remove_button, handle_bot_add_row, handle_bot_save_menu
+    handle_bot_place_button, handle_bot_remove_button, handle_bot_add_row, handle_bot_save_menu,
+    handle_bot_clear_menu, handle_bot_save_layout
 )
 from admin import (
     handle_admin_menu, handle_sales_analytics_menu, handle_sales_dashboard,
@@ -897,6 +898,8 @@ def callback_query_router(func):
                 "bot_remove_button": handle_bot_remove_button,
                 "bot_add_row": handle_bot_add_row,
                 "bot_save_menu": handle_bot_save_menu,
+                "bot_clear_menu": handle_bot_clear_menu,
+                "bot_save_layout": handle_bot_save_layout,
                 "bot_noop": handle_marketing_promotions_menu,  # Placeholder for separator buttons
             }
 

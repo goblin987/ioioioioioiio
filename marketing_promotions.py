@@ -3011,4 +3011,152 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         if conn:
             conn.close()
 
+async def handle_bot_clear_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Clear all buttons from current menu layout"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid menu type", show_alert=True)
+        return
+    
+    menu_type = params[0]
+    
+    # Clear the layout
+    context.user_data[f'editing_layout_{menu_type}'] = [[]]
+    
+    await query.answer("🗑️ Menu cleared!", show_alert=True)
+    
+    # Refresh the editor
+    return await handle_bot_edit_menu(update, context, [menu_type])
+
+async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save all menu layouts (global save)"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Get all editing layouts from context
+    menu_types = ['start_menu', 'city_menu', 'district_menu', 'payment_menu']
+    saved_menus = []
+    errors = []
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        import json
+        
+        for menu_type in menu_types:
+            layout_key = f'editing_layout_{menu_type}'
+            if layout_key in context.user_data:
+                current_layout = context.user_data[layout_key]
+                
+                # Clean up layout (remove empty rows and buttons)
+                cleaned_layout = []
+                for row in current_layout:
+                    cleaned_row = [btn for btn in row if btn and btn.strip()]
+                    if cleaned_row:
+                        cleaned_layout.append(cleaned_row)
+                
+                if cleaned_layout:  # Only save non-empty layouts
+                    menu_display_name = menu_type.replace('_', ' ').title()
+                    
+                    try:
+                        # Update or insert menu layout (with fallback)
+                        try:
+                            c.execute("""
+                                INSERT INTO bot_menu_layouts 
+                                (menu_name, menu_display_name, button_layout, created_by)
+                                VALUES (%s, %s, %s, %s)
+                                ON CONFLICT (menu_name) 
+                                DO UPDATE SET 
+                                    button_layout = EXCLUDED.button_layout,
+                                    updated_at = CURRENT_TIMESTAMP
+                            """, (
+                                menu_type,
+                                menu_display_name,
+                                json.dumps(cleaned_layout),
+                                query.from_user.id
+                            ))
+                        except Exception as conflict_error:
+                            logger.warning(f"ON CONFLICT failed for {menu_type}, trying manual upsert: {conflict_error}")
+                            # Fallback: manual check and update/insert
+                            c.execute("SELECT id FROM bot_menu_layouts WHERE menu_name = %s", (menu_type,))
+                            existing = c.fetchone()
+                            
+                            if existing:
+                                # Update existing
+                                c.execute("""
+                                    UPDATE bot_menu_layouts 
+                                    SET button_layout = %s, updated_at = CURRENT_TIMESTAMP
+                                    WHERE menu_name = %s
+                                """, (json.dumps(cleaned_layout), menu_type))
+                            else:
+                                # Insert new
+                                c.execute("""
+                                    INSERT INTO bot_menu_layouts 
+                                    (menu_name, menu_display_name, button_layout, created_by)
+                                    VALUES (%s, %s, %s, %s)
+                                """, (
+                                    menu_type,
+                                    menu_display_name,
+                                    json.dumps(cleaned_layout),
+                                    query.from_user.id
+                                ))
+                        
+                        saved_menus.append(menu_display_name)
+                        
+                        # Clear editing data
+                        del context.user_data[layout_key]
+                        
+                    except Exception as save_error:
+                        logger.error(f"Error saving {menu_type}: {save_error}")
+                        errors.append(f"{menu_display_name}: {str(save_error)}")
+        
+        if saved_menus:
+            conn.commit()
+        
+        # Prepare response message
+        if saved_menus and not errors:
+            msg = "✅ **ALL LAYOUTS SAVED** ✅\n\n"
+            msg += f"🎨 **Saved {len(saved_menus)} menus:**\n"
+            for menu in saved_menus:
+                msg += f"• {menu}\n"
+            msg += "\nYour bot now uses these custom layouts!"
+        elif saved_menus and errors:
+            msg = "⚠️ **PARTIALLY SAVED** ⚠️\n\n"
+            msg += f"✅ **Saved {len(saved_menus)} menus:**\n"
+            for menu in saved_menus:
+                msg += f"• {menu}\n"
+            msg += f"\n❌ **{len(errors)} errors:**\n"
+            for error in errors:
+                msg += f"• {error}\n"
+        elif errors and not saved_menus:
+            msg = "❌ **SAVE FAILED** ❌\n\n"
+            msg += "No menus were saved due to errors:\n"
+            for error in errors:
+                msg += f"• {error}\n"
+        else:
+            msg = "ℹ️ **NO CHANGES TO SAVE** ℹ️\n\n"
+            msg += "No menu layouts were found in editing mode.\n"
+            msg += "Edit some menus first, then save."
+        
+        keyboard = [
+            [InlineKeyboardButton("🎨 Continue Editing", callback_data="bot_look_custom")],
+            [InlineKeyboardButton("👀 Preview Layouts", callback_data="bot_look_preview")],
+            [InlineKeyboardButton("⬅️ Back to Bot Look", callback_data="admin_bot_look_editor")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error in global save: {e}")
+        await query.answer("❌ Error saving layouts", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
 # --- END OF FILE marketing_promotions.py ---
