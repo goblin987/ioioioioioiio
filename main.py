@@ -1873,7 +1873,7 @@ def main() -> None:
         nonlocal application
         logger.info("🔧 Initializing application...")
         try:
-        await application.initialize()
+            await application.initialize()
             logger.info("✅ Application initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize application: {e}")
