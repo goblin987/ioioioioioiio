@@ -477,6 +477,7 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
         [InlineKeyboardButton("Lietuvių 🇱🇹", callback_data="select_language|lt")]
     ]
     
+    # 🚀 YOLO: Handle both callback queries and regular messages
     if update.callback_query:
         await update.callback_query.edit_message_text(
             msg, 
@@ -2446,91 +2447,6 @@ async def handle_view_history(update: Update, context: ContextTypes.DEFAULT_TYPE
     except telegram_error.BadRequest as e:
         if "message is not modified" not in str(e).lower(): logger.error(f"Error editing history msg: {e}")
         else: await query.answer()
-
-
-# --- Language Selection ---
-async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Allows the user to select language and immediately refreshes the start menu."""
-    query = update.callback_query
-    user_id = query.from_user.id
-    current_lang, current_lang_data = _get_lang_data(context)
-    username = update.effective_user.username or update.effective_user.first_name or f"User_{user_id}"
-    conn = None
-
-    if params:
-        new_lang = params[0]
-        try:
-            from utils import LANGUAGES as UTILS_LANGUAGES_SELECT
-        except ImportError:
-             UTILS_LANGUAGES_SELECT = {'en': {}}
-             logger.error("Could not import LANGUAGES from utils in handle_language_selection")
-
-        if new_lang in UTILS_LANGUAGES_SELECT:
-            try:
-                conn = get_db_connection()
-                c = conn.cursor()
-                c.execute("UPDATE users SET language = %s WHERE user_id = %s", (new_lang, user_id))
-                conn.commit()
-                logger.info(f"User {user_id} DB language updated to {new_lang}")
-
-                context.user_data["lang"] = new_lang
-                logger.info(f"User {user_id} context language updated to {new_lang}")
-
-                # Use the just loaded LANGUAGES dict
-                new_lang_data = UTILS_LANGUAGES_SELECT.get(new_lang, UTILS_LANGUAGES_SELECT['en'])
-                language_set_answer = new_lang_data.get("language_set_answer", "Language set!")
-                await query.answer(language_set_answer.format(lang=new_lang.upper()))
-
-                # <<< FIX: Rebuild and edit start menu >>>
-                logger.info(f"Rebuilding start menu in {new_lang} for user {user_id}")
-                start_menu_text, start_menu_markup = _build_start_menu_content(user_id, username, new_lang_data, context, update.effective_user)
-                await query.edit_message_text(start_menu_text, reply_markup=start_menu_markup, parse_mode=None)
-                logger.info(f"Successfully edited message to show start menu in {new_lang}")
-                # <<< END FIX >>>
-
-            except sqlite3.Error as e:
-                logger.error(f"DB error updating language user {user_id}: {e}");
-                if conn and conn.in_transaction: conn.rollback()
-                error_saving_lang = current_lang_data.get("error_saving_language", "Error saving.")
-                await query.answer(error_saving_lang, show_alert=True)
-                await _display_language_menu(update, context, current_lang, current_lang_data)
-            except Exception as e:
-                logger.error(f"Unexpected error in language selection update for user {user_id}: {e}", exc_info=True)
-                await query.answer("An error occurred.", show_alert=True)
-                await _display_language_menu(update, context, current_lang, current_lang_data)
-            finally:
-                if conn: conn.close()
-        else:
-             invalid_lang_answer = current_lang_data.get("invalid_language_answer", "Invalid language selected.")
-             await query.answer(invalid_lang_answer, show_alert=True)
-    else:
-        await _display_language_menu(update, context, current_lang, current_lang_data)
-
-async def _display_language_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, current_lang: str, current_lang_data: dict):
-     """Helper function to display the language selection keyboard."""
-     query = update.callback_query
-     # Need LANGUAGES here
-     try: from utils import LANGUAGES as UTILS_LANGUAGES_DISPLAY
-     except ImportError: UTILS_LANGUAGES_DISPLAY = {'en': {}}
-
-     keyboard = []
-     for lang_code, lang_dict_for_name in UTILS_LANGUAGES_DISPLAY.items():
-         lang_name = lang_dict_for_name.get("native_name", lang_code.upper())
-         keyboard.append([InlineKeyboardButton(f"{lang_name} {'✅' if lang_code == current_lang else ''}", callback_data=f"language|{lang_code}")])
-     back_button_text = current_lang_data.get("back_button", "Back")
-     keyboard.append([InlineKeyboardButton(f"{EMOJI_BACK} {back_button_text}", callback_data="back_start")])
-     lang_select_prompt = current_lang_data.get("language", "🌐 Select Language:")
-     try:
-        if query and query.message:
-            await query.edit_message_text(lang_select_prompt, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-        else:
-             await send_message_with_retry(context.bot, update.effective_chat.id, lang_select_prompt, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-     except Exception as e:
-         logger.error(f"Error displaying language menu: {e}")
-         try:
-             await send_message_with_retry(context.bot, update.effective_chat.id, lang_select_prompt, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-         except Exception as send_e:
-             logger.error(f"Failed to send language menu after edit error: {send_e}")
 
 
 # --- Price List ---
