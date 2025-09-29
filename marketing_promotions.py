@@ -369,6 +369,26 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
     active_theme = get_active_ui_theme()
     active_theme_name = active_theme.get('theme_name', 'classic') if active_theme else 'classic'
     
+    # YOLO MODE: Determine what's actually active (preset vs custom)
+    conn_check = None
+    actually_active_custom_template_id = None
+    try:
+        conn_check = get_db_connection()
+        c_check = conn_check.cursor()
+        
+        # Check if any custom template is truly active
+        c_check.execute("SELECT id FROM bot_layout_templates WHERE is_active = TRUE LIMIT 1")
+        active_custom = c_check.fetchone()
+        if active_custom:
+            actually_active_custom_template_id = active_custom['id']
+            active_theme_name = 'custom'  # Override to show custom as active
+            
+    except Exception as e:
+        logger.error(f"Error checking active custom theme: {e}")
+    finally:
+        if conn_check:
+            conn_check.close()
+    
     msg = "🎨 **THEME MANAGEMENT CENTER** 🎨\n\n"
     msg += f"**Currently Active:** `{active_theme_name.upper()}`\n\n"
     
@@ -429,13 +449,15 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
             for template in custom_templates:
                 template_name = template['template_name']
                 description = template['template_description'] or "Custom layout"
-                is_active = template['is_active']
                 template_id = template['id']
+                
+                # YOLO MODE: Check if THIS template is the actually active one
+                is_actually_active = (actually_active_custom_template_id == template_id)
                 
                 # Single line format like system presets
                 msg += f"**{template_name}** - *{description}*\n"
                 
-                if is_active:
+                if is_actually_active:
                     # Active custom theme - checkmark on theme button, edit only
                     keyboard.append([
                         InlineKeyboardButton(f"✅ {template_name}", callback_data="theme_noop"),
@@ -615,7 +637,7 @@ async def handle_edit_preset_theme(update: Update, context: ContextTypes.DEFAULT
     await handle_bot_edit_menu(update, context, ['start_menu'])
 
 async def handle_edit_custom_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Edit a custom theme by loading it into the custom editor"""
+    """Edit a custom theme by loading it directly into the layout editor with saved buttons"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
@@ -634,7 +656,8 @@ async def handle_edit_custom_theme(update: Update, context: ContextTypes.DEFAULT
         conn = get_db_connection()
         c = conn.cursor()
         
-        c.execute("SELECT template_name FROM bot_layout_templates WHERE id = %s", (template_id,))
+        # Get template info and layout config
+        c.execute("SELECT template_name, layout_config FROM bot_layout_templates WHERE id = %s", (template_id,))
         template = c.fetchone()
         
         if not template:
@@ -642,19 +665,33 @@ async def handle_edit_custom_theme(update: Update, context: ContextTypes.DEFAULT
             return await handle_ui_theme_designer(update, context)
         
         template_name = template['template_name']
+        layout_config = template['layout_config']
         
-        msg = f"✏️ **EDITING CUSTOM THEME** ✏️\n\n"
-        msg += f"**Theme:** `{template_name}`\n\n"
-        msg += "🎛️ **Loading theme into custom editor...**\n\n"
-        msg += "The layout editor will open with all current button placements and settings from this custom theme pre-loaded.\n\n"
-        msg += "You can make adjustments and save your changes.\n\n"
+        # YOLO MODE: Pre-load the saved layout into editor context
+        import json
+        try:
+            parsed_config = json.loads(layout_config) if layout_config else {}
+            
+            # Load each menu's layout and header into editor context
+            for menu_name, menu_data in parsed_config.items():
+                if isinstance(menu_data, dict) and 'button_layout' in menu_data:
+                    context.user_data[f'editing_layout_{menu_name}'] = menu_data['button_layout']
+                    
+                    # Load header message if available
+                    if 'header_message' in menu_data:
+                        context.user_data[f'editing_header_{menu_name}'] = menu_data['header_message']
+                    elif menu_name == 'start_menu':
+                        # Default header for start menu
+                        context.user_data[f'editing_header_{menu_name}'] = f"Welcome back, {{user_mention}}! 💰 Balance: {{balance:.2f}} EUR\n\nChoose an option:"
+            
+            logger.info(f"Pre-loaded custom theme '{template_name}' into editor context")
+            
+        except Exception as parse_error:
+            logger.error(f"Error parsing layout config for theme {template_id}: {parse_error}")
+            # Continue anyway, editor will start with empty layout
         
-        keyboard = [
-            [InlineKeyboardButton("🎛️ OPEN LAYOUT EDITOR", callback_data="admin_bot_look_editor")],
-            [InlineKeyboardButton("❌ CANCEL", callback_data="ui_theme_designer")]
-        ]
-        
-        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        # Redirect directly to start menu editor with pre-loaded layout
+        await handle_bot_edit_menu(update, context, ['start_menu'])
         
     except Exception as e:
         logger.error(f"Error loading custom theme for editing {template_id}: {e}")
