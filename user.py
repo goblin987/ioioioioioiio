@@ -93,7 +93,7 @@ SUPPORTED_CRYPTO = {
 
 
 # --- Helper Function to Build Start Menu ---
-def _build_start_menu_content(user_id: int, username: str, lang_data: dict, context: ContextTypes.DEFAULT_TYPE) -> tuple[str, InlineKeyboardMarkup]:
+def _build_start_menu_content(user_id: int, username: str, lang_data: dict, context: ContextTypes.DEFAULT_TYPE, user_obj=None) -> tuple[str, InlineKeyboardMarkup]:
     """Builds the text and keyboard for the start menu using provided lang_data."""
     logger.debug(f"_build_start_menu_content: Building menu for user {user_id} with lang_data.")
 
@@ -219,7 +219,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
             # Get user data for variable processing
             user_data = {
                 'user_mention': username,
-                'user_first_name': user.first_name or username,
+                'user_first_name': user_obj.first_name if user_obj else username,
                 'user_id': str(user_id),
                 'balance': f"{balance:.2f}",
                 'total_purchases': str(purchases),
@@ -228,13 +228,21 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
             }
             
             # Get header message from database
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute("SELECT header_message FROM bot_menu_layouts WHERE menu_name = 'start_menu' AND is_active = TRUE LIMIT 1")
-            result = c.fetchone()
-            if result and result['header_message']:
-                custom_header_message = process_dynamic_variables(result['header_message'], user_data)
-            conn.close()
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("SELECT header_message FROM bot_menu_layouts WHERE menu_name = 'start_menu' AND is_active = TRUE LIMIT 1")
+                result = c.fetchone()
+                if result and result['header_message']:
+                    custom_header_message = process_dynamic_variables(result['header_message'], user_data)
+                    logger.info(f"Loaded custom header message for user {user_id}: {result['header_message'][:50]}...")
+                else:
+                    logger.info(f"No custom header message found for user {user_id}")
+                conn.close()
+            except Exception as header_error:
+                logger.error(f"Error loading custom header message for user {user_id}: {header_error}")
+                if conn:
+                    conn.close()
             
     except ImportError:
         keyboard = default_keyboard
@@ -251,8 +259,10 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
 
     # Use custom header message if available, otherwise use default
     if custom_header_message:
+        logger.info(f"Using custom header message for user {user_id}")
         return custom_header_message, reply_markup
     else:
+        logger.info(f"Using default welcome message for user {user_id}")
         return full_welcome, reply_markup
 
 
@@ -377,7 +387,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Build and Send/Edit Menu
     lang, lang_data = _get_lang_data(context)
-    full_welcome, reply_markup = _build_start_menu_content(user_id, username, lang_data, context)
+    full_welcome, reply_markup = _build_start_menu_content(user_id, username, lang_data, context, user)
 
     if is_callback:
         query = update.callback_query
@@ -2112,7 +2122,7 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
 
                 # <<< FIX: Rebuild and edit start menu >>>
                 logger.info(f"Rebuilding start menu in {new_lang} for user {user_id}")
-                start_menu_text, start_menu_markup = _build_start_menu_content(user_id, username, new_lang_data, context)
+                start_menu_text, start_menu_markup = _build_start_menu_content(user_id, username, new_lang_data, context, update.effective_user)
                 await query.edit_message_text(start_menu_text, reply_markup=start_menu_markup, parse_mode=None)
                 logger.info(f"Successfully edited message to show start menu in {new_lang}")
                 # <<< END FIX >>>
