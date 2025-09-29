@@ -330,8 +330,16 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
         # Get user's language preference
         user_language = context.user_data.get('lang', 'en')
         
-        # Create verification message in user's language
-        msg = VERIFICATION_TEXTS.get(user_language, VERIFICATION_TEXTS['en'])
+        # 🚀 YOLO MODE: Show verification text in all 3 languages if placement is AFTER
+        placement = get_language_prompt_placement()
+        if placement == 'after':
+            # User hasn't selected language yet, show all 3 languages
+            msg = "🤖 **Prove you're human: reply with the text in the image.**\n"
+            msg += "🤖 **Įrodykite, kad esate žmogus: atsakykite tekstu pavaizduotame paveikslėlyje.**\n"
+            msg += "🤖 **Докажите, что вы человек: ответьте текстом на изображении.**"
+        else:
+            # Language already selected, use user's language
+            msg = VERIFICATION_TEXTS.get(user_language, VERIFICATION_TEXTS['en'])
         
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
         
@@ -362,14 +370,22 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
         # Fallback to text-based verification
         user_language = context.user_data.get('lang', 'en')
         
-        # Use same multilingual text but with code displayed
-        fallback_texts = {
-            'en': f"🤖 **Prove you're human: reply with the text below.**\n\n**Code:** `{verification_code}`",
-            'lt': f"🤖 **Įrodykite, kad esate žmogus: atsakykite žemiau esančiu tekstu.**\n\n**Kodas:** `{verification_code}`",
-            'ru': f"🤖 **Докажите, что вы человек: ответьте текстом ниже.**\n\n**Код:** `{verification_code}`"
-        }
-        
-        msg = fallback_texts.get(user_language, fallback_texts['en'])
+        # 🚀 YOLO MODE: Show fallback text in all 3 languages if placement is AFTER
+        placement = get_language_prompt_placement()
+        if placement == 'after':
+            # User hasn't selected language yet, show all 3 languages
+            msg = f"🤖 **Prove you're human: reply with the text below.**\n"
+            msg += f"🤖 **Įrodykite, kad esate žmogus: atsakykite žemiau esančiu tekstu.**\n"
+            msg += f"🤖 **Докажите, что вы человек: ответьте текстом ниже.**\n\n"
+            msg += f"**Code / Kodas / Код:** `{verification_code}`"
+        else:
+            # Language already selected, use user's language
+            fallback_texts = {
+                'en': f"🤖 **Prove you're human: reply with the text below.**\n\n**Code:** `{verification_code}`",
+                'lt': f"🤖 **Įrodykite, kad esate žmogus: atsakykite žemiau esančiu tekstu.**\n\n**Kodas:** `{verification_code}`",
+                'ru': f"🤖 **Докажите, что вы человек: ответьте текстом ниже.**\n\n**Код:** `{verification_code}`"
+            }
+            msg = fallback_texts.get(user_language, fallback_texts['en'])
         
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
         
