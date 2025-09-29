@@ -204,17 +204,36 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
          InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")]
     ]
     
-    # Try to apply custom layout and header message if available
+    # YOLO MODE: Only apply custom layout if NO preset theme is active
     custom_header_message = None
     try:
-        from marketing_promotions import apply_custom_layout_to_keyboard, get_custom_layout, process_dynamic_variables
+        from marketing_promotions import apply_custom_layout_to_keyboard, get_custom_layout, process_dynamic_variables, get_active_ui_theme
         
-        # Get custom layout
-        keyboard = apply_custom_layout_to_keyboard('start_menu', default_keyboard)
-        logger.info(f"Applied custom start menu layout for user {user_id}")
+        # Check if preset theme is active
+        active_theme = get_active_ui_theme()
+        if active_theme and active_theme.get('theme_name') != 'custom':
+            # Preset theme is active - use default layout for that theme
+            logger.info(f"Preset theme '{active_theme.get('theme_name')}' is active - using default layout")
+            # For classic theme, use the 6-button layout we defined
+            if active_theme.get('theme_name') == 'classic':
+                keyboard = [
+                    [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
+                    [InlineKeyboardButton("👤 Profile", callback_data="profile"), 
+                     InlineKeyboardButton("💳 Top Up", callback_data="refill")],
+                    [InlineKeyboardButton("📝 Reviews", callback_data="reviews"),
+                     InlineKeyboardButton("📋 Price List", callback_data="price_list"),
+                     InlineKeyboardButton("🌐 Language", callback_data="language")]
+                ]
+        else:
+            # No preset theme - apply custom layout
+            keyboard = apply_custom_layout_to_keyboard('start_menu', default_keyboard)
+            logger.info(f"Applied custom start menu layout for user {user_id}")
         
-        # Get custom header message
-        custom_layout = get_custom_layout('start_menu')
+        # Get custom header message only if using custom layout
+        custom_layout = None
+        if active_theme and active_theme.get('theme_name') == 'custom':
+            custom_layout = get_custom_layout('start_menu')
+            
         if custom_layout:
             # Get user data for variable processing
             user_data = {
