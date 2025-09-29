@@ -30,7 +30,7 @@ from utils import (
     is_primary_admin, is_secondary_admin, is_any_admin, # Admin helper functions
     SECONDARY_ADMIN_IDS, is_user_banned, # Import ban check helper
     update_user_broadcast_status, # Import broadcast tracking helper
-    is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code, # Human verification
+    is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code, generate_verification_image, # Human verification
     get_verification_attempt_limit, get_user_verification_attempts, increment_verification_attempts, 
     reset_verification_attempts, block_user_for_failed_verification # Verification attempts
 )
@@ -321,32 +321,35 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
     # Show attempt info
     attempts_left = max_attempts - current_attempts
     
-    # Create verification message like in the image
+    # Generate professional verification image
+    verification_image = generate_verification_image(verification_code)
+    
+    # Create verification message
     msg = f"🤖 **Prove you're human: reply with the text in the image.**\n\n"
-    msg += f"```\n"
-    msg += f"┌─────────────────────────────┐\n"
-    msg += f"│                             │\n"
-    msg += f"│         {verification_code}          │\n"
-    msg += f"│                             │\n"
-    msg += f"└─────────────────────────────┘\n"
-    msg += f"```\n\n"
     msg += f"🔢 **Attempts remaining:** {attempts_left}/{max_attempts}\n"
     msg += f"⚠️ **Warning:** After {max_attempts} failed attempts, you will be blocked."
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
     
     if update.callback_query:
-        await update.callback_query.edit_message_text(
-            msg, 
-            reply_markup=InlineKeyboardMarkup(keyboard), 
+        # For callback queries, we need to send a new message with photo
+        await update.callback_query.message.reply_photo(
+            photo=verification_image,
+            caption=msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='Markdown'
         )
+        # Delete the old message
+        try:
+            await update.callback_query.message.delete()
+        except:
+            pass
     else:
-        await send_message_with_retry(
-            context.bot, 
-            update.effective_chat.id, 
-            msg, 
-            reply_markup=InlineKeyboardMarkup(keyboard), 
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=verification_image,
+            caption=msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='Markdown'
         )
 

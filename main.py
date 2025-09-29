@@ -1100,14 +1100,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Handle document uploads
                 bot = get_testforwarder_bot()
                 await bot.handle_document(update, context)
-            else:
+    else:
                 await handle_testforwarder_message(update, context)
             return  # If testforwarder handled it, don't process further
         except Exception as e:
             logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
     # No handler found
-    logger.debug(f"No handler found for user {user_id} in state: {state}")
+        logger.debug(f"No handler found for user {user_id} in state: {state}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1229,7 +1229,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
@@ -1817,7 +1817,7 @@ def main() -> None:
     logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
     try:
-        load_all_data()
+    load_all_data()
         logger.info("✅ All data loaded successfully")
     except Exception as e:
         logger.error(f"❌ Failed to load data: {e}", exc_info=True)
@@ -1873,7 +1873,7 @@ def main() -> None:
         nonlocal application
         logger.info("🔧 Initializing application...")
         try:
-            await application.initialize()
+        await application.initialize()
             logger.info("✅ Application initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize application: {e}")
@@ -1884,16 +1884,16 @@ def main() -> None:
             webhook_result = await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES)
             if webhook_result:
                 logger.info("✅ Telegram webhook set successfully.")
-            else:
+        else:
                 logger.error("❌ Failed to set Telegram webhook.")
-                return
+            return
         except Exception as e:
             logger.error(f"❌ Error setting webhook: {e}")
             return
         
         logger.info("🔧 Starting Telegram application...")
         try:
-            await application.start()
+        await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
         except Exception as e:
             logger.error(f"❌ Failed to start Telegram application: {e}")

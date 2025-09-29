@@ -14,6 +14,8 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 import requests
 from collections import Counter, defaultdict # Moved higher up
+from PIL import Image, ImageDraw, ImageFont
+import io
 
 # --- Telegram Imports ---
 from telegram import Update, Bot
@@ -3117,6 +3119,67 @@ def generate_verification_code():
     numbers = ''.join(random.choices(string.digits, k=1))  # 1 random number
     letter = random.choice(string.ascii_uppercase)  # 1 more letter
     return letters + numbers + letter
+
+def generate_verification_image(code):
+    """Generate a professional verification image like the one in photo 2"""
+    try:
+        # Create image with white background
+        width, height = 300, 100
+        image = Image.new('RGB', (width, height), 'white')
+        draw = ImageDraw.Draw(image)
+        
+        # Add subtle noise/dots to background (like in the photo)
+        for _ in range(200):
+            x = random.randint(0, width-1)
+            y = random.randint(0, height-1)
+            draw.point((x, y), fill=(200, 200, 200))
+        
+        # Try to use a system font, fallback to default
+        try:
+            # Try different font sizes and paths
+            font_size = 48
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except:
+            try:
+                font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", font_size)
+            except:
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                except:
+                    # Fallback to default font
+                    font = ImageFont.load_default()
+        
+        # Get text dimensions for centering
+        bbox = draw.textbbox((0, 0), code, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Center the text
+        x = (width - text_width) // 2
+        y = (height - text_height) // 2
+        
+        # Draw the text in black, bold style
+        draw.text((x, y), code, fill='black', font=font)
+        
+        # Convert to bytes
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        
+        return img_byte_arr
+        
+    except Exception as e:
+        logger.error(f"Error generating verification image: {e}")
+        # Fallback: create a simple text image
+        image = Image.new('RGB', (300, 100), 'white')
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+        draw.text((50, 30), code, fill='black', font=font)
+        
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        return img_byte_arr
 
 def is_human_verification_enabled():
     """Check if human verification is enabled"""
