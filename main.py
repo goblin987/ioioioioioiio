@@ -1094,14 +1094,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Handle document uploads
                 bot = get_testforwarder_bot()
                 await bot.handle_document(update, context)
-    else:
+            else:
                 await handle_testforwarder_message(update, context)
             return  # If testforwarder handled it, don't process further
         except Exception as e:
             logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
     # No handler found
-        logger.debug(f"No handler found for user {user_id} in state: {state}")
+    logger.debug(f"No handler found for user {user_id} in state: {state}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
