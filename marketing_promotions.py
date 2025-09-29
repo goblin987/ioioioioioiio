@@ -354,18 +354,141 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
     msg += f"**Currently Active:** {active_theme['theme_name'].title()} ✅\n\n"
     
     keyboard = []
+    
+    # Add built-in themes (cannot be deleted)
+    msg += "**🔧 Built-in Themes:**\n"
     for theme_key, theme_data in UI_THEMES.items():
         status = "✅ Active" if theme_key == active_theme['theme_name'] else "Select"
         button_text = f"{theme_data['name']} - {status}"
         callback_data = f"select_ui_theme|{theme_key}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
     
+    # Add custom templates from database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, template_name, template_description, is_active
+            FROM bot_layout_templates 
+            WHERE is_preset = FALSE
+            ORDER BY created_at DESC
+        """)
+        custom_templates = c.fetchall()
+        
+        if custom_templates:
+            msg += "\n**🎨 Custom Templates:**\n"
+            for template in custom_templates:
+                status = "✅ Active" if template['is_active'] else "Select"
+                button_text = f"🎨 {template['template_name']} - {status}"
+                keyboard.append([InlineKeyboardButton(button_text, callback_data=f"select_custom_template|{template['id']}")])
+                # Add delete button for custom templates
+                keyboard.append([InlineKeyboardButton(f"🗑️ Delete {template['template_name']}", callback_data=f"delete_custom_template|{template['id']}")])
+    
+    except Exception as e:
+        logger.error(f"Error loading custom templates: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
     keyboard.extend([
-        [InlineKeyboardButton("🔧 Customize Active Theme", callback_data="customize_active_theme")],
         [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_select_custom_template(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select and activate a custom template"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid template selection", show_alert=True)
+        return
+    
+    template_id = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get template details
+        c.execute("SELECT template_name, layout_config FROM bot_layout_templates WHERE id = %s", (template_id,))
+        template = c.fetchone()
+        
+        if not template:
+            await query.answer("Template not found", show_alert=True)
+            return
+        
+        # Deactivate all themes and templates
+        c.execute("UPDATE ui_themes SET is_active = FALSE")
+        c.execute("UPDATE bot_layout_templates SET is_active = FALSE")
+        
+        # Activate this template
+        c.execute("UPDATE bot_layout_templates SET is_active = TRUE WHERE id = %s", (template_id,))
+        
+        conn.commit()
+        
+        await query.answer(f"✅ Template '{template['template_name']}' activated!", show_alert=True)
+        
+        # Refresh the UI theme designer
+        await handle_ui_theme_designer(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error activating template {template_id}: {e}")
+        await query.answer("❌ Error activating template", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_delete_custom_template(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Delete a custom template"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid template selection", show_alert=True)
+        return
+    
+    template_id = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get template name for confirmation
+        c.execute("SELECT template_name, is_active FROM bot_layout_templates WHERE id = %s", (template_id,))
+        template = c.fetchone()
+        
+        if not template:
+            await query.answer("Template not found", show_alert=True)
+            return
+        
+        # If this template is active, switch to classic theme
+        if template['is_active']:
+            c.execute("UPDATE ui_themes SET is_active = FALSE")
+            c.execute("UPDATE ui_themes SET is_active = TRUE WHERE theme_name = 'classic'")
+        
+        # Delete the template
+        c.execute("DELETE FROM bot_layout_templates WHERE id = %s", (template_id,))
+        
+        conn.commit()
+        
+        await query.answer(f"✅ Template '{template['template_name']}' deleted!", show_alert=True)
+        
+        # Refresh the UI theme designer
+        await handle_ui_theme_designer(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error deleting template {template_id}: {e}")
+        await query.answer("❌ Error deleting template", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_select_ui_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Select and activate a UI theme"""
@@ -2050,7 +2173,8 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
             else:
                 deal_text += f" - From {deal['price']:.2f}€"
             
-            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"modern_product_select|{deal['product_id']}")])
+            # For hot deals, redirect to payment menu directly
+            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"pay_single_item|{deal['city']}|{deal['district']}|{deal['product_type']}|{deal['size']}|{deal['deal_price']}")])
         
         # Show automatic deals
         for deal in auto_deals:
@@ -2061,7 +2185,8 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
             
             emoji = get_product_emoji(product_type)
             deal_text = f"🔥 {emoji} {product_type.title()} - From {price:.2f}€"
-            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"modern_deal_select|{city}|{district}|{product_type}")])
+            # For auto deals, redirect to payment menu directly
+            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"pay_single_item|{city}|{district}|{product_type}|unknown|{price}")])
         
         total_deals = len(manual_deals) + len(auto_deals)
         msg += f"⚡ **{total_deals} hot deals available**\n"
@@ -2072,7 +2197,6 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         msg += "💎 *Premium offers coming*"
     
     keyboard.extend([
-        [InlineKeyboardButton("🛍️ Browse Premium Shop", callback_data="modern_shop")],
         [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
     ])
     
