@@ -2132,9 +2132,9 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
         [InlineKeyboardButton("🛍️ Shop Now", callback_data="modern_shop"),
          InlineKeyboardButton("🔥 Hot Deals", callback_data="modern_deals")],
         [InlineKeyboardButton("👤 My Account", callback_data="modern_profile"),
-         InlineKeyboardButton("💰 Wallet", callback_data="modern_wallet")],
+         InlineKeyboardButton("💳 Top Up", callback_data="modern_wallet")],
         [InlineKeyboardButton("🎯 Promotions", callback_data="modern_promotions"),
-         InlineKeyboardButton("📱 App Info", callback_data="modern_app")]
+         InlineKeyboardButton("ℹ️ Info", callback_data="modern_app")]
     ])
     
     if query:
@@ -4246,7 +4246,6 @@ AVAILABLE_BUTTONS = {
         {'text': '🛍️ Shop', 'callback': 'shop', 'emoji': '🛍️'},
         {'text': '👤 Profile', 'callback': 'profile', 'emoji': '👤'},
         {'text': '💳 Top Up', 'callback': 'topup', 'emoji': '💳'},
-        {'text': '💰 Wallet', 'callback': 'wallet', 'emoji': '💰'},
         {'text': '🔥 Hot Deals', 'callback': 'modern_deals', 'emoji': '🔥'},
         {'text': 'ℹ️ Info', 'callback': 'info', 'emoji': 'ℹ️'},
         {'text': '⭐ Reviews', 'callback': 'reviews', 'emoji': '⭐'},
