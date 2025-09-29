@@ -2203,13 +2203,57 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         # Create structured menu with city headers and deals
         total_deals = 0
+        
+        # Helper function to get city_id and district_id from names
+        def get_location_ids(city_name, district_name):
+            from utils import CITIES, DISTRICTS
+            city_id = None
+            district_id = None
+            
+            # Find city_id by name
+            for cid, cname in CITIES.items():
+                if cname.lower() == city_name.lower():
+                    city_id = cid
+                    break
+            
+            # Find district_id by name within the city
+            if city_id and city_id in DISTRICTS:
+                for did, dname in DISTRICTS[city_id].items():
+                    if dname.lower() == district_name.lower():
+                        district_id = did
+                        break
+            
+            return city_id, district_id
+        
         for city, city_deals in deals_by_city.items():
             # Add non-clickable city header
             keyboard.append([InlineKeyboardButton(f"🏙️ {city.upper()}", callback_data="city_header_noop")])
             
             # Add all deals for this city
             for deal in city_deals:
-                keyboard.append([InlineKeyboardButton(deal['text'], callback_data=deal['callback'])])
+                # Extract city and district from the original callback to convert to IDs
+                callback_parts = deal['callback'].split('|')
+                if len(callback_parts) >= 5:
+                    city_name = callback_parts[1]
+                    district_name = callback_parts[2]
+                    product_type = callback_parts[3]
+                    size = callback_parts[4]
+                    price = callback_parts[5]
+                    
+                    # Get the correct IDs
+                    city_id, district_id = get_location_ids(city_name, district_name)
+                    
+                    if city_id and district_id:
+                        # Create correct callback with IDs
+                        correct_callback = f"pay_single_item|{city_id}|{district_id}|{product_type}|{size}|{price}"
+                        keyboard.append([InlineKeyboardButton(deal['text'], callback_data=correct_callback)])
+                    else:
+                        # Fallback to original callback if IDs not found
+                        keyboard.append([InlineKeyboardButton(deal['text'], callback_data=deal['callback'])])
+                else:
+                    # Fallback to original callback if parsing fails
+                    keyboard.append([InlineKeyboardButton(deal['text'], callback_data=deal['callback'])])
+                
                 total_deals += 1
         
         msg += f"⚡ **{total_deals} hot deals available**\n"
