@@ -645,6 +645,7 @@ def callback_query_router(func):
                 "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "toggle_human_verification": admin.handle_toggle_human_verification,
+                "set_verification_attempts": admin.handle_set_verification_attempts,
                 "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
                 "admin_system_health": admin.handle_admin_system_health,
                 "admin_user_stats": admin.handle_admin_user_stats,
@@ -982,6 +983,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     STATE_HANDLERS = {
         # User Handlers (from user.py)
         'awaiting_verification': user.handle_verification_message,
+        'awaiting_verification_limit': admin.handle_verification_limit_message,
         'awaiting_review': user.handle_leave_review_message,
         'awaiting_user_discount_code': user.handle_user_discount_code_message,
         'awaiting_basket_discount_code': user.handle_basket_discount_code_message,

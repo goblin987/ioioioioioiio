@@ -678,27 +678,37 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    # Check current human verification status
+    # Check current human verification status and attempt limit
     conn = None
     human_verification_enabled = False
+    attempt_limit = 3
     try:
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("human_verification_enabled",))
         result = c.fetchone()
         human_verification_enabled = result and result['setting_value'] == 'true'
+        
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("verification_attempt_limit",))
+        limit_result = c.fetchone()
+        attempt_limit = int(limit_result['setting_value']) if limit_result else 3
     except Exception as e:
-        logger.error(f"Error checking human verification status: {e}")
+        logger.error(f"Error checking system settings: {e}")
     finally:
         if conn:
             conn.close()
     
     verification_status = "✅ ENABLED" if human_verification_enabled else "❌ DISABLED"
     
-    msg = f"⚙️ **System Settings**\n\nConfigure bot security and system settings:\n\n🤖 **Human Verification:** {verification_status}"
+    msg = f"⚙️ **System Settings**\n\nConfigure bot security and system settings:\n\n"
+    msg += f"🤖 **Human Verification:** {verification_status}\n"
+    msg += f"🔢 **Max Attempts:** {attempt_limit} tries\n"
+    msg += f"⚠️ **Auto-Block:** After {attempt_limit} failed attempts"
+    
     keyboard = [
         [InlineKeyboardButton(f"🤖 {'Disable' if human_verification_enabled else 'Enable'} Human Verification", 
                              callback_data=f"toggle_human_verification|{'disable' if human_verification_enabled else 'enable'}")],
+        [InlineKeyboardButton("🔢 Set Attempt Limit", callback_data="set_verification_attempts")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -743,6 +753,96 @@ async def handle_toggle_human_verification(update: Update, context: ContextTypes
     finally:
         if conn:
             conn.close()
+
+async def handle_set_verification_attempts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set verification attempt limit."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['state'] = 'awaiting_verification_limit'
+    
+    msg = "🔢 **Set Verification Attempt Limit**\n\n"
+    msg += "Enter the maximum number of attempts users get to pass human verification.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• `3` - Users get 3 tries (recommended)\n"
+    msg += "• `5` - Users get 5 tries (lenient)\n"
+    msg += "• `1` - Users get 1 try only (strict)\n\n"
+    msg += "⚠️ **After exceeding the limit, users will be automatically blocked.**\n\n"
+    msg += "💬 **Type the number:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data="admin_system_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_verification_limit_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle verification attempt limit input"""
+    if context.user_data.get('state') != 'awaiting_verification_limit':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    try:
+        limit = int(update.message.text.strip())
+        if limit < 1 or limit > 10:
+            await update.message.reply_text(
+                "❌ **Invalid Limit**\n\nPlease enter a number between 1 and 10.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Update the setting
+        conn = None
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO bot_settings (setting_key, setting_value)
+                VALUES (%s, %s)
+                ON CONFLICT (setting_key) 
+                DO UPDATE SET setting_value = EXCLUDED.setting_value
+            """, ("verification_attempt_limit", str(limit)))
+            conn.commit()
+            
+            context.user_data.pop('state', None)
+            
+            success_msg = f"✅ **Attempt Limit Updated**\n\n"
+            success_msg += f"🔢 **New Limit:** {limit} attempts\n"
+            success_msg += f"⚠️ **Auto-Block:** Users will be blocked after {limit} failed verification attempts\n\n"
+            success_msg += "Returning to System Settings..."
+            
+            await update.message.reply_text(success_msg, parse_mode='Markdown')
+            
+            # Wait and return to system menu
+            import asyncio
+            await asyncio.sleep(2)
+            
+            # Create a fake callback query to return to system menu
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+            keyboard = [[InlineKeyboardButton("🔙 Back to System Settings", callback_data="admin_system_menu")]]
+            await update.message.reply_text(
+                "📋 **Settings Updated Successfully**",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error setting verification limit: {e}")
+            await update.message.reply_text("❌ Error updating setting. Please try again.")
+            context.user_data.pop('state', None)
+        finally:
+            if conn:
+                conn.close()
+                
+    except ValueError:
+        await update.message.reply_text(
+            "❌ **Invalid Number**\n\nPlease enter a valid number between 1 and 10.",
+            parse_mode='Markdown'
+        )
 
 async def handle_admin_maintenance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show system maintenance menu"""

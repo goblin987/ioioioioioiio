@@ -30,7 +30,9 @@ from utils import (
     is_primary_admin, is_secondary_admin, is_any_admin, # Admin helper functions
     SECONDARY_ADMIN_IDS, is_user_banned, # Import ban check helper
     update_user_broadcast_status, # Import broadcast tracking helper
-    is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code # Human verification
+    is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code, # Human verification
+    get_verification_attempt_limit, get_user_verification_attempts, increment_verification_attempts, 
+    reset_verification_attempts, block_user_for_failed_verification # Verification attempts
 )
 import json # <<< Make sure json is imported
 import payment # <<< Make sure payment module is imported
@@ -292,10 +294,32 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
     """Show human verification challenge"""
     user_id = update.effective_user.id
     
+    # Check if user has exceeded attempt limit
+    current_attempts = get_user_verification_attempts(user_id)
+    max_attempts = get_verification_attempt_limit()
+    
+    if current_attempts >= max_attempts:
+        # User has exceeded attempts, block them
+        block_user_for_failed_verification(user_id)
+        
+        msg = f"🚫 **Access Blocked**\n\n"
+        msg += f"You have exceeded the maximum number of verification attempts ({max_attempts}).\n\n"
+        msg += f"Your access to this bot has been blocked for security reasons.\n\n"
+        msg += f"Contact support if you believe this is an error."
+        
+        if update.callback_query:
+            await update.callback_query.edit_message_text(msg, parse_mode='Markdown')
+        else:
+            await send_message_with_retry(context.bot, update.effective_chat.id, msg, parse_mode='Markdown')
+        return
+    
     # Generate verification code
     verification_code = generate_verification_code()
     context.user_data['verification_code'] = verification_code
     context.user_data['state'] = 'awaiting_verification'
+    
+    # Show attempt info
+    attempts_left = max_attempts - current_attempts
     
     # Create verification message like in the image
     msg = f"🤖 **Prove you're human: reply with the text in the image.**\n\n"
@@ -305,7 +329,9 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
     msg += f"│         {verification_code}          │\n"
     msg += f"│                             │\n"
     msg += f"└─────────────────────────────┘\n"
-    msg += f"```"
+    msg += f"```\n\n"
+    msg += f"🔢 **Attempts remaining:** {attempts_left}/{max_attempts}\n"
+    msg += f"⚠️ **Warning:** After {max_attempts} failed attempts, you will be blocked."
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
     
@@ -336,6 +362,7 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
     if user_input == correct_code:
         # Verification successful
         set_user_verified(user_id, True)
+        reset_verification_attempts(user_id)  # Reset attempts on success
         context.user_data.pop('verification_code', None)
         context.user_data.pop('state', None)
         
@@ -347,11 +374,33 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
         # Now show the start menu
         await start(update, context)
     else:
-        # Verification failed
-        await update.message.reply_text(
-            "❌ **Incorrect code!**\n\nPlease try again or type /start to get a new code.",
-            parse_mode='Markdown'
-        )
+        # Verification failed - increment attempts
+        new_attempt_count = increment_verification_attempts(user_id)
+        max_attempts = get_verification_attempt_limit()
+        attempts_left = max_attempts - new_attempt_count
+        
+        if attempts_left <= 0:
+            # User has exceeded attempts, block them
+            block_user_for_failed_verification(user_id)
+            context.user_data.pop('verification_code', None)
+            context.user_data.pop('state', None)
+            
+            await update.message.reply_text(
+                f"🚫 **Access Blocked**\n\n"
+                f"You have exceeded the maximum number of verification attempts ({max_attempts}).\n\n"
+                f"Your access to this bot has been blocked for security reasons.\n\n"
+                f"Contact support if you believe this is an error.",
+                parse_mode='Markdown'
+            )
+        else:
+            # Still have attempts left
+            await update.message.reply_text(
+                f"❌ **Incorrect code!**\n\n"
+                f"🔢 **Attempts remaining:** {attempts_left}/{max_attempts}\n"
+                f"⚠️ **Warning:** You will be blocked after {max_attempts} failed attempts.\n\n"
+                f"Type `/start` to get a new code or try again.",
+                parse_mode='Markdown'
+            )
 
 async def handle_verification_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle verification cancellation"""

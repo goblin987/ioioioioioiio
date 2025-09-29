@@ -8,6 +8,8 @@ import json
 import shutil
 import tempfile
 import asyncio
+import random
+import string
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 import requests
@@ -1188,7 +1190,8 @@ def init_db():
                 last_active {get_timestamp_type()} DEFAULT NULL,
                 broadcast_failed_count INTEGER DEFAULT 0,
                 referral_code {get_text_type()} DEFAULT NULL,
-                is_human_verified {get_boolean_type()} DEFAULT FALSE
+                is_human_verified {get_boolean_type()} DEFAULT FALSE,
+                verification_attempts INTEGER DEFAULT 0
             )''')
             logger.info(f"✅ Users table created successfully")
             
@@ -1216,6 +1219,19 @@ def init_db():
                     logger.info(f"✅ is_human_verified column already exists in users table")
                 else:
                     logger.warning(f"⚠️ Could not add is_human_verified column: {e}")
+                conn.rollback()
+            
+            # Add verification_attempts column if it doesn't exist
+            try:
+                logger.info(f"🔧 Adding verification_attempts column to users table...")
+                c.execute("ALTER TABLE users ADD COLUMN verification_attempts INTEGER DEFAULT 0")
+                conn.commit()
+                logger.info(f"✅ verification_attempts column added to users table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ verification_attempts column already exists in users table")
+                else:
+                    logger.warning(f"⚠️ Could not add verification_attempts column: {e}")
                 conn.rollback()
             
             # Handle existing tables: ALTER user_id columns from INTEGER to BIGINT for Telegram compatibility
@@ -3145,6 +3161,95 @@ def set_user_verified(user_id, verified=True):
         return True
     except Exception as e:
         logger.error(f"Error setting user verification status: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def get_verification_attempt_limit():
+    """Get the maximum number of verification attempts allowed"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("verification_attempt_limit",))
+        result = c.fetchone()
+        return int(result['setting_value']) if result else 3  # Default to 3 attempts
+    except Exception as e:
+        logger.error(f"Error getting verification attempt limit: {e}")
+        return 3  # Default fallback
+    finally:
+        if conn:
+            conn.close()
+
+def get_user_verification_attempts(user_id):
+    """Get user's current verification attempt count"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT verification_attempts FROM users WHERE user_id = %s", (user_id,))
+        result = c.fetchone()
+        return result.get('verification_attempts', 0) if result else 0
+    except Exception as e:
+        logger.error(f"Error getting user verification attempts: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+def increment_verification_attempts(user_id):
+    """Increment user's verification attempt count"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            UPDATE users 
+            SET verification_attempts = COALESCE(verification_attempts, 0) + 1 
+            WHERE user_id = %s
+        """, (user_id,))
+        conn.commit()
+        
+        # Get the new attempt count
+        c.execute("SELECT verification_attempts FROM users WHERE user_id = %s", (user_id,))
+        result = c.fetchone()
+        return result.get('verification_attempts', 0) if result else 0
+    except Exception as e:
+        logger.error(f"Error incrementing verification attempts: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+def reset_verification_attempts(user_id):
+    """Reset user's verification attempt count"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE users SET verification_attempts = 0 WHERE user_id = %s", (user_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error resetting verification attempts: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def block_user_for_failed_verification(user_id):
+    """Block user for failing verification too many times"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE users SET is_banned = %s WHERE user_id = %s", (True, user_id))
+        conn.commit()
+        logger.warning(f"User {user_id} blocked for failing human verification")
+        return True
+    except Exception as e:
+        logger.error(f"Error blocking user for failed verification: {e}")
         return False
     finally:
         if conn:
