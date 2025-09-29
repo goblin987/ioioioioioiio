@@ -2748,11 +2748,12 @@ async def handle_hot_deal_price_message(update: Update, context: ContextTypes.DE
         msg += f"💰 **Original Price:** {product['price']:.2f}€\n"
         msg += f"🔥 **Deal Price:** {price:.2f}€\n"
         msg += f"📊 **Savings:** {((product['price'] - price) / product['price'] * 100):.1f}%\n\n"
-        msg += "🏷️ **Enter deal title:**\n"
+        msg += "🏷️ **Enter deal title (or skip):**\n"
         msg += "*(Example: 'Weekend Special' or 'Limited Edition')*"
         
         keyboard = [
-            [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+            [InlineKeyboardButton("⏭️ Skip Title", callback_data=f"admin_deal_skip_title|{product['id']}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product_preserve|{product['id']}")]
         ]
         
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2792,11 +2793,12 @@ async def handle_hot_deal_discount_message(update: Update, context: ContextTypes
         msg += f"💰 **Original Price:** {product['price']:.2f}€\n"
         msg += f"📊 **Discount:** {discount:.1f}%\n"
         msg += f"🔥 **Deal Price:** {deal_price:.2f}€\n\n"
-        msg += "🏷️ **Enter deal title:**\n"
+        msg += "🏷️ **Enter deal title (or skip):**\n"
         msg += "*(Example: 'Weekend Special' or 'Limited Edition')*"
         
         keyboard = [
-            [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+            [InlineKeyboardButton("⏭️ Skip Title", callback_data=f"admin_deal_skip_title|{product['id']}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product_preserve|{product['id']}")]
         ]
         
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2997,6 +2999,49 @@ async def handle_admin_deal_title_only(update: Update, context: ContextTypes.DEF
     msg += f"💰 **Price:** {product['price']:.2f}€ (unchanged)\n\n"
     msg += "🎯 **Enter custom deal title:**\n"
     msg += "*(Example: 'Weekend Special' or 'Limited Edition')*"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_hot_deal_product_preserve(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Go back to product configuration while preserving context"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Clear current input state but preserve product context
+    context.user_data['state'] = None
+    
+    # Redirect to product configuration
+    await handle_admin_hot_deal_product(update, context, params)
+
+async def handle_admin_deal_skip_title(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Skip title step and proceed to quantity limit"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    product = context.user_data.get('hot_deal_product')
+    deal_price = context.user_data.get('hot_deal_price')
+    
+    if not product or deal_price is None:
+        await query.answer("❌ Deal configuration lost. Please try again.", show_alert=True)
+        return await handle_admin_add_hot_deal(update, context)
+    
+    # Set default title using product name
+    context.user_data['hot_deal_title'] = f"{product['product_type']} {product['size']} Deal"
+    context.user_data['state'] = 'awaiting_hot_deal_quantity'
+    
+    msg = f"🔢 **SET STOCK LIMIT** 🔢\n\n"
+    msg += f"📦 **Product:** {product['product_type']} {product['size']}\n"
+    msg += f"🏷️ **Title:** {context.user_data['hot_deal_title']}\n"
+    msg += f"🔥 **Deal Price:** {deal_price:.2f}€\n\n"
+    msg += "🎯 **Enter total maximum units for sale:**\n"
+    msg += "*(Example: 50 for max 50 total units available)*\n"
+    msg += "*(Or type 'unlimited' for no stock limit)*"
     
     keyboard = [
         [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
