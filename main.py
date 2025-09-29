@@ -1887,7 +1887,7 @@ def main() -> None:
         
         logger.info("🔧 Starting Telegram application...")
         try:
-        await application.start()
+            await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
         except Exception as e:
             logger.error(f"❌ Failed to start Telegram application: {e}")
