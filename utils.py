@@ -3416,3 +3416,86 @@ VERIFICATION_TEXTS = {
     'lt': "🤖 Įrodykite, kad esate žmogus: atsakykite tekstu pavaizduotame paveikslėlyje.",
     'ru': "🤖 Докажите, что вы человек: ответьте текстом на изображении."
 }
+
+# Multi-language interface translations
+INTERFACE_TRANSLATIONS = {
+    'en': {
+        # Main menu buttons
+        'shop': '🛍️ Shop',
+        'profile': '👤 Profile', 
+        'top_up': '💰 Top Up',
+        'reviews': '📝 Reviews',
+        'price_list': '💎 Price List',
+        'language': '🌍 Language',
+        'hot_deals': '🔥 Hot Deals',
+        'info': 'ℹ️ Info',
+        
+        # Status messages
+        'status_new': 'Status: New',
+        'balance': 'Balance',
+        'total_purchases': 'Total Purchases', 
+        'basket_items': 'Basket Items',
+        'welcome': '👋 Welcome',
+        'verification_successful': '✅ **Verification Successful!**\n\nWelcome to the bot! 🎉',
+        
+        # Common words
+        'eur': 'EUR',
+        'back': 'Back',
+        'cancel': 'Cancel',
+        'home': 'Home'
+    },
+    'lt': {
+        # Main menu buttons
+        'shop': '🛍️ Parduotuvė',
+        'profile': '👤 Profilis',
+        'top_up': '💰 Papildyti',
+        'reviews': '📝 Atsiliepimai', 
+        'price_list': '💎 Kainų Sąrašas',
+        'language': '🌍 Kalba',
+        'hot_deals': '🔥 Karšti Pasiūlymai',
+        'info': 'ℹ️ Informacija',
+        
+        # Status messages
+        'status_new': 'Statusas: Naujas',
+        'balance': 'Balansas',
+        'total_purchases': 'Iš Viso Pirkimų',
+        'basket_items': 'Krepšelio Prekės',
+        'welcome': '👋 Sveiki',
+        'verification_successful': '✅ **Patvirtinimas Sėkmingas!**\n\nSveiki atvykę į botą! 🎉',
+        
+        # Common words
+        'eur': 'EUR',
+        'back': 'Atgal',
+        'cancel': 'Atšaukti',
+        'home': 'Namai'
+    },
+    'ru': {
+        # Main menu buttons
+        'shop': '🛍️ Магазин',
+        'profile': '👤 Профиль',
+        'top_up': '💰 Пополнить',
+        'reviews': '📝 Отзывы',
+        'price_list': '💎 Прайс-лист', 
+        'language': '🌍 Язык',
+        'hot_deals': '🔥 Горячие Предложения',
+        'info': 'ℹ️ Информация',
+        
+        # Status messages
+        'status_new': 'Статус: Новый',
+        'balance': 'Баланс',
+        'total_purchases': 'Всего Покупок',
+        'basket_items': 'Товары в Корзине',
+        'welcome': '👋 Добро пожаловать',
+        'verification_successful': '✅ **Верификация успешна!**\n\nДобро пожаловать в бота! 🎉',
+        
+        # Common words
+        'eur': 'EUR',
+        'back': 'Назад',
+        'cancel': 'Отмена',
+        'home': 'Главная'
+    }
+}
+
+def get_translation(key, language='en'):
+    """Get translation for a key in specified language"""
+    return INTERFACE_TRANSLATIONS.get(language, INTERFACE_TRANSLATIONS['en']).get(key, key)

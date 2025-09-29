@@ -6,7 +6,7 @@ Provides different bot interface themes and user experience flows
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from utils import get_db_connection, send_message_with_retry, is_primary_admin
+from utils import get_db_connection, send_message_with_retry, is_primary_admin, get_translation
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -932,17 +932,25 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
     
+    # Get user's language preference
+    user_language = context.user_data.get('lang', 'en')
+    
     # Get user data for personalized welcome with full status
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username, balance, total_purchases, basket FROM users WHERE user_id = %s", (user_id,))
+        c.execute("SELECT username, balance, total_purchases, basket, language FROM users WHERE user_id = %s", (user_id,))
         user_data = c.fetchone()
         username = user_data['username'] if user_data else "User"
         balance = user_data['balance'] if user_data else 0.0
         total_purchases = user_data['total_purchases'] if user_data else 0
         basket_str = user_data['basket'] if user_data else ""
+        
+        # Get language from database if not in context
+        if not user_language and user_data and user_data['language']:
+            user_language = user_data['language']
+            context.user_data['lang'] = user_language
         
         # Count basket items
         basket_items = len(basket_str.split(',')) if basket_str and basket_str.strip() else 0
@@ -960,12 +968,18 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     # Get status bar based on purchases
     status_bar = get_user_status_bar(total_purchases)
     
-    # Classic welcome message with dynamic status (like in screenshot)
-    msg = f"👋 Welcome, {username}!\n\n"
-    msg += f"👤 Status: {status_bar}\n"
-    msg += f"💰 Balance: {balance:.2f} EUR\n"
-    msg += f"🛒 Total Purchases: {total_purchases}\n"
-    msg += f"🛍️ Basket Items: {basket_items}"
+    # Classic welcome message with translations
+    welcome_text = get_translation('welcome', user_language)
+    status_text = get_translation('status_new', user_language)
+    balance_text = get_translation('balance', user_language)
+    total_purchases_text = get_translation('total_purchases', user_language)
+    basket_items_text = get_translation('basket_items', user_language)
+    
+    msg = f"{welcome_text}, {username}!\n\n"
+    msg += f"👤 {status_text.replace('New', status_bar).replace('Naujas', status_bar).replace('Новый', status_bar)}\n"
+    msg += f"💰 {balance_text}: {balance:.2f} EUR\n"
+    msg += f"🛒 {total_purchases_text}: {total_purchases}\n"
+    msg += f"🛍️ {basket_items_text}: {basket_items}"
     
     # YOLO MODE: Hardcoded 6-button classic layout exactly as requested
     keyboard = []
@@ -974,14 +988,21 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     if is_primary_admin(user_id):
         keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
     
-    # Classic 6-button layout from your original screenshot
+    # Classic 6-button layout with translations
+    shop_btn = get_translation('shop', user_language)
+    profile_btn = get_translation('profile', user_language)
+    top_up_btn = get_translation('top_up', user_language)
+    reviews_btn = get_translation('reviews', user_language)
+    price_list_btn = get_translation('price_list', user_language)
+    language_btn = get_translation('language', user_language)
+    
     keyboard.extend([
-        [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
-        [InlineKeyboardButton("👤 Profile", callback_data="profile"), 
-         InlineKeyboardButton("💳 Top Up", callback_data="refill")],
-        [InlineKeyboardButton("📝 Reviews", callback_data="reviews"),
-         InlineKeyboardButton("📋 Price List", callback_data="price_list"),
-         InlineKeyboardButton("🌐 Language", callback_data="language")]
+        [InlineKeyboardButton(shop_btn, callback_data="shop")],
+        [InlineKeyboardButton(profile_btn, callback_data="profile"), 
+         InlineKeyboardButton(top_up_btn, callback_data="refill")],
+        [InlineKeyboardButton(reviews_btn, callback_data="reviews"),
+         InlineKeyboardButton(price_list_btn, callback_data="price_list"),
+         InlineKeyboardButton(language_btn, callback_data="language")]
     ])
     
     reply_markup = InlineKeyboardMarkup(keyboard)

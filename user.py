@@ -33,7 +33,8 @@ from utils import (
     is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code, generate_verification_image, # Human verification
     get_verification_attempt_limit, get_user_verification_attempts, increment_verification_attempts, 
     reset_verification_attempts, block_user_for_failed_verification, # Verification attempts
-    is_language_selection_enabled, get_language_prompt_placement, VERIFICATION_TEXTS # Language selection
+    is_language_selection_enabled, get_language_prompt_placement, VERIFICATION_TEXTS, # Language selection
+    get_translation # Interface translations
 )
 import json # <<< Make sure json is imported
 import payment # <<< Make sure payment module is imported
@@ -416,8 +417,12 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
         context.user_data.pop('verification_code', None)
         context.user_data.pop('state', None)
         
+        # Get user's language and show success message in their language
+        user_language = context.user_data.get('lang', 'en')
+        success_message = get_translation('verification_successful', user_language)
+        
         await update.message.reply_text(
-            "✅ **Verification Successful!**\n\nWelcome to the bot! 🎉",
+            success_message,
             parse_mode='Markdown'
         )
         
