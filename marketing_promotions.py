@@ -2091,28 +2091,48 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Modern hot deals interface with REAL deals (manual + automatic)"""
     query = update.callback_query
     
-    # Get both manual hot deals and automatic lowest-price deals
+    # FORCE CLEANUP: Remove any inactive deals first
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get manual hot deals first (priority) - FRESH DATA
+        # Clean up any deals that should not be active
+        c.execute("DELETE FROM hot_deals WHERE is_active = FALSE")
+        cleanup_count = c.rowcount
+        if cleanup_count > 0:
+            logger.info(f"🧹 Cleaned up {cleanup_count} inactive hot deals from database")
+            conn.commit()
+        else:
+            logger.info("🧹 No inactive deals to clean up")
+        
+        # AGGRESSIVE FILTERING - Only show VERIFIED ACTIVE deals
         c.execute("""
             SELECT hd.id, hd.deal_title, hd.deal_description, hd.discount_percentage,
                    hd.original_price, hd.deal_price, hd.priority,
                    p.id as product_id, p.city, p.district, p.product_type, p.size, p.price
             FROM hot_deals hd
             JOIN products p ON hd.product_id = p.id
-            WHERE hd.is_active = TRUE AND p.available > 0
+            WHERE hd.is_active = TRUE 
+            AND p.available > 0
             AND (hd.expires_at IS NULL OR hd.expires_at > CURRENT_TIMESTAMP)
+            AND EXISTS (SELECT 1 FROM hot_deals hd2 WHERE hd2.id = hd.id AND hd2.is_active = TRUE)
             ORDER BY hd.priority DESC, hd.created_at DESC
             LIMIT 5
         """)
         manual_deals = c.fetchall()
         
-        # Log for debugging deleted deals issue
-        logger.info(f"Hot deals query returned {len(manual_deals)} active deals")
+        # VERIFICATION: Double-check each deal exists and is active
+        verified_deals = []
+        for deal in manual_deals:
+            c.execute("SELECT COUNT(*) as count FROM hot_deals WHERE id = %s AND is_active = TRUE", (deal['id'],))
+            if c.fetchone()['count'] > 0:
+                verified_deals.append(deal)
+            else:
+                logger.warning(f"Filtered out inactive deal ID {deal['id']}")
+        
+        manual_deals = verified_deals
+        logger.info(f"Hot deals query returned {len(manual_deals)} VERIFIED active deals")
         
         # Get automatic lowest-price deals if we need more
         remaining_slots = 5 - len(manual_deals)
@@ -2311,6 +2331,17 @@ async def handle_pay_single_item_hot_deal(update: Update, context: ContextTypes.
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("BEGIN")
+        
+        # VERIFICATION: Check if this is actually from a valid hot deal
+        # Extract hot deal info from context or verify the deal still exists
+        deal_exists = True
+        if hasattr(context.user_data, 'get') and context.user_data.get('from_hot_deal'):
+            deal_id = context.user_data.get('hot_deal_id')
+            if deal_id:
+                c.execute("SELECT COUNT(*) as count FROM hot_deals WHERE id = %s AND is_active = TRUE", (deal_id,))
+                deal_exists = c.fetchone()['count'] > 0
+                if not deal_exists:
+                    logger.warning(f"Hot deal {deal_id} no longer exists or is inactive")
         
         # Find any available product matching the criteria (hot deals can use any matching product)
         c.execute("""
