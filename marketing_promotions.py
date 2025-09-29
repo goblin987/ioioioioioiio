@@ -2280,8 +2280,9 @@ async def handle_pay_single_item_hot_deal(update: Update, context: ContextTypes.
     user_id = query.from_user.id
     chat_id = query.message.chat_id
     
-    # Import necessary functions from user module
-    from user import CITIES, DISTRICTS, PRODUCT_TYPES, DEFAULT_PRODUCT_EMOJI, _get_lang_data, format_currency, get_db_connection, track_reservation, send_message_with_retry
+    # Import necessary functions from user and utils modules
+    from user import CITIES, DISTRICTS, PRODUCT_TYPES, DEFAULT_PRODUCT_EMOJI, _get_lang_data, format_currency, send_message_with_retry
+    from utils import get_db_connection, track_reservation
     from decimal import Decimal, ROUND_DOWN
     import asyncio
     import telegram.error as telegram_error
