@@ -619,24 +619,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             is_verified = is_user_verified(user_id)
             logger.info(f"🔍 User {user_id} verification status: {is_verified}")
             
-            # 🚀 YOLO MODE: Force verification for testing if placement is AFTER
-            placement = get_language_prompt_placement()
-            if placement == 'after' and is_verified:
-                logger.info(f"🔄 YOLO: Forcing verification reset for testing (placement=after)")
-                # Reset verification status
-                conn = None
-                try:
-                    conn = get_db_connection()
-                    c = conn.cursor()
-                    c.execute("UPDATE users SET is_human_verified = FALSE, verification_attempts = 0 WHERE user_id = %s", (user_id,))
-                    conn.commit()
-                    is_verified = False
-                    logger.info(f"✅ YOLO: Verification reset for user {user_id}")
-                except Exception as e:
-                    logger.error(f"Error resetting verification: {e}")
-                finally:
-                    if conn:
-                        conn.close()
+            # Check verification status normally (no auto-reset)
             
             # 🚀 YOLO MODE: Debug commands for testing
             if update.message and update.message.text:
