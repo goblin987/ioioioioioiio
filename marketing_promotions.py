@@ -1254,7 +1254,7 @@ def map_button_text_to_callback(button_text):
         '💰 Wallet': 'wallet',
         '📊 Stats': 'stats',
         '🎮 Games': 'games',
-        '🔥 Hot Deals': 'deals',
+        '🔥 Hot Deals': 'modern_deals',
         'ℹ️ Info': 'info',
         '⚙️ Settings': 'settings',
         '🎁 Promotions': 'promotions',
@@ -2343,7 +2343,7 @@ async def handle_admin_hot_deal_product(update: Update, context: ContextTypes.DE
         [InlineKeyboardButton("💰 Set Custom Price", callback_data=f"admin_deal_custom_price|{product_id}")],
         [InlineKeyboardButton("📊 Set Discount %", callback_data=f"admin_deal_discount|{product_id}")],
         [InlineKeyboardButton("🏷️ Custom Title Only", callback_data=f"admin_deal_title_only|{product_id}")],
-        [InlineKeyboardButton("🔢 Set Purchase Limit", callback_data=f"admin_deal_quantity_limit|{product_id}")],
+        [InlineKeyboardButton("🔢 Set Stock Limit", callback_data=f"admin_deal_quantity_limit|{product_id}")],
         [InlineKeyboardButton("⬅️ Back to Products", callback_data="admin_add_hot_deal")]
     ]
     
@@ -2494,13 +2494,13 @@ async def handle_hot_deal_title_message(update: Update, context: ContextTypes.DE
     context.user_data['hot_deal_title'] = title
     context.user_data['state'] = 'awaiting_hot_deal_quantity'
     
-    msg = f"🔢 **SET PURCHASE LIMIT** 🔢\n\n"
+    msg = f"🔢 **SET STOCK LIMIT** 🔢\n\n"
     msg += f"📦 **Product:** {product['product_type']} {product['size']}\n"
     msg += f"🏷️ **Title:** {title}\n"
     msg += f"🔥 **Deal Price:** {deal_price:.2f}€\n\n"
-    msg += "🎯 **Enter maximum units per customer:**\n"
-    msg += "*(Example: 10 for max 10 units per customer)*\n"
-    msg += "*(Or type 'unlimited' for no limit)*"
+    msg += "🎯 **Enter total maximum units for sale:**\n"
+    msg += "*(Example: 50 for max 50 total units available)*\n"
+    msg += "*(Or type 'unlimited' for no stock limit)*"
     
     keyboard = [
         [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
@@ -2536,7 +2536,7 @@ async def handle_hot_deal_quantity_message(update: Update, context: ContextTypes
         try:
             quantity_limit = int(quantity_input)
             if quantity_limit <= 0:
-                await update.message.reply_text("❌ Quantity must be greater than 0 or 'unlimited'. Try again:")
+                await update.message.reply_text("❌ Stock limit must be greater than 0 or 'unlimited'. Try again:")
                 return
         except ValueError:
             await update.message.reply_text("❌ Invalid format. Enter a number or 'unlimited'. Try again:")
@@ -2587,9 +2587,9 @@ async def handle_hot_deal_quantity_message(update: Update, context: ContextTypes
         if discount > 0:
             msg += f"📊 **Discount:** {discount:.1f}%\n"
         if quantity_limit:
-            msg += f"🔢 **Limit:** {quantity_limit} per customer\n"
+            msg += f"🔢 **Stock Limit:** {quantity_limit} total units\n"
         else:
-            msg += f"🔢 **Limit:** Unlimited\n"
+            msg += f"🔢 **Stock Limit:** Unlimited\n"
         msg += f"\n🚀 **Deal is now active!**"
         
         keyboard = [
@@ -2683,12 +2683,12 @@ async def handle_admin_deal_quantity_limit(update: Update, context: ContextTypes
     from utils import get_product_emoji
     emoji = get_product_emoji(product['product_type'])
     
-    msg = f"🔢 **SET PURCHASE LIMIT** 🔢\n\n"
+    msg = f"🔢 **SET STOCK LIMIT** 🔢\n\n"
     msg += f"📦 **Product:** {emoji} {product['product_type']} {product['size']}\n"
     msg += f"💰 **Price:** {product['price']:.2f}€ (unchanged)\n\n"
-    msg += "🎯 **Enter maximum units per customer:**\n"
-    msg += "*(Example: 10 for max 10 units per customer)*\n"
-    msg += "*(Or type 'unlimited' for no limit)*"
+    msg += "🎯 **Enter total maximum units for sale:**\n"
+    msg += "*(Example: 50 for max 50 total units available)*\n"
+    msg += "*(Or type 'unlimited' for no stock limit)*"
     
     keyboard = [
         [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
@@ -2762,6 +2762,141 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_edit_hot_deal(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit existing hot deal"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid deal selection", show_alert=True)
+        return
+    
+    deal_id = params[0]
+    
+    # Get deal details
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT hd.*, p.product_type, p.size, p.city, p.district
+            FROM hot_deals hd
+            JOIN products p ON hd.product_id = p.id
+            WHERE hd.id = %s
+        """, (deal_id,))
+        deal = c.fetchone()
+    except Exception as e:
+        logger.error(f"Error loading deal {deal_id}: {e}")
+        await query.answer("Error loading deal", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not deal:
+        await query.answer("Deal not found", show_alert=True)
+        return
+    
+    from utils import get_product_emoji
+    emoji = get_product_emoji(deal['product_type'])
+    status = "🟢 Active" if deal['is_active'] else "🔴 Inactive"
+    
+    msg = f"✏️ **EDIT HOT DEAL** ✏️\n\n"
+    msg += f"📦 **Product:** {emoji} {deal['product_type']} {deal['size']}\n"
+    msg += f"📍 **Location:** {deal['city']}/{deal['district']}\n"
+    msg += f"🏷️ **Title:** {deal['deal_title']}\n"
+    msg += f"💰 **Original Price:** {deal['original_price']:.2f}€\n"
+    msg += f"🔥 **Deal Price:** {deal['deal_price']:.2f}€\n"
+    if deal['discount_percentage'] > 0:
+        msg += f"📊 **Discount:** {deal['discount_percentage']:.1f}%\n"
+    if deal['quantity_limit']:
+        msg += f"🔢 **Stock Limit:** {deal['quantity_limit']} units\n"
+    else:
+        msg += f"🔢 **Stock Limit:** Unlimited\n"
+    msg += f"📊 **Status:** {status}\n\n"
+    msg += "**Choose action:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔄 Toggle Active/Inactive", callback_data=f"admin_toggle_hot_deal|{deal_id}")],
+        [InlineKeyboardButton("🗑️ Delete Deal", callback_data=f"admin_delete_hot_deal|{deal_id}")],
+        [InlineKeyboardButton("⬅️ Back to Deals", callback_data="admin_manage_hot_deals")],
+        [InlineKeyboardButton("🏠 Back to Hot Deals Menu", callback_data="admin_hot_deals_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_toggle_hot_deal(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle hot deal active status"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid deal selection", show_alert=True)
+        return
+    
+    deal_id = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Toggle status
+        c.execute("UPDATE hot_deals SET is_active = NOT is_active WHERE id = %s", (deal_id,))
+        conn.commit()
+        
+        # Get new status
+        c.execute("SELECT is_active FROM hot_deals WHERE id = %s", (deal_id,))
+        result = c.fetchone()
+        new_status = "activated" if result['is_active'] else "deactivated"
+        
+        await query.answer(f"✅ Deal {new_status} successfully!", show_alert=True)
+        
+        # Redirect back to edit screen
+        await handle_admin_edit_hot_deal(update, context, [deal_id])
+        
+    except Exception as e:
+        logger.error(f"Error toggling deal {deal_id}: {e}")
+        await query.answer("❌ Error updating deal", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_admin_delete_hot_deal(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Delete hot deal"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid deal selection", show_alert=True)
+        return
+    
+    deal_id = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Delete deal
+        c.execute("DELETE FROM hot_deals WHERE id = %s", (deal_id,))
+        conn.commit()
+        
+        await query.answer("✅ Deal deleted successfully!", show_alert=True)
+        
+        # Redirect back to manage deals
+        await handle_admin_manage_hot_deals(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error deleting deal {deal_id}: {e}")
+        await query.answer("❌ Error deleting deal", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 # YOLO MODE: APP INFO MANAGEMENT SYSTEM FOR ADMINS
 async def handle_admin_app_info_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
