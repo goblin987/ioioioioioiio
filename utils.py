@@ -1236,6 +1236,19 @@ def init_db():
                     logger.warning(f"⚠️ Could not add verification_attempts column: {e}")
                 conn.rollback()
             
+            # Add language column if it doesn't exist
+            try:
+                logger.info(f"🔧 Adding language column to users table...")
+                c.execute(f"ALTER TABLE users ADD COLUMN language {get_text_type()} DEFAULT NULL")
+                conn.commit()
+                logger.info(f"✅ language column added to users table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ language column already exists in users table")
+                else:
+                    logger.warning(f"⚠️ Could not add language column: {e}")
+                conn.rollback()
+            
             # Handle existing tables: ALTER user_id columns from INTEGER to BIGINT for Telegram compatibility
             logger.info(f"🔧 CRITICAL: Ensuring user_id columns are BIGINT for Telegram compatibility...")
             try:
@@ -3369,7 +3382,9 @@ def is_language_selection_enabled():
         c = conn.cursor()
         c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("language_selection_enabled",))
         result = c.fetchone()
-        return result and result['setting_value'] == 'true'
+        enabled = result and result['setting_value'] == 'true'
+        logger.info(f"🌍 Language selection enabled: {enabled} (DB result: {result})")
+        return enabled
     except Exception as e:
         logger.error(f"Error checking language selection status: {e}")
         return False
@@ -3385,7 +3400,9 @@ def get_language_prompt_placement():
         c = conn.cursor()
         c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("language_prompt_placement",))
         result = c.fetchone()
-        return result['setting_value'] if result else 'before'
+        placement = result['setting_value'] if result else 'before'
+        logger.info(f"🌍 Language prompt placement: {placement} (DB result: {result})")
+        return placement
     except Exception as e:
         logger.error(f"Error getting language prompt placement: {e}")
         return 'before'

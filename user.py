@@ -550,28 +550,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # LANGUAGE SELECTION CHECK - Before verification if enabled
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
-        # Check if user has selected language
-        user_language = context.user_data.get('lang')
-        if not user_language:
-            # Check database for saved language
-            conn = None
-            try:
-                conn = get_db_connection()
-                c = conn.cursor()
-                c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
-                result = c.fetchone()
-                if result and result['language']:
-                    user_language = result['language']
-                    context.user_data['lang'] = user_language
-            except Exception as e:
-                logger.error(f"Error checking user language: {e}")
-            finally:
-                if conn:
-                    conn.close()
-        
-        if not user_language:
-            logger.info(f"🌍 User {user_id} needs to select language (before verification)")
-            return await handle_language_selection(update, context)
+        # Skip language selection for admins
+        if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
+            # Check if user has selected language
+            user_language = context.user_data.get('lang')
+            if not user_language:
+                # Check database for saved language
+                conn = None
+                try:
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+                    result = c.fetchone()
+                    if result and result['language']:
+                        user_language = result['language']
+                        context.user_data['lang'] = user_language
+                        logger.info(f"🌍 User {user_id} language loaded from DB: {user_language}")
+                except Exception as e:
+                    logger.error(f"Error checking user language: {e}")
+                finally:
+                    if conn:
+                        conn.close()
+            
+            if not user_language:
+                logger.info(f"🌍 User {user_id} needs to select language (before verification)")
+                return await handle_language_selection(update, context)
+            else:
+                logger.info(f"🌍 User {user_id} already has language: {user_language}")
+        else:
+            logger.info(f"👑 User {user_id} is admin, skipping language selection")
     
     # HUMAN VERIFICATION CHECK
     if is_human_verification_enabled():
@@ -592,28 +599,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # LANGUAGE SELECTION CHECK - After verification if enabled
     if is_language_selection_enabled() and get_language_prompt_placement() == 'after':
-        # Check if user has selected language
-        user_language = context.user_data.get('lang')
-        if not user_language:
-            # Check database for saved language
-            conn = None
-            try:
-                conn = get_db_connection()
-                c = conn.cursor()
-                c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
-                result = c.fetchone()
-                if result and result['language']:
-                    user_language = result['language']
-                    context.user_data['lang'] = user_language
-            except Exception as e:
-                logger.error(f"Error checking user language: {e}")
-            finally:
-                if conn:
-                    conn.close()
-        
-        if not user_language:
-            logger.info(f"🌍 User {user_id} needs to select language (after verification)")
-            return await handle_language_selection(update, context)
+        # Skip language selection for admins
+        if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
+            # Check if user has selected language
+            user_language = context.user_data.get('lang')
+            if not user_language:
+                # Check database for saved language
+                conn = None
+                try:
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+                    result = c.fetchone()
+                    if result and result['language']:
+                        user_language = result['language']
+                        context.user_data['lang'] = user_language
+                        logger.info(f"🌍 User {user_id} language loaded from DB: {user_language}")
+                except Exception as e:
+                    logger.error(f"Error checking user language: {e}")
+                finally:
+                    if conn:
+                        conn.close()
+            
+            if not user_language:
+                logger.info(f"🌍 User {user_id} needs to select language (after verification)")
+                return await handle_language_selection(update, context)
+            else:
+                logger.info(f"🌍 User {user_id} already has language: {user_language}")
+        else:
+            logger.info(f"👑 User {user_id} is admin, skipping language selection")
     
     # Check if admin has activated custom UI theme
     try:
