@@ -240,6 +240,22 @@ def init_marketing_tables():
             logger.warning(f"⚠️ Error processing themes: {themes_error}")
             conn.rollback()
         
+        # YOLO MODE: Create hot deals settings table for simple admin controls
+        c.execute('''CREATE TABLE IF NOT EXISTS hot_deals_settings (
+            id SERIAL PRIMARY KEY,
+            setting_name TEXT NOT NULL UNIQUE,
+            setting_value BOOLEAN DEFAULT TRUE,
+            updated_by BIGINT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        # Insert default setting for automatic deals (enabled by default)
+        c.execute("""
+            INSERT INTO hot_deals_settings (setting_name, setting_value)
+            VALUES ('auto_deals_enabled', TRUE)
+            ON CONFLICT (setting_name) DO NOTHING
+        """)
+        
         conn.commit()
         logger.info("✅ Marketing and UI theme tables initialized successfully")
         
@@ -2134,20 +2150,28 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         manual_deals = verified_deals
         logger.info(f"Hot deals query returned {len(manual_deals)} VERIFIED active deals")
         
-        # Get automatic lowest-price deals if we need more
+        # Get automatic lowest-price deals if we need more (and if enabled)
         remaining_slots = 5 - len(manual_deals)
         auto_deals = []
         if remaining_slots > 0:
-            c.execute("""
-                SELECT DISTINCT city, district, product_type, MIN(price) as min_price, 
-                       COUNT(*) as available_count
-                FROM products 
-                WHERE available > 0 
-                GROUP BY city, district, product_type
-                ORDER BY min_price ASC
-                LIMIT %s
-            """, (remaining_slots,))
-            auto_deals = c.fetchall()
+            # Check if automatic deals are enabled by admin
+            c.execute("SELECT setting_value FROM hot_deals_settings WHERE setting_name = 'auto_deals_enabled'")
+            auto_enabled_result = c.fetchone()
+            auto_deals_enabled = auto_enabled_result['setting_value'] if auto_enabled_result else True
+            
+            if auto_deals_enabled:
+                c.execute("""
+                    SELECT DISTINCT city, district, product_type, MIN(price) as min_price, 
+                           COUNT(*) as available_count
+                    FROM products 
+                    WHERE available > 0 
+                    GROUP BY city, district, product_type
+                    ORDER BY min_price ASC
+                    LIMIT %s
+                """, (remaining_slots,))
+                auto_deals = c.fetchall()
+            else:
+                logger.info("🚫 Automatic deals disabled by admin - not showing to users")
         
     except Exception as e:
         logger.error(f"Error loading hot deals: {e}")
@@ -3132,19 +3156,27 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
         """)
         manual_deals = c.fetchall()
         
-        # Get automatic deals (same as user-facing display)
+        # Get automatic deals (same as user-facing display) - but check if enabled
         remaining_slots = 10 - len(manual_deals)
         if remaining_slots > 0:
-            c.execute("""
-                SELECT DISTINCT city, district, product_type, MIN(price) as min_price, 
-                       COUNT(*) as available_count, 'automatic' as deal_type
-                FROM products 
-                WHERE available > 0 
-                GROUP BY city, district, product_type
-                ORDER BY min_price ASC
-                LIMIT %s
-            """, (remaining_slots,))
-            auto_deals = c.fetchall()
+            # Check if automatic deals are enabled
+            c.execute("SELECT setting_value FROM hot_deals_settings WHERE setting_name = 'auto_deals_enabled'")
+            auto_enabled_result = c.fetchone()
+            auto_deals_enabled = auto_enabled_result['setting_value'] if auto_enabled_result else True
+            
+            if auto_deals_enabled:
+                c.execute("""
+                    SELECT DISTINCT city, district, product_type, MIN(price) as min_price, 
+                           COUNT(*) as available_count, 'automatic' as deal_type
+                    FROM products 
+                    WHERE available > 0 
+                    GROUP BY city, district, product_type
+                    ORDER BY min_price ASC
+                    LIMIT %s
+                """, (remaining_slots,))
+                auto_deals = c.fetchall()
+            else:
+                auto_deals = []
             
     except Exception as e:
         logger.error(f"Error loading hot deals: {e}")
@@ -3170,8 +3202,20 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
         )
         return
     
+    # Check auto deals status for display
+    auto_deals_enabled = True
+    try:
+        c.execute("SELECT setting_value FROM hot_deals_settings WHERE setting_name = 'auto_deals_enabled'")
+        auto_enabled_result = c.fetchone()
+        auto_deals_enabled = auto_enabled_result['setting_value'] if auto_enabled_result else True
+    except:
+        auto_deals_enabled = True
+    
+    auto_status = "🟢 ENABLED" if auto_deals_enabled else "🚫 DISABLED"
+    
     msg = "🔥 **MANAGE HOT DEALS** 🔥\n\n"
-    msg += f"**Found:** {len(manual_deals)} manual + {len(auto_deals)} automatic = {len(all_deals)} total\n\n"
+    msg += f"**Found:** {len(manual_deals)} manual + {len(auto_deals)} automatic = {len(all_deals)} total\n"
+    msg += f"**Auto Deals Status:** {auto_status}\n\n"
     
     keyboard = []
     
@@ -3210,6 +3254,12 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
             msg += f"   💰 From {deal['min_price']:.2f}€ ({deal['available_count']} available)\n\n"
         
         msg += "ℹ️ *Automatic deals show lowest prices - cannot be edited*\n\n"
+        
+        # Add simple controls for automatic deals
+        keyboard.extend([
+            [InlineKeyboardButton("🚫 DISABLE All Automatic Deals", callback_data="admin_disable_auto_deals")],
+            [InlineKeyboardButton("🟢 ENABLE All Automatic Deals", callback_data="admin_enable_auto_deals")]
+        ])
     
     keyboard.extend([
         [InlineKeyboardButton("➕ Add New Manual Hot Deal", callback_data="admin_add_hot_deal")],
@@ -3359,6 +3409,71 @@ async def handle_admin_delete_hot_deal(update: Update, context: ContextTypes.DEF
     except Exception as e:
         logger.error(f"Error deleting deal {deal_id}: {e}")
         await query.answer("❌ Error deleting deal", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+# YOLO MODE: SIMPLE AUTO DEALS CONTROL - DUMMY PROOF
+async def handle_admin_disable_auto_deals(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """SIMPLE: Disable all automatic hot deals"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Simple update - disable automatic deals
+        c.execute("""
+            UPDATE hot_deals_settings 
+            SET setting_value = FALSE, updated_by = %s, updated_at = CURRENT_TIMESTAMP 
+            WHERE setting_name = 'auto_deals_enabled'
+        """, (query.from_user.id,))
+        
+        conn.commit()
+        
+        await query.answer("🚫 Automatic deals DISABLED! Users won't see them anymore.", show_alert=True)
+        
+        # Refresh the management page
+        await handle_admin_manage_hot_deals(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error disabling auto deals: {e}")
+        await query.answer("❌ Error disabling automatic deals", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_admin_enable_auto_deals(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """SIMPLE: Enable all automatic hot deals"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Simple update - enable automatic deals
+        c.execute("""
+            UPDATE hot_deals_settings 
+            SET setting_value = TRUE, updated_by = %s, updated_at = CURRENT_TIMESTAMP 
+            WHERE setting_name = 'auto_deals_enabled'
+        """, (query.from_user.id,))
+        
+        conn.commit()
+        
+        await query.answer("🟢 Automatic deals ENABLED! Users will see them again.", show_alert=True)
+        
+        # Refresh the management page
+        await handle_admin_manage_hot_deals(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error enabling auto deals: {e}")
+        await query.answer("❌ Error enabling automatic deals", show_alert=True)
     finally:
         if conn:
             conn.close()
