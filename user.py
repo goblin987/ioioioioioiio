@@ -504,6 +504,7 @@ async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_T
     
     # Save language preference
     context.user_data['lang'] = language
+    context.user_data['language_selection_completed'] = True  # 🚀 YOLO: Mark as completed
     
     # Update user's language in database
     conn = None
@@ -552,7 +553,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
         # Skip language selection for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            # Check if user has selected language
+            # 🚀 YOLO MODE: Always show language selection if not completed in this session
+            if not context.user_data.get('language_selection_completed'):
+                logger.info(f"🌍 YOLO: Showing language selection for user {user_id} (before verification)")
+                return await handle_language_selection(update, context)
+            
+            # Load language from context or database
             user_language = context.user_data.get('lang')
             if not user_language:
                 # Check database for saved language
@@ -572,11 +578,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if conn:
                         conn.close()
             
-            if not user_language:
-                logger.info(f"🌍 User {user_id} needs to select language (before verification)")
-                return await handle_language_selection(update, context)
-            else:
-                logger.info(f"🌍 User {user_id} already has language: {user_language}")
+            logger.info(f"🌍 User {user_id} has language: {user_language}")
         else:
             logger.info(f"👑 User {user_id} is admin, skipping language selection")
     
@@ -601,7 +603,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_language_selection_enabled() and get_language_prompt_placement() == 'after':
         # Skip language selection for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            # Check if user has selected language
+            # 🚀 YOLO MODE: Always show language selection if not shown in this session
+            if not context.user_data.get('language_selection_completed'):
+                logger.info(f"🌍 YOLO: Showing language selection for user {user_id} (after verification)")
+                return await handle_language_selection(update, context)
+            
+            # Load language from context or database
             user_language = context.user_data.get('lang')
             if not user_language:
                 # Check database for saved language
@@ -621,11 +628,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if conn:
                         conn.close()
             
-            if not user_language:
-                logger.info(f"🌍 User {user_id} needs to select language (after verification)")
-                return await handle_language_selection(update, context)
-            else:
-                logger.info(f"🌍 User {user_id} already has language: {user_language}")
+            logger.info(f"🌍 User {user_id} has language: {user_language}")
         else:
             logger.info(f"👑 User {user_id} is admin, skipping language selection")
     
