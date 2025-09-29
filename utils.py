@@ -3229,7 +3229,14 @@ def is_user_verified(user_id):
         c = conn.cursor()
         c.execute("SELECT is_human_verified FROM users WHERE user_id = %s", (user_id,))
         result = c.fetchone()
-        return result and result.get('is_human_verified', False)
+        
+        if result is None:
+            logger.info(f"🔍 User {user_id} not found in database, returning False")
+            return False
+        
+        verified_status = result.get('is_human_verified', False)
+        logger.info(f"🔍 User {user_id} verification status from DB: {verified_status}")
+        return bool(verified_status)
     except Exception as e:
         logger.error(f"Error checking user verification status: {e}")
         return False
@@ -3243,8 +3250,18 @@ def set_user_verified(user_id, verified=True):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("UPDATE users SET is_human_verified = %s WHERE user_id = %s", (verified, user_id))
+        
+        # YOLO MODE: Insert or update user with verification status
+        c.execute("""
+            INSERT INTO users (user_id, username, is_human_verified, verification_attempts) 
+            VALUES (%s, %s, %s, 0)
+            ON CONFLICT (user_id) 
+            DO UPDATE SET is_human_verified = EXCLUDED.is_human_verified, verification_attempts = 0
+        """, (user_id, f"User_{user_id}", verified))
+        
+        rows_affected = c.rowcount
         conn.commit()
+        logger.info(f"🚀 YOLO: User {user_id} verification set to {verified}, rows affected: {rows_affected}")
         return True
     except Exception as e:
         logger.error(f"Error setting user verification status: {e}")
