@@ -1828,7 +1828,7 @@ async def handle_modern_city_select(update: Update, context: ContextTypes.DEFAUL
     
     keyboard.extend([
         [InlineKeyboardButton("⬅️ Back to Cities", callback_data="modern_shop")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -1870,7 +1870,7 @@ async def handle_modern_district_select(update: Update, context: ContextTypes.DE
             f"📞 *Contact support for availability*",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"modern_city_select|{city_name}")],
-                [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+                [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
             ]),
             parse_mode='Markdown'
         )
@@ -1894,7 +1894,7 @@ async def handle_modern_district_select(update: Update, context: ContextTypes.DE
     
     keyboard.extend([
         [InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"modern_city_select|{city_name}")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -1944,7 +1944,7 @@ async def handle_modern_product_type(update: Update, context: ContextTypes.DEFAU
             f"📞 *Contact VIP support*",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("⬅️ Back to Catalog", callback_data=f"modern_district_select|{city_name}|{district_name}")],
-                [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+                [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
             ]),
             parse_mode='Markdown'
         )
@@ -1987,7 +1987,7 @@ async def handle_modern_product_type(update: Update, context: ContextTypes.DEFAU
     # Premium navigation
     keyboard.extend([
         [InlineKeyboardButton("⬅️ Back to Catalog", callback_data=f"modern_district_select|{city_name}|{district_name}")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2060,7 +2060,7 @@ async def handle_modern_product_select(update: Update, context: ContextTypes.DEF
         [InlineKeyboardButton("💳 Premium Purchase", callback_data=f"modern_pay_options|{product_id}")],
         [InlineKeyboardButton("🎫 Apply VIP Code", callback_data=f"modern_discount_code|{product_id}")],
         [InlineKeyboardButton("⬅️ Back to Variants", callback_data=f"modern_product_type|{city_name}|{district_name}|{product_type}"),
-         InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+         InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2448,7 +2448,7 @@ async def handle_modern_profile(update: Update, context: ContextTypes.DEFAULT_TY
     
     keyboard = [
         [InlineKeyboardButton("💰 Premium Wallet", callback_data="modern_wallet")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2466,7 +2466,7 @@ async def handle_modern_wallet(update: Update, context: ContextTypes.DEFAULT_TYP
     
     keyboard = [
         [InlineKeyboardButton("👤 Back to Profile", callback_data="modern_profile")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2484,7 +2484,7 @@ async def handle_modern_promotions(update: Update, context: ContextTypes.DEFAULT
     
     keyboard = [
         [InlineKeyboardButton("🔥 Hot Deals", callback_data="modern_deals")],
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("🏠 Home", callback_data="modern_home")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2536,7 +2536,7 @@ async def handle_modern_app(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_modern_home(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Return to modern premium home"""
+    """Return to modern home"""
     return await handle_modern_welcome(update, context, params)
 
 # YOLO MODE: HOT DEALS MANAGEMENT SYSTEM FOR ADMINS
