@@ -370,48 +370,42 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
     active_theme_name = active_theme.get('theme_name', 'classic') if active_theme else 'classic'
     
     msg = "🎨 **THEME MANAGEMENT CENTER** 🎨\n\n"
-    msg += f"**Currently Active Theme:** `{active_theme_name.upper()}`\n\n"
+    msg += f"**Currently Active:** `{active_theme_name.upper()}`\n\n"
     
     keyboard = []
     
-    # ═══════════════════════════════════════════════════════════════
-    # SECTION 1: NON-DELETABLE SYSTEM PRESETS
-    # ═══════════════════════════════════════════════════════════════
-    msg += "**🔧 SYSTEM PRESETS** *(Core Themes)*\n"
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    # SYSTEM PRESETS (Clean format)
+    msg += "**🔧 SYSTEM PRESETS**\n\n"
     
     system_themes = [
-        ('classic', '📋 CLASSIC', 'Traditional 6-button layout with comprehensive options', '🏛️'),
-        ('minimalist', '🍃 MINIMALIST', 'Clean Apple-style interface with essential buttons only', '✨'),
-        ('modern', '💎 MODERN', 'Premium card-based design with enhanced visual appeal', '🚀')
+        ('classic', 'CLASSIC', 'Traditional 6-button layout'),
+        ('minimalist', 'MINIMALIST', 'Clean 3-button layout'),
+        ('modern', 'MODERN', 'Premium card-style layout')
     ]
     
-    for theme_key, theme_name, theme_desc, theme_icon in system_themes:
+    for theme_key, theme_name, theme_desc in system_themes:
         is_active = active_theme_name == theme_key
         
-        # Theme Card Header
+        # Single line format with checkmark on button
+        msg += f"**{theme_name}** - *{theme_desc}*\n"
+        
         if is_active:
-            msg += f"┌─ {theme_icon} **{theme_name}** ✅ **ACTIVE** ─┐\n"
-            msg += f"│ *{theme_desc}*\n"
-            msg += f"└─────────────────────────────────────────┘\n"
-            # No action buttons for active theme
-        else:
-            msg += f"┌─ {theme_icon} **{theme_name}** ─┐\n"
-            msg += f"│ *{theme_desc}*\n"
-            msg += f"└─────────────────────────────────────────┘\n"
-            # Action buttons for inactive themes
+            # Active theme - show checkmark on the theme button itself
             keyboard.append([
-                InlineKeyboardButton("🔄 SELECT/APPLY", callback_data=f"select_ui_theme|{theme_key}"),
+                InlineKeyboardButton(f"✅ {theme_name}", callback_data="theme_noop"),
+                InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_preset_theme|{theme_key}")
+            ])
+        else:
+            # Inactive theme - normal buttons
+            keyboard.append([
+                InlineKeyboardButton(f"📋 {theme_name}", callback_data=f"select_ui_theme|{theme_key}"),
                 InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_preset_theme|{theme_key}")
             ])
         
         msg += "\n"
     
-    # ═══════════════════════════════════════════════════════════════
-    # SECTION 2: CUSTOM USER THEMES
-    # ═══════════════════════════════════════════════════════════════
-    msg += "**🎨 CUSTOM THEMES** *(User Created)*\n"
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    # CUSTOM THEMES (Clean format)
+    msg += "**🎨 CUSTOM THEMES**\n\n"
     
     # Load custom templates from database
     conn = None
@@ -434,29 +428,25 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
             custom_themes_found = True
             for template in custom_templates:
                 template_name = template['template_name']
-                description = template['template_description'] or "Custom layout created by admin"
+                description = template['template_description'] or "Custom layout"
                 is_active = template['is_active']
                 template_id = template['id']
                 
-                # Custom Theme Card Header
+                # Single line format like system presets
+                msg += f"**{template_name}** - *{description}*\n"
+                
                 if is_active:
-                    msg += f"┌─ 🎨 **{template_name}** ✅ **ACTIVE** ─┐\n"
-                    msg += f"│ *{description}*\n"
-                    msg += f"└─────────────────────────────────────────┘\n"
-                    # Only Edit button for active custom theme
+                    # Active custom theme - checkmark on theme button, edit only
                     keyboard.append([
-                        InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_custom_theme|{template_id}")
+                        InlineKeyboardButton(f"✅ {template_name}", callback_data="theme_noop"),
+                        InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_custom_theme|{template_id}"),
+                        InlineKeyboardButton("🗑️ DELETE", callback_data=f"confirm_delete_theme|{template_id}|{template_name}")
                     ])
                 else:
-                    msg += f"┌─ 🎨 **{template_name}** ─┐\n"
-                    msg += f"│ *{description}*\n"
-                    msg += f"└─────────────────────────────────────────┘\n"
-                    # Full action buttons for inactive custom themes
+                    # Inactive custom theme - all three buttons in same row
                     keyboard.append([
-                        InlineKeyboardButton("🔄 SELECT/APPLY", callback_data=f"select_custom_template|{template_id}"),
-                        InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_custom_theme|{template_id}")
-                    ])
-                    keyboard.append([
+                        InlineKeyboardButton(f"🎨 {template_name}", callback_data=f"select_custom_template|{template_id}"),
+                        InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_custom_theme|{template_id}"),
                         InlineKeyboardButton("🗑️ DELETE", callback_data=f"confirm_delete_theme|{template_id}|{template_name}")
                     ])
                 
@@ -585,7 +575,7 @@ async def handle_execute_delete_theme(update: Update, context: ContextTypes.DEFA
             conn.close()
 
 async def handle_edit_preset_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Edit a preset theme by loading it into the custom editor"""
+    """Edit a preset theme by loading it into the custom editor with existing buttons"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
@@ -596,21 +586,33 @@ async def handle_edit_preset_theme(update: Update, context: ContextTypes.DEFAULT
     
     theme_key = params[0]
     
-    # Store the theme being edited in context for the editor
+    # Pre-load the preset theme layout into the editor context
     context.user_data['editing_preset_theme'] = theme_key
     
-    msg = f"✏️ **EDITING PRESET THEME** ✏️\n\n"
-    msg += f"**Theme:** `{theme_key.upper()}`\n\n"
-    msg += "🎛️ **Loading theme into custom editor...**\n\n"
-    msg += "The layout editor will open with all current button placements and settings from this preset theme pre-loaded.\n\n"
-    msg += "You can make adjustments and save as a new custom theme, or modify the existing layout.\n\n"
+    # Get the preset layout and pre-load it
+    preset_layouts = {
+        'classic': [
+            ['🛍️ Shop'],
+            ['👤 Profile', '💳 Top Up'], 
+            ['📝 Reviews', '📋 Price List', '🌐 Language']
+        ],
+        'minimalist': [
+            ['🛍️ Shop'], 
+            ['👤 Profile', '💳 Top Up']
+        ],
+        'modern': [
+            ['🛍️ Shop', '🔥 Hot Deals'], 
+            ['👤 Profile', '💳 Top Up']
+        ]
+    }
     
-    keyboard = [
-        [InlineKeyboardButton("🎛️ OPEN LAYOUT EDITOR", callback_data="admin_bot_look_editor")],
-        [InlineKeyboardButton("❌ CANCEL", callback_data="ui_theme_designer")]
-    ]
+    # Pre-load the layout into editor context
+    if theme_key in preset_layouts:
+        context.user_data['editing_layout_start_menu'] = preset_layouts[theme_key]
+        context.user_data['current_header_start_menu'] = f"Welcome back, {{user_mention}}! 💰 Balance: {{balance:.2f}} EUR\n\nChoose an option:"
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    # Redirect directly to the editor with pre-loaded layout
+    await handle_bot_edit_menu(update, context, ['start_menu'])
 
 async def handle_edit_custom_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Edit a custom theme by loading it into the custom editor"""
@@ -5076,6 +5078,48 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         import json
         menu_display_name = menu_type.replace('_', ' ').title()
         
+        # Check if we're editing a preset theme
+        editing_preset = context.user_data.get('editing_preset_theme')
+        if editing_preset:
+            # Save back to the preset theme (overwrite existing)
+            c.execute("UPDATE ui_themes SET is_active = FALSE")  # Clear all
+            c.execute("""
+                INSERT INTO ui_themes (theme_name, is_active, welcome_message, button_layout, style_config)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (theme_name) 
+                DO UPDATE SET 
+                    button_layout = EXCLUDED.button_layout,
+                    welcome_message = EXCLUDED.welcome_message,
+                    is_active = TRUE
+            """, (
+                editing_preset,
+                True,
+                current_header,
+                json.dumps(cleaned_layout),
+                json.dumps({'type': editing_preset})
+            ))
+            conn.commit()
+            
+            # Clear editing context
+            context.user_data.pop('editing_preset_theme', None)
+            context.user_data.pop(f'editing_layout_{menu_type}', None)
+            context.user_data.pop(f'editing_header_{menu_type}', None)
+            
+            success_msg = f"✅ **PRESET THEME UPDATED**\n\n"
+            success_msg += f"**Theme:** `{editing_preset.upper()}`\n\n"
+            success_msg += "Your changes have been saved to the preset theme.\n"
+            success_msg += "The theme is now active with your modifications.\n\n"
+            success_msg += "Returning to Theme Management Center..."
+            
+            await query.edit_message_text(success_msg, parse_mode='Markdown')
+            
+            # Wait 2 seconds then return to theme designer
+            import asyncio
+            await asyncio.sleep(2)
+            await handle_ui_theme_designer(update, context)
+            return
+        
+        # Regular custom theme save logic
         # Update or insert menu layout (with fallback for databases without unique constraint)
         try:
             c.execute("""
