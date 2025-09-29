@@ -535,16 +535,23 @@ async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_T
     
     await query.answer(confirmations.get(language, "✅ Language set"), show_alert=False)
     
-    # Continue to next step (verification or main menu)
+    # Continue to next step based on placement and verification status
     placement = get_language_prompt_placement()
     
-    if placement == 'before' and is_human_verification_enabled():
-        # Language was shown before verification, now show verification
-        if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            if not is_user_verified(user_id):
-                return await handle_human_verification(update, context)
+    if placement == 'before':
+        # Language was shown before verification, now check if verification is needed
+        if is_human_verification_enabled():
+            if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
+                if not is_user_verified(user_id):
+                    logger.info(f"🔍 Language selected, now showing verification for user {user_id}")
+                    return await handle_human_verification(update, context)
+    elif placement == 'after':
+        # Language was shown after verification, verification should already be done
+        # Just continue to main menu
+        pass
     
     # Show main menu
+    logger.info(f"🌍 Language selection complete, showing main menu for user {user_id}")
     await start(update, context)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -595,6 +602,44 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
             is_verified = is_user_verified(user_id)
             logger.info(f"🔍 User {user_id} verification status: {is_verified}")
+            
+            # 🚀 YOLO MODE: Debug commands for testing
+            if update.message and update.message.text:
+                message_text = update.message.text.lower()
+                
+                # Reset verification command
+                if "reset verification" in message_text:
+                    logger.info(f"🔄 YOLO: Resetting verification for user {user_id}")
+                    conn = None
+                    try:
+                        conn = get_db_connection()
+                        c = conn.cursor()
+                        c.execute("UPDATE users SET is_human_verified = FALSE, verification_attempts = 0 WHERE user_id = %s", (user_id,))
+                        conn.commit()
+                        logger.info(f"✅ Verification reset for user {user_id}")
+                        is_verified = False
+                        await update.message.reply_text("🔄 Verification status reset! Type /start again.")
+                        return
+                    except Exception as e:
+                        logger.error(f"Error resetting verification: {e}")
+                    finally:
+                        if conn:
+                            conn.close()
+                
+                # Debug settings command
+                if "debug settings" in message_text:
+                    human_verification = is_human_verification_enabled()
+                    language_selection = is_language_selection_enabled() 
+                    placement = get_language_prompt_placement()
+                    debug_msg = f"🔍 **Debug Info:**\n\n"
+                    debug_msg += f"🤖 Human Verification: {'✅ ENABLED' if human_verification else '❌ DISABLED'}\n"
+                    debug_msg += f"🌍 Language Selection: {'✅ ENABLED' if language_selection else '❌ DISABLED'}\n"
+                    debug_msg += f"📍 Language Placement: {placement.upper()}\n"
+                    debug_msg += f"✅ User Verified: {is_verified}\n"
+                    debug_msg += f"🌍 User Language: {context.user_data.get('lang', 'None')}"
+                    await update.message.reply_text(debug_msg, parse_mode='Markdown')
+                    return
+            
             if not is_verified:
                 logger.info(f"User {user_id} needs human verification")
                 return await handle_human_verification(update, context)
