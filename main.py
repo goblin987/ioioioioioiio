@@ -99,6 +99,7 @@ from marketing_promotions import (
     handle_hot_deal_price_message, handle_hot_deal_discount_message, 
     handle_hot_deal_title_message, handle_hot_deal_quantity_message, handle_admin_app_info_menu, handle_admin_add_app_info,
     handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status,
+    handle_app_info_title_message, handle_app_info_content_message,
     handle_admin_bot_look_editor, handle_bot_look_presets, handle_bot_preset_select,
     handle_bot_look_custom, handle_bot_edit_menu, handle_bot_select_button,
     handle_bot_place_button, handle_bot_remove_button, handle_bot_add_row, handle_bot_save_menu,
@@ -1015,6 +1016,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_hot_deal_discount': handle_hot_deal_discount_message,
         'awaiting_hot_deal_title': handle_hot_deal_title_message,
         'awaiting_hot_deal_quantity': handle_hot_deal_quantity_message,
+        'awaiting_app_info_title': handle_app_info_title_message,
+        'awaiting_app_info_content': handle_app_info_content_message,
 
         # User Management States (from viewer_admin.py)
         'awaiting_balance_adjustment_amount': handle_adjust_balance_amount_message,

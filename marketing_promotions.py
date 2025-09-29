@@ -3356,6 +3356,134 @@ async def handle_admin_add_app_info(update: Update, context: ContextTypes.DEFAUL
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
+async def handle_app_info_title_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle app info title input from admin"""
+    user_id = update.effective_user.id
+    
+    if context.user_data.get('state') != 'awaiting_app_info_title':
+        return
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    title = update.message.text.strip()
+    
+    if not title or len(title) < 2:
+        await update.message.reply_text(
+            "❌ **Invalid Title**\n\nTitle must be at least 2 characters long.\n\n💬 **Try again:**"
+        )
+        return
+    
+    if len(title) > 100:
+        await update.message.reply_text(
+            "❌ **Title Too Long**\n\nTitle must be 100 characters or less.\n\n💬 **Try again:**"
+        )
+        return
+    
+    # Store title and ask for content
+    context.user_data['app_info_title'] = title
+    context.user_data['state'] = 'awaiting_app_info_content'
+    
+    msg = f"📝 **APP INFO: {title}**\n\n"
+    msg += "✍️ **Enter Content:**\n\n"
+    msg += "💡 **You can include:**\n"
+    msg += "• Contact details\n"
+    msg += "• Links\n"
+    msg += "• Instructions\n"
+    msg += "• Multiple lines\n\n"
+    msg += "🎯 **Type the content for this info section:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data="admin_app_info_menu")]
+    ]
+    
+    await update.message.reply_text(
+        msg, 
+        reply_markup=InlineKeyboardMarkup(keyboard), 
+        parse_mode='Markdown'
+    )
+
+async def handle_app_info_content_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle app info content input from admin"""
+    user_id = update.effective_user.id
+    
+    if context.user_data.get('state') != 'awaiting_app_info_content':
+        return
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    content = update.message.text.strip()
+    
+    if not content or len(content) < 5:
+        await update.message.reply_text(
+            "❌ **Content Too Short**\n\nContent must be at least 5 characters long.\n\n💬 **Try again:**"
+        )
+        return
+    
+    if len(content) > 2000:
+        await update.message.reply_text(
+            "❌ **Content Too Long**\n\nContent must be 2000 characters or less.\n\n💬 **Try again:**"
+        )
+        return
+    
+    # Get title from context
+    title = context.user_data.get('app_info_title')
+    if not title:
+        await update.message.reply_text("❌ Error: Title lost. Please start again.")
+        context.user_data['state'] = None
+        return
+    
+    # Save to database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            INSERT INTO app_info 
+            (info_title, info_content, is_active, display_order, created_by)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            title,
+            content,
+            True,
+            0,  # Default order
+            user_id
+        ))
+        
+        conn.commit()
+        
+        # Clear state
+        context.user_data['state'] = None
+        context.user_data['app_info_title'] = None
+        
+        msg = "✅ **APP INFO CREATED** ✅\n\n"
+        msg += f"📝 **Title:** {title}\n"
+        msg += f"📄 **Content:** {content[:100]}{'...' if len(content) > 100 else ''}\n\n"
+        msg += "🚀 **Info is now active and visible to users!**"
+        
+        keyboard = [
+            [InlineKeyboardButton("📱 View App Info", callback_data="modern_app")],
+            [InlineKeyboardButton("🔧 Manage App Info", callback_data="admin_app_info_menu")],
+            [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
+        ]
+        
+        await update.message.reply_text(
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating app info: {e}")
+        await update.message.reply_text("❌ Error creating app info. Please try again.")
+        context.user_data['state'] = None
+        context.user_data['app_info_title'] = None
+    finally:
+        if conn:
+            conn.close()
+
 async def handle_admin_manage_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Manage existing app info"""
     query = update.callback_query
