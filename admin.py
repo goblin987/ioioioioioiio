@@ -542,8 +542,8 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         [InlineKeyboardButton("👥 User Management", callback_data="admin_users_menu")],
         [InlineKeyboardButton("🎁 Marketing & Promotions", callback_data="admin_marketing_menu")],
         
-        # === SYSTEM & SETTINGS ===
-        [InlineKeyboardButton("⚙️ System Settings", callback_data="admin_system_menu")],
+        # === BOT INTERFACE & DESIGN ===
+        [InlineKeyboardButton("🎨 Bot UI Management", callback_data="admin_bot_ui_menu")],
         
         # === QUICK ACCESS ===
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],
@@ -645,9 +645,8 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "🎁 **Marketing & Promotions**\n\nManage discounts, referrals, campaigns, and UI themes:"
+    msg = "🎁 **Marketing & Promotions**\n\nManage discounts, referrals, campaigns, and broadcasts:"
     keyboard = [
-        [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("🏷️ Manage Discount Codes", callback_data="adm_manage_discounts")],
         [InlineKeyboardButton("🎁 Referral Program", callback_data="referral_admin_menu")],
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
@@ -656,14 +655,15 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
-async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Shows system settings menu."""
+async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows Bot UI Management menu."""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "⚙️ **System Settings**\n\nConfigure bot settings:"
+    msg = "🎨 **Bot UI Management**\n\nManage bot interface, themes, and media:"
     keyboard = [
+        [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
@@ -3186,7 +3186,7 @@ async def handle_adm_set_media(update: Update, context: ContextTypes.DEFAULT_TYP
     lang, lang_data = _get_lang_data(context) # Use helper
     set_media_prompt_text = lang_data.get("set_media_prompt_plain", "Send a photo, video, or GIF to display above all messages:")
     context.user_data["state"] = "awaiting_bot_media"
-    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="admin_menu")]]
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="admin_bot_ui_menu")]]
     await query.edit_message_text(set_media_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     await query.answer("Send photo, video, or GIF.")
 

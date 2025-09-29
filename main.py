@@ -641,7 +641,7 @@ def callback_query_router(func):
                 "admin_locations_menu": admin.handle_admin_locations_menu,
                 "admin_users_menu": admin.handle_admin_users_menu,
                 "admin_marketing_menu": admin.handle_admin_marketing_menu,
-                "admin_system_menu": admin.handle_admin_system_menu,
+                "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
                 "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
                 "admin_system_health": admin.handle_admin_system_health,
                 "admin_user_stats": admin.handle_admin_user_stats,
