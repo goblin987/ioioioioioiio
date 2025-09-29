@@ -2156,39 +2156,62 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         from utils import get_product_emoji
         
-        # Show manual hot deals first
+        # Organize deals by city for structured display
+        deals_by_city = {}
+        
+        # Group manual deals by city
         for deal in manual_deals:
+            city = deal['city']
+            if city not in deals_by_city:
+                deals_by_city[city] = []
+            
             product_type = deal['product_type']
             emoji = get_product_emoji(product_type)
             
+            # Format deal text with clear pricing
             if deal['deal_title']:
-                deal_text = f"🔥 {deal['deal_title']}"
+                deal_name = deal['deal_title']
             else:
-                deal_text = f"🔥 {emoji} {product_type.title()}"
+                deal_name = f"{emoji} {product_type.title()} {deal['size']}"
             
-            if deal['deal_price'] and deal['original_price']:
-                deal_text += f" - {deal['deal_price']:.2f}€ (was {deal['original_price']:.2f}€)"
-            elif deal['discount_percentage'] > 0:
-                deal_text += f" - {deal['discount_percentage']:.0f}% OFF"
-            else:
-                deal_text += f" - From {deal['price']:.2f}€"
+            deal_text = f"{deal_name}: {deal['deal_price']:.2f}€ (was {deal['original_price']:.2f}€)"
             
-            # For hot deals, redirect to payment menu directly
-            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"pay_single_item|{deal['city']}|{deal['district']}|{deal['product_type']}|{deal['size']}|{deal['deal_price']}")])
+            deal_info = {
+                'text': deal_text,
+                'callback': f"pay_single_item|{deal['city']}|{deal['district']}|{deal['product_type']}|{deal['size']}|{deal['deal_price']}",
+                'type': 'manual'
+            }
+            deals_by_city[city].append(deal_info)
         
-        # Show automatic deals
+        # Group automatic deals by city
         for deal in auto_deals:
             city = deal['city']
-            district = deal['district']
-            product_type = deal['product_type']
-            price = deal['min_price']
+            if city not in deals_by_city:
+                deals_by_city[city] = []
             
+            product_type = deal['product_type']
             emoji = get_product_emoji(product_type)
-            deal_text = f"🔥 {emoji} {product_type.title()} - From {price:.2f}€"
-            # For auto deals, redirect to payment menu directly
-            keyboard.append([InlineKeyboardButton(deal_text, callback_data=f"pay_single_item|{city}|{district}|{product_type}|unknown|{price}")])
+            
+            deal_text = f"{emoji} {product_type.title()}: From {deal['min_price']:.2f}€"
+            
+            deal_info = {
+                'text': deal_text,
+                'callback': f"pay_single_item|{city}|{deal['district']}|{product_type}|unknown|{deal['min_price']}",
+                'type': 'auto'
+            }
+            deals_by_city[city].append(deal_info)
         
-        total_deals = len(manual_deals) + len(auto_deals)
+        # Create structured menu with city headers and deals
+        total_deals = 0
+        for city, city_deals in deals_by_city.items():
+            # Add non-clickable city header
+            keyboard.append([InlineKeyboardButton(f"🏙️ {city.upper()}", callback_data="city_header_noop")])
+            
+            # Add all deals for this city
+            for deal in city_deals:
+                keyboard.append([InlineKeyboardButton(deal['text'], callback_data=deal['callback'])])
+                total_deals += 1
+        
         msg += f"⚡ **{total_deals} hot deals available**\n"
         msg += "💎 *Premium quality guaranteed*"
         
@@ -2201,6 +2224,11 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_city_header_noop(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle non-clickable city header - just show a message"""
+    query = update.callback_query
+    await query.answer("🏙️ City Header - Select a deal below", show_alert=False)
 
 async def handle_modern_deal_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle hot deal selection - redirect to product selection"""

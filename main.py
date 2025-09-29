@@ -94,7 +94,7 @@ from marketing_promotions import (
     handle_admin_deal_custom_price, handle_admin_deal_discount, handle_admin_deal_title_only,
     handle_admin_deal_quantity_limit, handle_admin_manage_hot_deals,
     handle_admin_edit_hot_deal, handle_admin_toggle_hot_deal, handle_admin_delete_hot_deal,
-    handle_select_custom_template, handle_delete_custom_template,
+    handle_select_custom_template, handle_delete_custom_template, handle_city_header_noop,
     handle_hot_deal_price_message, handle_hot_deal_discount_message, 
     handle_hot_deal_title_message, handle_hot_deal_quantity_message, handle_admin_app_info_menu, handle_admin_add_app_info,
     handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status,
@@ -862,6 +862,7 @@ def callback_query_router(func):
                 "admin_delete_hot_deal": handle_admin_delete_hot_deal,
                 "select_custom_template": handle_select_custom_template,
                 "delete_custom_template": handle_delete_custom_template,
+                "city_header_noop": handle_city_header_noop,  # Non-clickable city header
                 # App Info Management Handlers
                 "admin_app_info_menu": handle_admin_app_info_menu,
                 "admin_add_app_info": handle_admin_add_app_info,
