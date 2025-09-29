@@ -545,6 +545,9 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         # === BOT INTERFACE & DESIGN ===
         [InlineKeyboardButton("🎨 Bot UI Management", callback_data="admin_bot_ui_menu")],
         
+        # === SYSTEM & SECURITY ===
+        [InlineKeyboardButton("⚙️ System Settings", callback_data="admin_system_menu")],
+        
         # === QUICK ACCESS ===
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],
         
@@ -668,6 +671,78 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows system settings menu with security options."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Check current human verification status
+    conn = None
+    human_verification_enabled = False
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("human_verification_enabled",))
+        result = c.fetchone()
+        human_verification_enabled = result and result['setting_value'] == 'true'
+    except Exception as e:
+        logger.error(f"Error checking human verification status: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
+    verification_status = "✅ ENABLED" if human_verification_enabled else "❌ DISABLED"
+    
+    msg = f"⚙️ **System Settings**\n\nConfigure bot security and system settings:\n\n🤖 **Human Verification:** {verification_status}"
+    keyboard = [
+        [InlineKeyboardButton(f"🤖 {'Disable' if human_verification_enabled else 'Enable'} Human Verification", 
+                             callback_data=f"toggle_human_verification|{'disable' if human_verification_enabled else 'enable'}")],
+        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+    ]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_toggle_human_verification(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle human verification on/off."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid action", show_alert=True)
+        return
+    
+    action = params[0]  # 'enable' or 'disable'
+    new_value = 'true' if action == 'enable' else 'false'
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update or insert the setting
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key) 
+            DO UPDATE SET setting_value = EXCLUDED.setting_value
+        """, ("human_verification_enabled", new_value))
+        
+        conn.commit()
+        
+        status = "ENABLED" if action == 'enable' else "DISABLED"
+        await query.answer(f"✅ Human Verification {status}", show_alert=True)
+        
+        # Return to system settings menu
+        await handle_admin_system_menu(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error toggling human verification: {e}")
+        await query.answer("❌ Error updating setting", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_admin_maintenance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show system maintenance menu"""

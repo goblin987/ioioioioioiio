@@ -29,7 +29,8 @@ from utils import (
     _unreserve_basket_items, # <<< IMPORT UNRESERVE HELPER >>>
     is_primary_admin, is_secondary_admin, is_any_admin, # Admin helper functions
     SECONDARY_ADMIN_IDS, is_user_banned, # Import ban check helper
-    update_user_broadcast_status # Import broadcast tracking helper
+    update_user_broadcast_status, # Import broadcast tracking helper
+    is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code # Human verification
 )
 import json # <<< Make sure json is imported
 import payment # <<< Make sure payment module is imported
@@ -286,6 +287,83 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
 
 
 # --- User Command Handlers ---
+# --- Human Verification System ---
+async def handle_human_verification(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show human verification challenge"""
+    user_id = update.effective_user.id
+    
+    # Generate verification code
+    verification_code = generate_verification_code()
+    context.user_data['verification_code'] = verification_code
+    context.user_data['state'] = 'awaiting_verification'
+    
+    # Create verification message like in the image
+    msg = f"🤖 **Prove you're human: reply with the text in the image.**\n\n"
+    msg += f"```\n"
+    msg += f"┌─────────────────────────────┐\n"
+    msg += f"│                             │\n"
+    msg += f"│         {verification_code}          │\n"
+    msg += f"│                             │\n"
+    msg += f"└─────────────────────────────┘\n"
+    msg += f"```"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode='Markdown'
+        )
+    else:
+        await send_message_with_retry(
+            context.bot, 
+            update.effective_chat.id, 
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode='Markdown'
+        )
+
+async def handle_verification_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle user's verification code input"""
+    if context.user_data.get('state') != 'awaiting_verification':
+        return
+    
+    user_id = update.effective_user.id
+    user_input = update.message.text.strip().upper()
+    correct_code = context.user_data.get('verification_code', '').upper()
+    
+    if user_input == correct_code:
+        # Verification successful
+        set_user_verified(user_id, True)
+        context.user_data.pop('verification_code', None)
+        context.user_data.pop('state', None)
+        
+        await update.message.reply_text(
+            "✅ **Verification Successful!**\n\nWelcome to the bot! 🎉",
+            parse_mode='Markdown'
+        )
+        
+        # Now show the start menu
+        await start(update, context)
+    else:
+        # Verification failed
+        await update.message.reply_text(
+            "❌ **Incorrect code!**\n\nPlease try again or type /start to get a new code.",
+            parse_mode='Markdown'
+        )
+
+async def handle_verification_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle verification cancellation"""
+    query = update.callback_query
+    context.user_data.pop('verification_code', None)
+    context.user_data.pop('state', None)
+    
+    await query.edit_message_text(
+        "❌ **Verification Cancelled**\n\nType /start to try again.",
+        parse_mode='Markdown'
+    )
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the /start command and the initial welcome message."""
     user = update.effective_user
@@ -293,6 +371,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_callback = update.callback_query is not None
     user_id = user.id
     username = user.username or user.first_name or f"User_{user_id}"
+    
+    # HUMAN VERIFICATION CHECK - First priority
+    if is_human_verification_enabled():
+        # Skip verification for admins
+        if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
+            if not is_user_verified(user_id):
+                logger.info(f"User {user_id} needs human verification")
+                return await handle_human_verification(update, context)
     
     # Check if admin has activated custom UI theme
     try:

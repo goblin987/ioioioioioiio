@@ -513,6 +513,7 @@ def callback_query_router(func):
             KNOWN_HANDLERS = {
                 # User Handlers (from user.py)
                 "start": user.start, "back_start": user.handle_back_start, "shop": user.handle_shop,
+                "verification_cancel": user.handle_verification_cancel,
                 "city": user.handle_city_selection, "dist": user.handle_district_selection,
                 "type": user.handle_type_selection, "product": user.handle_product_selection,
                 "add": user.handle_add_to_basket,
@@ -642,6 +643,8 @@ def callback_query_router(func):
                 "admin_users_menu": admin.handle_admin_users_menu,
                 "admin_marketing_menu": admin.handle_admin_marketing_menu,
                 "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
+                "admin_system_menu": admin.handle_admin_system_menu,
+                "toggle_human_verification": admin.handle_toggle_human_verification,
                 "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
                 "admin_system_health": admin.handle_admin_system_health,
                 "admin_user_stats": admin.handle_admin_user_stats,
@@ -978,6 +981,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     STATE_HANDLERS = {
         # User Handlers (from user.py)
+        'awaiting_verification': user.handle_verification_message,
         'awaiting_review': user.handle_leave_review_message,
         'awaiting_user_discount_code': user.handle_user_discount_code_message,
         'awaiting_basket_discount_code': user.handle_basket_discount_code_message,

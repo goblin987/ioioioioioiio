@@ -1187,7 +1187,8 @@ def init_db():
                 is_reseller {get_boolean_type()} DEFAULT FALSE,
                 last_active {get_timestamp_type()} DEFAULT NULL,
                 broadcast_failed_count INTEGER DEFAULT 0,
-                referral_code {get_text_type()} DEFAULT NULL
+                referral_code {get_text_type()} DEFAULT NULL,
+                is_human_verified {get_boolean_type()} DEFAULT FALSE
             )''')
             logger.info(f"✅ Users table created successfully")
             
@@ -1202,6 +1203,19 @@ def init_db():
                     logger.info(f"✅ referral_code column already exists in users table")
                 else:
                     logger.warning(f"⚠️ Could not add referral_code column: {e}")
+                conn.rollback()
+            
+            # Add is_human_verified column if it doesn't exist
+            try:
+                logger.info(f"🔧 Adding is_human_verified column to users table...")
+                c.execute(f"ALTER TABLE users ADD COLUMN is_human_verified {get_boolean_type()} DEFAULT FALSE")
+                conn.commit()
+                logger.info(f"✅ is_human_verified column added to users table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ is_human_verified column already exists in users table")
+                else:
+                    logger.warning(f"⚠️ Could not add is_human_verified column: {e}")
                 conn.rollback()
             
             # Handle existing tables: ALTER user_id columns from INTEGER to BIGINT for Telegram compatibility
@@ -3078,3 +3092,60 @@ def send_health_alert(health_status):
             )
     except Exception as e:
         logger.error(f"❌ BULLETPROOF: Error sending health alert: {e}")
+
+# --- Human Verification System ---
+
+def generate_verification_code():
+    """Generate a random verification code like NIR1B"""
+    letters = ''.join(random.choices(string.ascii_uppercase, k=3))  # 3 random letters
+    numbers = ''.join(random.choices(string.digits, k=1))  # 1 random number
+    letter = random.choice(string.ascii_uppercase)  # 1 more letter
+    return letters + numbers + letter
+
+def is_human_verification_enabled():
+    """Check if human verification is enabled"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("human_verification_enabled",))
+        result = c.fetchone()
+        return result and result['setting_value'] == 'true'
+    except Exception as e:
+        logger.error(f"Error checking human verification status: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def is_user_verified(user_id):
+    """Check if user has completed human verification"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT is_human_verified FROM users WHERE user_id = %s", (user_id,))
+        result = c.fetchone()
+        return result and result.get('is_human_verified', False)
+    except Exception as e:
+        logger.error(f"Error checking user verification status: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def set_user_verified(user_id, verified=True):
+    """Mark user as human verified"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE users SET is_human_verified = %s WHERE user_id = %s", (verified, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error setting user verification status: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
