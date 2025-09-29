@@ -566,7 +566,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
         # Skip language selection for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            # 🚀 YOLO MODE: Always show language selection if not completed in this session
+            # 🚀 YOLO MODE: Show language selection if not completed in this session (before verification)
             if not context.user_data.get('language_selection_completed'):
                 logger.info(f"🌍 YOLO: Showing language selection for user {user_id} (before verification)")
                 return await handle_language_selection(update, context)
@@ -654,10 +654,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_language_selection_enabled() and get_language_prompt_placement() == 'after':
         # Skip language selection for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            # 🚀 YOLO MODE: Always show language selection if not shown in this session
-            if not context.user_data.get('language_selection_completed'):
-                logger.info(f"🌍 YOLO: Showing language selection for user {user_id} (after verification)")
+            # 🚀 YOLO MODE: Only show language selection if user is verified AND hasn't completed language selection
+            is_user_already_verified = is_user_verified(user_id)
+            
+            if is_user_already_verified and not context.user_data.get('language_selection_completed'):
+                logger.info(f"🌍 YOLO: User {user_id} is verified, showing language selection (after verification)")
                 return await handle_language_selection(update, context)
+            elif not is_user_already_verified:
+                logger.info(f"🔍 User {user_id} not verified yet, skipping language selection (placement=after)")
+                # Don't show language selection - verification should come first
             
             # Load language from context or database
             user_language = context.user_data.get('lang')
