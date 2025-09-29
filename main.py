@@ -92,7 +92,9 @@ from marketing_promotions import (
     handle_modern_promotions, handle_modern_app, handle_modern_home,
     handle_admin_hot_deals_menu, handle_admin_add_hot_deal, handle_admin_hot_deal_product,
     handle_admin_deal_custom_price, handle_admin_deal_discount, handle_admin_deal_title_only,
-    handle_admin_manage_hot_deals, handle_admin_app_info_menu, handle_admin_add_app_info,
+    handle_admin_deal_quantity_limit, handle_admin_manage_hot_deals,
+    handle_hot_deal_price_message, handle_hot_deal_discount_message, 
+    handle_hot_deal_title_message, handle_hot_deal_quantity_message, handle_admin_app_info_menu, handle_admin_add_app_info,
     handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status,
     handle_admin_bot_look_editor, handle_bot_look_presets, handle_bot_preset_select,
     handle_bot_look_custom, handle_bot_edit_menu, handle_bot_select_button,
@@ -852,6 +854,7 @@ def callback_query_router(func):
                 "admin_deal_custom_price": handle_admin_deal_custom_price,
                 "admin_deal_discount": handle_admin_deal_discount,
                 "admin_deal_title_only": handle_admin_deal_title_only,
+                "admin_deal_quantity_limit": handle_admin_deal_quantity_limit,
                 "admin_manage_hot_deals": handle_admin_manage_hot_deals,
                 # App Info Management Handlers
                 "admin_app_info_menu": handle_admin_app_info_menu,
@@ -995,6 +998,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Header message editing handler (from marketing_promotions.py)
         'awaiting_header_message': handle_header_message_input,
+        
+        # Hot deals handlers
+        'awaiting_hot_deal_price': handle_hot_deal_price_message,
+        'awaiting_hot_deal_discount': handle_hot_deal_discount_message,
+        'awaiting_hot_deal_title': handle_hot_deal_title_message,
+        'awaiting_hot_deal_quantity': handle_hot_deal_quantity_message,
 
         # User Management States (from viewer_admin.py)
         'awaiting_balance_adjustment_amount': handle_adjust_balance_amount_message,

@@ -123,6 +123,7 @@ def init_marketing_tables():
             discount_percentage REAL DEFAULT 0,
             original_price REAL,
             deal_price REAL,
+            quantity_limit INTEGER DEFAULT NULL,
             is_active BOOLEAN DEFAULT TRUE,
             priority INTEGER DEFAULT 0,
             created_by BIGINT NOT NULL,
@@ -203,6 +204,18 @@ def init_marketing_tables():
                 pass
             else:
                 logger.warning(f"⚠️ Could not add header_message column: {e}")
+        
+        # Add quantity_limit column to hot_deals if it doesn't exist
+        try:
+            c.execute("ALTER TABLE hot_deals ADD COLUMN quantity_limit INTEGER DEFAULT NULL")
+            conn.commit()
+            logger.info("✅ Added quantity_limit column to hot_deals")
+        except Exception as e:
+            conn.rollback()
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                pass
+            else:
+                logger.warning(f"⚠️ Could not add quantity_limit column: {e}")
         
         # Insert default themes if not exists (with proper error handling)
         try:
@@ -2232,9 +2245,11 @@ async def handle_admin_add_hot_deal(update: Update, context: ContextTypes.DEFAUL
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("""
-            SELECT id, city, district, product_type, size, price, available
+            SELECT DISTINCT product_type, size, price, city, district,
+                   MIN(id) as id, SUM(available) as total_available
             FROM products 
             WHERE available > 0
+            GROUP BY product_type, size, price, city, district
             ORDER BY city, district, product_type, price
             LIMIT 20
         """)
@@ -2268,7 +2283,7 @@ async def handle_admin_add_hot_deal(update: Update, context: ContextTypes.DEFAUL
     for product in products:
         emoji = get_product_emoji(product['product_type'])
         product_text = f"{emoji} {product['product_type']} {product['size']} - {product['price']:.2f}€"
-        product_text += f" ({product['city']}/{product['district']})"
+        product_text += f" ({product['city']}/{product['district']}) [{product['total_available']} units]"
         
         keyboard.append([InlineKeyboardButton(product_text, callback_data=f"admin_hot_deal_product|{product['id']}")])
     
@@ -2328,6 +2343,7 @@ async def handle_admin_hot_deal_product(update: Update, context: ContextTypes.DE
         [InlineKeyboardButton("💰 Set Custom Price", callback_data=f"admin_deal_custom_price|{product_id}")],
         [InlineKeyboardButton("📊 Set Discount %", callback_data=f"admin_deal_discount|{product_id}")],
         [InlineKeyboardButton("🏷️ Custom Title Only", callback_data=f"admin_deal_title_only|{product_id}")],
+        [InlineKeyboardButton("🔢 Set Purchase Limit", callback_data=f"admin_deal_quantity_limit|{product_id}")],
         [InlineKeyboardButton("⬅️ Back to Products", callback_data="admin_add_hot_deal")]
     ]
     
@@ -2361,6 +2377,233 @@ async def handle_admin_deal_custom_price(update: Update, context: ContextTypes.D
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_hot_deal_price_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle custom price input for hot deal"""
+    user_id = update.effective_user.id
+    
+    if context.user_data.get('state') != 'awaiting_hot_deal_price':
+        return
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    product = context.user_data.get('hot_deal_product')
+    if not product:
+        await update.message.reply_text("❌ Product selection lost. Please try again.")
+        context.user_data['state'] = None
+        return
+    
+    try:
+        price = float(update.message.text.strip())
+        if price <= 0:
+            await update.message.reply_text("❌ Price must be greater than 0. Try again:")
+            return
+        
+        context.user_data['hot_deal_price'] = price
+        context.user_data['state'] = 'awaiting_hot_deal_title'
+        
+        msg = f"💰 **CUSTOM PRICE SET** 💰\n\n"
+        msg += f"📦 **Product:** {product['product_type']} {product['size']}\n"
+        msg += f"💰 **Original Price:** {product['price']:.2f}€\n"
+        msg += f"🔥 **Deal Price:** {price:.2f}€\n"
+        msg += f"📊 **Savings:** {((product['price'] - price) / product['price'] * 100):.1f}%\n\n"
+        msg += "🏷️ **Enter deal title:**\n"
+        msg += "*(Example: 'Weekend Special' or 'Limited Edition')*"
+        
+        keyboard = [
+            [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+        ]
+        
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except ValueError:
+        await update.message.reply_text("❌ Invalid price format. Please enter a number (e.g., 15.99):")
+
+async def handle_hot_deal_discount_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle discount percentage input for hot deal"""
+    user_id = update.effective_user.id
+    
+    if context.user_data.get('state') != 'awaiting_hot_deal_discount':
+        return
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    product = context.user_data.get('hot_deal_product')
+    if not product:
+        await update.message.reply_text("❌ Product selection lost. Please try again.")
+        context.user_data['state'] = None
+        return
+    
+    try:
+        discount = float(update.message.text.strip())
+        if discount <= 0 or discount >= 100:
+            await update.message.reply_text("❌ Discount must be between 0 and 100%. Try again:")
+            return
+        
+        deal_price = product['price'] * (1 - discount / 100)
+        context.user_data['hot_deal_price'] = deal_price
+        context.user_data['hot_deal_discount'] = discount
+        context.user_data['state'] = 'awaiting_hot_deal_title'
+        
+        msg = f"📊 **DISCOUNT SET** 📊\n\n"
+        msg += f"📦 **Product:** {product['product_type']} {product['size']}\n"
+        msg += f"💰 **Original Price:** {product['price']:.2f}€\n"
+        msg += f"📊 **Discount:** {discount:.1f}%\n"
+        msg += f"🔥 **Deal Price:** {deal_price:.2f}€\n\n"
+        msg += "🏷️ **Enter deal title:**\n"
+        msg += "*(Example: 'Weekend Special' or 'Limited Edition')*"
+        
+        keyboard = [
+            [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+        ]
+        
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except ValueError:
+        await update.message.reply_text("❌ Invalid discount format. Please enter a number (e.g., 25):")
+
+async def handle_hot_deal_title_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle title input for hot deal"""
+    user_id = update.effective_user.id
+    
+    if context.user_data.get('state') != 'awaiting_hot_deal_title':
+        return
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    product = context.user_data.get('hot_deal_product')
+    deal_price = context.user_data.get('hot_deal_price')
+    
+    if not product or deal_price is None:
+        await update.message.reply_text("❌ Deal configuration lost. Please try again.")
+        context.user_data['state'] = None
+        return
+    
+    title = update.message.text.strip()
+    if not title or len(title) < 2:
+        await update.message.reply_text("❌ Title must be at least 2 characters. Try again:")
+        return
+    
+    if len(title) > 50:
+        await update.message.reply_text("❌ Title must be 50 characters or less. Try again:")
+        return
+    
+    context.user_data['hot_deal_title'] = title
+    context.user_data['state'] = 'awaiting_hot_deal_quantity'
+    
+    msg = f"🔢 **SET PURCHASE LIMIT** 🔢\n\n"
+    msg += f"📦 **Product:** {product['product_type']} {product['size']}\n"
+    msg += f"🏷️ **Title:** {title}\n"
+    msg += f"🔥 **Deal Price:** {deal_price:.2f}€\n\n"
+    msg += "🎯 **Enter maximum units per customer:**\n"
+    msg += "*(Example: 10 for max 10 units per customer)*\n"
+    msg += "*(Or type 'unlimited' for no limit)*"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+    ]
+    
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_hot_deal_quantity_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle quantity limit input for hot deal"""
+    user_id = update.effective_user.id
+    
+    if context.user_data.get('state') != 'awaiting_hot_deal_quantity':
+        return
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    product = context.user_data.get('hot_deal_product')
+    deal_price = context.user_data.get('hot_deal_price')
+    title = context.user_data.get('hot_deal_title')
+    discount = context.user_data.get('hot_deal_discount', 0)
+    
+    if not product or deal_price is None or not title:
+        await update.message.reply_text("❌ Deal configuration lost. Please try again.")
+        context.user_data['state'] = None
+        return
+    
+    quantity_input = update.message.text.strip().lower()
+    
+    if quantity_input == 'unlimited':
+        quantity_limit = None
+    else:
+        try:
+            quantity_limit = int(quantity_input)
+            if quantity_limit <= 0:
+                await update.message.reply_text("❌ Quantity must be greater than 0 or 'unlimited'. Try again:")
+                return
+        except ValueError:
+            await update.message.reply_text("❌ Invalid format. Enter a number or 'unlimited'. Try again:")
+            return
+    
+    # Save hot deal to database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Handle quantity-only deals (no custom title)
+        deal_type = context.user_data.get('hot_deal_type', 'custom')
+        if deal_type == 'quantity_only':
+            final_title = f"Limited Stock - {product['product_type']} {product['size']}"
+        else:
+            final_title = title
+        
+        c.execute("""
+            INSERT INTO hot_deals 
+            (product_id, deal_title, deal_description, discount_percentage, 
+             original_price, deal_price, quantity_limit, is_active, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            product['id'],
+            final_title,
+            f"Special offer: {final_title}",
+            discount,
+            product['price'],
+            deal_price,
+            quantity_limit,
+            True,
+            user_id
+        ))
+        
+        conn.commit()
+        
+        # Clear state
+        context.user_data['state'] = None
+        for key in ['hot_deal_product', 'hot_deal_price', 'hot_deal_title', 'hot_deal_discount']:
+            context.user_data.pop(key, None)
+        
+        msg = f"✅ **HOT DEAL CREATED** ✅\n\n"
+        msg += f"📦 **Product:** {product['product_type']} {product['size']}\n"
+        msg += f"🏷️ **Title:** {final_title}\n"
+        msg += f"💰 **Original Price:** {product['price']:.2f}€\n"
+        msg += f"🔥 **Deal Price:** {deal_price:.2f}€\n"
+        if discount > 0:
+            msg += f"📊 **Discount:** {discount:.1f}%\n"
+        if quantity_limit:
+            msg += f"🔢 **Limit:** {quantity_limit} per customer\n"
+        else:
+            msg += f"🔢 **Limit:** Unlimited\n"
+        msg += f"\n🚀 **Deal is now active!**"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔥 Manage Hot Deals", callback_data="admin_hot_deals_menu")],
+            [InlineKeyboardButton("➕ Add Another Deal", callback_data="admin_add_hot_deal")],
+            [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
+        ]
+        
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error creating hot deal: {e}")
+        await update.message.reply_text("❌ Error creating hot deal. Please try again.")
+        context.user_data['state'] = None
 
 async def handle_admin_deal_discount(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Set discount percentage for hot deal"""
@@ -2403,6 +2646,7 @@ async def handle_admin_deal_title_only(update: Update, context: ContextTypes.DEF
         return
     
     context.user_data['hot_deal_type'] = 'title_only'
+    context.user_data['hot_deal_price'] = product['price']  # Keep original price
     context.user_data['state'] = 'awaiting_hot_deal_title'
     
     from utils import get_product_emoji
@@ -2413,6 +2657,38 @@ async def handle_admin_deal_title_only(update: Update, context: ContextTypes.DEF
     msg += f"💰 **Price:** {product['price']:.2f}€ (unchanged)\n\n"
     msg += "🎯 **Enter custom deal title:**\n"
     msg += "*(Example: 'Weekend Special' or 'Limited Edition')*"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_deal_quantity_limit(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set quantity limit for hot deal"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    product = context.user_data.get('hot_deal_product')
+    if not product:
+        await query.answer("Product selection lost", show_alert=True)
+        return
+    
+    # Set default price (original price) and prepare for quantity input
+    context.user_data['hot_deal_price'] = product['price']
+    context.user_data['hot_deal_type'] = 'quantity_only'
+    context.user_data['state'] = 'awaiting_hot_deal_quantity'
+    
+    from utils import get_product_emoji
+    emoji = get_product_emoji(product['product_type'])
+    
+    msg = f"🔢 **SET PURCHASE LIMIT** 🔢\n\n"
+    msg += f"📦 **Product:** {emoji} {product['product_type']} {product['size']}\n"
+    msg += f"💰 **Price:** {product['price']:.2f}€ (unchanged)\n\n"
+    msg += "🎯 **Enter maximum units per customer:**\n"
+    msg += "*(Example: 10 for max 10 units per customer)*\n"
+    msg += "*(Or type 'unlimited' for no limit)*"
     
     keyboard = [
         [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_hot_deal_product|{product['id']}")]
