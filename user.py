@@ -333,9 +333,9 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
         # 🚀 YOLO MODE: Show verification text in all 3 languages if placement is AFTER
         placement = get_language_prompt_placement()
         if placement == 'after':
-            # User hasn't selected language yet, show all 3 languages
-            msg = "🤖 **Prove you're human: reply with the text in the image.**\n"
-            msg += "🤖 **Įrodykite, kad esate žmogus: atsakykite tekstu pavaizduotame paveikslėlyje.**\n"
+            # User hasn't selected language yet, show all 3 languages with proper spacing
+            msg = "🤖 **Prove you're human: reply with the text in the image.**\n\n"
+            msg += "🤖 **Įrodykite, kad esate žmogus: atsakykite tekstu pavaizduotame paveikslėlyje.**\n\n"
             msg += "🤖 **Докажите, что вы человек: ответьте текстом на изображении.**"
         else:
             # Language already selected, use user's language
@@ -373,9 +373,9 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
         # 🚀 YOLO MODE: Show fallback text in all 3 languages if placement is AFTER
         placement = get_language_prompt_placement()
         if placement == 'after':
-            # User hasn't selected language yet, show all 3 languages
-            msg = f"🤖 **Prove you're human: reply with the text below.**\n"
-            msg += f"🤖 **Įrodykite, kad esate žmogus: atsakykite žemiau esančiu tekstu.**\n"
+            # User hasn't selected language yet, show all 3 languages with proper spacing
+            msg = f"🤖 **Prove you're human: reply with the text below.**\n\n"
+            msg += f"🤖 **Įrodykite, kad esate žmogus: atsakykite žemiau esančiu tekstu.**\n\n"
             msg += f"🤖 **Докажите, что вы человек: ответьте текстом ниже.**\n\n"
             msg += f"**Code / Kodas / Код:** `{verification_code}`"
         else:
@@ -483,10 +483,20 @@ async def handle_verification_cancel(update: Update, context: ContextTypes.DEFAU
     context.user_data.pop('verification_code', None)
     context.user_data.pop('state', None)
     
-    await query.edit_message_text(
+    # Delete the verification message (which might be a photo) and send a new text message
+    try:
+        await query.message.delete()
+    except:
+        pass  # Ignore if deletion fails
+    
+    # Send a new message instead of editing
+    await query.message.reply_text(
         "❌ **Verification Cancelled**\n\nType /start to try again.",
         parse_mode='Markdown'
     )
+    
+    # Answer the callback query to remove the loading state
+    await query.answer()
 
 async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show language selection prompt"""
