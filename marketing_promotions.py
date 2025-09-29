@@ -961,8 +961,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     status_bar = get_user_status_bar(total_purchases)
     
     # Classic welcome message with dynamic status (like in screenshot)
-    msg = f"🤖 **NusipirkBot**\n\n"
-    msg += f"👋 Welcome, {username}!\n\n"
+    msg = f"👋 Welcome, {username}!\n\n"
     msg += f"👤 Status: {status_bar}\n"
     msg += f"💰 Balance: {balance:.2f} EUR\n"
     msg += f"🛒 Total Purchases: {total_purchases}\n"
