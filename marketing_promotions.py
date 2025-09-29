@@ -360,7 +360,7 @@ async def handle_marketing_promotions_menu(update: Update, context: ContextTypes
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """YOLO MODE: Clean, dummy-proof UI Theme Designer"""
+    """Professional Theme Management Interface with Card-Based Design"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
@@ -369,77 +369,339 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
     active_theme = get_active_ui_theme()
     active_theme_name = active_theme.get('theme_name', 'classic') if active_theme else 'classic'
     
-    msg = "🎨 **BOT THEME SELECTOR** 🎨\n\n"
-    msg += f"**🔥 Currently Active:** `{active_theme_name.upper()}`\n\n"
+    msg = "🎨 **THEME MANAGEMENT CENTER** 🎨\n\n"
+    msg += f"**Currently Active Theme:** `{active_theme_name.upper()}`\n\n"
     
     keyboard = []
     
-    # YOLO MODE: Simple 3 built-in themes with clear activation
-    msg += "**📱 CHOOSE YOUR BOT STYLE:**\n\n"
+    # ═══════════════════════════════════════════════════════════════
+    # SECTION 1: NON-DELETABLE SYSTEM PRESETS
+    # ═══════════════════════════════════════════════════════════════
+    msg += "**🔧 SYSTEM PRESETS** *(Core Themes)*\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
     
-    themes = [
-        ('classic', '📋 CLASSIC', 'Original 6-button layout'),
-        ('minimalist', '🍃 MINIMALIST', 'Clean 3-button layout'),
-        ('modern', '💎 MODERN', 'Card-style premium layout')
+    system_themes = [
+        ('classic', '📋 CLASSIC', 'Traditional 6-button layout with comprehensive options', '🏛️'),
+        ('minimalist', '🍃 MINIMALIST', 'Clean Apple-style interface with essential buttons only', '✨'),
+        ('modern', '💎 MODERN', 'Premium card-based design with enhanced visual appeal', '🚀')
     ]
     
-    for theme_key, theme_name, theme_desc in themes:
+    for theme_key, theme_name, theme_desc, theme_icon in system_themes:
         is_active = active_theme_name == theme_key
+        
+        # Theme Card Header
         if is_active:
-            # Active theme - show with checkmark, no button
-            msg += f"✅ **{theme_name}** - *{theme_desc}* **(ACTIVE)**\n"
+            msg += f"┌─ {theme_icon} **{theme_name}** ✅ **ACTIVE** ─┐\n"
+            msg += f"│ *{theme_desc}*\n"
+            msg += f"└─────────────────────────────────────────┘\n"
+            # No action buttons for active theme
         else:
-            # Inactive theme - show activation button
-            msg += f"⚪ **{theme_name}** - *{theme_desc}*\n"
-            keyboard.append([InlineKeyboardButton(f"🔄 ACTIVATE {theme_name}", callback_data=f"select_ui_theme|{theme_key}")])
+            msg += f"┌─ {theme_icon} **{theme_name}** ─┐\n"
+            msg += f"│ *{theme_desc}*\n"
+            msg += f"└─────────────────────────────────────────┘\n"
+            # Action buttons for inactive themes
+            keyboard.append([
+                InlineKeyboardButton("🔄 SELECT/APPLY", callback_data=f"select_ui_theme|{theme_key}"),
+                InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_preset_theme|{theme_key}")
+            ])
+        
+        msg += "\n"
     
-    msg += "\n"
+    # ═══════════════════════════════════════════════════════════════
+    # SECTION 2: CUSTOM USER THEMES
+    # ═══════════════════════════════════════════════════════════════
+    msg += "**🎨 CUSTOM THEMES** *(User Created)*\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
     
-    # Custom templates section (cleaner)
+    # Load custom templates from database
     conn = None
+    custom_themes_found = False
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
         c.execute("""
-            SELECT id, template_name, template_description, is_active
+            SELECT id, template_name, template_description, is_active, created_at
             FROM bot_layout_templates 
             WHERE is_preset = FALSE
             ORDER BY created_at DESC
-            LIMIT 5
+            LIMIT 10
         """)
         
         custom_templates = c.fetchall()
         
         if custom_templates:
-            msg += "**🎨 CUSTOM TEMPLATES:**\n\n"
+            custom_themes_found = True
             for template in custom_templates:
                 template_name = template['template_name']
-                description = template['template_description'] or "Custom layout"
+                description = template['template_description'] or "Custom layout created by admin"
                 is_active = template['is_active']
+                template_id = template['id']
                 
+                # Custom Theme Card Header
                 if is_active:
-                    msg += f"✅ **{template_name}** - *{description}* **(ACTIVE)**\n"
-                else:
-                    msg += f"⚪ **{template_name}** - *{description}*\n"
-                    # Activation and delete buttons on same row
+                    msg += f"┌─ 🎨 **{template_name}** ✅ **ACTIVE** ─┐\n"
+                    msg += f"│ *{description}*\n"
+                    msg += f"└─────────────────────────────────────────┘\n"
+                    # Only Edit button for active custom theme
                     keyboard.append([
-                        InlineKeyboardButton(f"🔄 ACTIVATE", callback_data=f"select_custom_template|{template['id']}"),
-                        InlineKeyboardButton(f"🗑️ DELETE", callback_data=f"delete_custom_template|{template['id']}")
+                        InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_custom_theme|{template_id}")
                     ])
-            msg += "\n"
+                else:
+                    msg += f"┌─ 🎨 **{template_name}** ─┐\n"
+                    msg += f"│ *{description}*\n"
+                    msg += f"└─────────────────────────────────────────┘\n"
+                    # Full action buttons for inactive custom themes
+                    keyboard.append([
+                        InlineKeyboardButton("🔄 SELECT/APPLY", callback_data=f"select_custom_template|{template_id}"),
+                        InlineKeyboardButton("✏️ EDIT", callback_data=f"edit_custom_theme|{template_id}")
+                    ])
+                    keyboard.append([
+                        InlineKeyboardButton("🗑️ DELETE", callback_data=f"confirm_delete_theme|{template_id}|{template_name}")
+                    ])
+                
+                msg += "\n"
     
     except Exception as e:
         logger.error(f"Error loading custom templates: {e}")
+        msg += "⚠️ *Error loading custom themes*\n\n"
     finally:
         if conn:
             conn.close()
     
-    # Simple bottom buttons
+    if not custom_themes_found:
+        msg += "📝 *No custom themes created yet*\n"
+        msg += "*Use the layout editor below to create your first custom theme*\n\n"
+    
+    # ═══════════════════════════════════════════════════════════════
+    # CREATION AND NAVIGATION SECTION
+    # ═══════════════════════════════════════════════════════════════
     keyboard.extend([
-        [InlineKeyboardButton("🎛️ CREATE CUSTOM LAYOUT", callback_data="admin_bot_look_editor")],
+        [InlineKeyboardButton("🎛️ CREATE NEW CUSTOM THEME", callback_data="admin_bot_look_editor")],
+        [InlineKeyboardButton("📱 PREVIEW ACTIVE THEME", callback_data="preview_active_theme")],
         [InlineKeyboardButton("⬅️ BACK TO MARKETING", callback_data="marketing_promotions_menu")]
     ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_confirm_delete_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show delete confirmation modal for custom themes"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid delete request", show_alert=True)
+        return
+    
+    template_id = params[0]
+    template_name = params[1]
+    
+    msg = "🗑️ **DELETE CONFIRMATION** 🗑️\n\n"
+    msg += f"**Are you sure you want to delete:**\n"
+    msg += f"`{template_name}`\n\n"
+    msg += "⚠️ **WARNING:** This action cannot be undone!\n"
+    msg += "The custom theme will be permanently removed.\n\n"
+    msg += "**What happens next:**\n"
+    msg += "• Theme will be deleted from the system\n"
+    msg += "• If this theme is currently active, the system will switch to Classic theme\n"
+    msg += "• All layout configurations will be lost\n\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ CANCEL", callback_data="ui_theme_designer")],
+        [InlineKeyboardButton("🗑️ YES, DELETE PERMANENTLY", callback_data=f"execute_delete_theme|{template_id}|{template_name}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_execute_delete_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Execute the deletion of a custom theme after confirmation"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid delete request", show_alert=True)
+        return
+    
+    template_id = params[0]
+    template_name = params[1]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Check if this theme is currently active
+        c.execute("SELECT is_active FROM bot_layout_templates WHERE id = %s", (template_id,))
+        template = c.fetchone()
+        
+        if not template:
+            await query.answer("Theme not found", show_alert=True)
+            return await handle_ui_theme_designer(update, context)
+        
+        was_active = template['is_active']
+        
+        # Delete the custom theme
+        c.execute("DELETE FROM bot_layout_templates WHERE id = %s", (template_id,))
+        c.execute("DELETE FROM bot_menu_layouts WHERE template_id = %s", (template_id,))
+        
+        # If deleted theme was active, activate classic theme
+        if was_active:
+            c.execute("UPDATE ui_themes SET is_active = FALSE")  # Clear all
+            c.execute("UPDATE ui_themes SET is_active = TRUE WHERE theme_name = 'classic'")  # Activate classic
+            
+            # Ensure classic theme exists in ui_themes
+            c.execute("SELECT COUNT(*) as count FROM ui_themes WHERE theme_name = 'classic'")
+            if c.fetchone()['count'] == 0:
+                c.execute("""
+                    INSERT INTO ui_themes (theme_name, is_active, welcome_message, button_layout, style_config)
+                    VALUES ('classic', TRUE, 'Welcome to our store! 🛍️\n\nChoose an option below:', 
+                    '[[\"🛍️ Shop\"], [\"👤 Profile\", \"💳 Top Up\"], [\"📝 Reviews\", \"📋 Price List\", \"🌐 Language\"]]',
+                    '{\"type\": \"classic\"}')
+                """)
+        
+        conn.commit()
+        
+        success_msg = f"✅ **THEME DELETED SUCCESSFULLY**\n\n"
+        success_msg += f"**Deleted:** `{template_name}`\n\n"
+        if was_active:
+            success_msg += "🔄 **System automatically switched to Classic theme**\n\n"
+        success_msg += "Returning to Theme Management Center..."
+        
+        await query.edit_message_text(success_msg, parse_mode='Markdown')
+        
+        # Wait 2 seconds then return to theme designer
+        import asyncio
+        await asyncio.sleep(2)
+        await handle_ui_theme_designer(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error deleting custom theme {template_id}: {e}")
+        await query.answer("❌ Error deleting theme", show_alert=True)
+        await handle_ui_theme_designer(update, context)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_edit_preset_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit a preset theme by loading it into the custom editor"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid theme selection", show_alert=True)
+        return
+    
+    theme_key = params[0]
+    
+    # Store the theme being edited in context for the editor
+    context.user_data['editing_preset_theme'] = theme_key
+    
+    msg = f"✏️ **EDITING PRESET THEME** ✏️\n\n"
+    msg += f"**Theme:** `{theme_key.upper()}`\n\n"
+    msg += "🎛️ **Loading theme into custom editor...**\n\n"
+    msg += "The layout editor will open with all current button placements and settings from this preset theme pre-loaded.\n\n"
+    msg += "You can make adjustments and save as a new custom theme, or modify the existing layout.\n\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("🎛️ OPEN LAYOUT EDITOR", callback_data="admin_bot_look_editor")],
+        [InlineKeyboardButton("❌ CANCEL", callback_data="ui_theme_designer")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_edit_custom_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit a custom theme by loading it into the custom editor"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid theme selection", show_alert=True)
+        return
+    
+    template_id = params[0]
+    
+    # Store the template being edited in context for the editor
+    context.user_data['editing_custom_theme'] = template_id
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("SELECT template_name FROM bot_layout_templates WHERE id = %s", (template_id,))
+        template = c.fetchone()
+        
+        if not template:
+            await query.answer("Theme not found", show_alert=True)
+            return await handle_ui_theme_designer(update, context)
+        
+        template_name = template['template_name']
+        
+        msg = f"✏️ **EDITING CUSTOM THEME** ✏️\n\n"
+        msg += f"**Theme:** `{template_name}`\n\n"
+        msg += "🎛️ **Loading theme into custom editor...**\n\n"
+        msg += "The layout editor will open with all current button placements and settings from this custom theme pre-loaded.\n\n"
+        msg += "You can make adjustments and save your changes.\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("🎛️ OPEN LAYOUT EDITOR", callback_data="admin_bot_look_editor")],
+            [InlineKeyboardButton("❌ CANCEL", callback_data="ui_theme_designer")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error loading custom theme for editing {template_id}: {e}")
+        await query.answer("❌ Error loading theme", show_alert=True)
+        await handle_ui_theme_designer(update, context)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_preview_active_theme(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show preview of the currently active theme"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    # Get currently active theme
+    active_theme = get_active_ui_theme()
+    active_theme_name = active_theme.get('theme_name', 'classic') if active_theme else 'classic'
+    
+    msg = f"📱 **THEME PREVIEW** 📱\n\n"
+    msg += f"**Currently Active:** `{active_theme_name.upper()}`\n\n"
+    msg += "**Preview Description:**\n"
+    
+    if active_theme_name == 'classic':
+        msg += "🏛️ **Classic Theme**\n"
+        msg += "• 6-button traditional layout\n"
+        msg += "• Shop (full width)\n"
+        msg += "• Profile + Top Up (second row)\n"
+        msg += "• Reviews + Price List + Language (third row)\n"
+    elif active_theme_name == 'minimalist':
+        msg += "✨ **Minimalist Theme**\n"
+        msg += "• 3-button clean layout\n"
+        msg += "• Shop (full width)\n"
+        msg += "• Profile + Top Up (second row)\n"
+    elif active_theme_name == 'modern':
+        msg += "🚀 **Modern Theme**\n"
+        msg += "• Premium card-style layout\n"
+        msg += "• Enhanced visual appeal\n"
+        msg += "• Hot deals integration\n"
+    else:
+        msg += "🎨 **Custom Theme**\n"
+        msg += "• User-created layout\n"
+        msg += "• Custom button arrangement\n"
+    
+    msg += f"\n**To see the live preview, type `/start` in the bot.**\n\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("⬅️ BACK TO THEMES", callback_data="ui_theme_designer")]
+    ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 

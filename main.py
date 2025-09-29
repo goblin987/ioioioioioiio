@@ -95,6 +95,8 @@ from marketing_promotions import (
     handle_admin_deal_quantity_limit, handle_admin_manage_hot_deals,
     handle_admin_edit_hot_deal, handle_admin_toggle_hot_deal, handle_admin_delete_hot_deal,
     handle_select_custom_template, handle_delete_custom_template, handle_city_header_noop,
+    handle_confirm_delete_theme, handle_execute_delete_theme, handle_edit_preset_theme,
+    handle_edit_custom_theme, handle_preview_active_theme,
     handle_pay_single_item_hot_deal, handle_admin_deal_skip_title, handle_admin_hot_deal_product_preserve,
     handle_hot_deal_price_message, handle_hot_deal_discount_message, 
     handle_hot_deal_title_message, handle_hot_deal_quantity_message, handle_admin_app_info_menu, handle_admin_add_app_info,
@@ -865,6 +867,11 @@ def callback_query_router(func):
                 "admin_delete_hot_deal": handle_admin_delete_hot_deal,
                 "select_custom_template": handle_select_custom_template,
                 "delete_custom_template": handle_delete_custom_template,
+                "confirm_delete_theme": handle_confirm_delete_theme,
+                "execute_delete_theme": handle_execute_delete_theme,
+                "edit_preset_theme": handle_edit_preset_theme,
+                "edit_custom_theme": handle_edit_custom_theme,
+                "preview_active_theme": handle_preview_active_theme,
                 "city_header_noop": handle_city_header_noop,  # Non-clickable city header
                 "pay_single_item_hot_deal": handle_pay_single_item_hot_deal,  # Hot deals payment (no discounts)
                 "admin_deal_skip_title": handle_admin_deal_skip_title,  # Skip title step
