@@ -275,22 +275,7 @@ def get_active_ui_theme():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # First check if there are custom layouts (they take priority)
-        c.execute("""
-            SELECT COUNT(*) as count FROM bot_menu_layouts WHERE is_active = TRUE
-        """)
-        custom_layouts_count = c.fetchone()['count']
-        
-        if custom_layouts_count > 0:
-            # Custom layouts exist, use custom theme
-            return {
-                'theme_name': 'custom',
-                'welcome_message': "Custom layout active",
-                'button_layout': [],
-                'style_config': {'type': 'custom'}
-            }
-        
-        # Check ui_themes table for admin-selected theme
+        # YOLO MODE: Check ui_themes table FIRST (preset themes take priority over custom layouts)
         c.execute("""
             SELECT theme_name, welcome_message, button_layout, style_config
             FROM ui_themes 
@@ -300,11 +285,28 @@ def get_active_ui_theme():
         result = c.fetchone()
         
         if result:
+            logger.info(f"Using preset theme: {result['theme_name']}")
             return {
                 'theme_name': result['theme_name'],
                 'welcome_message': result['welcome_message'],
                 'button_layout': eval(result['button_layout']) if result['button_layout'] else [],
                 'style_config': eval(result['style_config']) if result['style_config'] else {}
+            }
+        
+        # If no preset theme, check if there are custom layouts
+        c.execute("""
+            SELECT COUNT(*) as count FROM bot_menu_layouts WHERE is_active = TRUE
+        """)
+        custom_layouts_count = c.fetchone()['count']
+        
+        if custom_layouts_count > 0:
+            # Custom layouts exist, use custom theme
+            logger.info("Using custom layout")
+            return {
+                'theme_name': 'custom',
+                'welcome_message': "Custom layout active",
+                'button_layout': [],
+                'style_config': {'type': 'custom'}
             }
         else:
             # Default to classic theme if nothing is set
@@ -4092,27 +4094,30 @@ async def handle_bot_preset_select(update: Update, context: ContextTypes.DEFAULT
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Deactivate all existing templates
-        c.execute("UPDATE bot_layout_templates SET is_active = FALSE")
-        
-        # Insert new template
-        import json
-        c.execute("""
-            INSERT INTO bot_layout_templates 
-            (template_name, template_description, layout_config, is_preset, is_active, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            template_data['name'],
-            template_data['description'],
-            json.dumps(template_data['menus']),
-            True,
-            True,
-            query.from_user.id
-        ))
-        
-        # YOLO MODE: Clear ALL custom layouts when selecting preset
+        # YOLO MODE: Clear ALL custom layouts when selecting preset (DO THIS FIRST!)
         c.execute("DELETE FROM bot_menu_layouts")  # Clear all custom layouts
-        c.execute("UPDATE bot_layout_templates SET is_active = FALSE")  # Clear custom templates
+        c.execute("UPDATE bot_layout_templates SET is_active = FALSE")  # Clear all templates
+        c.execute("UPDATE ui_themes SET is_active = FALSE")  # Clear all ui themes
+        
+        # Now activate the selected preset theme in ui_themes table
+        c.execute("""
+            UPDATE ui_themes SET is_active = TRUE 
+            WHERE theme_name = %s
+        """, (template_key,))
+        
+        # If theme doesn't exist, insert it
+        c.execute("SELECT COUNT(*) as count FROM ui_themes WHERE theme_name = %s", (template_key,))
+        if c.fetchone()['count'] == 0:
+            c.execute("""
+                INSERT INTO ui_themes (theme_name, is_active, welcome_message, button_layout, style_config)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                template_key,
+                True,
+                f"Welcome to our store! 🛍️\n\nChoose an option below:",
+                str(template_data['menus']['start_menu']),
+                str({'type': template_key})
+            ))
         
         for menu_name, layout in template_data['menus'].items():
             display_name = menu_name.replace('_', ' ').title()
