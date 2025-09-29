@@ -3358,3 +3358,44 @@ def block_user_for_failed_verification(user_id):
     finally:
         if conn:
             conn.close()
+
+# --- Language Selection System ---
+
+def is_language_selection_enabled():
+    """Check if language selection is enabled"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("language_selection_enabled",))
+        result = c.fetchone()
+        return result and result['setting_value'] == 'true'
+    except Exception as e:
+        logger.error(f"Error checking language selection status: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def get_language_prompt_placement():
+    """Get language prompt placement setting (before/after verification)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("language_prompt_placement",))
+        result = c.fetchone()
+        return result['setting_value'] if result else 'before'
+    except Exception as e:
+        logger.error(f"Error getting language prompt placement: {e}")
+        return 'before'
+    finally:
+        if conn:
+            conn.close()
+
+# Multi-language verification texts
+VERIFICATION_TEXTS = {
+    'en': "🤖 Prove you're human: reply with the text in the image.",
+    'lt': "🤖 Įrodykite, kad esate žmogus: atsakykite tekstu pavaizduotame paveikslėlyje.",
+    'ru': "🤖 Докажите, что вы человек: ответьте текстом на изображении."
+}

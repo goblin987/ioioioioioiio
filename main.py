@@ -514,6 +514,7 @@ def callback_query_router(func):
                 # User Handlers (from user.py)
                 "start": user.start, "back_start": user.handle_back_start, "shop": user.handle_shop,
                 "verification_cancel": user.handle_verification_cancel,
+                "select_language": user.handle_select_language,
                 "city": user.handle_city_selection, "dist": user.handle_district_selection,
                 "type": user.handle_type_selection, "product": user.handle_product_selection,
                 "add": user.handle_add_to_basket,
@@ -646,6 +647,9 @@ def callback_query_router(func):
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "toggle_human_verification": admin.handle_toggle_human_verification,
                 "set_verification_attempts": admin.handle_set_verification_attempts,
+                "toggle_language_selection": admin.handle_toggle_language_selection,
+                "change_language_placement": admin.handle_change_language_placement,
+                "set_language_placement": admin.handle_set_language_placement,
                 "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
                 "admin_system_health": admin.handle_admin_system_health,
                 "admin_user_stats": admin.handle_admin_user_stats,

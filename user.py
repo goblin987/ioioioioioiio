@@ -32,7 +32,8 @@ from utils import (
     update_user_broadcast_status, # Import broadcast tracking helper
     is_human_verification_enabled, is_user_verified, set_user_verified, generate_verification_code, generate_verification_image, # Human verification
     get_verification_attempt_limit, get_user_verification_attempts, increment_verification_attempts, 
-    reset_verification_attempts, block_user_for_failed_verification # Verification attempts
+    reset_verification_attempts, block_user_for_failed_verification, # Verification attempts
+    is_language_selection_enabled, get_language_prompt_placement, VERIFICATION_TEXTS # Language selection
 )
 import json # <<< Make sure json is imported
 import payment # <<< Make sure payment module is imported
@@ -325,10 +326,11 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
     try:
         verification_image = generate_verification_image(verification_code)
         
-        # Create verification message
-        msg = f"🤖 **Prove you're human: reply with the text in the image.**\n\n"
-        msg += f"🔢 **Attempts remaining:** {attempts_left}/{max_attempts}\n"
-        msg += f"⚠️ **Warning:** After {max_attempts} failed attempts, you will be blocked."
+        # Get user's language preference
+        user_language = context.user_data.get('lang', 'en')
+        
+        # Create verification message in user's language
+        msg = VERIFICATION_TEXTS.get(user_language, VERIFICATION_TEXTS['en'])
         
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
         
@@ -357,10 +359,16 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
     except Exception as e:
         logger.error(f"Failed to generate/send verification image: {e}")
         # Fallback to text-based verification
-        msg = f"🤖 **Prove you're human: reply with the text below.**\n\n"
-        msg += f"**Code:** `{verification_code}`\n\n"
-        msg += f"🔢 **Attempts remaining:** {attempts_left}/{max_attempts}\n"
-        msg += f"⚠️ **Warning:** After {max_attempts} failed attempts, you will be blocked."
+        user_language = context.user_data.get('lang', 'en')
+        
+        # Use same multilingual text but with code displayed
+        fallback_texts = {
+            'en': f"🤖 **Prove you're human: reply with the text below.**\n\n**Code:** `{verification_code}`",
+            'lt': f"🤖 **Įrodykite, kad esate žmogus: atsakykite žemiau esančiu tekstu.**\n\n**Kodas:** `{verification_code}`",
+            'ru': f"🤖 **Докажите, что вы человек: ответьте текстом ниже.**\n\n**Код:** `{verification_code}`"
+        }
+        
+        msg = fallback_texts.get(user_language, fallback_texts['en'])
         
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="verification_cancel")]]
         
@@ -459,6 +467,79 @@ async def handle_verification_cancel(update: Update, context: ContextTypes.DEFAU
         parse_mode='Markdown'
     )
 
+async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show language selection prompt"""
+    msg = "🌍 **Choose language / Выберите язык / Pasirinkite kalbą**"
+    
+    keyboard = [
+        [InlineKeyboardButton("English 🇬🇧", callback_data="select_language|en")],
+        [InlineKeyboardButton("Русский 🇷🇺", callback_data="select_language|ru")],
+        [InlineKeyboardButton("Lietuvių 🇱🇹", callback_data="select_language|lt")]
+    ]
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode='Markdown'
+        )
+    else:
+        await send_message_with_retry(
+            context.bot, 
+            update.effective_chat.id, 
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode='Markdown'
+        )
+
+async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle language selection"""
+    query = update.callback_query
+    if not params:
+        await query.answer("Invalid language selection", show_alert=True)
+        return
+    
+    language = params[0]  # 'en', 'ru', or 'lt'
+    user_id = update.effective_user.id
+    
+    # Save language preference
+    context.user_data['lang'] = language
+    
+    # Update user's language in database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE users SET language = %s WHERE user_id = %s", (language, user_id))
+        conn.commit()
+        logger.info(f"✅ User {user_id} language set to {language}")
+    except Exception as e:
+        logger.error(f"❌ Error setting user language: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
+    # Show confirmation
+    confirmations = {
+        'en': "✅ **Language set to English**",
+        'ru': "✅ **Язык установлен на русский**",
+        'lt': "✅ **Kalba nustatyta į lietuvių**"
+    }
+    
+    await query.answer(confirmations.get(language, "✅ Language set"), show_alert=False)
+    
+    # Continue to next step (verification or main menu)
+    placement = get_language_prompt_placement()
+    
+    if placement == 'before' and is_human_verification_enabled():
+        # Language was shown before verification, now show verification
+        if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
+            if not is_user_verified(user_id):
+                return await handle_human_verification(update, context)
+    
+    # Show main menu
+    await start(update, context)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the /start command and the initial welcome message."""
     user = update.effective_user
@@ -467,7 +548,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     username = user.username or user.first_name or f"User_{user_id}"
     
-    # HUMAN VERIFICATION CHECK - First priority
+    # LANGUAGE SELECTION CHECK - Before verification if enabled
+    if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
+        # Check if user has selected language
+        user_language = context.user_data.get('lang')
+        if not user_language:
+            # Check database for saved language
+            conn = None
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+                result = c.fetchone()
+                if result and result['language']:
+                    user_language = result['language']
+                    context.user_data['lang'] = user_language
+            except Exception as e:
+                logger.error(f"Error checking user language: {e}")
+            finally:
+                if conn:
+                    conn.close()
+        
+        if not user_language:
+            logger.info(f"🌍 User {user_id} needs to select language (before verification)")
+            return await handle_language_selection(update, context)
+    
+    # HUMAN VERIFICATION CHECK
     if is_human_verification_enabled():
         logger.info(f"🔍 Human verification is enabled, checking user {user_id}")
         # Skip verification for admins
@@ -483,6 +589,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"👑 User {user_id} is admin, skipping verification")
     else:
         logger.info(f"🔍 Human verification is disabled")
+    
+    # LANGUAGE SELECTION CHECK - After verification if enabled
+    if is_language_selection_enabled() and get_language_prompt_placement() == 'after':
+        # Check if user has selected language
+        user_language = context.user_data.get('lang')
+        if not user_language:
+            # Check database for saved language
+            conn = None
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+                result = c.fetchone()
+                if result and result['language']:
+                    user_language = result['language']
+                    context.user_data['lang'] = user_language
+            except Exception as e:
+                logger.error(f"Error checking user language: {e}")
+            finally:
+                if conn:
+                    conn.close()
+        
+        if not user_language:
+            logger.info(f"🌍 User {user_id} needs to select language (after verification)")
+            return await handle_language_selection(update, context)
     
     # Check if admin has activated custom UI theme
     try:

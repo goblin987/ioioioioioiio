@@ -678,13 +678,18 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    # Check current human verification status and attempt limit
+    # Check current system settings
     conn = None
     human_verification_enabled = False
     attempt_limit = 3
+    language_selection_enabled = False
+    language_prompt_placement = 'before'  # 'before' or 'after' human verification
+    
     try:
         conn = get_db_connection()
         c = conn.cursor()
+        
+        # Human verification settings
         c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("human_verification_enabled",))
         result = c.fetchone()
         human_verification_enabled = result and result['setting_value'] == 'true'
@@ -692,6 +697,16 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
         c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("verification_attempt_limit",))
         limit_result = c.fetchone()
         attempt_limit = int(limit_result['setting_value']) if limit_result else 3
+        
+        # Language selection settings
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("language_selection_enabled",))
+        lang_result = c.fetchone()
+        language_selection_enabled = lang_result and lang_result['setting_value'] == 'true'
+        
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", ("language_prompt_placement",))
+        placement_result = c.fetchone()
+        language_prompt_placement = placement_result['setting_value'] if placement_result else 'before'
+        
     except Exception as e:
         logger.error(f"Error checking system settings: {e}")
     finally:
@@ -699,16 +714,23 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
             conn.close()
     
     verification_status = "✅ ENABLED" if human_verification_enabled else "❌ DISABLED"
+    language_status = "✅ ENABLED" if language_selection_enabled else "❌ DISABLED"
+    placement_text = "BEFORE verification" if language_prompt_placement == 'before' else "AFTER verification"
     
-    msg = f"⚙️ **System Settings**\n\nConfigure bot security and system settings:\n\n"
+    msg = f"⚙️ **System Settings**\n\nConfigure bot security and language settings:\n\n"
     msg += f"🤖 **Human Verification:** {verification_status}\n"
     msg += f"🔢 **Max Attempts:** {attempt_limit} tries\n"
-    msg += f"⚠️ **Auto-Block:** After {attempt_limit} failed attempts"
+    msg += f"⚠️ **Auto-Block:** After {attempt_limit} failed attempts\n\n"
+    msg += f"🌍 **Language Selection:** {language_status}\n"
+    msg += f"📍 **Language Prompt:** {placement_text}"
     
     keyboard = [
         [InlineKeyboardButton(f"🤖 {'Disable' if human_verification_enabled else 'Enable'} Human Verification", 
                              callback_data=f"toggle_human_verification|{'disable' if human_verification_enabled else 'enable'}")],
         [InlineKeyboardButton("🔢 Set Attempt Limit", callback_data="set_verification_attempts")],
+        [InlineKeyboardButton(f"🌍 {'Disable' if language_selection_enabled else 'Enable'} Language Selection", 
+                             callback_data=f"toggle_language_selection|{'disable' if language_selection_enabled else 'enable'}")],
+        [InlineKeyboardButton("📍 Change Language Prompt Placement", callback_data="change_language_placement")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -843,6 +865,106 @@ async def handle_verification_limit_message(update: Update, context: ContextType
             "❌ **Invalid Number**\n\nPlease enter a valid number between 1 and 10.",
             parse_mode='Markdown'
         )
+
+async def handle_toggle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle language selection on/off."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid action", show_alert=True)
+        return
+    
+    action = params[0]  # 'enable' or 'disable'
+    new_value = 'true' if action == 'enable' else 'false'
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update or insert the setting
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key) 
+            DO UPDATE SET setting_value = EXCLUDED.setting_value
+        """, ("language_selection_enabled", new_value))
+        
+        conn.commit()
+        
+        status = "ENABLED" if action == 'enable' else "DISABLED"
+        await query.answer(f"✅ Language Selection {status}", show_alert=True)
+        
+        # Return to system settings menu
+        await handle_admin_system_menu(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error toggling language selection: {e}")
+        await query.answer("❌ Error updating setting", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_change_language_placement(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Change language prompt placement (before/after verification)."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📍 **Language Prompt Placement**\n\n"
+    msg += "Choose when to show the language selection prompt:\n\n"
+    msg += "**BEFORE** - Show language selection before human verification\n"
+    msg += "**AFTER** - Show language selection after human verification passes"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔝 Before Verification", callback_data="set_language_placement|before")],
+        [InlineKeyboardButton("🔽 After Verification", callback_data="set_language_placement|after")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="admin_system_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_set_language_placement(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set language prompt placement."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid placement", show_alert=True)
+        return
+    
+    placement = params[0]  # 'before' or 'after'
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update or insert the setting
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key) 
+            DO UPDATE SET setting_value = EXCLUDED.setting_value
+        """, ("language_prompt_placement", placement))
+        
+        conn.commit()
+        
+        placement_text = "BEFORE verification" if placement == 'before' else "AFTER verification"
+        await query.answer(f"✅ Language prompt set to {placement_text}", show_alert=True)
+        
+        # Return to system settings menu
+        await handle_admin_system_menu(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error setting language placement: {e}")
+        await query.answer("❌ Error updating setting", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_admin_maintenance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show system maintenance menu"""
