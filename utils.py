@@ -3123,6 +3123,8 @@ def generate_verification_code():
 def generate_verification_image(code):
     """Generate a professional verification image like the one in photo 2"""
     try:
+        logger.info(f"🖼️ Generating verification image for code: {code}")
+        
         # Create image with white background
         width, height = 300, 100
         image = Image.new('RGB', (width, height), 'white')
@@ -3135,24 +3137,39 @@ def generate_verification_image(code):
             draw.point((x, y), fill=(200, 200, 200))
         
         # Try to use a system font, fallback to default
-        try:
-            # Try different font sizes and paths
-            font_size = 48
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except:
+        font_size = 48
+        font_loaded = False
+        
+        # Try different font paths
+        font_paths = [
+            "arial.ttf",
+            "/System/Library/Fonts/Arial.ttf", 
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        ]
+        
+        for font_path in font_paths:
             try:
-                font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", font_size)
-            except:
-                try:
-                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-                except:
-                    # Fallback to default font
-                    font = ImageFont.load_default()
+                font = ImageFont.truetype(font_path, font_size)
+                font_loaded = True
+                logger.info(f"✅ Loaded font: {font_path}")
+                break
+            except Exception as font_e:
+                logger.debug(f"❌ Failed to load font {font_path}: {font_e}")
+                continue
+        
+        if not font_loaded:
+            logger.warning("⚠️ Using default font for verification image")
+            font = ImageFont.load_default()
         
         # Get text dimensions for centering
-        bbox = draw.textbbox((0, 0), code, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+        try:
+            bbox = draw.textbbox((0, 0), code, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+        except:
+            # Fallback for older PIL versions
+            text_width, text_height = draw.textsize(code, font=font)
         
         # Center the text
         x = (width - text_width) // 2
@@ -3166,20 +3183,27 @@ def generate_verification_image(code):
         image.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
+        logger.info(f"✅ Successfully generated verification image")
         return img_byte_arr
         
     except Exception as e:
-        logger.error(f"Error generating verification image: {e}")
+        logger.error(f"❌ Error generating verification image: {e}")
         # Fallback: create a simple text image
-        image = Image.new('RGB', (300, 100), 'white')
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.load_default()
-        draw.text((50, 30), code, fill='black', font=font)
-        
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='PNG')
-        img_byte_arr.seek(0)
-        return img_byte_arr
+        try:
+            image = Image.new('RGB', (300, 100), 'white')
+            draw = ImageDraw.Draw(image)
+            font = ImageFont.load_default()
+            draw.text((50, 30), code, fill='black', font=font)
+            
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            img_byte_arr.seek(0)
+            
+            logger.info(f"✅ Generated fallback verification image")
+            return img_byte_arr
+        except Exception as fallback_e:
+            logger.error(f"❌ Even fallback image generation failed: {fallback_e}")
+            raise Exception(f"Complete image generation failure: {e}, fallback: {fallback_e}")
 
 def is_human_verification_enabled():
     """Check if human verification is enabled"""
