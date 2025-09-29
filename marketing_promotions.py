@@ -912,30 +912,61 @@ async def handle_select_ui_theme(update: Update, context: ContextTypes.DEFAULT_T
 
 # --- Minimalist UI Implementation ---
 
+def get_user_status_bar(total_purchases):
+    """Generate status bar based on user's total purchases"""
+    if total_purchases == 0:
+        return "New 🟩⬜⬜⬜⬜⬜"
+    elif total_purchases < 5:
+        return "Beginner 🟩🟩⬜⬜⬜⬜"
+    elif total_purchases < 15:
+        return "Regular 🟩🟩🟩⬜⬜⬜"
+    elif total_purchases < 30:
+        return "Frequent 🟩🟩🟩🟩⬜⬜"
+    elif total_purchases < 50:
+        return "Loyal 🟩🟩🟩🟩🟩⬜"
+    else:
+        return "VIP 🟩🟩🟩🟩🟩🟩"
+
 async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle welcome message with classic UI theme (6-button layout)"""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
     
-    # Get user data for personalized welcome
+    # Get user data for personalized welcome with full status
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username, balance FROM users WHERE user_id = %s", (user_id,))
+        c.execute("SELECT username, balance, total_purchases, basket FROM users WHERE user_id = %s", (user_id,))
         user_data = c.fetchone()
         username = user_data['username'] if user_data else "User"
         balance = user_data['balance'] if user_data else 0.0
+        total_purchases = user_data['total_purchases'] if user_data else 0
+        basket_str = user_data['basket'] if user_data else ""
+        
+        # Count basket items
+        basket_items = len(basket_str.split(',')) if basket_str and basket_str.strip() else 0
+        
     except Exception as e:
         logger.error(f"Error getting user data for classic welcome: {e}")
         username = "User"
         balance = 0.0
+        total_purchases = 0
+        basket_items = 0
     finally:
         if conn:
             conn.close()
     
-    # Classic welcome message
-    msg = f"👋 Welcome back, {username}! 💰 Balance: {balance:.2f} EUR\n\nChoose an option:"
+    # Get status bar based on purchases
+    status_bar = get_user_status_bar(total_purchases)
+    
+    # Classic welcome message with dynamic status (like in screenshot)
+    msg = f"🤖 **NusipirkBot**\n\n"
+    msg += f"👋 Welcome, {username}!\n\n"
+    msg += f"👤 Status: {status_bar}\n"
+    msg += f"💰 Balance: {balance:.2f} EUR\n"
+    msg += f"🛒 Total Purchases: {total_purchases}\n"
+    msg += f"🛍️ Basket Items: {basket_items}"
     
     # YOLO MODE: Hardcoded 6-button classic layout exactly as requested
     keyboard = []
