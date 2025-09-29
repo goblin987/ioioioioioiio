@@ -2244,8 +2244,8 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
                     city_id, district_id = get_location_ids(city_name, district_name)
                     
                     if city_id and district_id:
-                        # Create correct callback with IDs
-                        correct_callback = f"pay_single_item|{city_id}|{district_id}|{product_type}|{size}|{price}"
+                        # Create correct callback with IDs and hot_deal flag
+                        correct_callback = f"pay_single_item_hot_deal|{city_id}|{district_id}|{product_type}|{size}|{price}"
                         keyboard.append([InlineKeyboardButton(deal['text'], callback_data=correct_callback)])
                     else:
                         # Fallback to original callback if IDs not found
@@ -2273,6 +2273,149 @@ async def handle_city_header_noop(update: Update, context: ContextTypes.DEFAULT_
     """Handle non-clickable city header - just show a message"""
     query = update.callback_query
     await query.answer("🏙️ City Header - Select a deal below", show_alert=False)
+
+async def handle_pay_single_item_hot_deal(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle hot deal payment - NO DISCOUNTS ALLOWED (already discounted price)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    chat_id = query.message.chat_id
+    
+    # Import necessary functions from user module
+    from user import CITIES, DISTRICTS, PRODUCT_TYPES, DEFAULT_PRODUCT_EMOJI, _get_lang_data, format_currency, get_db_connection, track_reservation, send_message_with_retry
+    from decimal import Decimal, ROUND_DOWN
+    import asyncio
+    import telegram.error as telegram_error
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
+    lang, lang_data = _get_lang_data(context)
+
+    if not params or len(params) < 5:
+        await query.answer("Error: Incomplete product data.", show_alert=True)
+        return
+
+    city_id, dist_id, p_type, size, price_str = params  # price_str is the HOT DEAL price (already discounted)
+
+    try:
+        hot_deal_price = Decimal(price_str)
+    except ValueError:
+        await query.edit_message_text("❌ Error: Invalid product data.", parse_mode=None)
+        return
+
+    city = CITIES.get(city_id)
+    district = DISTRICTS.get(city_id, {}).get(dist_id)
+    if not city or not district:
+        await query.edit_message_text("❌ Error: Location data mismatch.", parse_mode=None)
+        return
+
+    await query.answer("⏳ Processing hot deal...")
+
+    reserved_id = None
+    conn = None
+    product_details_for_snapshot = None
+    error_occurred_reservation = False
+
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN")
+        
+        # Find any available product matching the criteria (hot deals can use any matching product)
+        c.execute("""
+            SELECT id, name, price, size, product_type, city, district, original_text 
+            FROM products 
+            WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved 
+            ORDER BY id LIMIT 1
+        """, (city, district, p_type, size))
+        product_to_reserve = c.fetchone()
+
+        if not product_to_reserve:
+            conn.rollback()
+            try:
+                await query.edit_message_text("❌ Sorry, this hot deal is no longer available!", parse_mode=None)
+            except Exception:
+                pass
+            error_occurred_reservation = True
+        else:
+            reserved_id = product_to_reserve['id']
+            product_details_for_snapshot = dict(product_to_reserve)
+            c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (reserved_id,))
+            if c.rowcount == 1:
+                conn.commit()
+            else:
+                conn.rollback()
+                try:
+                    await query.edit_message_text("❌ Sorry, this hot deal was just taken!", parse_mode=None)
+                except Exception:
+                    pass
+                error_occurred_reservation = True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        try:
+            await query.edit_message_text("❌ Database error during reservation.", parse_mode=None)
+        except Exception:
+            pass
+        error_occurred_reservation = True
+    finally:
+        if conn:
+            conn.close()
+
+    if error_occurred_reservation:
+        return
+
+    if reserved_id and product_details_for_snapshot:
+        # Create snapshot with hot deal price (NO DISCOUNTS APPLIED)
+        single_item_snapshot = [{
+            "product_id": reserved_id,
+            "price": float(hot_deal_price),  # Use hot deal price, not original price
+            "name": product_details_for_snapshot['name'],
+            "size": product_details_for_snapshot['size'],
+            "product_type": product_details_for_snapshot['product_type'],
+            "city": product_details_for_snapshot['city'],
+            "district": product_details_for_snapshot['district'],
+            "original_text": product_details_for_snapshot.get('original_text')
+        }]
+
+        # Set context for direct payment (NO DISCOUNT CODES ALLOWED)
+        context.user_data['single_item_pay_snapshot'] = single_item_snapshot
+        context.user_data['single_item_pay_final_eur'] = float(hot_deal_price)  # Final price is hot deal price
+        context.user_data['single_item_pay_discount_code'] = None  # NO DISCOUNTS
+        context.user_data['single_item_pay_back_params'] = params
+        
+        # Track reservation for abandonment cleanup
+        track_reservation(user_id, single_item_snapshot, "single")
+
+        # Display payment options WITHOUT discount buttons
+        item_name_display = f"{PRODUCT_TYPES.get(p_type, '')} {product_details_for_snapshot['name']} {product_details_for_snapshot['size']}"
+        price_display_str = format_currency(hot_deal_price)
+        
+        prompt_msg = f"🔥 **HOT DEAL PAYMENT** 🔥\n\n"
+        prompt_msg += f"📦 **Product:** {item_name_display}\n"
+        prompt_msg += f"💰 **Hot Deal Price:** {price_display_str} EUR\n\n"
+        prompt_msg += f"⚠️ *No additional discounts can be applied to hot deals*\n\n"
+        prompt_msg += f"Choose your payment method:"
+
+        pay_now_button_text = lang_data.get("pay_now_button", "Pay Now")
+        back_to_deals_button_text = "⬅️ Back to Hot Deals"
+
+        # Payment menu WITHOUT discount options
+        keyboard = [
+            [InlineKeyboardButton(f"💳 {pay_now_button_text}", callback_data="skip_discount_single_pay")],
+            [InlineKeyboardButton(back_to_deals_button_text, callback_data="modern_deals")]
+        ]
+        
+        try:
+            await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        except telegram_error.BadRequest as e:
+            if "message is not modified" not in str(e).lower():
+                await send_message_with_retry(context.bot, chat_id, prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+            else:
+                await query.answer()
+    else:
+        try:
+            await query.edit_message_text("❌ An internal error occurred during payment initiation.", parse_mode=None)
+        except Exception:
+            pass
 
 async def handle_modern_deal_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle hot deal selection - redirect to product selection"""
