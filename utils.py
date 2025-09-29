@@ -1592,7 +1592,7 @@ def init_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_users_is_reseller ON users(is_reseller)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_reseller_discounts_user_id ON reseller_discounts(reseller_user_id)")
             # <<< END ADDED >>>
-            
+
             # Handle existing tables: ALTER all user_id columns from INTEGER to BIGINT for Telegram compatibility
             logger.info(f"🔧 Converting all user_id columns to BIGINT for existing tables...")
             user_id_tables = [
@@ -1969,11 +1969,11 @@ def get_progress_bar(purchases):
         return get_progress_bar_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-        try:
-            p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
-            filled = min(sum(1 for t in thresholds if p_int >= t), 5)
-            return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
-        except (ValueError, TypeError): return '[⬜️⬜️⬜️⬜️⬜️]'
+    try:
+        p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
+        filled = min(sum(1 for t in thresholds if p_int >= t), 5)
+        return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
+    except (ValueError, TypeError): return '[⬜️⬜️⬜️⬜️⬜️]'
 
 async def send_message_with_retry(
     bot: Bot,
@@ -2037,12 +2037,12 @@ def get_user_status(purchases):
         return get_user_status_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-        try:
-            p_int = int(purchases)
-            if p_int >= 10: return "VIP 👑"
-            elif p_int >= 5: return "Regular ⭐"
-            else: return "New 🌱"
-        except (ValueError, TypeError): return "New 🌱"
+    try:
+        p_int = int(purchases)
+        if p_int >= 10: return "VIP 👑"
+        elif p_int >= 5: return "Regular ⭐"
+        else: return "New 🌱"
+    except (ValueError, TypeError): return "New 🌱"
 
 # --- Modified clear_expired_basket (Individual user focus) ---
 def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
@@ -3198,7 +3198,7 @@ def generate_verification_image(code):
         
         logger.info(f"✅ Successfully generated verification image")
         return img_byte_arr
-        
+                
     except Exception as e:
         logger.error(f"❌ Error generating verification image: {e}")
         # Fallback: create a simple text image
@@ -3297,8 +3297,8 @@ def get_verification_attempt_limit():
         return 3  # Default fallback
     finally:
         if conn:
-            conn.close()
-
+        conn.close()
+        
 def get_user_verification_attempts(user_id):
     """Get user's current verification attempt count"""
     conn = None

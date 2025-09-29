@@ -63,10 +63,62 @@ def init_referral_tables():
         if conn:
             conn.close()
 
-# Referral program settings
-REFERRER_REWARD_PERCENTAGE = Decimal('5.0')  # 5% of referred user's first purchase
-REFERRED_USER_BONUS = Decimal('2.0')  # 2 EUR bonus for new users
-MIN_PURCHASE_FOR_REFERRAL = Decimal('10.0')  # Minimum purchase to trigger referral reward
+# Referral program settings - NOW ADMIN CONFIGURABLE! 🚀
+def get_referral_settings():
+    """Get referral settings from database with fallback to defaults"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get settings from bot_settings table
+        c.execute("SELECT setting_key, setting_value FROM bot_settings WHERE setting_key LIKE 'referral_%'")
+        settings = {row['setting_key']: row['setting_value'] for row in c.fetchall()}
+        
+        return {
+            'referrer_percentage': Decimal(settings.get('referral_referrer_percentage', '5.0')),
+            'referred_bonus': Decimal(settings.get('referral_referred_bonus', '2.0')),
+            'min_purchase': Decimal(settings.get('referral_min_purchase', '10.0')),
+            'program_enabled': settings.get('referral_program_enabled', 'true') == 'true'
+        }
+    except Exception as e:
+        logger.error(f"Error getting referral settings: {e}")
+        # Fallback to defaults
+        return {
+            'referrer_percentage': Decimal('5.0'),
+            'referred_bonus': Decimal('2.0'),
+            'min_purchase': Decimal('10.0'),
+            'program_enabled': True
+        }
+    finally:
+        if conn:
+            conn.close()
+
+def set_referral_setting(key: str, value: str):
+    """Set a referral setting in the database"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value) 
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key) 
+            DO UPDATE SET setting_value = EXCLUDED.setting_value
+        """, (f'referral_{key}', value))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error setting referral setting {key}: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+# Legacy constants for backward compatibility
+REFERRER_REWARD_PERCENTAGE = Decimal('5.0')  # Will be overridden by get_referral_settings()
+REFERRED_USER_BONUS = Decimal('2.0')  # Will be overridden by get_referral_settings()
+MIN_PURCHASE_FOR_REFERRAL = Decimal('10.0')  # Will be overridden by get_referral_settings()
 REFERRAL_CODE_LENGTH = 8
 
 # --- Core Referral Functions ---
@@ -186,10 +238,11 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
             float(REFERRED_USER_BONUS)
         ))
         
-        # Give immediate bonus to referred user
+        # Give immediate bonus to referred user using dynamic settings
+        settings = get_referral_settings()
         c.execute("""
             UPDATE users SET balance = balance + %s WHERE user_id = %s
-        """, (float(REFERRED_USER_BONUS), referred_user_id))
+        """, (float(settings['referred_bonus']), referred_user_id))
         
         # Update referrer's total referrals count
         c.execute("""
@@ -205,7 +258,7 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
         return {
             'success': True,
             'referrer_username': referrer.get('username', 'Unknown'),
-            'bonus_amount': REFERRED_USER_BONUS,
+            'bonus_amount': settings['referred_bonus'],
             'referrer_user_id': referrer_user_id
         }
         
@@ -229,6 +282,13 @@ async def process_referral_purchase(user_id: int, purchase_amount: Decimal) -> b
     """
     conn = None
     try:
+        # Get current referral settings
+        settings = get_referral_settings()
+        
+        # Check if referral program is enabled
+        if not settings['program_enabled']:
+            return False
+        
         conn = get_db_connection()
         c = conn.cursor()
         
@@ -243,16 +303,16 @@ async def process_referral_purchase(user_id: int, purchase_amount: Decimal) -> b
         if not referral or referral['first_purchase_at']:
             return False  # No referral or already processed
         
-        # Check if purchase meets minimum requirement
-        if purchase_amount < MIN_PURCHASE_FOR_REFERRAL:
-            logger.debug(f"Purchase {purchase_amount} below minimum {MIN_PURCHASE_FOR_REFERRAL} for referral")
+        # Check if purchase meets minimum requirement using dynamic settings
+        if purchase_amount < settings['min_purchase']:
+            logger.debug(f"Purchase {purchase_amount} below minimum {settings['min_purchase']} for referral")
             return False
         
         referrer_user_id = referral['referrer_user_id']
         referral_code = referral['referral_code']
         
-        # Calculate referrer reward
-        referrer_reward = (purchase_amount * REFERRER_REWARD_PERCENTAGE / 100).quantize(
+        # Calculate referrer reward using dynamic percentage
+        referrer_reward = (purchase_amount * settings['referrer_percentage'] / 100).quantize(
             Decimal('0.01'), rounding=ROUND_DOWN
         )
         
@@ -384,6 +444,18 @@ async def handle_referral_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     lang = context.user_data.get("lang", "en")
     lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
     
+    # Get current referral settings
+    settings = get_referral_settings()
+    
+    # Check if referral program is enabled
+    if not settings['program_enabled']:
+        await query.edit_message_text(
+            "🚫 **Referral Program Disabled**\n\nThe referral program is currently disabled by the administrator.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back to Profile", callback_data="profile")]]),
+            parse_mode='Markdown'
+        )
+        return
+    
     stats = get_referral_stats(user_id)
     
     if not stats.get('has_code'):
@@ -393,8 +465,8 @@ async def handle_referral_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         msg += f"💰 **How it works:**\n"
         msg += f"• Get your unique referral code\n"
         msg += f"• Share it with friends\n"
-        msg += f"• They get {format_currency(REFERRED_USER_BONUS)} welcome bonus\n"
-        msg += f"• You get {REFERRER_REWARD_PERCENTAGE}% of their first purchase\n\n"
+        msg += f"• They get {format_currency(settings['referred_bonus'])} welcome bonus\n"
+        msg += f"• You get {settings['referrer_percentage']}% of their first purchase\n\n"
         msg += "Ready to start earning?"
         
         keyboard = [
@@ -824,23 +896,289 @@ async def handle_referral_admin_top_referrers(update: Update, context: ContextTy
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
 
 async def handle_referral_admin_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Show referral program settings"""
+    """Show referral program settings - FULLY FUNCTIONAL! 🚀"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("Settings coming soon!", show_alert=False)
-    await query.edit_message_text("⚙️ Referral program settings coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+    # Get current settings
+    settings = get_referral_settings()
+    
+    msg = "⚙️ **Referral Program Settings**\n\n"
+    msg += f"🎯 **Current Configuration:**\n\n"
+    msg += f"📊 **Program Status:** {'✅ ENABLED' if settings['program_enabled'] else '❌ DISABLED'}\n"
+    msg += f"💰 **Referrer Percentage:** {settings['referrer_percentage']}%\n"
+    msg += f"🎁 **New User Bonus:** {format_currency(settings['referred_bonus'])}\n"
+    msg += f"🛒 **Minimum Purchase:** {format_currency(settings['min_purchase'])}\n\n"
+    msg += f"💡 **How it works:**\n"
+    msg += f"• New users get {format_currency(settings['referred_bonus'])} when using a referral code\n"
+    msg += f"• Referrers get {settings['referrer_percentage']}% commission on first purchase\n"
+    msg += f"• Minimum purchase of {format_currency(settings['min_purchase'])} required for commission"
+    
+    keyboard = [
+        [InlineKeyboardButton(f"{'🔴 Disable' if settings['program_enabled'] else '🟢 Enable'} Program", 
+                            callback_data=f"referral_admin_toggle|{'disable' if settings['program_enabled'] else 'enable'}")],
+        [InlineKeyboardButton("📊 Set Referrer %", callback_data="referral_admin_set_percentage"),
+         InlineKeyboardButton("🎁 Set User Bonus", callback_data="referral_admin_set_bonus")],
+        [InlineKeyboardButton("🛒 Set Min Purchase", callback_data="referral_admin_set_min_purchase")],
+        [InlineKeyboardButton("📈 View Statistics", callback_data="referral_admin_stats"),
+         InlineKeyboardButton("🔄 Reset All Data", callback_data="referral_admin_reset_confirm")],
+        [InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="referral_admin_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# 🚀 YOLO MODE: COMPLETE ALL ADMIN HANDLERS!
+
+async def handle_referral_admin_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle referral program on/off"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        return await query.answer("Invalid action", show_alert=True)
+    
+    action = params[0]  # 'enable' or 'disable'
+    new_status = 'true' if action == 'enable' else 'false'
+    
+    if set_referral_setting('program_enabled', new_status):
+        status_text = "ENABLED" if action == 'enable' else "DISABLED"
+        await query.answer(f"✅ Referral program {status_text}!", show_alert=True)
+        # Refresh the settings menu
+        await handle_referral_admin_settings(update, context)
+    else:
+        await query.answer("❌ Failed to update setting", show_alert=True)
+
+async def handle_referral_admin_set_percentage(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set referrer percentage"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['state'] = 'awaiting_referral_percentage'
+    
+    msg = "📊 **Set Referrer Percentage**\n\n"
+    msg += "Enter the percentage that referrers should earn from their referrals' first purchase.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• `5` = 5%\n"
+    msg += "• `10` = 10%\n"
+    msg += "• `2.5` = 2.5%\n\n"
+    msg += "**Current:** " + str(get_referral_settings()['referrer_percentage']) + "%\n\n"
+    msg += "Type the new percentage (0-50):"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="referral_admin_settings")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_referral_admin_set_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set new user bonus"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['state'] = 'awaiting_referral_bonus'
+    
+    msg = "🎁 **Set New User Bonus**\n\n"
+    msg += "Enter the bonus amount that new users get when they use a referral code.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• `2` = 2.00 EUR\n"
+    msg += "• `5.50` = 5.50 EUR\n"
+    msg += "• `10` = 10.00 EUR\n\n"
+    msg += "**Current:** " + format_currency(get_referral_settings()['referred_bonus']) + "\n\n"
+    msg += "Type the new bonus amount:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="referral_admin_settings")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_referral_admin_set_min_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set minimum purchase amount"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    context.user_data['state'] = 'awaiting_referral_min_purchase'
+    
+    msg = "🛒 **Set Minimum Purchase**\n\n"
+    msg += "Enter the minimum purchase amount required for referrers to earn commission.\n\n"
+    msg += "**Examples:**\n"
+    msg += "• `10` = 10.00 EUR\n"
+    msg += "• `25.50` = 25.50 EUR\n"
+    msg += "• `5` = 5.00 EUR\n\n"
+    msg += "**Current:** " + format_currency(get_referral_settings()['min_purchase']) + "\n\n"
+    msg += "Type the new minimum purchase amount:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="referral_admin_settings")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_referral_admin_reset_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm referral program reset"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "🔄 **Reset Referral Program**\n\n"
+    msg += "⚠️ **WARNING:** This will permanently delete:\n"
+    msg += "• All referral codes\n"
+    msg += "• All referral relationships\n"
+    msg += "• All referral statistics\n"
+    msg += "• All earned commissions data\n\n"
+    msg += "**This action CANNOT be undone!**\n\n"
+    msg += "Are you absolutely sure you want to proceed?"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔴 YES, RESET EVERYTHING", callback_data="referral_admin_reset_confirmed")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="referral_admin_settings")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_referral_admin_reset(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Reset referral program"""
+    """Actually reset the referral program"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("Reset function coming soon!", show_alert=False)
-    await query.edit_message_text("🔄 Referral program reset coming soon!", 
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="referral_admin_menu")]]))
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Delete all referral data
+        c.execute("DELETE FROM referrals")
+        c.execute("DELETE FROM referral_codes")
+        c.execute("UPDATE users SET referral_code = NULL, total_referrals = 0, total_earnings = 0")
+        
+        conn.commit()
+        
+        msg = "✅ **Referral Program Reset Complete**\n\n"
+        msg += "All referral data has been permanently deleted:\n"
+        msg += "• Referral codes: Cleared\n"
+        msg += "• Referral relationships: Deleted\n"
+        msg += "• Statistics: Reset to zero\n"
+        msg += "• User earnings: Reset to zero\n\n"
+        msg += "The referral program is ready for a fresh start!"
+        
+        keyboard = [[InlineKeyboardButton("⬅️ Back to Settings", callback_data="referral_admin_settings")]]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        logger.info(f"Admin {query.from_user.id} reset the entire referral program")
+        
+    except Exception as e:
+        logger.error(f"Error resetting referral program: {e}")
+        await query.answer("❌ Error resetting program", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+# 🚀 MESSAGE HANDLERS FOR ADMIN SETTINGS
+
+async def handle_referral_percentage_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle referrer percentage input"""
+    if context.user_data.get('state') != 'awaiting_referral_percentage':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    try:
+        percentage = float(update.message.text.strip())
+        if percentage < 0 or percentage > 50:
+            await update.message.reply_text(
+                "❌ **Invalid Percentage**\n\nPlease enter a percentage between 0 and 50.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        if set_referral_setting('referrer_percentage', str(percentage)):
+            await update.message.reply_text(
+                f"✅ **Referrer Percentage Updated**\n\nReferrers will now earn **{percentage}%** commission on their referrals' first purchase.",
+                parse_mode='Markdown'
+            )
+            context.user_data.pop('state', None)
+            
+            # Show updated settings menu
+            fake_update = type('obj', (object,), {'callback_query': type('obj', (object,), {
+                'from_user': update.effective_user,
+                'edit_message_text': lambda *args, **kwargs: None
+            })})()
+            # We'll just send a new message instead of editing
+            await update.message.reply_text("Settings updated! Use /admin to access the referral settings again.")
+        else:
+            await update.message.reply_text("❌ **Error**\n\nFailed to update percentage. Please try again.", parse_mode='Markdown')
+    
+    except ValueError:
+        await update.message.reply_text(
+            "❌ **Invalid Input**\n\nPlease enter a valid number (e.g., 5, 10, 2.5).",
+            parse_mode='Markdown'
+        )
+
+async def handle_referral_bonus_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new user bonus input"""
+    if context.user_data.get('state') != 'awaiting_referral_bonus':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    try:
+        bonus = float(update.message.text.strip())
+        if bonus < 0 or bonus > 100:
+            await update.message.reply_text(
+                "❌ **Invalid Amount**\n\nPlease enter an amount between 0 and 100 EUR.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        if set_referral_setting('referred_bonus', str(bonus)):
+            await update.message.reply_text(
+                f"✅ **New User Bonus Updated**\n\nNew users will now receive **{format_currency(Decimal(str(bonus)))}** when using a referral code.",
+                parse_mode='Markdown'
+            )
+            context.user_data.pop('state', None)
+            await update.message.reply_text("Settings updated! Use /admin to access the referral settings again.")
+        else:
+            await update.message.reply_text("❌ **Error**\n\nFailed to update bonus. Please try again.", parse_mode='Markdown')
+    
+    except ValueError:
+        await update.message.reply_text(
+            "❌ **Invalid Input**\n\nPlease enter a valid amount (e.g., 2, 5.50, 10).",
+            parse_mode='Markdown'
+        )
+
+async def handle_referral_min_purchase_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle minimum purchase input"""
+    if context.user_data.get('state') != 'awaiting_referral_min_purchase':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    try:
+        min_purchase = float(update.message.text.strip())
+        if min_purchase < 0 or min_purchase > 1000:
+            await update.message.reply_text(
+                "❌ **Invalid Amount**\n\nPlease enter an amount between 0 and 1000 EUR.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        if set_referral_setting('min_purchase', str(min_purchase)):
+            await update.message.reply_text(
+                f"✅ **Minimum Purchase Updated**\n\nReferrers will now earn commission only when their referrals spend at least **{format_currency(Decimal(str(min_purchase)))}**.",
+                parse_mode='Markdown'
+            )
+            context.user_data.pop('state', None)
+            await update.message.reply_text("Settings updated! Use /admin to access the referral settings again.")
+        else:
+            await update.message.reply_text("❌ **Error**\n\nFailed to update minimum purchase. Please try again.", parse_mode='Markdown')
+    
+    except ValueError:
+        await update.message.reply_text(
+            "❌ **Invalid Input**\n\nPlease enter a valid amount (e.g., 10, 25.50, 5).",
+            parse_mode='Markdown'
+        )
 
 # --- END OF FILE referral_system.py ---

@@ -283,7 +283,14 @@ try:
         handle_referral_copy_code, handle_referral_admin_menu, process_referral_purchase,
         handle_referral_how_it_works, handle_referral_view_details, handle_referral_tips,
         handle_referral_admin_stats, handle_referral_admin_top_referrers,
-        handle_referral_admin_settings, handle_referral_admin_reset
+        handle_referral_admin_settings, handle_referral_admin_reset,
+        # 🚀 YOLO MODE: NEW ADMIN HANDLERS!
+        handle_referral_admin_toggle, handle_referral_admin_set_percentage,
+        handle_referral_admin_set_bonus, handle_referral_admin_set_min_purchase,
+        handle_referral_admin_reset_confirm,
+        # 🚀 MESSAGE HANDLERS FOR ADMIN SETTINGS
+        handle_referral_percentage_message, handle_referral_bonus_message,
+        handle_referral_min_purchase_message
     )
 except ImportError:
     import logging
@@ -680,6 +687,13 @@ def callback_query_router(func):
                 "referral_admin_top_referrers": handle_referral_admin_top_referrers,
                 "referral_admin_settings": handle_referral_admin_settings,
                 "referral_admin_reset": handle_referral_admin_reset,
+                # 🚀 YOLO MODE: NEW ADMIN CALLBACK HANDLERS!
+                "referral_admin_toggle": handle_referral_admin_toggle,
+                "referral_admin_set_percentage": handle_referral_admin_set_percentage,
+                "referral_admin_set_bonus": handle_referral_admin_set_bonus,
+                "referral_admin_set_min_purchase": handle_referral_admin_set_min_purchase,
+                "referral_admin_reset_confirm": handle_referral_admin_reset_confirm,
+                "referral_admin_reset_confirmed": handle_referral_admin_reset,
                 
     # Testforwarder integration handlers
     "auto_ads_menu": handle_testforwarder_menu,
@@ -996,6 +1010,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_refill_crypto_choice': None,
         'awaiting_basket_crypto_choice': None,
         
+        # 🚀 YOLO MODE: REFERRAL ADMIN MESSAGE HANDLERS!
+        'awaiting_referral_percentage': handle_referral_percentage_message,
+        'awaiting_referral_bonus': handle_referral_bonus_message,
+        'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
+        
         # Auto ads system message handlers (removed - using testforwarder integration)
         
         # VIP system message handlers
@@ -1104,14 +1123,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Handle document uploads
                 bot = get_testforwarder_bot()
                 await bot.handle_document(update, context)
-            else:
+    else:
                 await handle_testforwarder_message(update, context)
             return  # If testforwarder handled it, don't process further
         except Exception as e:
             logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
     # No handler found
-    logger.debug(f"No handler found for user {user_id} in state: {state}")
+        logger.debug(f"No handler found for user {user_id} in state: {state}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1233,7 +1252,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
@@ -1809,6 +1828,14 @@ def main() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to initialize marketing tables: {e}", exc_info=True)
     
+    # 🚀 YOLO MODE: INITIALIZE REFERRAL SYSTEM!
+    try:
+        from referral_system import init_referral_tables
+        init_referral_tables()
+        logger.info("✅ Referral system tables initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize referral tables: {e}", exc_info=True)
+    
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
         init_enhanced_auto_ads_tables()
@@ -1821,7 +1848,7 @@ def main() -> None:
     logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
     try:
-        load_all_data()
+    load_all_data()
         logger.info("✅ All data loaded successfully")
     except Exception as e:
         logger.error(f"❌ Failed to load data: {e}", exc_info=True)
@@ -1877,7 +1904,7 @@ def main() -> None:
         nonlocal application
         logger.info("🔧 Initializing application...")
         try:
-            await application.initialize()
+        await application.initialize()
             logger.info("✅ Application initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize application: {e}")
@@ -1888,16 +1915,16 @@ def main() -> None:
             webhook_result = await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES)
             if webhook_result:
                 logger.info("✅ Telegram webhook set successfully.")
-            else:
+        else:
                 logger.error("❌ Failed to set Telegram webhook.")
-                return
+            return
         except Exception as e:
             logger.error(f"❌ Error setting webhook: {e}")
             return
         
         logger.info("🔧 Starting Telegram application...")
         try:
-            await application.start()
+        await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
         except Exception as e:
             logger.error(f"❌ Failed to start Telegram application: {e}")

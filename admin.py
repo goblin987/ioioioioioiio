@@ -636,6 +636,7 @@ async def handle_admin_users_menu(update: Update, context: ContextTypes.DEFAULT_
         [InlineKeyboardButton("👑 VIP System", callback_data="vip_management_menu")],
         [InlineKeyboardButton("👑 Manage Resellers", callback_data="manage_resellers_menu")],
         [InlineKeyboardButton("🏷️ Reseller Discounts", callback_data="manage_reseller_discounts_select_reseller|0")],
+        [InlineKeyboardButton("🎁 Referral System", callback_data="referral_admin_menu")],  # 🚀 YOLO MODE: ADDED!
         [InlineKeyboardButton("🚫 Manage Reviews", callback_data="adm_manage_reviews|0")],
         [InlineKeyboardButton("🧹 Clear Reservations", callback_data="adm_clear_reservations_confirm")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
@@ -4932,7 +4933,7 @@ async def handle_adm_add_city_message(update: Update, context: ContextTypes.DEFA
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except Exception as integrity_e:
         if "unique" in str(integrity_e).lower() or "duplicate" in str(integrity_e).lower():
-            await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{text}' already exists.", parse_mode=None)
+        await send_message_with_retry(context.bot, chat_id, f"❌ Error: City '{text}' already exists.", parse_mode=None)
         else:
             logger.error(f"DB error adding city '{text}': {integrity_e}", exc_info=True)
             await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add city.", parse_mode=None)
@@ -4974,7 +4975,7 @@ async def handle_adm_add_district_message(update: Update, context: ContextTypes.
         await send_message_with_retry(context.bot, chat_id, success_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except Exception as integrity_e:
         if "unique" in str(integrity_e).lower() or "duplicate" in str(integrity_e).lower():
-            await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{text}' already exists in {city_name}.", parse_mode=None)
+        await send_message_with_retry(context.bot, chat_id, f"❌ Error: District '{text}' already exists in {city_name}.", parse_mode=None)
         else:
             logger.error(f"DB error adding district '{text}': {integrity_e}", exc_info=True)
             await send_message_with_retry(context.bot, chat_id, "❌ Error: Failed to add district.", parse_mode=None)
