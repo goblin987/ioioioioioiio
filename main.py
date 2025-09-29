@@ -883,6 +883,9 @@ def callback_query_router(func):
                 "info": handle_modern_app,
                 # YOLO MODE: Add Reviews button for custom UI
                 "reviews": user.handle_reviews_menu,
+                # YOLO MODE: Add missing original UI callbacks
+                "price_list": user.handle_price_list,
+                "language": user.handle_language_selection,
                 # Visual Button Board Editor Handlers
                 "admin_bot_look_editor": handle_admin_bot_look_editor,
                 "bot_look_presets": handle_bot_look_presets,

@@ -3902,6 +3902,8 @@ AVAILABLE_BUTTONS = {
         {'text': '🔥 Hot Deals', 'callback': 'modern_deals', 'emoji': '🔥'},
         {'text': 'ℹ️ Info', 'callback': 'info', 'emoji': 'ℹ️'},
         {'text': '⭐ Reviews', 'callback': 'reviews', 'emoji': '⭐'},
+        {'text': '📋 Price List', 'callback': 'price_list', 'emoji': '📋'},
+        {'text': '🌐 Language', 'callback': 'language', 'emoji': '🌐'},
         {'text': '🎁 Promotions', 'callback': 'promotions', 'emoji': '🎁'},
         {'text': '📞 Support', 'callback': 'support', 'emoji': '📞'}
     ],
@@ -3934,9 +3936,26 @@ AVAILABLE_BUTTONS = {
 PRESET_TEMPLATES = {
     'classic': {
         'name': 'Classic Layout',
-        'description': 'Traditional 3-button layout',
+        'description': 'Original 6-button layout (2x3 grid)',
         'menus': {
-            'start_menu': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
+            'start_menu': [
+                ['🛍️ Shop'],
+                ['👤 Profile', '💳 Top Up'], 
+                ['📝 Reviews', '📋 Price List', '🌐 Language']
+            ],
+            'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
+            'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+        }
+    },
+    'minimalist': {
+        'name': 'Minimalist Layout',
+        'description': 'Clean 3-button layout - Shop on top, Profile and Top Up below',
+        'menus': {
+            'start_menu': [
+                ['🛍️ Shop'], 
+                ['👤 Profile', '💳 Top Up']
+            ],
             'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
             'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
             'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
