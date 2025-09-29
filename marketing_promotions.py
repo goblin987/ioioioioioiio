@@ -1368,6 +1368,9 @@ def process_dynamic_variables(message, user_data=None, context_data=None):
         if placeholder in processed_message:
             processed_message = processed_message.replace(placeholder, str(value))
     
+    # Process line breaks - convert \n to actual line breaks
+    processed_message = processed_message.replace('\\n', '\n')
+    
     return processed_message
 
 def get_product_emoji(product_type):
