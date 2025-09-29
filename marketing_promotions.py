@@ -274,30 +274,18 @@ def get_active_ui_theme():
                 'style_config': {'type': 'custom'}
             }
         
-        # No custom layouts, check ui_themes table
-        c.execute("""
-            SELECT theme_name, welcome_message, button_layout, style_config
-            FROM ui_themes 
-            WHERE is_active = TRUE
-            LIMIT 1
-        """)
-        result = c.fetchone()
+        # FORCE RESET TO CLASSIC - Disable auto modern UI preset
+        c.execute("UPDATE ui_themes SET is_active = FALSE")  # Disable all auto themes
+        c.execute("UPDATE ui_themes SET is_active = TRUE WHERE theme_name = 'classic'")  # Force classic only
+        conn.commit()
         
-        if result:
-            return {
-                'theme_name': result['theme_name'],
-                'welcome_message': result['welcome_message'],
-                'button_layout': eval(result['button_layout']) if result['button_layout'] else [],
-                'style_config': eval(result['style_config']) if result['style_config'] else {}
-            }
-        else:
-            # Return default classic theme (original interface)
-            return {
-                'theme_name': 'classic',
-                'welcome_message': "Welcome to our store! 🛍️\n\nChoose an option below:",
-                'button_layout': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
-                'style_config': UI_THEMES['classic']
-            }
+        # Always return classic theme - no more auto modern UI activation
+        return {
+            'theme_name': 'classic',
+            'welcome_message': "Welcome to our store! 🛍️\n\nChoose an option below:",
+            'button_layout': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
+            'style_config': UI_THEMES['classic']
+        }
             
     except Exception as e:
         logger.error(f"Error getting active UI theme: {e}")
@@ -1377,7 +1365,7 @@ def map_button_text_to_callback(button_text):
         '💰 Wallet': 'wallet',
         '📊 Stats': 'stats',
         '🎮 Games': 'games',
-        '🔥 Hot Deals': 'modern_deals',
+        '🔥 Hot Deals': 'modern_deals',  # Hot Deals work with any UI theme
         'ℹ️ Info': 'info',
         '⚙️ Settings': 'settings',
         '🎁 Promotions': 'promotions',
@@ -2266,8 +2254,9 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         msg += "🔄 *Updating deals - check back soon!*\n"
         msg += "💎 *Premium offers coming*"
     
+    # Dynamic back button based on how user accessed hot deals
     keyboard.extend([
-        [InlineKeyboardButton("⬅️ Back", callback_data="modern_home")]
+        [InlineKeyboardButton("⬅️ Back to Menu", callback_data="start")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
