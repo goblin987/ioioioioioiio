@@ -5348,7 +5348,66 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
         if saved_menus:
             conn.commit()
         
-        # Prepare response message
+        # YOLO MODE: Check if we're editing an existing custom theme
+        editing_existing_theme = context.user_data.get('editing_custom_theme')
+        
+        if editing_existing_theme:
+            # EDITING EXISTING THEME - Update the template and return to theme center
+            try:
+                # Get template info
+                c.execute("SELECT template_name FROM bot_layout_templates WHERE id = %s", (editing_existing_theme,))
+                template_info = c.fetchone()
+                
+                if template_info:
+                    template_name = template_info['template_name']
+                    
+                    # Build layout config from saved menus
+                    template_config = {}
+                    for menu_type in menu_types:
+                        c.execute("SELECT button_layout, header_message FROM bot_menu_layouts WHERE menu_name = %s AND created_by = %s", 
+                                (menu_type, query.from_user.id))
+                        menu_data = c.fetchone()
+                        if menu_data:
+                            template_config[menu_type] = {
+                                'display_name': menu_type.replace('_', ' ').title(),
+                                'button_layout': json.loads(menu_data['button_layout']),
+                                'header_message': menu_data['header_message']
+                            }
+                    
+                    # Update the existing template
+                    c.execute("""
+                        UPDATE bot_layout_templates 
+                        SET layout_config = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                    """, (json.dumps(template_config), editing_existing_theme))
+                    
+                    conn.commit()
+                    
+                    # Clear editing context
+                    del context.user_data['editing_custom_theme']
+                    
+                    # Success message and return to theme center
+                    msg = "✅ **THEME UPDATED SUCCESSFULLY** ✅\n\n"
+                    msg += f"🎨 **Updated Theme:** `{template_name}`\n"
+                    msg += f"📋 **Updated Menus:** {len(saved_menus)}\n\n"
+                    for menu in saved_menus:
+                        msg += f"• {menu}\n"
+                    msg += f"\n🚀 **Your changes have been saved to the existing theme!**\n"
+                    msg += f"📱 **Test your updated theme:** Type `/start` to see it in action!"
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("📱 Preview Updated Theme", callback_data="preview_active_theme")],
+                        [InlineKeyboardButton("🎨 Back to Theme Center", callback_data="ui_theme_designer")]
+                    ]
+                    
+                    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+                    return
+                    
+            except Exception as update_error:
+                logger.error(f"Error updating existing theme {editing_existing_theme}: {update_error}")
+                # Fall through to regular save logic
+        
+        # CREATING NEW THEME - Regular save logic with naming step
         if saved_menus and not errors:
             msg = "✅ **ALL LAYOUTS SAVED** ✅\n\n"
             msg += f"🎨 **Saved {len(saved_menus)} menus:**\n"
