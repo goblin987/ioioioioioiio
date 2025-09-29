@@ -290,18 +290,30 @@ def get_active_ui_theme():
                 'style_config': {'type': 'custom'}
             }
         
-        # FORCE RESET TO CLASSIC - Disable auto modern UI preset
-        c.execute("UPDATE ui_themes SET is_active = FALSE")  # Disable all auto themes
-        c.execute("UPDATE ui_themes SET is_active = TRUE WHERE theme_name = 'classic'")  # Force classic only
-        conn.commit()
+        # Check ui_themes table for admin-selected theme
+        c.execute("""
+            SELECT theme_name, welcome_message, button_layout, style_config
+            FROM ui_themes 
+            WHERE is_active = TRUE
+            LIMIT 1
+        """)
+        result = c.fetchone()
         
-        # Always return classic theme - no more auto modern UI activation
-        return {
-            'theme_name': 'classic',
-            'welcome_message': "Welcome to our store! 🛍️\n\nChoose an option below:",
-            'button_layout': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
-            'style_config': UI_THEMES['classic']
-        }
+        if result:
+            return {
+                'theme_name': result['theme_name'],
+                'welcome_message': result['welcome_message'],
+                'button_layout': eval(result['button_layout']) if result['button_layout'] else [],
+                'style_config': eval(result['style_config']) if result['style_config'] else {}
+            }
+        else:
+            # Default to classic theme if nothing is set
+            return {
+                'theme_name': 'classic',
+                'welcome_message': "Welcome to our store! 🛍️\n\nChoose an option below:",
+                'button_layout': [['🛍️ Shop', '👤 Profile', '💳 Top Up']],
+                'style_config': UI_THEMES['classic']
+            }
             
     except Exception as e:
         logger.error(f"Error getting active UI theme: {e}")
@@ -3887,15 +3899,11 @@ AVAILABLE_BUTTONS = {
         {'text': '👤 Profile', 'callback': 'profile', 'emoji': '👤'},
         {'text': '💳 Top Up', 'callback': 'topup', 'emoji': '💳'},
         {'text': '💰 Wallet', 'callback': 'wallet', 'emoji': '💰'},
-        {'text': '📊 Stats', 'callback': 'stats', 'emoji': '📊'},
-        {'text': '🎮 Games', 'callback': 'games', 'emoji': '🎮'},
-        {'text': '🔥 Hot Deals', 'callback': 'deals', 'emoji': '🔥'},
+        {'text': '🔥 Hot Deals', 'callback': 'modern_deals', 'emoji': '🔥'},
         {'text': 'ℹ️ Info', 'callback': 'info', 'emoji': 'ℹ️'},
-        {'text': '⚙️ Settings', 'callback': 'settings', 'emoji': '⚙️'},
+        {'text': '⭐ Reviews', 'callback': 'reviews', 'emoji': '⭐'},
         {'text': '🎁 Promotions', 'callback': 'promotions', 'emoji': '🎁'},
-        {'text': '📞 Support', 'callback': 'support', 'emoji': '📞'},
-        {'text': '🏆 Leaderboard', 'callback': 'leaderboard', 'emoji': '🏆'},
-        {'text': '⭐ Reviews', 'callback': 'reviews', 'emoji': '⭐'}
+        {'text': '📞 Support', 'callback': 'support', 'emoji': '📞'}
     ],
     'city_menu': [
         {'text': '🏙️ Vilnius', 'callback': 'city_vilnius', 'emoji': '🏙️'},
@@ -4083,8 +4091,9 @@ async def handle_bot_preset_select(update: Update, context: ContextTypes.DEFAULT
             query.from_user.id
         ))
         
-        # Save individual menu layouts (clear existing first)
-        c.execute("DELETE FROM bot_menu_layouts WHERE created_by = %s", (query.from_user.id,))
+        # YOLO MODE: Clear ALL custom layouts when selecting preset
+        c.execute("DELETE FROM bot_menu_layouts")  # Clear all custom layouts
+        c.execute("UPDATE bot_layout_templates SET is_active = FALSE")  # Clear custom templates
         
         for menu_name, layout in template_data['menus'].items():
             display_name = menu_name.replace('_', ' ').title()
