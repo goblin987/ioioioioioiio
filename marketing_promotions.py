@@ -246,6 +246,22 @@ def get_active_ui_theme():
         conn = get_db_connection()
         c = conn.cursor()
         
+        # First check if there are custom layouts (they take priority)
+        c.execute("""
+            SELECT COUNT(*) as count FROM bot_menu_layouts WHERE is_active = TRUE
+        """)
+        custom_layouts_count = c.fetchone()['count']
+        
+        if custom_layouts_count > 0:
+            # Custom layouts exist, use custom theme
+            return {
+                'theme_name': 'custom',
+                'welcome_message': "Custom layout active",
+                'button_layout': [],
+                'style_config': {'type': 'custom'}
+            }
+        
+        # No custom layouts, check ui_themes table
         c.execute("""
             SELECT theme_name, welcome_message, button_layout, style_config
             FROM ui_themes 

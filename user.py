@@ -204,11 +204,38 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
          InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")]
     ]
     
-    # Try to apply custom layout if available
+    # Try to apply custom layout and header message if available
+    custom_header_message = None
     try:
-        from marketing_promotions import apply_custom_layout_to_keyboard
+        from marketing_promotions import apply_custom_layout_to_keyboard, get_custom_layout, process_dynamic_variables
+        
+        # Get custom layout
         keyboard = apply_custom_layout_to_keyboard('start_menu', default_keyboard)
         logger.info(f"Applied custom start menu layout for user {user_id}")
+        
+        # Get custom header message
+        custom_layout = get_custom_layout('start_menu')
+        if custom_layout:
+            # Get user data for variable processing
+            user_data = {
+                'user_mention': username,
+                'user_first_name': user.first_name or username,
+                'user_id': str(user_id),
+                'balance': f"{balance:.2f}",
+                'total_purchases': str(purchases),
+                'vip_level': 'Standard',  # Default, can be enhanced later
+                'basket_count': str(basket_count)
+            }
+            
+            # Get header message from database
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT header_message FROM bot_menu_layouts WHERE menu_name = 'start_menu' AND is_active = TRUE LIMIT 1")
+            result = c.fetchone()
+            if result and result['header_message']:
+                custom_header_message = process_dynamic_variables(result['header_message'], user_data)
+            conn.close()
+            
     except ImportError:
         keyboard = default_keyboard
         logger.debug("Marketing promotions module not available, using default keyboard")
@@ -222,7 +249,11 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    return full_welcome, reply_markup
+    # Use custom header message if available, otherwise use default
+    if custom_header_message:
+        return custom_header_message, reply_markup
+    else:
+        return full_welcome, reply_markup
 
 
 # --- User Command Handlers ---
@@ -236,7 +267,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if admin has activated custom UI theme
     try:
-        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome, handle_modern_welcome
+        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome, handle_modern_welcome, get_custom_layout
         active_theme = get_active_ui_theme()
         
         if active_theme and active_theme.get('theme_name') == 'minimalist':
@@ -245,6 +276,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif active_theme and active_theme.get('theme_name') == 'modern':
             logger.info(f"Using admin-configured modern UI theme for user {user_id}")
             return await handle_modern_welcome(update, context)
+        elif active_theme and active_theme.get('theme_name') == 'custom':
+            logger.info(f"Using custom layout for user {user_id}")
+            # Custom layouts are handled by the custom layout system in _build_start_menu_content
+            # Continue with regular start flow but with custom layout applied
         else:
             logger.info(f"Using classic interface for user {user_id} (active theme: {active_theme.get('theme_name', 'classic')})")
     except ImportError:
