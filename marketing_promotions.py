@@ -2300,7 +2300,7 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     # Dynamic back button based on how user accessed hot deals
     keyboard.extend([
-        [InlineKeyboardButton("⬅️ Back to Menu", callback_data="start")]
+        [InlineKeyboardButton("⬅️ Back to Menu", callback_data="back_start")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -2580,8 +2580,17 @@ async def handle_modern_app(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_modern_home(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Return to modern home"""
-    return await handle_modern_welcome(update, context, params)
+    """Return to appropriate home - custom UI or modern UI"""
+    # YOLO MODE: Dynamic navigation - check if user came from custom UI
+    active_theme = get_active_ui_theme()
+    
+    if active_theme and active_theme.get('theme_name') == 'custom':
+        # User has custom UI active - go back to custom start
+        from user import handle_back_start
+        return await handle_back_start(update, context, params)
+    else:
+        # User using modern UI - go to modern welcome
+        return await handle_modern_welcome(update, context, params)
 
 # YOLO MODE: HOT DEALS MANAGEMENT SYSTEM FOR ADMINS
 async def handle_admin_hot_deals_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
