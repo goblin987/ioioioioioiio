@@ -3110,30 +3110,54 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    # Get existing hot deals
+    # Get BOTH manual hot deals AND automatic deals (like users see)
     conn = None
+    manual_deals = []
+    auto_deals = []
+    
     try:
         conn = get_db_connection()
         c = conn.cursor()
+        
+        # Get manual hot deals (from hot_deals table)
         c.execute("""
             SELECT hd.id, hd.deal_title, hd.deal_description, hd.discount_percentage,
                    hd.original_price, hd.deal_price, hd.priority, hd.is_active,
                    hd.created_at, hd.expires_at,
-                   p.product_type, p.size, p.city, p.district
+                   p.product_type, p.size, p.city, p.district, 'manual' as deal_type
             FROM hot_deals hd
             JOIN products p ON hd.product_id = p.id
             ORDER BY hd.is_active DESC, hd.priority DESC, hd.created_at DESC
             LIMIT 10
         """)
-        deals = c.fetchall()
+        manual_deals = c.fetchall()
+        
+        # Get automatic deals (same as user-facing display)
+        remaining_slots = 10 - len(manual_deals)
+        if remaining_slots > 0:
+            c.execute("""
+                SELECT DISTINCT city, district, product_type, MIN(price) as min_price, 
+                       COUNT(*) as available_count, 'automatic' as deal_type
+                FROM products 
+                WHERE available > 0 
+                GROUP BY city, district, product_type
+                ORDER BY min_price ASC
+                LIMIT %s
+            """, (remaining_slots,))
+            auto_deals = c.fetchall()
+            
     except Exception as e:
         logger.error(f"Error loading hot deals: {e}")
-        deals = []
+        manual_deals = []
+        auto_deals = []
     finally:
         if conn:
             conn.close()
     
-    if not deals:
+    # Combine both types of deals
+    all_deals = list(manual_deals) + list(auto_deals)
+    
+    if not all_deals:
         await query.edit_message_text(
             "📋 **NO HOT DEALS FOUND** 📋\n\n"
             "No hot deals created yet.\n"
@@ -3146,27 +3170,50 @@ async def handle_admin_manage_hot_deals(update: Update, context: ContextTypes.DE
         )
         return
     
-    msg = "📋 **MANAGE HOT DEALS** 📋\n\n"
-    msg += "🎯 **Current Hot Deals:**\n\n"
+    msg = "🔥 **MANAGE HOT DEALS** 🔥\n\n"
+    msg += f"**Found:** {len(manual_deals)} manual + {len(auto_deals)} automatic = {len(all_deals)} total\n\n"
     
     keyboard = []
     
     from utils import get_product_emoji
-    for deal in deals:
-        emoji = get_product_emoji(deal['product_type'])
-        status = "🟢" if deal['is_active'] else "🔴"
+    
+    # Display manual deals first
+    if manual_deals:
+        msg += "📝 **MANUAL HOT DEALS (you created):**\n"
+        for deal in manual_deals:
+            emoji = get_product_emoji(deal['product_type'])
+            status = "🟢" if deal['is_active'] else "🔴"
+            
+            if deal['deal_title']:
+                deal_name = deal['deal_title']
+            else:
+                deal_name = f"{emoji} {deal['product_type']} {deal['size']}"
+            
+            location = f"{deal['city']} - {deal['district']}"
+            msg += f"{status} **{deal_name}** ({location})\n"
+            msg += f"   💰 {deal['deal_price']:.2f}€ (was {deal['original_price']:.2f}€)\n\n"
+            
+            button_text = f"{status} EDIT: {deal_name}"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"admin_edit_hot_deal|{deal['id']}")])
         
-        if deal['deal_title']:
-            deal_name = deal['deal_title']
-        else:
-            deal_name = f"{emoji} {deal['product_type']} {deal['size']}"
+        msg += "\n"
+    
+    # Display automatic deals (users see these too)
+    if auto_deals:
+        msg += "🤖 **AUTOMATIC DEALS (system generated):**\n"
+        for deal in auto_deals:
+            emoji = get_product_emoji(deal['product_type'])
+            product_name = deal['product_type'].title()
+            location = f"{deal['city']} - {deal['district']}"
+            
+            msg += f"🟢 **{emoji} {product_name}** ({location})\n"
+            msg += f"   💰 From {deal['min_price']:.2f}€ ({deal['available_count']} available)\n\n"
         
-        button_text = f"{status} {deal_name}"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"admin_edit_hot_deal|{deal['id']}")])
+        msg += "ℹ️ *Automatic deals show lowest prices - cannot be edited*\n\n"
     
     keyboard.extend([
-        [InlineKeyboardButton("➕ Add New Hot Deal", callback_data="admin_add_hot_deal")],
-        [InlineKeyboardButton("⬅️ Back to Hot Deals", callback_data="admin_hot_deals_menu")]
+        [InlineKeyboardButton("➕ Add New Manual Hot Deal", callback_data="admin_add_hot_deal")],
+        [InlineKeyboardButton("⬅️ Back to Hot Deals Menu", callback_data="admin_hot_deals_menu")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
