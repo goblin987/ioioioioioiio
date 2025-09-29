@@ -296,7 +296,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if admin has activated custom UI theme
     try:
-        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome, handle_modern_welcome, get_custom_layout
+        from marketing_promotions import get_active_ui_theme, handle_minimalist_welcome, handle_modern_welcome, handle_classic_welcome, get_custom_layout
         active_theme = get_active_ui_theme()
         
         if active_theme and active_theme.get('theme_name') == 'minimalist':
@@ -305,12 +305,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif active_theme and active_theme.get('theme_name') == 'modern':
             logger.info(f"Using admin-configured modern UI theme for user {user_id}")
             return await handle_modern_welcome(update, context)
+        elif active_theme and active_theme.get('theme_name') == 'classic':
+            logger.info(f"Using admin-configured classic UI theme for user {user_id}")
+            # For classic theme, use hardcoded 6-button layout directly
+            return await handle_classic_welcome(update, context)
         elif active_theme and active_theme.get('theme_name') == 'custom':
             logger.info(f"Using custom layout for user {user_id}")
             # Custom layouts are handled by the custom layout system in _build_start_menu_content
             # Continue with regular start flow but with custom layout applied
         else:
-            logger.info(f"Using classic interface for user {user_id} (active theme: {active_theme.get('theme_name', 'classic')})")
+            logger.info(f"Using default interface for user {user_id} (active theme: {active_theme.get('theme_name', 'default')})")
     except ImportError:
         logger.warning("Marketing promotions module not available, using default UI")
     except Exception as e:

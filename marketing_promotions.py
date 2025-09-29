@@ -360,48 +360,74 @@ async def handle_marketing_promotions_menu(update: Update, context: ContextTypes
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """UI Theme selection and customization"""
+    """YOLO MODE: Clean, dummy-proof UI Theme Designer"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
+    # Get currently active theme
     active_theme = get_active_ui_theme()
+    active_theme_name = active_theme.get('theme_name', 'classic') if active_theme else 'classic'
     
-    msg = "🎨 **UI Theme Designer**\n\n"
-    msg += "**Choose a theme for your bot's user interface:**\n\n"
-    msg += f"**Currently Active:** {active_theme['theme_name'].title()} ✅\n\n"
+    msg = "🎨 **BOT THEME SELECTOR** 🎨\n\n"
+    msg += f"**🔥 Currently Active:** `{active_theme_name.upper()}`\n\n"
     
     keyboard = []
     
-    # Add built-in themes (cannot be deleted)
-    msg += "**🔧 Built-in Themes:**\n"
-    for theme_key, theme_data in UI_THEMES.items():
-        status = "✅ Active" if theme_key == active_theme['theme_name'] else "Select"
-        button_text = f"{theme_data['name']} - {status}"
-        callback_data = f"select_ui_theme|{theme_key}"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    # YOLO MODE: Simple 3 built-in themes with clear activation
+    msg += "**📱 CHOOSE YOUR BOT STYLE:**\n\n"
     
-    # Add custom templates from database
+    themes = [
+        ('classic', '📋 CLASSIC', 'Original 6-button layout'),
+        ('minimalist', '🍃 MINIMALIST', 'Clean 3-button layout'),
+        ('modern', '💎 MODERN', 'Card-style premium layout')
+    ]
+    
+    for theme_key, theme_name, theme_desc in themes:
+        is_active = active_theme_name == theme_key
+        if is_active:
+            # Active theme - show with checkmark, no button
+            msg += f"✅ **{theme_name}** - *{theme_desc}* **(ACTIVE)**\n"
+        else:
+            # Inactive theme - show activation button
+            msg += f"⚪ **{theme_name}** - *{theme_desc}*\n"
+            keyboard.append([InlineKeyboardButton(f"🔄 ACTIVATE {theme_name}", callback_data=f"select_ui_theme|{theme_key}")])
+    
+    msg += "\n"
+    
+    # Custom templates section (cleaner)
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
+        
         c.execute("""
             SELECT id, template_name, template_description, is_active
             FROM bot_layout_templates 
             WHERE is_preset = FALSE
             ORDER BY created_at DESC
+            LIMIT 5
         """)
+        
         custom_templates = c.fetchall()
         
         if custom_templates:
-            msg += "\n**🎨 Custom Templates:**\n"
+            msg += "**🎨 CUSTOM TEMPLATES:**\n\n"
             for template in custom_templates:
-                status = "✅ Active" if template['is_active'] else "Select"
-                button_text = f"🎨 {template['template_name']} - {status}"
-                keyboard.append([InlineKeyboardButton(button_text, callback_data=f"select_custom_template|{template['id']}")])
-                # Add delete button for custom templates
-                keyboard.append([InlineKeyboardButton(f"🗑️ Delete {template['template_name']}", callback_data=f"delete_custom_template|{template['id']}")])
+                template_name = template['template_name']
+                description = template['template_description'] or "Custom layout"
+                is_active = template['is_active']
+                
+                if is_active:
+                    msg += f"✅ **{template_name}** - *{description}* **(ACTIVE)**\n"
+                else:
+                    msg += f"⚪ **{template_name}** - *{description}*\n"
+                    # Activation and delete buttons on same row
+                    keyboard.append([
+                        InlineKeyboardButton(f"🔄 ACTIVATE", callback_data=f"select_custom_template|{template['id']}"),
+                        InlineKeyboardButton(f"🗑️ DELETE", callback_data=f"delete_custom_template|{template['id']}")
+                    ])
+            msg += "\n"
     
     except Exception as e:
         logger.error(f"Error loading custom templates: {e}")
@@ -409,8 +435,10 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
         if conn:
             conn.close()
     
+    # Simple bottom buttons
     keyboard.extend([
-        [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
+        [InlineKeyboardButton("🎛️ CREATE CUSTOM LAYOUT", callback_data="admin_bot_look_editor")],
+        [InlineKeyboardButton("⬅️ BACK TO MARKETING", callback_data="marketing_promotions_menu")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -582,6 +610,60 @@ async def handle_select_ui_theme(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 # --- Minimalist UI Implementation ---
+
+async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle welcome message with classic UI theme (6-button layout)"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    # Get user data for personalized welcome
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT username, balance FROM users WHERE user_id = %s", (user_id,))
+        user_data = c.fetchone()
+        username = user_data['username'] if user_data else "User"
+        balance = user_data['balance'] if user_data else 0.0
+    except Exception as e:
+        logger.error(f"Error getting user data for classic welcome: {e}")
+        username = "User"
+        balance = 0.0
+    finally:
+        if conn:
+            conn.close()
+    
+    # Classic welcome message
+    msg = f"👋 Welcome back, {username}! 💰 Balance: {balance:.2f} EUR\n\nChoose an option:"
+    
+    # YOLO MODE: Hardcoded 6-button classic layout exactly as requested
+    keyboard = []
+    
+    # Add admin panel button for admins at the top
+    if is_primary_admin(user_id):
+        keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
+    
+    # Classic 6-button layout from your original screenshot
+    keyboard.extend([
+        [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
+        [InlineKeyboardButton("👤 Profile", callback_data="profile"), 
+         InlineKeyboardButton("💳 Top Up", callback_data="refill")],
+        [InlineKeyboardButton("📝 Reviews", callback_data="reviews"),
+         InlineKeyboardButton("📋 Price List", callback_data="price_list"),
+         InlineKeyboardButton("🌐 Language", callback_data="language")]
+    ])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        if update.callback_query:
+            await update.callback_query.edit_message_text(msg, reply_markup=reply_markup)
+        else:
+            await send_message_with_retry(context.bot, chat_id, msg, reply_markup=reply_markup)
+    except Exception as e:
+        logger.error(f"Error sending classic welcome message: {e}")
+        # Fallback to regular message
+        await send_message_with_retry(context.bot, chat_id, msg, reply_markup=reply_markup)
 
 async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle welcome message with minimalist UI theme"""

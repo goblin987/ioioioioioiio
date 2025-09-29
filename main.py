@@ -80,7 +80,7 @@ import admin # Import admin module
 import marketing_promotions # Import marketing and promotions module
 from marketing_promotions import (
     init_marketing_tables, handle_marketing_promotions_menu, handle_ui_theme_designer,
-    handle_select_ui_theme, handle_minimalist_welcome, handle_minimalist_shop,
+    handle_select_ui_theme, handle_classic_welcome, handle_minimalist_welcome, handle_minimalist_shop,
     handle_minimalist_city_select, handle_minimalist_district_select, 
     handle_minimalist_product_type, handle_minimalist_product_select,
     handle_minimalist_pay_options, handle_minimalist_discount_code,
@@ -88,7 +88,7 @@ from marketing_promotions import (
     handle_modern_welcome, handle_modern_shop, handle_modern_city_select,
     handle_modern_district_select, handle_modern_product_type, handle_modern_product_select,
     handle_modern_pay_options, handle_modern_discount_code, handle_modern_deals,
-    handle_modern_deal_select, handle_modern_profile, handle_modern_wallet, 
+    handle_modern_deal_select, handle_modern_profile, handle_modern_wallet,
     handle_modern_promotions, handle_modern_app, handle_modern_home,
     handle_admin_hot_deals_menu, handle_admin_add_hot_deal, handle_admin_hot_deal_product,
     handle_admin_deal_custom_price, handle_admin_deal_discount, handle_admin_deal_title_only,
