@@ -3713,24 +3713,81 @@ async def handle_admin_manage_app_info(update: Update, context: ContextTypes.DEF
         )
         return
     
-    msg = "📋 **MANAGE APP INFO** 📋\n\n"
-    msg += "🎯 **Current Info Items:**\n\n"
+    msg = "📱 **APP INFO MANAGER** 📱\n\n"
+    msg += f"**Found {len(info_items)} info items:**\n\n"
     
     keyboard = []
     
-    for info in info_items:
-        status = "🟢" if info['is_active'] else "🔴"
-        title = info['info_title'][:30] + "..." if len(info['info_title']) > 30 else info['info_title']
+    # YOLO MODE: Show detailed info with simple actions
+    for i, info in enumerate(info_items, 1):
+        status = "✅ ACTIVE" if info['is_active'] else "❌ INACTIVE"
+        title = info['info_title']
+        content_preview = info['info_content'][:50] + "..." if len(info['info_content']) > 50 else info['info_content']
         
-        button_text = f"{status} {title}"
-        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"admin_edit_app_info|{info['id']}")])
+        msg += f"**{i}. {title}**\n"
+        msg += f"   Status: {status}\n"
+        msg += f"   Content: {content_preview}\n\n"
+        
+        # Simple action buttons for each item
+        keyboard.extend([
+            [InlineKeyboardButton(f"✏️ EDIT: {title[:15]}...", callback_data=f"admin_edit_app_info|{info['id']}")],
+            [InlineKeyboardButton(f"🔄 TOGGLE: {title[:15]}...", callback_data=f"admin_toggle_info_status|{info['id']}"),
+             InlineKeyboardButton(f"🗑️ DELETE: {title[:15]}...", callback_data=f"admin_delete_app_info|{info['id']}")]
+        ])
     
     keyboard.extend([
-        [InlineKeyboardButton("➕ Add New Info", callback_data="admin_add_app_info")],
-        [InlineKeyboardButton("⬅️ Back to App Info", callback_data="admin_app_info_menu")]
+        [InlineKeyboardButton("➕ ADD NEW INFO ITEM", callback_data="admin_add_app_info")],
+        [InlineKeyboardButton("⬅️ BACK TO MENU", callback_data="admin_app_info_menu")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# YOLO MODE: MISSING DELETE HANDLER - DUMMY PROOF
+async def handle_admin_delete_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Delete app info - YOLO MODE DUMMY PROOF"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid info selection", show_alert=True)
+        return
+    
+    info_id = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get info title for confirmation
+        c.execute("SELECT info_title FROM app_info WHERE id = %s", (info_id,))
+        info = c.fetchone()
+        
+        if not info:
+            await query.answer("Info not found", show_alert=True)
+            return
+        
+        # YOLO MODE: Simple delete - no confirmation needed
+        c.execute("DELETE FROM app_info WHERE id = %s", (info_id,))
+        deleted_count = c.rowcount
+        conn.commit()
+        
+        if deleted_count > 0:
+            await query.answer(f"✅ '{info['info_title'][:20]}...' DELETED!", show_alert=True)
+            logger.info(f"Admin {query.from_user.id} deleted app info: {info['info_title']}")
+        else:
+            await query.answer("❌ Delete failed - info not found", show_alert=True)
+        
+        # Refresh the manage page
+        await handle_admin_manage_app_info(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error deleting app info {info_id}: {e}")
+        await query.answer("❌ Error deleting info", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_admin_edit_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Edit existing app info"""
@@ -3837,7 +3894,8 @@ AVAILABLE_BUTTONS = {
         {'text': '⚙️ Settings', 'callback': 'settings', 'emoji': '⚙️'},
         {'text': '🎁 Promotions', 'callback': 'promotions', 'emoji': '🎁'},
         {'text': '📞 Support', 'callback': 'support', 'emoji': '📞'},
-        {'text': '🏆 Leaderboard', 'callback': 'leaderboard', 'emoji': '🏆'}
+        {'text': '🏆 Leaderboard', 'callback': 'leaderboard', 'emoji': '🏆'},
+        {'text': '⭐ Reviews', 'callback': 'reviews', 'emoji': '⭐'}
     ],
     'city_menu': [
         {'text': '🏙️ Vilnius', 'callback': 'city_vilnius', 'emoji': '🏙️'},

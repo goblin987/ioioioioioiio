@@ -99,7 +99,7 @@ from marketing_promotions import (
     handle_hot_deal_price_message, handle_hot_deal_discount_message, 
     handle_hot_deal_title_message, handle_hot_deal_quantity_message, handle_admin_app_info_menu, handle_admin_add_app_info,
     handle_admin_manage_app_info, handle_admin_edit_app_info, handle_admin_toggle_info_status,
-    handle_app_info_title_message, handle_app_info_content_message,
+    handle_admin_delete_app_info, handle_app_info_title_message, handle_app_info_content_message,
     handle_admin_disable_auto_deals, handle_admin_enable_auto_deals,
     handle_admin_bot_look_editor, handle_bot_look_presets, handle_bot_preset_select,
     handle_bot_look_custom, handle_bot_edit_menu, handle_bot_select_button,
@@ -875,11 +875,14 @@ def callback_query_router(func):
                 "admin_manage_app_info": handle_admin_manage_app_info,
                 "admin_edit_app_info": handle_admin_edit_app_info,
                 "admin_toggle_info_status": handle_admin_toggle_info_status,
+                "admin_delete_app_info": handle_admin_delete_app_info,
                 # YOLO MODE: Simple auto deals control - dummy proof
                 "admin_disable_auto_deals": handle_admin_disable_auto_deals,
                 "admin_enable_auto_deals": handle_admin_enable_auto_deals,
                 # YOLO MODE: Fix Info button - register info callback
                 "info": handle_modern_app,
+                # YOLO MODE: Add Reviews button for custom UI
+                "reviews": user.handle_reviews_menu,
                 # Visual Button Board Editor Handlers
                 "admin_bot_look_editor": handle_admin_bot_look_editor,
                 "bot_look_presets": handle_bot_look_presets,
