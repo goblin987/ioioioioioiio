@@ -390,8 +390,22 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
     
     if user_input == correct_code:
         # Verification successful
-        set_user_verified(user_id, True)
+        logger.info(f"✅ User {user_id} entered correct verification code: {correct_code}")
+        
+        # Ensure user exists in database first
+        from utils import ensure_user_exists
+        ensure_user_exists(user_id, update.effective_user.username or update.effective_user.first_name or f"User_{user_id}")
+        
+        # Set verification status
+        verification_result = set_user_verified(user_id, True)
         reset_verification_attempts(user_id)  # Reset attempts on success
+        
+        logger.info(f"🔍 Verification status set for user {user_id}: {verification_result}")
+        
+        # Double-check verification status
+        is_verified = is_user_verified(user_id)
+        logger.info(f"🔍 Double-check: User {user_id} verification status: {is_verified}")
+        
         context.user_data.pop('verification_code', None)
         context.user_data.pop('state', None)
         
@@ -399,6 +413,10 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
             "✅ **Verification Successful!**\n\nWelcome to the bot! 🎉",
             parse_mode='Markdown'
         )
+        
+        # Wait a moment for database consistency
+        import asyncio
+        await asyncio.sleep(0.5)
         
         # Now show the start menu
         await start(update, context)
@@ -452,11 +470,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # HUMAN VERIFICATION CHECK - First priority
     if is_human_verification_enabled():
+        logger.info(f"🔍 Human verification is enabled, checking user {user_id}")
         # Skip verification for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            if not is_user_verified(user_id):
+            is_verified = is_user_verified(user_id)
+            logger.info(f"🔍 User {user_id} verification status: {is_verified}")
+            if not is_verified:
                 logger.info(f"User {user_id} needs human verification")
                 return await handle_human_verification(update, context)
+            else:
+                logger.info(f"✅ User {user_id} is already verified, proceeding to main menu")
+        else:
+            logger.info(f"👑 User {user_id} is admin, skipping verification")
+    else:
+        logger.info(f"🔍 Human verification is disabled")
     
     # Check if admin has activated custom UI theme
     try:
