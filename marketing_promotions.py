@@ -2109,7 +2109,7 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get manual hot deals first (priority)
+        # Get manual hot deals first (priority) - FRESH DATA
         c.execute("""
             SELECT hd.id, hd.deal_title, hd.deal_description, hd.discount_percentage,
                    hd.original_price, hd.deal_price, hd.priority,
@@ -2122,6 +2122,9 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
             LIMIT 5
         """)
         manual_deals = c.fetchall()
+        
+        # Log for debugging deleted deals issue
+        logger.info(f"Hot deals query returned {len(manual_deals)} active deals")
         
         # Get automatic lowest-price deals if we need more
         remaining_slots = 5 - len(manual_deals)
@@ -2264,7 +2267,7 @@ async def handle_modern_deals(update: Update, context: ContextTypes.DEFAULT_TYPE
         msg += "💎 *Premium offers coming*"
     
     keyboard.extend([
-        [InlineKeyboardButton("🏠 Premium Home", callback_data="modern_home")]
+        [InlineKeyboardButton("⬅️ Back", callback_data="modern_home")]
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -3269,11 +3272,21 @@ async def handle_admin_delete_hot_deal(update: Update, context: ContextTypes.DEF
         
         # Delete deal
         c.execute("DELETE FROM hot_deals WHERE id = %s", (deal_id,))
+        
+        # Verify deletion
+        c.execute("SELECT COUNT(*) as count FROM hot_deals WHERE id = %s", (deal_id,))
+        remaining = c.fetchone()['count']
+        
         conn.commit()
         
-        await query.answer("✅ Deal deleted successfully!", show_alert=True)
+        if remaining == 0:
+            await query.answer("✅ Deal deleted successfully!", show_alert=True)
+            logger.info(f"Hot deal {deal_id} successfully deleted from database")
+        else:
+            await query.answer("⚠️ Deal deletion may have failed", show_alert=True)
+            logger.warning(f"Hot deal {deal_id} deletion failed - still exists in database")
         
-        # Redirect back to manage deals
+        # Force refresh by redirecting back to manage deals
         await handle_admin_manage_hot_deals(update, context)
         
     except Exception as e:
