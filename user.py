@@ -392,11 +392,28 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
         # Verification successful
         logger.info(f"✅ User {user_id} entered correct verification code: {correct_code}")
         
-        # Ensure user exists in database first
-        from utils import ensure_user_exists
-        ensure_user_exists(user_id, update.effective_user.username or update.effective_user.first_name or f"User_{user_id}")
+        # Ensure user exists in database first by trying to create/update them
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            username = update.effective_user.username or update.effective_user.first_name or f"User_{user_id}"
+            
+            # Insert or update user to ensure they exist
+            c.execute("""
+                INSERT INTO users (user_id, username, first_interaction, is_human_verified) 
+                VALUES (%s, %s, CURRENT_TIMESTAMP, %s)
+                ON CONFLICT (user_id) 
+                DO UPDATE SET username = EXCLUDED.username, is_human_verified = EXCLUDED.is_human_verified
+            """, (user_id, username, True))
+            conn.commit()
+            logger.info(f"✅ User {user_id} created/updated in database with verification status")
+            conn.close()
+        except Exception as e:
+            logger.error(f"❌ Error ensuring user exists: {e}")
+            if conn:
+                conn.close()
         
-        # Set verification status
+        # Also use the utility function as backup
         verification_result = set_user_verified(user_id, True)
         reset_verification_attempts(user_id)  # Reset attempts on success
         
