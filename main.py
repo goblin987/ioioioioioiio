@@ -226,30 +226,7 @@ except ImportError:
         await update.callback_query.edit_message_text("Price history not available")
     def init_price_editor_tables(): pass
 
-try:
-    import interactive_welcome_editor
-    from interactive_welcome_editor import (
-        handle_interactive_welcome_editor, handle_interactive_text_editor, handle_interactive_button_designer,
-        handle_interactive_live_preview, handle_interactive_smart_templates, handle_interactive_text_editing,
-        init_interactive_welcome_tables
-    )
-except ImportError:
-    import logging
-    logging.getLogger(__name__).error("Could not import interactive_welcome_editor module")
-    # Create dummy handlers
-    async def handle_interactive_welcome_editor(update, context, params=None):
-        await update.callback_query.edit_message_text("Interactive editor not available")
-    async def handle_interactive_text_editor(update, context, params=None):
-        await update.callback_query.edit_message_text("Interactive editor not available")
-    async def handle_interactive_button_designer(update, context, params=None):
-        await update.callback_query.edit_message_text("Interactive editor not available")
-    async def handle_interactive_live_preview(update, context, params=None):
-        await update.callback_query.edit_message_text("Interactive editor not available")
-    async def handle_interactive_smart_templates(update, context, params=None):
-        await update.callback_query.edit_message_text("Interactive editor not available")
-    async def handle_interactive_text_editing(update, context):
-        pass
-    def init_interactive_welcome_tables(): pass
+# Interactive welcome editor removed - functionality replaced by Visual Bot UI Editor
 
 try:
     import welcome_editor
@@ -804,12 +781,6 @@ def callback_query_router(func):
                 "welcome_reset_execute": handle_welcome_reset_execute,
                 "welcome_save_changes": handle_welcome_save_changes,
                 
-                # Interactive welcome editor handlers
-                "interactive_welcome_editor": handle_interactive_welcome_editor,
-                "interactive_text_editor": handle_interactive_text_editor,
-                "interactive_button_designer": handle_interactive_button_designer,
-                "interactive_live_preview": handle_interactive_live_preview,
-                "interactive_smart_templates": handle_interactive_smart_templates,
                 
                 # Product price editor handlers
                 "product_price_editor_menu": handle_product_price_editor_menu,
@@ -845,7 +816,6 @@ def callback_query_router(func):
                 "customize_active_theme": handle_ui_theme_designer,  # Placeholder - redirect to theme designer
                 "marketing_campaigns_menu": handle_marketing_promotions_menu,  # Placeholder - redirect to main menu
                 "promotion_codes_menu": handle_marketing_promotions_menu,  # Placeholder - redirect to main menu
-                "welcome_message_editor": admin.handle_adm_manage_welcome,  # Redirect to existing welcome editor
                 "stock_type_kava": admin.handle_adm_manage_types,  # Placeholder - redirect to product types management
                 "minimalist_product_info": handle_marketing_promotions_menu,  # Placeholder - show product info
                 "ignore": handle_marketing_promotions_menu,  # Ignore spacer buttons - redirect to main menu
@@ -990,7 +960,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
         'awaiting_vip_name_edit': handle_vip_name_edit_message,
         'awaiting_welcome_text': handle_welcome_text_message,
-        'interactive_text_editing': handle_interactive_text_editing,
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
         

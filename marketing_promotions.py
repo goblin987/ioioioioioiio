@@ -320,7 +320,6 @@ async def handle_marketing_promotions_menu(update: Update, context: ContextTypes
         [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="admin_bot_look_editor")],
         [InlineKeyboardButton("🔥 Hot Deals Manager", callback_data="admin_hot_deals_menu")],
         [InlineKeyboardButton("ℹ️ App Info Manager", callback_data="admin_app_info_menu")],
-        [InlineKeyboardButton("📝 Welcome Message Editor", callback_data="welcome_message_editor")],
         [InlineKeyboardButton("🎁 Promotion Codes", callback_data="promotion_codes_menu")],
         [InlineKeyboardButton("📊 Marketing Campaigns", callback_data="marketing_campaigns_menu")],
         [InlineKeyboardButton("👀 Preview Current Theme", callback_data="preview_current_theme")],

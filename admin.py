@@ -652,8 +652,6 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("🎁 Referral Program", callback_data="referral_admin_menu")],
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
         [InlineKeyboardButton("📢 Broadcast Message", callback_data="adm_broadcast_start")],
-        [InlineKeyboardButton("👋 Welcome Message Editor", callback_data="welcome_editor_menu")],
-        [InlineKeyboardButton("🎨 Super Interactive Editor", callback_data="interactive_welcome_editor")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
