@@ -286,10 +286,12 @@ def reset_userbot_config() -> bool:
 
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
+    print("🔍 YOLO: Creating multi-userbot schema...")
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
+        print("🔍 YOLO: Got database connection and cursor")
         
         # Main userbot accounts table
         c.execute("""
@@ -371,10 +373,12 @@ def create_multi_userbot_schema():
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbot_deliveries_created_at ON userbot_deliveries(created_at DESC)")
         
         conn.commit()
+        print("✅ YOLO: Multi-userbot schema committed successfully")
         logger.info("✅ Multi-userbot database schema created successfully")
         return True
         
     except Exception as e:
+        print(f"❌ YOLO: Error creating multi-userbot schema: {e}")
         logger.error(f"❌ Error creating multi-userbot schema: {e}", exc_info=True)
         if conn:
             try:
