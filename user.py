@@ -2508,17 +2508,29 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
 
         item_name_display = f"{PRODUCT_TYPES.get(p_type, '')} {product_details_for_snapshot['name']} {product_details_for_snapshot['size']}"
         price_display_str = format_currency(price_after_reseller)
+        
+        # Check if referral system is enabled
+        from referral_system import get_referral_settings
+        referral_settings = get_referral_settings()
+        referral_enabled = referral_settings.get('program_enabled', False)
+        
         prompt_msg = (f"You are about to pay for: {item_name_display} ({price_display_str} EUR).\n\n"
                       f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply%s')}")
         pay_now_direct_button_text = lang_data.get("pay_now_button", "Pay Now")
         apply_discount_button_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
+        apply_referral_button_text = lang_data.get("apply_referral_button", "🎁 Apply Referral Code")
         back_to_product_button_text = lang_data.get("back_options_button", "Back to Product")
 
         keyboard = [
              [InlineKeyboardButton(pay_now_direct_button_text, callback_data="skip_discount_single_pay")],
-             [InlineKeyboardButton(apply_discount_button_text, callback_data="apply_discount_single_pay")],
-             [InlineKeyboardButton(f"⬅️ {back_to_product_button_text}", callback_data=f"product|{city_id}|{dist_id}|{p_type}|{size}|{price_str}")]
+             [InlineKeyboardButton(apply_discount_button_text, callback_data="apply_discount_single_pay")]
         ]
+        
+        # Add referral button if enabled
+        if referral_enabled:
+            keyboard.append([InlineKeyboardButton(apply_referral_button_text, callback_data="apply_referral_single_pay")])
+        
+        keyboard.append([InlineKeyboardButton(f"⬅️ {back_to_product_button_text}", callback_data=f"product|{city_id}|{dist_id}|{p_type}|{size}|{price_str}")])
         try:
             await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
         except telegram_error.BadRequest as e:
@@ -3069,3 +3081,189 @@ async def handle_skip_discount_single_pay(update: Update, context: ContextTypes.
     proceeding_msg = lang_data.get("proceeding_to_payment_answer", "Proceeding to payment options...")
     await query.answer(proceeding_msg)
     await _show_crypto_choices_for_basket(update, context, edit_message=True)
+
+# --- NEW: Handler to Apply Referral Code in Single Item Pay Flow ---
+async def handle_apply_referral_single_pay(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle referral code application during single item purchase"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    lang, lang_data = _get_lang_data(context)
+    
+    # Check if single item payment context exists
+    if 'single_item_pay_snapshot' not in context.user_data or 'single_item_pay_final_eur' not in context.user_data:
+        logger.warning(f"User {user_id} clicked apply_referral_single_pay but context missing.")
+        await query.answer("Session expired. Please try again.", show_alert=True)
+        return await handle_shop(update, context)
+    
+    # Check if referral system is enabled
+    from referral_system import get_referral_settings
+    referral_settings = get_referral_settings()
+    if not referral_settings.get('program_enabled', False):
+        await query.answer("❌ Referral program is currently disabled.", show_alert=True)
+        return
+    
+    # Check if user already used a referral code
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT referred_by FROM users WHERE user_id = %s", (user_id,))
+        result = c.fetchone()
+        if result and result['referred_by']:
+            await query.answer("❌ You've already used a referral code!", show_alert=True)
+            return
+    except Exception as e:
+        logger.error(f"Error checking referral status: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
+    prompt_msg = lang_data.get("enter_referral_code_prompt", "🎁 Enter your referral code in chat:")
+    cancel_button_text = lang_data.get("cancel_button", "Cancel")
+    
+    # Set state to wait for referral code input
+    context.user_data['state'] = 'awaiting_referral_code_single_pay'
+    
+    keyboard = [[InlineKeyboardButton(f"❌ {cancel_button_text}", callback_data="cancel_referral_single_pay")]]
+    
+    await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    await query.answer("Enter referral code in chat.")
+
+async def handle_referral_code_message_single_pay(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text message with referral code during single item purchase"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    lang, lang_data = _get_lang_data(context)
+    
+    if context.user_data.get('state') != 'awaiting_referral_code_single_pay':
+        return  # Not in referral code entry state
+    
+    entered_code = update.message.text.strip()
+    
+    # Process referral code
+    from referral_system import apply_referral_code
+    success, message = apply_referral_code(user_id, entered_code)
+    
+    # Clear state
+    context.user_data.pop('state', None)
+    
+    if success:
+        # Show success message with updated payment menu
+        await send_message_with_retry(context.bot, chat_id, f"✅ {message}", parse_mode=None)
+        
+        # Return to payment menu
+        if 'single_item_pay_back_params' in context.user_data:
+            back_params = context.user_data['single_item_pay_back_params']
+            # Show updated payment menu with referral bonus applied
+            snapshot = context.user_data.get('single_item_pay_snapshot', [])
+            if snapshot:
+                item = snapshot[0]
+                item_name_display = f"{PRODUCT_TYPES.get(item['product_type'], '')} {item['name']} {item['size']}"
+                price_after_reseller = Decimal(str(context.user_data.get('single_item_pay_final_eur', 0)))
+                price_display_str = format_currency(price_after_reseller)
+                
+                prompt_msg = (f"You are about to pay for: {item_name_display} ({price_display_str} EUR).\n\n"
+                             f"✅ Referral bonus applied!\n\n"
+                             f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply?')}")
+                
+                pay_now_direct_button_text = lang_data.get("pay_now_button", "Pay Now")
+                apply_discount_button_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
+                back_to_product_button_text = lang_data.get("back_options_button", "Back to Product")
+                
+                keyboard = [
+                    [InlineKeyboardButton(pay_now_direct_button_text, callback_data="skip_discount_single_pay")],
+                    [InlineKeyboardButton(apply_discount_button_text, callback_data="apply_discount_single_pay")],
+                    [InlineKeyboardButton(f"⬅️ {back_to_product_button_text}", 
+                                        callback_data=f"product|{back_params[0]}|{back_params[1]}|{back_params[2]}|{back_params[3]}|{back_params[4]}")]
+                ]
+                
+                await send_message_with_retry(context.bot, chat_id, prompt_msg, 
+                                            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    else:
+        # Show error and return to payment menu
+        await send_message_with_retry(context.bot, chat_id, f"❌ {message}", parse_mode=None)
+        
+        # Return to payment menu
+        if 'single_item_pay_back_params' in context.user_data:
+            back_params = context.user_data['single_item_pay_back_params']
+            snapshot = context.user_data.get('single_item_pay_snapshot', [])
+            if snapshot:
+                item = snapshot[0]
+                item_name_display = f"{PRODUCT_TYPES.get(item['product_type'], '')} {item['name']} {item['size']}"
+                price_after_reseller = Decimal(str(context.user_data.get('single_item_pay_final_eur', 0)))
+                price_display_str = format_currency(price_after_reseller)
+                
+                prompt_msg = (f"You are about to pay for: {item_name_display} ({price_display_str} EUR).\n\n"
+                             f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply?')}")
+                
+                pay_now_direct_button_text = lang_data.get("pay_now_button", "Pay Now")
+                apply_discount_button_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
+                apply_referral_button_text = lang_data.get("apply_referral_button", "🎁 Apply Referral Code")
+                back_to_product_button_text = lang_data.get("back_options_button", "Back to Product")
+                
+                from referral_system import get_referral_settings
+                referral_settings = get_referral_settings()
+                referral_enabled = referral_settings.get('program_enabled', False)
+                
+                keyboard = [
+                    [InlineKeyboardButton(pay_now_direct_button_text, callback_data="skip_discount_single_pay")],
+                    [InlineKeyboardButton(apply_discount_button_text, callback_data="apply_discount_single_pay")]
+                ]
+                
+                if referral_enabled:
+                    keyboard.append([InlineKeyboardButton(apply_referral_button_text, callback_data="apply_referral_single_pay")])
+                
+                keyboard.append([InlineKeyboardButton(f"⬅️ {back_to_product_button_text}", 
+                                        callback_data=f"product|{back_params[0]}|{back_params[1]}|{back_params[2]}|{back_params[3]}|{back_params[4]}")])
+                
+                await send_message_with_retry(context.bot, chat_id, prompt_msg, 
+                                            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+
+async def handle_cancel_referral_single_pay(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Cancel referral code entry and return to payment menu"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    lang, lang_data = _get_lang_data(context)
+    
+    # Clear state
+    context.user_data.pop('state', None)
+    
+    # Return to payment menu
+    if 'single_item_pay_back_params' not in context.user_data or 'single_item_pay_snapshot' not in context.user_data:
+        await query.answer("Session expired.", show_alert=True)
+        return await handle_shop(update, context)
+    
+    back_params = context.user_data['single_item_pay_back_params']
+    snapshot = context.user_data.get('single_item_pay_snapshot', [])
+    
+    if snapshot:
+        item = snapshot[0]
+        item_name_display = f"{PRODUCT_TYPES.get(item['product_type'], '')} {item['name']} {item['size']}"
+        price_after_reseller = Decimal(str(context.user_data.get('single_item_pay_final_eur', 0)))
+        price_display_str = format_currency(price_after_reseller)
+        
+        prompt_msg = (f"You are about to pay for: {item_name_display} ({price_display_str} EUR).\n\n"
+                     f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply?')}")
+        
+        pay_now_direct_button_text = lang_data.get("pay_now_button", "Pay Now")
+        apply_discount_button_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
+        apply_referral_button_text = lang_data.get("apply_referral_button", "🎁 Apply Referral Code")
+        back_to_product_button_text = lang_data.get("back_options_button", "Back to Product")
+        
+        from referral_system import get_referral_settings
+        referral_settings = get_referral_settings()
+        referral_enabled = referral_settings.get('program_enabled', False)
+        
+        keyboard = [
+            [InlineKeyboardButton(pay_now_direct_button_text, callback_data="skip_discount_single_pay")],
+            [InlineKeyboardButton(apply_discount_button_text, callback_data="apply_discount_single_pay")]
+        ]
+        
+        if referral_enabled:
+            keyboard.append([InlineKeyboardButton(apply_referral_button_text, callback_data="apply_referral_single_pay")])
+        
+        keyboard.append([InlineKeyboardButton(f"⬅️ {back_to_product_button_text}", 
+                                callback_data=f"product|{back_params[0]}|{back_params[1]}|{back_params[2]}|{back_params[3]}|{back_params[4]}")])
+        
+        await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+        await query.answer("Cancelled.")

@@ -74,7 +74,11 @@ from user import (
     # <<< ADDED Single Item Discount Flow Handlers from user.py >>>
     handle_apply_discount_single_pay,
     handle_skip_discount_single_pay,
-    handle_single_item_discount_code_message
+    handle_single_item_discount_code_message,
+    # <<< ADDED Referral Code Flow Handlers >>>
+    handle_apply_referral_single_pay,
+    handle_referral_code_message_single_pay,
+    handle_cancel_referral_single_pay
 )
 import admin # Import admin module
 import marketing_promotions # Import marketing and promotions module
@@ -573,6 +577,9 @@ def callback_query_router(func):
                 # <<< ADDED Single Item Discount Flow Callbacks (from user.py) >>>
                 "apply_discount_single_pay": user.handle_apply_discount_single_pay,
                 "skip_discount_single_pay": user.handle_skip_discount_single_pay,
+                # <<< ADDED Referral Code Flow Callbacks >>>
+                "apply_referral_single_pay": user.handle_apply_referral_single_pay,
+                "cancel_referral_single_pay": user.handle_cancel_referral_single_pay,
 
                 # Payment Handlers (from payment.py)
                 "select_basket_crypto": payment.handle_select_basket_crypto,
@@ -1060,6 +1067,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_basket_discount_code': user.handle_basket_discount_code_message,
         'awaiting_refill_amount': user.handle_refill_amount_message,
         'awaiting_single_item_discount_code': user.handle_single_item_discount_code_message, # <<< ADDED
+        'awaiting_referral_code_single_pay': user.handle_referral_code_message_single_pay, # <<< ADDED Referral
         'awaiting_refill_crypto_choice': None,
         'awaiting_basket_crypto_choice': None,
         
