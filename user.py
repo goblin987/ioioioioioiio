@@ -1401,11 +1401,19 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text(reserved_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
 
     except sqlite3.Error as e:
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         logger.error(f"DB error adding product {product_id_reserved if product_id_reserved else 'N/A'} user {user_id}: {e}", exc_info=True)
         await query.edit_message_text(f"❌ {error_adding_db}", parse_mode=None)
     except Exception as e:
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         logger.error(f"Unexpected error adding item user {user_id}: {e}", exc_info=True)
         await query.edit_message_text(f"❌ {error_adding_unexpected}", parse_mode=None)
     finally:
@@ -1994,7 +2002,7 @@ async def handle_remove_from_basket(update: Update, context: ContextTypes.DEFAUL
         conn = get_db_connection()
         c = conn.cursor(); c.execute("BEGIN")
         if item_removed_from_context:
-             c.execute("UPDATE products SET reserved = MAX(0, reserved - 1) WHERE id = %s", (product_id_to_remove,))
+             c.execute("UPDATE products SET reserved = GREATEST(0, reserved - 1) WHERE id = %s", (product_id_to_remove,))
              if c.rowcount > 0: logger.debug(f"Decremented reservation P{product_id_to_remove}.")
              else: logger.warning(f"Could not find P{product_id_to_remove} to decrement reservation (maybe already cleared%s).")
         c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
@@ -2030,10 +2038,18 @@ async def handle_remove_from_basket(update: Update, context: ContextTypes.DEFAUL
                 await query.answer(reason_removed, show_alert=False)
 
     except sqlite3.Error as e:
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         logger.error(f"DB error removing item {product_id_to_remove} user {user_id}: {e}", exc_info=True); await query.edit_message_text("❌ Error: Failed to remove item (DB).", parse_mode=None); return
     except Exception as e:
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         logger.error(f"Unexpected error removing item {product_id_to_remove} user {user_id}: {e}", exc_info=True); await query.edit_message_text("❌ Error: Unexpected issue removing item.", parse_mode=None); return
     finally:
         if conn: conn.close()
@@ -2057,7 +2073,7 @@ async def handle_clear_basket(update: Update, context: ContextTypes.DEFAULT_TYPE
         c = conn.cursor(); c.execute("BEGIN"); c.execute("UPDATE users SET basket = '' WHERE user_id = %s", (user_id,))
         if product_ids_to_release_counts:
              decrement_data = [(count, pid) for pid, count in product_ids_to_release_counts.items()]
-             c.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
+             c.executemany("UPDATE products SET reserved = GREATEST(0, reserved - %s) WHERE id = %s", decrement_data)
              total_items_released = sum(product_ids_to_release_counts.values()); logger.info(f"Released {total_items_released} reservations user {user_id} clear.")
         conn.commit()
         context.user_data["basket"] = []; context.user_data.pop('applied_discount', None)
@@ -2068,10 +2084,18 @@ async def handle_clear_basket(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.edit_message_text(cleared_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
 
     except sqlite3.Error as e:
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         logger.error(f"DB error clearing basket user {user_id}: {e}", exc_info=True); await query.edit_message_text("❌ Error: DB issue clearing basket.", parse_mode=None)
     except Exception as e:
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         logger.error(f"Unexpected error clearing basket user {user_id}: {e}", exc_info=True); await query.edit_message_text("❌ Error: Unexpected issue.", parse_mode=None)
     finally:
         if conn: conn.close()
@@ -2442,7 +2466,11 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
                 error_occurred_reservation = True
     except sqlite3.Error as e:
         logger.error(f"DB error reserving single item {p_type} {size} user {user_id}: {e}")
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         try: await query.edit_message_text("❌ Database error during reservation.", parse_mode=None)
         except Exception: pass
         error_occurred_reservation = True
@@ -2707,13 +2735,21 @@ async def handle_leave_review_message(update: Update, context: ContextTypes.DEFA
 
     except sqlite3.Error as e:
         logger.error(f"DB error saving review user {user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         context.user_data.pop("state", None)
         await send_message_with_retry(context.bot, chat_id, f"❌ {error_saving_review_db}", parse_mode=None)
 
     except Exception as e:
         logger.error(f"Unexpected error saving review user {user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         context.user_data.pop("state", None)
         await send_message_with_retry(context.bot, chat_id, f"❌ {error_saving_review_unexpected}", parse_mode=None)
 

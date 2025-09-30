@@ -1753,7 +1753,7 @@ def _unreserve_basket_items(basket_snapshot: list | None):
         c = conn.cursor()
         c.execute("BEGIN")
         decrement_data = [(count, pid) for pid, count in product_ids_to_release_counts.items()]
-        c.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
+        c.executemany("UPDATE products SET reserved = GREATEST(0, reserved - %s) WHERE id = %s", decrement_data)
         conn.commit()
         total_released = sum(product_ids_to_release_counts.values())
         logger.info(f"Un-reserved {total_released} items due to failed/expired/cancelled payment.") # General log message
@@ -2106,7 +2106,7 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
             c.execute("UPDATE users SET basket = %s WHERE user_id = %s", (new_basket_str, user_id))
             if expired_product_ids_counts:
                 decrement_data = [(count, pid) for pid, count in expired_product_ids_counts.items()]
-                c.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
+                c.executemany("UPDATE products SET reserved = GREATEST(0, reserved - %s) WHERE id = %s", decrement_data)
                 logger.info(f"Released {sum(expired_product_ids_counts.values())} reservations for user {user_id} due to expiry.")
 
         c.execute("COMMIT") # Commit transaction
@@ -2205,7 +2205,8 @@ def clear_all_expired_baskets():
         if all_expired_product_counts:
             decrement_data = [(count, pid) for pid, count in all_expired_product_counts.items()]
             if decrement_data:
-                c_update.executemany("UPDATE products SET reserved = MAX(0, reserved - %s) WHERE id = %s", decrement_data)
+                # PostgreSQL: Use GREATEST() instead of MAX() for comparing values
+                c_update.executemany("UPDATE products SET reserved = GREATEST(0, reserved - %s) WHERE id = %s", decrement_data)
                 total_released = sum(all_expired_product_counts.values())
                 logger.info(f"Scheduled clear: Released {total_released} expired product reservations.")
 
@@ -2213,10 +2214,16 @@ def clear_all_expired_baskets():
 
     except psycopg2.Error as e:
         logger.error(f"SQLite error during batch updates in clear_all_expired_baskets: {e}", exc_info=True)
-        if conn_update and conn_update.in_transaction: conn_update.rollback()
+        if conn_update: 
+            try:
+                conn_update.rollback()
+            except: pass
     except Exception as e:
         logger.error(f"Unexpected error during batch updates in clear_all_expired_baskets: {e}", exc_info=True)
-        if conn_update and conn_update.in_transaction: conn_update.rollback()
+        if conn_update: 
+            try:
+                conn_update.rollback()
+            except: pass
     finally:
         if conn_update: conn_update.close()
 

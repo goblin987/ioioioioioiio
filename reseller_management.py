@@ -593,7 +593,11 @@ async def handle_reseller_percent_message(update: Update, context: ContextTypes.
 
         except sqlite3.Error as e: # Catch potential DB errors like IntegrityError implicitly
             logger.error(f"DB error {mode} reseller discount: {e}", exc_info=True)
-            if conn and conn.in_transaction: conn.rollback()
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
             await send_message_with_retry(context.bot, chat_id, "❌ DB Error saving discount rule.", parse_mode=None)
             context.user_data.pop('state', None) # Clear state on error
             # Clean up other related context data on error

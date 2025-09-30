@@ -754,7 +754,11 @@ async def handle_adjust_balance_reason_message(update: Update, context: ContextT
 
     except sqlite3.Error as e:
         logger.error(f"DB error adjusting balance user {target_user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         await send_message_with_retry(context.bot, chat_id, db_error_msg, parse_mode=None)
         # Clear state on error
         context.user_data.pop('state', None); context.user_data.pop('adjust_balance_target_user_id', None); context.user_data.pop('adjust_balance_amount', None)
@@ -818,7 +822,11 @@ async def handle_toggle_ban_user(update: Update, context: ContextTypes.DEFAULT_T
 
     except sqlite3.Error as e:
         logger.error(f"DB error toggling ban status for user {target_user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         error_msg = lang_data.get("ban_db_error", "❌ Database error updating ban status.")
         await query.answer(error_msg, show_alert=True)
     except Exception as e:

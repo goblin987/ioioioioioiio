@@ -1028,10 +1028,18 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
 
     except sqlite3.Error as e:
         logger.error(f"DB error during purchase finalization user {user_id}: {e}", exc_info=True); db_update_successful = False
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
     except Exception as e:
         logger.error(f"Unexpected error during purchase finalization user {user_id}: {e}", exc_info=True); db_update_successful = False
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
     finally:
         if conn: conn.close()
 
@@ -1340,7 +1348,11 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
 
     except sqlite3.Error as e:
         logger.error(f"DB error deducting balance user {user_id}: {e}", exc_info=True); db_balance_deducted = False
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
     finally:
         if conn: conn.close()
 
@@ -1510,11 +1522,19 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
 
     except sqlite3.Error as e:
         logger.error(f"DB error during credit_user_balance user {user_id}: {e}", exc_info=True)
-        if conn and conn.in_transaction: conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         return False
     except Exception as e:
          logger.error(f"Unexpected error during credit_user_balance user {user_id}: {e}", exc_info=True)
-         if conn and conn.in_transaction: conn.rollback()
+         if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
          return False
     finally:
         if conn: conn.close()
