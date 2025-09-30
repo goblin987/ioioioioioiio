@@ -168,10 +168,21 @@ from viewer_admin import (
 )
 
 # Userbot system imports
+print("🔍 YOLO DEBUG: Starting userbot imports...")
 try:
+    print("🔍 YOLO DEBUG: Importing userbot_database...")
     from userbot_database import init_userbot_tables
+    print("✅ YOLO DEBUG: userbot_database imported successfully")
+    
+    print("🔍 YOLO DEBUG: Importing userbot_manager...")
     from userbot_manager import userbot_manager
+    print("✅ YOLO DEBUG: userbot_manager imported successfully")
+    
+    print("🔍 YOLO DEBUG: Importing userbot_config...")
     from userbot_config import userbot_config
+    print("✅ YOLO DEBUG: userbot_config imported successfully")
+    
+    print("🔍 YOLO DEBUG: Importing userbot_admin handlers...")
     from userbot_admin import (
         handle_userbot_control,
         handle_userbot_setup_start,
@@ -190,9 +201,16 @@ try:
         handle_userbot_phone_message,
         handle_userbot_verification_code_message
     )
+    print("✅ YOLO DEBUG: userbot_admin handlers imported successfully")
+    
     USERBOT_AVAILABLE = True
+    print("✅ YOLO DEBUG: USERBOT_AVAILABLE = True")
     logging.getLogger(__name__).info("✅ Userbot system available")
-except ImportError as e:
+except Exception as e:
+    print(f"❌ YOLO DEBUG: Userbot import failed! Error type: {type(e).__name__}")
+    print(f"❌ YOLO DEBUG: Error message: {str(e)}")
+    import traceback
+    print(f"❌ YOLO DEBUG: Full traceback:\n{traceback.format_exc()}")
     logging.getLogger(__name__).warning(f"⚠️ Userbot system not available: {e}")
     USERBOT_AVAILABLE = False
 
