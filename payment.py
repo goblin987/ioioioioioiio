@@ -924,9 +924,9 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
             product_id = item_snapshot['product_id']
             
             # Decrement stock with better error handling
-            avail_update = c.execute("UPDATE products SET available = available - 1 WHERE id = %s AND available > 0", (product_id,))
+            c.execute("UPDATE products SET available = available - 1 WHERE id = %s AND available > 0", (product_id,))
             
-            if avail_update.rowcount == 0:
+            if c.rowcount == 0:
                 logger.error(f"Failed to decrement stock for product {product_id} for user {user_id}")
                 conn.rollback()
                 return False
@@ -1002,13 +1002,13 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
         if discount_code_used:
             # Atomically increment discount code usage only if limit not exceeded
             # This prevents race conditions where multiple users use the same code simultaneously
-            update_result = c.execute("""
+            c.execute("""
                 UPDATE discount_codes 
                 SET uses_count = uses_count + 1 
                 WHERE code = %s AND (max_uses IS NULL OR uses_count < max_uses)
             """, (discount_code_used,))
             
-            if update_result.rowcount == 0:
+            if c.rowcount == 0:
                 # Check why the update failed
                 c.execute("SELECT uses_count, max_uses FROM discount_codes WHERE code = %s", (discount_code_used,))
                 code_check = c.fetchone()
@@ -1450,8 +1450,8 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
         c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         old_balance_res = c.fetchone(); old_balance_float = old_balance_res['balance'] if old_balance_res else 0.0
 
-        update_result = c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float, user_id))
-        if update_result.rowcount == 0:
+        c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float, user_id))
+        if c.rowcount == 0:
             logger.error(f"User {user_id} not found during balance credit update. Reason: {reason}")
             conn.rollback()
             return False

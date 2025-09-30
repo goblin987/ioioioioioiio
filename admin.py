@@ -4171,8 +4171,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                               logger.info(f"Scheduled deletion of media dir: {media_dir_to_del}")
                  c.execute("DELETE FROM products WHERE city = %s", (city_name,)) # Actual product deletion
                  c.execute("DELETE FROM districts WHERE city_id = %s", (city_id_int,))
-                 delete_city_result = c.execute("DELETE FROM cities WHERE id = %s", (city_id_int,))
-                 if delete_city_result.rowcount > 0:
+                 c.execute("DELETE FROM cities WHERE id = %s", (city_id_int,))
+                 if c.rowcount > 0:
                      conn.commit(); load_all_data()
                      success_msg = f"✅ City '{city_name}' and contents deleted!"
                      next_callback = "adm_manage_cities"
@@ -4199,8 +4199,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                               asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_del, ignore_errors=True))
                               logger.info(f"Scheduled deletion of media dir: {media_dir_to_del}")
                  c.execute("DELETE FROM products WHERE city = %s AND district = %s", (city_name, district_name)) # Actual product deletion
-                 delete_dist_result = c.execute("DELETE FROM districts WHERE id = %s AND city_id = %s", (dist_id_int, city_id_int))
-                 if delete_dist_result.rowcount > 0:
+                 c.execute("DELETE FROM districts WHERE id = %s AND city_id = %s", (dist_id_int, city_id_int))
+                 if c.rowcount > 0:
                      conn.commit(); load_all_data()
                      success_msg = f"✅ District '{district_name}' removed from {city_name}!"
                      next_callback = f"adm_manage_districts_city|{city_id_str}"
@@ -4214,8 +4214,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
              back_details_tuple = c.fetchone() # Result is already a Row object
              logger.info(f"Admin Action (confirm_remove_product): Deleting product ID {product_id}")
              c.execute("DELETE FROM product_media WHERE product_id = %s", (product_id,))
-             delete_prod_result = c.execute("DELETE FROM products WHERE id = %s", (product_id,)) # Actual product deletion
-             if delete_prod_result.rowcount > 0:
+             c.execute("DELETE FROM products WHERE id = %s", (product_id,)) # Actual product deletion
+             if c.rowcount > 0:
                   conn.commit()
                   success_msg = f"✅ Product ID {product_id} removed!"
                   media_dir_to_delete = os.path.join(MEDIA_DIR, str(product_id))
@@ -4237,8 +4237,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
               result = c.fetchone()
               reseller_discount_count = result['count']
               if product_count == 0 and reseller_discount_count == 0:
-                  delete_type_result = c.execute("DELETE FROM product_types WHERE name = %s", (type_name,))
-                  if delete_type_result.rowcount > 0:
+                  c.execute("DELETE FROM product_types WHERE name = %s", (type_name,))
+                  if c.rowcount > 0:
                        conn.commit(); load_all_data()
                        success_msg = f"✅ Type '{type_name}' deleted!"
                        next_callback = "adm_manage_types"
@@ -4272,13 +4272,13 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                         asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_del, ignore_errors=True))
                         logger.info(f"Force delete: Scheduled deletion of media dir: {media_dir_to_del}")
 
-            delete_products_res = c.execute("DELETE FROM products WHERE product_type = %s", (type_name,))
-            products_deleted_count = delete_products_res.rowcount if delete_products_res else 0
-            delete_discounts_res = c.execute("DELETE FROM reseller_discounts WHERE product_type = %s", (type_name,))
-            discounts_deleted_count = delete_discounts_res.rowcount if delete_discounts_res else 0
-            delete_type_res = c.execute("DELETE FROM product_types WHERE name = %s", (type_name,))
+            c.execute("DELETE FROM products WHERE product_type = %s", (type_name,))
+            products_deleted_count = c.rowcount
+            c.execute("DELETE FROM reseller_discounts WHERE product_type = %s", (type_name,))
+            discounts_deleted_count = c.rowcount
+            c.execute("DELETE FROM product_types WHERE name = %s", (type_name,))
 
-            if delete_type_res.rowcount > 0:
+            if c.rowcount > 0:
                 conn.commit(); load_all_data()
                 log_admin_action(admin_id=user_id, action="PRODUCT_TYPE_FORCE_DELETE",
                                  reason=f"Type: '{type_name}'. Deleted {products_deleted_count} products, {discounts_deleted_count} discount rules.",
@@ -4335,8 +4335,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
              code_id = int(action_params[0])
              c.execute("SELECT code FROM discount_codes WHERE id = %s", (code_id,))
              code_res = c.fetchone(); code_text = code_res['code'] if code_res else f"ID {code_id}"
-             delete_disc_result = c.execute("DELETE FROM discount_codes WHERE id = %s", (code_id,))
-             if delete_disc_result.rowcount > 0:
+             c.execute("DELETE FROM discount_codes WHERE id = %s", (code_id,))
+             if c.rowcount > 0:
                  conn.commit(); success_msg = f"✅ Discount code {code_text} deleted!"
                  next_callback = "adm_manage_discounts"
              else: conn.rollback(); success_msg = f"❌ Error: Discount code {code_text} not found."
@@ -4344,8 +4344,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "delete_review":
             if not action_params: raise ValueError("Missing review_id")
             review_id = int(action_params[0])
-            delete_rev_result = c.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
-            if delete_rev_result.rowcount > 0:
+            c.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
+            if c.rowcount > 0:
                 conn.commit(); success_msg = f"✅ Review ID {review_id} deleted!"
                 next_callback = "adm_manage_reviews|0"
             else: conn.rollback(); success_msg = f"❌ Error: Review ID {review_id} not found."
@@ -4353,8 +4353,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
         elif action_type == "delete_welcome_template":
             if not action_params: raise ValueError("Missing template_name")
             name_to_delete = action_params[0]
-            delete_wm_result = c.execute("DELETE FROM welcome_messages WHERE name = %s", (name_to_delete,))
-            if delete_wm_result.rowcount > 0:
+            c.execute("DELETE FROM welcome_messages WHERE name = %s", (name_to_delete,))
+            if c.rowcount > 0:
                  conn.commit(); success_msg = f"✅ Welcome template '{name_to_delete}' deleted!"
                  next_callback = "adm_manage_welcome|0"
             else: conn.rollback(); success_msg = f"❌ Error: Welcome template '{name_to_delete}' not found."
@@ -4377,8 +4377,8 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                 reseller_id = int(action_params[0]); product_type = action_params[1]
                 c.execute("SELECT discount_percentage FROM reseller_discounts WHERE reseller_user_id = %s AND product_type = %s", (reseller_id, product_type))
                 old_res = c.fetchone(); old_value = old_res['discount_percentage'] if old_res else None
-                delete_res_result = c.execute("DELETE FROM reseller_discounts WHERE reseller_user_id = %s AND product_type = %s", (reseller_id, product_type))
-                if delete_res_result.rowcount > 0:
+                c.execute("DELETE FROM reseller_discounts WHERE reseller_user_id = %s AND product_type = %s", (reseller_id, product_type))
+                if c.rowcount > 0:
                     conn.commit(); log_admin_action(user_id, ACTION_RESELLER_DISCOUNT_DELETE, reseller_id, reason=f"Type: {product_type}", old_value=old_value)
                     success_msg = f"✅ Reseller discount rule deleted for {product_type}."
                 else: conn.rollback(); success_msg = f"❌ Error: Reseller discount rule for {product_type} not found."
