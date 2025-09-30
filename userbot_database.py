@@ -257,6 +257,33 @@ def update_userbot_setting(setting_name: str, setting_value: Any) -> bool:
         if conn:
             conn.close()
 
+def reset_userbot_config() -> bool:
+    """Reset userbot configuration (legacy function - resets userbot #1)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Delete userbot #1 completely
+        c.execute("DELETE FROM userbots WHERE id = 1")
+        c.execute("DELETE FROM userbot_stats WHERE userbot_id = 1")
+        
+        conn.commit()
+        logger.info("✅ Userbot configuration reset successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error resetting userbot config: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
     conn = None
