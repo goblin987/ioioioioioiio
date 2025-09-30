@@ -1339,8 +1339,8 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
              return False
         # 2. Deduct balance
         amount_float_to_deduct = float(amount_to_deduct)
-        update_res = c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s", (amount_float_to_deduct, user_id))
-        if update_res.rowcount == 0: logger.error(f"Failed to deduct balance user {user_id}."); conn.rollback(); return False
+        c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s", (amount_float_to_deduct, user_id))
+        if c.rowcount == 0: logger.error(f"Failed to deduct balance user {user_id}."); conn.rollback(); return False
 
         conn.commit() # Commit balance deduction *before* finalizing items
         db_balance_deducted = True
