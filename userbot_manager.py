@@ -137,8 +137,18 @@ class UserbotManager:
                 self.reconnect_task = None
             
             if self.client:
-                await self.client.stop()
-                logger.info("✅ Userbot disconnected")
+                # Check if client is already disconnected to prevent "already terminated" error
+                try:
+                    if hasattr(self.client, 'is_connected') and self.client.is_connected:
+                        await self.client.stop()
+                        logger.info("✅ Userbot disconnected")
+                    else:
+                        logger.info("ℹ️ Client already disconnected, skipping stop()")
+                except ConnectionError as e:
+                    if "already terminated" in str(e).lower():
+                        logger.info("ℹ️ Client already terminated, safe to ignore")
+                    else:
+                        raise
             
             self.is_connected = False
             await asyncio.to_thread(update_connection_status, False, "Manually disconnected")

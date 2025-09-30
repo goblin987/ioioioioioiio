@@ -319,8 +319,10 @@ async def handle_userbot_verification_code_message(update: Update, context: Cont
     
     # Success message
     username = result.get('username', 'User')
+    # Escape username to prevent Markdown parse errors
+    username_escaped = username.replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
     msg = "🎉 **Setup Complete!**\n\n"
-    msg += f"Userbot authenticated as **@{username}**!\n\n"
+    msg += f"Userbot authenticated as **@{username_escaped}**!\n\n"
     msg += "✅ Configuration saved\n"
     msg += "✅ Session stored securely\n\n"
     msg += "Now connecting to Telegram..."
