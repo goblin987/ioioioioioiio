@@ -16,6 +16,87 @@ def init_userbot_tables():
     """Initialize userbot tables - called from main.py"""
     return create_multi_userbot_schema()
 
+# ==================== BACKWARDS COMPATIBILITY (OLD SINGLE-USERBOT SYSTEM) ====================
+
+def save_session_string(session_string: str) -> bool:
+    """Save session string (legacy single-userbot function)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Try to update existing userbot #1 (legacy default)
+        c.execute("SELECT id FROM userbots WHERE id = 1")
+        if c.fetchone():
+            c.execute("""
+                UPDATE userbots 
+                SET session_string = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = 1
+            """, (session_string,))
+        else:
+            # Create default userbot if doesn't exist
+            c.execute("""
+                INSERT INTO userbots (id, name, api_id, api_hash, phone_number, session_string)
+                VALUES (1, 'Default Userbot', 'pending', 'pending', 'pending', %s)
+                ON CONFLICT (id) DO UPDATE SET session_string = EXCLUDED.session_string
+            """, (session_string,))
+        
+        conn.commit()
+        logger.info("✅ Session string saved successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error saving session string: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def get_session_string() -> Optional[str]:
+    """Get session string (legacy single-userbot function)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("SELECT session_string FROM userbots WHERE id = 1")
+        row = c.fetchone()
+        
+        if row and row['session_string']:
+            return row['session_string']
+        return None
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting session string: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+def update_connection_status(is_connected: bool, status_message: str = None):
+    """Update connection status (legacy single-userbot function)"""
+    update_userbot_connection(1, is_connected, status_message)
+
+def get_connection_status() -> Dict[str, Any]:
+    """Get connection status (legacy single-userbot function)"""
+    userbot = get_userbot(1)
+    if userbot:
+        return {
+            'is_connected': userbot.get('is_connected', False),
+            'status_message': userbot.get('status_message', 'Unknown'),
+            'last_updated': userbot.get('updated_at')
+        }
+    return {
+        'is_connected': False,
+        'status_message': 'Not configured',
+        'last_updated': None
+    }
+
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
     conn = None
