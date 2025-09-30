@@ -2032,6 +2032,7 @@ def get_date_range(period_key):
 
 def get_user_status(purchases):
     """Get user status using VIP system if available, fallback to hardcoded"""
+    # Fixed indentation - PostgreSQL compatibility
     try:
         # Try to use VIP system
         from vip_system import get_user_status_enhanced
