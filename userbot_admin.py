@@ -42,22 +42,22 @@ async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_T
 
 async def _show_setup_wizard(query, context):
     """Show initial setup wizard"""
-    msg = "🤖 **Userbot Setup Wizard**\n\n"
+    msg = "🤖 <b>Userbot Setup Wizard</b>\n\n"
     msg += "Welcome to the userbot configuration!\n\n"
-    msg += "**What is a userbot?**\n"
+    msg += "<b>What is a userbot?</b>\n"
     msg += "A userbot delivers products to customers via secret chats with self-destructing messages for enhanced privacy.\n\n"
-    msg += "**Requirements:**\n"
+    msg += "<b>Requirements:</b>\n"
     msg += "• A separate Telegram account (NOT your bot account)\n"
     msg += "• API ID and API Hash from https://my.telegram.org\n"
     msg += "• Phone number for verification\n\n"
-    msg += "Click **Start Setup** to begin!"
+    msg += "Click <b>Start Setup</b> to begin!"
     
     keyboard = [
         [InlineKeyboardButton("🚀 Start Setup", callback_data="userbot_setup_start")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def _show_status_dashboard(query, context):
     """Show userbot status dashboard"""
@@ -65,25 +65,25 @@ async def _show_status_dashboard(query, context):
     status = get_connection_status()
     stats = get_delivery_stats()
     
-    msg = "🤖 **Userbot Control Panel**\n\n"
+    msg = "🤖 <b>Userbot Control Panel</b>\n\n"
     
     # Configuration status
     config_status = "✅ Configured" if userbot_config.is_configured() else "❌ Not Configured"
-    msg += f"**Configuration Status:** {config_status}\n"
+    msg += f"<b>Configuration Status:</b> {config_status}\n"
     
     # Connection status
     is_connected = status.get('is_connected', False)
     conn_status = "✅ Connected" if is_connected else "❌ Disconnected"
     status_msg = status.get('status_message', 'Unknown')
-    msg += f"**Connection Status:** {conn_status}\n"
+    msg += f"<b>Connection Status:</b> {conn_status}\n"
     msg += f"*{status_msg}*\n"
     
     # Last updated
     last_updated = status.get('last_updated')
     if last_updated:
-        msg += f"**Last Updated:** {last_updated.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+        msg += f"<b>Last Updated:</b> {last_updated.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
     
-    msg += "\n**Settings:**\n"
+    msg += "\n<b>Settings:</b>\n"
     
     # Enabled status
     enabled = config.get('enabled', False)
@@ -109,7 +109,7 @@ async def _show_status_dashboard(query, context):
     max_retries = config.get('max_retries', 3)
     msg += f"• Max Retries: {max_retries}\n"
     
-    msg += "\n**Statistics:**\n"
+    msg += "\n<b>Statistics:</b>\n"
     msg += f"• Total Deliveries: {stats['total']}\n"
     msg += f"• Success Rate: {stats['success_rate']}%\n"
     msg += f"• Failed Deliveries: {stats['failed']}\n"
@@ -132,7 +132,7 @@ async def _show_status_dashboard(query, context):
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ])
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 # ==================== SETUP WIZARD ====================
 
@@ -145,17 +145,17 @@ async def handle_userbot_setup_start(update: Update, context: ContextTypes.DEFAU
         await query.answer("Access denied", show_alert=True)
         return
     
-    msg = "🔧 **Step 1/3: API ID**\n\n"
+    msg = "🔧 <b>Step 1/3: API ID</b>\n\n"
     msg += "Get your API ID from: https://my.telegram.org\n\n"
     msg += "1. Log in with your phone number\n"
     msg += "2. Go to 'API development tools'\n"
     msg += "3. Create an application if you haven't\n"
-    msg += "4. Copy your **API ID**\n\n"
-    msg += "📝 **Please send your API ID now:**"
+    msg += "4. Copy your <b>API ID</b>\n\n"
+    msg += "📝 <b>Please send your API ID now:</b>"
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]]
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
     
     # Set state
     context.user_data['state'] = 'awaiting_userbot_api_id'
@@ -174,8 +174,8 @@ async def handle_userbot_api_id_message(update: Update, context: ContextTypes.DE
     # Validate API ID (should be numeric)
     if not api_id.isdigit():
         await update.message.reply_text(
-            "❌ **Invalid API ID**\n\nAPI ID should be a number. Please try again:",
-            parse_mode='Markdown'
+            "❌ <b>Invalid API ID</b>\n\nAPI ID should be a number. Please try again:",
+            parse_mode='HTML'
         )
         return
     
@@ -183,14 +183,14 @@ async def handle_userbot_api_id_message(update: Update, context: ContextTypes.DE
     context.user_data['userbot_api_id'] = api_id
     context.user_data['state'] = 'awaiting_userbot_api_hash'
     
-    msg = "✅ **API ID Saved!**\n\n"
-    msg += "🔧 **Step 2/3: API Hash**\n\n"
-    msg += "From the same page (https://my.telegram.org), copy your **API Hash**.\n\n"
-    msg += "📝 **Please send your API Hash now:**"
+    msg = "✅ <b>API ID Saved!</b>\n\n"
+    msg += "🔧 <b>Step 2/3: API Hash</b>\n\n"
+    msg += "From the same page (https://my.telegram.org), copy your <b>API Hash</b>.\n\n"
+    msg += "📝 <b>Please send your API Hash now:</b>"
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]]
     
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def handle_userbot_api_hash_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle API Hash input"""
@@ -206,8 +206,8 @@ async def handle_userbot_api_hash_message(update: Update, context: ContextTypes.
     # Validate API Hash (should be alphanumeric, 32 chars)
     if len(api_hash) < 20:
         await update.message.reply_text(
-            "❌ **Invalid API Hash**\n\nAPI Hash seems too short. Please check and try again:",
-            parse_mode='Markdown'
+            "❌ <b>Invalid API Hash</b>\n\nAPI Hash seems too short. Please check and try again:",
+            parse_mode='HTML'
         )
         return
     
@@ -215,15 +215,15 @@ async def handle_userbot_api_hash_message(update: Update, context: ContextTypes.
     context.user_data['userbot_api_hash'] = api_hash
     context.user_data['state'] = 'awaiting_userbot_phone'
     
-    msg = "✅ **API Hash Saved!**\n\n"
-    msg += "🔧 **Step 3/3: Phone Number**\n\n"
+    msg = "✅ <b>API Hash Saved!</b>\n\n"
+    msg += "🔧 <b>Step 3/3: Phone Number</b>\n\n"
     msg += "Enter the phone number for your userbot account.\n\n"
-    msg += "**Format:** +1234567890 (include country code)\n\n"
-    msg += "📝 **Please send your phone number now:**"
+    msg += "<b>Format:</b> +1234567890 (include country code)\n\n"
+    msg += "📝 <b>Please send your phone number now:</b>"
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]]
     
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def handle_userbot_phone_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle phone number input and start authentication"""
@@ -239,8 +239,8 @@ async def handle_userbot_phone_message(update: Update, context: ContextTypes.DEF
     # Validate phone number (should start with +)
     if not phone_number.startswith('+'):
         await update.message.reply_text(
-            "❌ **Invalid Phone Number**\n\nPhone number must start with + and include country code.\n\nExample: +1234567890\n\nPlease try again:",
-            parse_mode='Markdown'
+            "❌ <b>Invalid Phone Number</b>\n\nPhone number must start with + and include country code.\n\nExample: +1234567890\n\nPlease try again:",
+            parse_mode='HTML'
         )
         return
     
@@ -249,7 +249,7 @@ async def handle_userbot_phone_message(update: Update, context: ContextTypes.DEF
     api_hash = context.user_data.get('userbot_api_hash')
     
     if not api_id or not api_hash:
-        await update.message.reply_text("❌ **Error:** Setup data lost. Please start again.")
+        await update.message.reply_text("❌ <b>Error:</b> Setup data lost. Please start again.")
         context.user_data.pop('state', None)
         return
     
@@ -257,15 +257,15 @@ async def handle_userbot_phone_message(update: Update, context: ContextTypes.DEF
     userbot_config.save(api_id, api_hash, phone_number)
     
     # Start phone authentication
-    await update.message.reply_text("⏳ **Sending verification code...**", parse_mode='Markdown')
+    await update.message.reply_text("⏳ <b>Sending verification code...</b>", parse_mode='HTML')
     
     result = await userbot_manager.start_phone_auth(phone_number)
     
     if not result['success']:
         error_msg = result.get('error', 'Unknown error')
         await update.message.reply_text(
-            f"❌ **Authentication Failed**\n\n{error_msg}\n\nPlease try again or contact support.",
-            parse_mode='Markdown'
+            f"❌ <b>Authentication Failed</b>\n\n{error_msg}\n\nPlease try again or contact support.",
+            parse_mode='HTML'
         )
         context.user_data.pop('state', None)
         return
@@ -274,13 +274,13 @@ async def handle_userbot_phone_message(update: Update, context: ContextTypes.DEF
     context.user_data['userbot_phone'] = phone_number
     context.user_data['state'] = 'awaiting_userbot_verification_code'
     
-    msg = "✅ **Verification Code Sent!**\n\n"
-    msg += f"A verification code has been sent to **{phone_number}**.\n\n"
-    msg += "📝 **Please send the verification code now:**"
+    msg = "✅ <b>Verification Code Sent!</b>\n\n"
+    msg += f"A verification code has been sent to <b>{phone_number}</b>.\n\n"
+    msg += "📝 <b>Please send the verification code now:</b>"
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]]
     
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def handle_userbot_verification_code_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle verification code input"""
@@ -295,19 +295,19 @@ async def handle_userbot_verification_code_message(update: Update, context: Cont
     phone_number = context.user_data.get('userbot_phone')
     
     if not phone_number:
-        await update.message.reply_text("❌ **Error:** Phone number not found. Please start again.")
+        await update.message.reply_text("❌ <b>Error:</b> Phone number not found. Please start again.")
         context.user_data.pop('state', None)
         return
     
-    await update.message.reply_text("⏳ **Verifying code...**", parse_mode='Markdown')
+    await update.message.reply_text("⏳ <b>Verifying code...</b>", parse_mode='HTML')
     
     result = await userbot_manager.verify_phone_code(phone_number, code)
     
     if not result['success']:
         error_msg = result.get('error', 'Unknown error')
         await update.message.reply_text(
-            f"❌ **Verification Failed**\n\n{error_msg}\n\nPlease try again:",
-            parse_mode='Markdown'
+            f"❌ <b>Verification Failed</b>\n\n{error_msg}\n\nPlease try again:",
+            parse_mode='HTML'
         )
         return
     
@@ -319,15 +319,13 @@ async def handle_userbot_verification_code_message(update: Update, context: Cont
     
     # Success message
     username = result.get('username', 'User')
-    # Escape username to prevent Markdown parse errors
-    username_escaped = username.replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
-    msg = "🎉 **Setup Complete!**\n\n"
-    msg += f"Userbot authenticated as **@{username_escaped}**!\n\n"
+    msg = "🎉 <b>Setup Complete!</b>\n\n"
+    msg += f"Userbot authenticated as <b>@{username}</b>!\n\n"
     msg += "✅ Configuration saved\n"
     msg += "✅ Session stored securely\n\n"
     msg += "Now connecting to Telegram..."
     
-    await update.message.reply_text(msg, parse_mode='Markdown')
+    await update.message.reply_text(msg, parse_mode='HTML')
     
     # Initialize userbot
     await asyncio.sleep(1)
@@ -335,13 +333,13 @@ async def handle_userbot_verification_code_message(update: Update, context: Cont
     
     if success:
         await update.message.reply_text(
-            "✅ **Userbot Connected!**\n\nYour userbot is now ready to deliver products via secret chats!",
-            parse_mode='Markdown'
+            "✅ <b>Userbot Connected!</b>\n\nYour userbot is now ready to deliver products via secret chats!",
+            parse_mode='HTML'
         )
     else:
         await update.message.reply_text(
-            "⚠️ **Connection Issue**\n\nSetup complete but failed to connect. Try reconnecting from the control panel.",
-            parse_mode='Markdown'
+            "⚠️ <b>Connection Issue</b>\n\nSetup complete but failed to connect. Try reconnecting from the control panel.",
+            parse_mode='HTML'
         )
 
 # ==================== CONNECTION MANAGEMENT ====================
@@ -420,7 +418,7 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
     
     config = userbot_config.get_dict()
     
-    msg = "⚙️ **Userbot Settings**\n\n"
+    msg = "⚙️ <b>Userbot Settings</b>\n\n"
     msg += "Configure userbot behavior:\n\n"
     
     # Current settings
@@ -432,12 +430,12 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
     max_retries = config.get('max_retries', 3)
     retry_delay = config.get('retry_delay', 5)
     
-    msg += f"**Delivery:** {'✅ Enabled' if enabled else '❌ Disabled'}\n"
-    msg += f"**Auto-Reconnect:** {'✅ Enabled' if auto_reconnect else '❌ Disabled'}\n"
-    msg += f"**Notifications:** {'✅ Enabled' if notifications else '❌ Disabled'}\n"
-    msg += f"**Message TTL:** {ttl_hours} hours\n"
-    msg += f"**Max Retries:** {max_retries}\n"
-    msg += f"**Retry Delay:** {retry_delay} seconds\n"
+    msg += f"<b>Delivery:</b> {'✅ Enabled' if enabled else '❌ Disabled'}\n"
+    msg += f"<b>Auto-Reconnect:</b> {'✅ Enabled' if auto_reconnect else '❌ Disabled'}\n"
+    msg += f"<b>Notifications:</b> {'✅ Enabled' if notifications else '❌ Disabled'}\n"
+    msg += f"<b>Message TTL:</b> {ttl_hours} hours\n"
+    msg += f"<b>Max Retries:</b> {max_retries}\n"
+    msg += f"<b>Retry Delay:</b> {retry_delay} seconds\n"
     
     keyboard = [
         [InlineKeyboardButton(
@@ -457,7 +455,7 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
         [InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]
     ]
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle userbot enabled/disabled"""
@@ -535,16 +533,16 @@ async def handle_userbot_stats(update: Update, context: ContextTypes.DEFAULT_TYP
     
     stats = get_delivery_stats()
     
-    msg = "📊 **Delivery Statistics**\n\n"
-    msg += f"**Total Deliveries:** {stats['total']}\n"
-    msg += f"**Successful:** {stats['success']} ✅\n"
-    msg += f"**Failed:** {stats['failed']} ❌\n"
-    msg += f"**Success Rate:** {stats['success_rate']}%\n\n"
+    msg = "📊 <b>Delivery Statistics</b>\n\n"
+    msg += f"<b>Total Deliveries:</b> {stats['total']}\n"
+    msg += f"<b>Successful:</b> {stats['success']} ✅\n"
+    msg += f"<b>Failed:</b> {stats['failed']} ❌\n"
+    msg += f"<b>Success Rate:</b> {stats['success_rate']}%\n\n"
     
     # Recent deliveries
     recent = stats.get('recent_deliveries', [])
     if recent:
-        msg += "**Recent Deliveries:**\n\n"
+        msg += "<b>Recent Deliveries:</b>\n\n"
         for delivery in recent[:5]:
             status_emoji = "✅" if delivery['delivery_status'] == 'success' else "❌"
             delivered_at = delivery.get('delivered_at')
@@ -557,7 +555,7 @@ async def handle_userbot_stats(update: Update, context: ContextTypes.DEFAULT_TYP
     
     keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]]
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 # ==================== RESET CONFIRMATION ====================
 
@@ -570,20 +568,20 @@ async def handle_userbot_reset_confirm(update: Update, context: ContextTypes.DEF
         await query.answer("Access denied", show_alert=True)
         return
     
-    msg = "⚠️ **Reset Userbot Configuration**\n\n"
+    msg = "⚠️ <b>Reset Userbot Configuration</b>\n\n"
     msg += "This will:\n"
     msg += "• Delete all configuration\n"
     msg += "• Remove saved session\n"
     msg += "• Disconnect userbot\n"
     msg += "• Keep delivery statistics\n\n"
-    msg += "**Are you sure you want to reset?**"
+    msg += "<b>Are you sure you want to reset?</b>"
     
     keyboard = [
         [InlineKeyboardButton("✅ Yes, Reset", callback_data="userbot_reset_confirmed"),
          InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]
     ]
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def handle_userbot_reset_confirmed(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Reset userbot configuration"""
@@ -602,12 +600,12 @@ async def handle_userbot_reset_confirmed(update: Update, context: ContextTypes.D
     
     if success:
         await query.answer("✅ Configuration reset!", show_alert=True)
-        msg = "✅ **Configuration Reset**\n\nUserbot configuration has been reset. You can set it up again anytime."
+        msg = "✅ <b>Configuration Reset</b>\n\nUserbot configuration has been reset. You can set it up again anytime."
         keyboard = [
             [InlineKeyboardButton("🚀 Setup Again", callback_data="userbot_setup_start")],
             [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
         ]
-        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
     else:
         await query.answer("❌ Reset failed. Check logs.", show_alert=True)
 
