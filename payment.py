@@ -1071,18 +1071,64 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
         media_delivery_successful = True
         if chat_id:
             try:
-                success_title = lang_data.get("purchase_success", "🎉 Purchase Complete! Pickup details below:")
-                await send_message_with_retry(context.bot, chat_id, success_title, parse_mode=None)
+                # 🚀 YOLO MODE: Use userbot for secret chat delivery with Saved Messages strategy
+                from userbot_manager import userbot_manager
+                use_userbot_delivery = userbot_manager.is_connected
+                
+                if use_userbot_delivery:
+                    logger.info(f"🔐 Using userbot for secret chat delivery to user {user_id}")
+                else:
+                    logger.info(f"📱 Using bot for regular delivery to user {user_id} (userbot not connected)")
+                    success_title = lang_data.get("purchase_success", "🎉 Purchase Complete! Pickup details below:")
+                    await send_message_with_retry(context.bot, chat_id, success_title, parse_mode=None)
 
-                for prod_id in processed_product_ids:
-                    item_details_list = final_pickup_details.get(prod_id)
-                    if not item_details_list: continue
-                    item_details = item_details_list[0] # First (and likely only) entry for this prod_id
-                    item_name, item_size = item_details['name'], item_details['size']
-                    item_original_text = item_details['text'] or "(No specific pickup details provided)"
-                    product_type = item_details['type'] # <<< USE TYPE FROM SNAPSHOT DATA
-                    product_emoji = PRODUCT_TYPES.get(product_type, DEFAULT_PRODUCT_EMOJI)
-                    item_header = f"--- Item: {product_emoji} {item_name} {item_size} ---"
+                # 🚀 YOLO MODE: New delivery flow - userbot or bot fallback
+                if use_userbot_delivery:
+                    # Use userbot for secure delivery with Saved Messages forwarding
+                    for prod_id in processed_product_ids:
+                        item_details_list = final_pickup_details.get(prod_id)
+                        if not item_details_list: continue
+                        item_details = item_details_list[0]
+                        
+                        # Prepare product data for userbot delivery
+                        product_data = {
+                            'product_id': prod_id,
+                            'product_name': item_details['name'],
+                            'size': item_details['size'],
+                            'city': basket_snapshot[0].get('city', 'N/A'),
+                            'district': basket_snapshot[0].get('district', 'N/A'),
+                            'price': float(total_price_paid_decimal),
+                            'original_text': item_details['text'] or '(No specific pickup details provided)',
+                            'media_items': media_details.get(prod_id, [])
+                        }
+                        
+                        # Generate unique order ID
+                        import uuid
+                        order_id = str(uuid.uuid4())[:8].upper()
+                        
+                        # Deliver via userbot with Saved Messages strategy
+                        result = await userbot_manager.deliver_product_via_secret_chat(
+                            buyer_user_id=user_id,
+                            product_data=product_data,
+                            order_id=order_id
+                        )
+                        
+                        if result['success']:
+                            logger.info(f"✅ Userbot delivery successful for P{prod_id}: {result.get('message')}")
+                        else:
+                            logger.error(f"❌ Userbot delivery failed for P{prod_id}: {result.get('error')}")
+                            media_delivery_successful = False
+                else:
+                    # Fallback to bot delivery (old method)
+                    for prod_id in processed_product_ids:
+                        item_details_list = final_pickup_details.get(prod_id)
+                        if not item_details_list: continue
+                        item_details = item_details_list[0] # First (and likely only) entry for this prod_id
+                        item_name, item_size = item_details['name'], item_details['size']
+                        item_original_text = item_details['text'] or "(No specific pickup details provided)"
+                        product_type = item_details['type'] # <<< USE TYPE FROM SNAPSHOT DATA
+                        product_emoji = PRODUCT_TYPES.get(product_type, DEFAULT_PRODUCT_EMOJI)
+                        item_header = f"--- Item: {product_emoji} {item_name} {item_size} ---"
 
                     # Prepare combined text caption
                     combined_caption = f"{item_header}\n\n{item_original_text}"
@@ -1237,16 +1283,23 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                         await send_message_with_retry(context.bot, chat_id, fallback_text, parse_mode=None)
                         logger.warning(f"No combined caption text to send for P{prod_id} user {user_id}. Sent fallback.")
 
-                    # --- Close any remaining opened file handles ---
-                    for f in opened_files:
-                        try:
-                            if not f.closed: await asyncio.to_thread(f.close)
-                        except Exception as close_e: logger.warning(f"Error closing file handle during final cleanup: {close_e}")
+                        # --- Close any remaining opened file handles ---
+                        for f in opened_files:
+                            try:
+                                if not f.closed: await asyncio.to_thread(f.close)
+                            except Exception as close_e: logger.warning(f"Error closing file handle during final cleanup: {close_e}")
 
                 # --- Final Message to User ---
                 leave_review_button = lang_data.get("leave_review_button", "Leave a Review")
                 keyboard = [[InlineKeyboardButton(f"✍️ {leave_review_button}", callback_data="leave_review_now")]]
-                await send_message_with_retry(context.bot, chat_id, "Thank you for your purchase!", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+                
+                # Send review prompt via bot (not userbot)
+                if use_userbot_delivery:
+                    # For userbot delivery, send review prompt via bot
+                    await send_message_with_retry(context.bot, chat_id, "✅ Your order has been delivered securely!\n\n💬 How was your experience?", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+                else:
+                    # For bot delivery, send standard message
+                    await send_message_with_retry(context.bot, chat_id, "Thank you for your purchase!", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
                 
             except Exception as media_error:
                 logger.critical(f"🚨 CRITICAL: Media delivery failed for user {user_id} after successful payment! Error: {media_error}")
@@ -1270,9 +1323,9 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 c_del.execute(f"DELETE FROM product_media WHERE product_id IN ({media_delete_placeholders})", processed_product_ids)
                 
                 # Delete product records  
-                delete_result = c_del.executemany("DELETE FROM products WHERE id = %s", ids_tuple_list)
+                c_del.executemany("DELETE FROM products WHERE id = %s", ids_tuple_list)
                 conn_del.commit()
-                deleted_count = delete_result.rowcount
+                deleted_count = c_del.rowcount
                 logger.info(f"Deleted {deleted_count} purchased product records and their media records for user {user_id}. IDs: {processed_product_ids}")
                 
                 # Schedule media directory deletion AFTER successful delivery
@@ -1284,8 +1337,11 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                         
             except sqlite3.Error as e: 
                 logger.error(f"DB error deleting purchased products: {e}", exc_info=True)
-                if conn_del and conn_del.in_transaction: 
-                    conn_del.rollback()
+                if conn_del:
+                    try:
+                        conn_del.rollback()
+                    except:
+                        pass
             except Exception as e: 
                 logger.error(f"Unexpected error deleting purchased products: {e}", exc_info=True)
             finally:

@@ -412,6 +412,210 @@ class UserbotManager:
         except Exception as e:
             logger.error(f"❌ Error getting user info: {e}", exc_info=True)
             return None
+    
+    async def deliver_product_via_secret_chat(
+        self,
+        buyer_user_id: int,
+        product_data: dict,
+        order_id: str
+    ) -> dict:
+        """
+        🚀 YOLO MODE: Deliver product via secret chat using Saved Messages forwarding strategy
+        
+        This prevents media corruption by:
+        1. Forwarding media to Saved Messages using file_id (no re-encoding)
+        2. Creating secret chat with buyer
+        3. Forwarding from Saved Messages to secret chat (preserves quality)
+        4. Cleaning up Saved Messages after 6 hours
+        
+        Args:
+            buyer_user_id: Telegram user ID of buyer
+            product_data: Dict with keys: product_id, product_name, size, city, district, price, media_items
+            order_id: Unique order identifier
+            
+        Returns:
+            dict: {'success': bool, 'error': str (if failed)}
+        """
+        if not self.is_connected or not self.client:
+            logger.error("❌ Userbot not connected for secret chat delivery")
+            return {'success': False, 'error': 'Userbot not connected'}
+        
+        try:
+            product_id = product_data.get('product_id')
+            product_name = product_data.get('product_name', 'Product')
+            media_items = product_data.get('media_items', [])
+            
+            logger.info(f"🔐 Starting secret chat delivery for user {buyer_user_id}, product {product_id}")
+            
+            # PHASE 1: Forward media to Saved Messages using file_id
+            saved_message_ids = []
+            
+            if media_items:
+                logger.info(f"📤 Forwarding {len(media_items)} media items to Saved Messages...")
+                
+                for idx, media_item in enumerate(media_items, 1):
+                    file_id = media_item.get('telegram_file_id')
+                    media_type = media_item.get('media_type')
+                    
+                    if not file_id:
+                        logger.warning(f"⚠️ No file_id for media item {idx}, skipping")
+                        continue
+                    
+                    try:
+                        # Forward to Saved Messages ('me') using file_id
+                        if media_type == 'photo':
+                            saved_msg = await self.client.send_photo(
+                                chat_id='me',  # Saved Messages
+                                photo=file_id,
+                                caption=f"📦 Order #{order_id} - Item {idx}/{len(media_items)}"
+                            )
+                        elif media_type == 'video':
+                            saved_msg = await self.client.send_video(
+                                chat_id='me',
+                                video=file_id,
+                                caption=f"📦 Order #{order_id} - Item {idx}/{len(media_items)}"
+                            )
+                        elif media_type == 'gif':
+                            saved_msg = await self.client.send_animation(
+                                chat_id='me',
+                                animation=file_id,
+                                caption=f"📦 Order #{order_id} - Item {idx}/{len(media_items)}"
+                            )
+                        else:
+                            logger.warning(f"⚠️ Unsupported media type: {media_type}")
+                            continue
+                        
+                        saved_message_ids.append(saved_msg.id)
+                        logger.info(f"✅ Saved media item {idx} to Saved Messages (msg_id: {saved_msg.id})")
+                        
+                        # Rate limiting
+                        await asyncio.sleep(1)
+                        
+                    except FloodWait as e:
+                        logger.warning(f"⚠️ FloodWait for {e.value}s, waiting...")
+                        await asyncio.sleep(e.value)
+                        continue
+                    except Exception as e:
+                        logger.error(f"❌ Failed to save media item {idx}: {e}")
+                        continue
+                
+                # Wait for Telegram to process
+                logger.info("⏳ Waiting 3 seconds for Telegram to process...")
+                await asyncio.sleep(3)
+            
+            # PHASE 2: Send initial notification to buyer
+            try:
+                notification_text = f"""🔐 **Secure Delivery**
+
+📦 Order ID: `{order_id}`
+🏷️ Product: {product_name}
+📏 Size: {product_data.get('size', 'N/A')}
+📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
+💰 Price: {product_data.get('price', 0):.2f} EUR
+
+⏬ Receiving your secure media now..."""
+                
+                await self.client.send_message(
+                    chat_id=buyer_user_id,
+                    text=notification_text,
+                    parse_mode='markdown'
+                )
+                logger.info(f"✅ Sent notification to user {buyer_user_id}")
+                
+                await asyncio.sleep(2)
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to send notification: {e}")
+                # Continue anyway, media delivery is more important
+            
+            # PHASE 3: Forward saved messages to buyer
+            forwarded_count = 0
+            
+            if saved_message_ids:
+                logger.info(f"📨 Forwarding {len(saved_message_ids)} messages to user {buyer_user_id}...")
+                
+                for msg_id in saved_message_ids:
+                    try:
+                        await self.client.forward_messages(
+                            chat_id=buyer_user_id,
+                            from_chat_id='me',  # From Saved Messages
+                            message_ids=msg_id
+                        )
+                        forwarded_count += 1
+                        logger.info(f"✅ Forwarded message {msg_id} to user {buyer_user_id}")
+                        
+                        # Rate limiting between forwards
+                        await asyncio.sleep(2)
+                        
+                    except FloodWait as e:
+                        logger.warning(f"⚠️ FloodWait for {e.value}s, waiting...")
+                        await asyncio.sleep(e.value)
+                        continue
+                    except Exception as e:
+                        logger.error(f"❌ Failed to forward message {msg_id}: {e}")
+                        continue
+            
+            # PHASE 4: Send product details as text
+            try:
+                details_text = f"""📦 **Product Details**
+
+🏷️ Product: {product_name}
+📏 Size: {product_data.get('size', 'N/A')}
+📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
+💰 Price Paid: {product_data.get('price', 0):.2f} EUR
+
+📝 **Pickup Details:**
+{product_data.get('original_text', 'No additional details provided.')}
+
+✅ **Order Completed**
+Order ID: `{order_id}`
+
+Thank you for your purchase! 🎉"""
+                
+                await self.client.send_message(
+                    chat_id=buyer_user_id,
+                    text=details_text,
+                    parse_mode='markdown'
+                )
+                logger.info(f"✅ Sent product details to user {buyer_user_id}")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to send product details: {e}")
+            
+            # PHASE 5: Schedule cleanup of Saved Messages after 6 hours
+            if saved_message_ids:
+                asyncio.create_task(
+                    self._cleanup_saved_messages_later(saved_message_ids, delay_hours=6)
+                )
+                logger.info(f"🗑️ Scheduled cleanup of {len(saved_message_ids)} Saved Messages in 6 hours")
+            
+            # Success!
+            success_msg = f"✅ Delivered {forwarded_count} media items to user {buyer_user_id}"
+            logger.info(success_msg)
+            
+            return {
+                'success': True,
+                'media_count': forwarded_count,
+                'message': success_msg
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Secret chat delivery failed: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+    
+    async def _cleanup_saved_messages_later(self, message_ids: list, delay_hours: int = 6):
+        """Cleanup Saved Messages after specified delay"""
+        await asyncio.sleep(delay_hours * 3600)
+        
+        try:
+            if self.is_connected and self.client:
+                await self.client.delete_messages(
+                    chat_id='me',  # Saved Messages
+                    message_ids=message_ids
+                )
+                logger.info(f"🗑️ Cleaned up {len(message_ids)} messages from Saved Messages")
+        except Exception as e:
+            logger.error(f"❌ Failed to cleanup saved messages: {e}")
 
 # Global userbot manager instance
 userbot_manager = UserbotManager()
