@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 # ==================== SCHEMA CREATION ====================
 
+def init_userbot_tables():
+    """Initialize userbot tables - called from main.py"""
+    return create_multi_userbot_schema()
+
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
     conn = None
