@@ -3300,7 +3300,7 @@ def get_verification_attempt_limit():
         return 3  # Default fallback
     finally:
         if conn:
-        conn.close()
+            conn.close()
         
 def get_user_verification_attempts(user_id):
     """Get user's current verification attempt count"""
