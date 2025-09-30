@@ -163,6 +163,35 @@ from viewer_admin import (
     handle_adjust_balance_reason_message
 )
 
+# Userbot system imports
+try:
+    from userbot_database import init_userbot_tables
+    from userbot_manager import userbot_manager
+    from userbot_config import userbot_config
+    from userbot_admin import (
+        handle_userbot_control,
+        handle_userbot_setup_start,
+        handle_userbot_connect,
+        handle_userbot_disconnect,
+        handle_userbot_test,
+        handle_userbot_settings,
+        handle_userbot_stats,
+        handle_userbot_reset_confirm,
+        handle_userbot_reset_confirmed,
+        handle_userbot_toggle_enabled,
+        handle_userbot_toggle_reconnect,
+        handle_userbot_toggle_notifications,
+        handle_userbot_api_id_message,
+        handle_userbot_api_hash_message,
+        handle_userbot_phone_message,
+        handle_userbot_verification_code_message
+    )
+    USERBOT_AVAILABLE = True
+    logger.info("✅ Userbot system available")
+except ImportError as e:
+    logger.warning(f"⚠️ Userbot system not available: {e}")
+    USERBOT_AVAILABLE = False
+
 # Import new feature modules
 try:
     import stock_management
@@ -700,6 +729,28 @@ def callback_query_router(func):
                 # 🚀 PAYMENT MENU REFERRAL HANDLERS
                 "referral_code": handle_referral_code_payment,
                 "cancel_referral_code": handle_cancel_referral_code,
+            }
+            
+            # Add userbot handlers if available
+            if USERBOT_AVAILABLE:
+                KNOWN_HANDLERS.update({
+                    "userbot_control": handle_userbot_control,
+                    "userbot_setup_start": handle_userbot_setup_start,
+                    "userbot_connect": handle_userbot_connect,
+                    "userbot_disconnect": handle_userbot_disconnect,
+                    "userbot_test": handle_userbot_test,
+                    "userbot_settings": handle_userbot_settings,
+                    "userbot_stats": handle_userbot_stats,
+                    "userbot_reset_confirm": handle_userbot_reset_confirm,
+                    "userbot_reset_confirmed": handle_userbot_reset_confirmed,
+                    "userbot_toggle_enabled": handle_userbot_toggle_enabled,
+                    "userbot_toggle_reconnect": handle_userbot_toggle_reconnect,
+                    "userbot_toggle_notifications": handle_userbot_toggle_notifications,
+                })
+                logger.info("✅ Userbot handlers registered")
+            
+            # Additional handlers continue below
+            KNOWN_HANDLERS.update({
                 
     # Testforwarder integration handlers
     "auto_ads_menu": handle_testforwarder_menu,
@@ -1022,6 +1073,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
         'awaiting_referral_code_payment': handle_referral_code_payment_message,
         
+        # Userbot setup message handlers
+        'awaiting_userbot_api_id': handle_userbot_api_id_message if USERBOT_AVAILABLE else None,
+        'awaiting_userbot_api_hash': handle_userbot_api_hash_message if USERBOT_AVAILABLE else None,
+        'awaiting_userbot_phone': handle_userbot_phone_message if USERBOT_AVAILABLE else None,
+        'awaiting_userbot_verification_code': handle_userbot_verification_code_message if USERBOT_AVAILABLE else None,
+        
         # Auto ads system message handlers (removed - using testforwarder integration)
         
         # VIP system message handlers
@@ -1130,14 +1187,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Handle document uploads
                 bot = get_testforwarder_bot()
                 await bot.handle_document(update, context)
-            else:
+    else:
                 await handle_testforwarder_message(update, context)
             return  # If testforwarder handled it, don't process further
         except Exception as e:
             logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
     
     # No handler found
-    logger.debug(f"No handler found for user {user_id} in state: {state}")
+        logger.debug(f"No handler found for user {user_id} in state: {state}")
 
 # --- Error Handler ---
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1207,10 +1264,41 @@ async def post_init(application: Application) -> None:
         BotCommand("start", "Start the bot / Main menu"),
         BotCommand("admin", "Access admin panel (Admin only)"),
     ])
+    
+    # Initialize userbot system
+    if USERBOT_AVAILABLE:
+        try:
+            logger.info("🤖 Initializing userbot system...")
+            init_userbot_tables()
+            logger.info("✅ Userbot tables initialized")
+            
+            # Initialize userbot if configured and enabled
+            if userbot_config.is_configured() and userbot_config.is_enabled():
+                logger.info("🤖 Userbot is configured and enabled, connecting...")
+                await userbot_manager.initialize()
+                if userbot_manager.is_connected:
+                    logger.info("✅ Userbot connected successfully")
+                else:
+                    logger.warning("⚠️ Userbot failed to connect")
+            else:
+                logger.info("ℹ️ Userbot not configured or not enabled")
+        except Exception as e:
+            logger.error(f"❌ Userbot initialization failed: {e}", exc_info=True)
+    
     logger.info("Post_init finished.")
 
 async def post_shutdown(application: Application) -> None:
     logger.info("Running post_shutdown cleanup...")
+    
+    # Shutdown userbot
+    if USERBOT_AVAILABLE and userbot_manager.is_connected:
+        try:
+            logger.info("🤖 Shutting down userbot...")
+            await userbot_manager.disconnect()
+            logger.info("✅ Userbot disconnected")
+        except Exception as e:
+            logger.error(f"❌ Userbot shutdown error: {e}", exc_info=True)
+    
     logger.info("Post_shutdown finished.")
 
 async def clear_expired_baskets_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
@@ -1259,7 +1347,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
@@ -1855,7 +1943,7 @@ def main() -> None:
     logger.info("🔧 About to call load_all_data()...")
     logger.info("🔧 Loading all data...")
     try:
-        load_all_data()
+    load_all_data()
         logger.info("✅ All data loaded successfully")
     except Exception as e:
         logger.error(f"❌ Failed to load data: {e}", exc_info=True)
@@ -1911,7 +1999,7 @@ def main() -> None:
         nonlocal application
         logger.info("🔧 Initializing application...")
         try:
-            await application.initialize()
+        await application.initialize()
             logger.info("✅ Application initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize application: {e}")
@@ -1922,16 +2010,16 @@ def main() -> None:
             webhook_result = await application.bot.set_webhook(url=f"{WEBHOOK_URL}/telegram/{TOKEN}", allowed_updates=Update.ALL_TYPES)
             if webhook_result:
                 logger.info("✅ Telegram webhook set successfully.")
-            else:
+        else:
                 logger.error("❌ Failed to set Telegram webhook.")
-                return
+            return
         except Exception as e:
             logger.error(f"❌ Error setting webhook: {e}")
             return
         
         logger.info("🔧 Starting Telegram application...")
         try:
-            await application.start()
+        await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
         except Exception as e:
             logger.error(f"❌ Failed to start Telegram application: {e}")
