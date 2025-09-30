@@ -1265,7 +1265,7 @@ async def post_init(application: Application) -> None:
     if USERBOT_AVAILABLE:
         try:
             logger.info("🤖 Initializing userbot system...")
-            init_userbot_tables()
+            await asyncio.to_thread(init_userbot_tables)
             logger.info("✅ Userbot tables initialized")
             
             # Initialize userbot if configured and enabled
