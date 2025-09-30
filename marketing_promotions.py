@@ -1791,7 +1791,36 @@ def get_custom_layout(menu_name):
         if conn:
             conn.close()
 
-def apply_custom_layout_to_keyboard(menu_name, default_keyboard):
+def translate_button_text(button_text, user_language='en'):
+    """Translate button text based on user language"""
+    from utils import get_translation
+    
+    # Map button text to translation keys
+    button_translation_map = {
+        '🛍️ Shop': 'shop',
+        '👤 Profile': 'profile', 
+        '💳 Top Up': 'top_up',
+        '📝 Reviews': 'reviews',
+        '💎 Price List': 'price_list',
+        '🌍 Language': 'language',
+        '🔥 Hot Deals': 'hot_deals',
+        'ℹ️ Info': 'info',
+        '🎁 Referral Code': 'referral_code',
+        '💳 Pay Now': 'pay_now',
+        '🎫 Discount Code': 'discount_code',
+        '⬅️ Back': 'back',
+        '🏠 Home': 'home'
+    }
+    
+    # Check if we have a translation for this button
+    translation_key = button_translation_map.get(button_text)
+    if translation_key:
+        return get_translation(translation_key, user_language)
+    
+    # If no translation found, return original text
+    return button_text
+
+def apply_custom_layout_to_keyboard(menu_name, default_keyboard, user_language='en'):
     """Apply custom layout to keyboard if available, otherwise return default"""
     custom_layout = get_custom_layout(menu_name)
     
@@ -1801,14 +1830,17 @@ def apply_custom_layout_to_keyboard(menu_name, default_keyboard):
     try:
         # Convert custom layout to InlineKeyboardMarkup
         from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        from utils import get_translation
         
         custom_keyboard = []
         for row in custom_layout:
             keyboard_row = []
             for button_text in row:
+                # 🚀 YOLO MODE: TRANSLATE BUTTON TEXT!
+                translated_text = translate_button_text(button_text, user_language)
                 # Map button text to callback data
                 callback_data = map_button_text_to_callback(button_text)
-                keyboard_row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+                keyboard_row.append(InlineKeyboardButton(translated_text, callback_data=callback_data))
             if keyboard_row:  # Only add non-empty rows
                 custom_keyboard.append(keyboard_row)
         

@@ -31,7 +31,7 @@ def init_referral_tables():
             user_id BIGINT NOT NULL,
             referral_code TEXT NOT NULL UNIQUE,
             created_at TEXT NOT NULL,
-            is_active INTEGER DEFAULT 1,
+            is_active BOOLEAN DEFAULT TRUE,
             total_referrals INTEGER DEFAULT 0,
             total_rewards_earned REAL DEFAULT 0.0,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -153,7 +153,7 @@ async def create_referral_code(user_id: int) -> Optional[str]:
         # Check if user already has a referral code
         c.execute("""
             SELECT referral_code FROM referral_codes 
-            WHERE user_id = %s AND is_active = 1
+            WHERE user_id = %s AND is_active = TRUE
         """, (user_id,))
         
         existing = c.fetchone()
@@ -172,7 +172,7 @@ async def create_referral_code(user_id: int) -> Optional[str]:
                 c.execute("""
                     INSERT INTO referral_codes 
                     (user_id, referral_code, created_at, is_active)
-                    VALUES (%s, %s, %s, 1)
+                    VALUES (%s, %s, %s, TRUE)
                 """, (user_id, code, datetime.now(timezone.utc).isoformat()))
                 
                 conn.commit()
@@ -218,7 +218,7 @@ async def apply_referral_code(referred_user_id: int, referral_code: str) -> Dict
             SELECT rc.user_id, rc.referral_code, u.username
             FROM referral_codes rc
             LEFT JOIN users u ON rc.user_id = u.user_id
-            WHERE rc.referral_code = %s AND rc.is_active = 1
+            WHERE rc.referral_code = %s AND rc.is_active = TRUE
         """, (referral_code.upper(),))
         
         referrer = c.fetchone()

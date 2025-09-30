@@ -3431,6 +3431,9 @@ INTERFACE_TRANSLATIONS = {
         'language': '🌍 Language',
         'hot_deals': '🔥 Hot Deals',
         'info': 'ℹ️ Info',
+        'referral_code': '🎁 Referral Code',
+        'pay_now': '💳 Pay Now',
+        'discount_code': '🎫 Discount Code',
         
         # Status messages
         'status_new': 'Status: New',
@@ -3456,6 +3459,9 @@ INTERFACE_TRANSLATIONS = {
         'language': '🌍 Kalba',
         'hot_deals': '🔥 Karšti Pasiūlymai',
         'info': 'ℹ️ Informacija',
+        'referral_code': '🎁 Referalų Kodas',
+        'pay_now': '💳 Mokėti Dabar',
+        'discount_code': '🎫 Nuolaidos Kodas',
         
         # Status messages
         'status_new': 'Statusas: Naujas',
@@ -3481,6 +3487,9 @@ INTERFACE_TRANSLATIONS = {
         'language': '🌍 Язык',
         'hot_deals': '🔥 Горячие Предложения',
         'info': 'ℹ️ Информация',
+        'referral_code': '🎁 Реферальный Код',
+        'pay_now': '💳 Заплатить Сейчас',
+        'discount_code': '🎫 Код Скидки',
         
         # Status messages
         'status_new': 'Статус: Новый',

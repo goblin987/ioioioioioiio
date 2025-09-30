@@ -231,8 +231,19 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
                 ]
         else:
             # No preset theme - apply custom layout
-            keyboard = apply_custom_layout_to_keyboard('start_menu', default_keyboard)
-            logger.info(f"Applied custom start menu layout for user {user_id}")
+            # Get user language from context or database
+            user_language = 'en'  # Default
+            try:
+                # Try to get language from database
+                c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+                lang_result = c.fetchone()
+                if lang_result and lang_result['language']:
+                    user_language = lang_result['language']
+            except Exception as lang_e:
+                logger.debug(f"Could not get user language: {lang_e}")
+            
+            keyboard = apply_custom_layout_to_keyboard('start_menu', default_keyboard, user_language)
+            logger.info(f"Applied custom start menu layout for user {user_id} (language: {user_language})")
         
         # Get custom header message only if using custom layout
         custom_layout = None
