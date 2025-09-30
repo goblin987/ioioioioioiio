@@ -649,10 +649,9 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "🎁 **Marketing & Promotions**\n\nManage discounts, referrals, campaigns, and broadcasts:"
+    msg = "🎁 **Marketing & Promotions**\n\nManage discounts, campaigns, and broadcasts:"
     keyboard = [
         [InlineKeyboardButton("🏷️ Manage Discount Codes", callback_data="adm_manage_discounts")],
-        [InlineKeyboardButton("🎁 Referral Program", callback_data="referral_admin_menu")],
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
         [InlineKeyboardButton("📢 Broadcast Message", callback_data="adm_broadcast_start")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]

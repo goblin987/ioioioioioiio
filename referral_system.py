@@ -631,7 +631,7 @@ async def handle_referral_admin_menu(update: Update, context: ContextTypes.DEFAU
             [InlineKeyboardButton("👥 Top Referrers", callback_data="referral_admin_top_referrers")],
             [InlineKeyboardButton("⚙️ Program Settings", callback_data="referral_admin_settings")],
             [InlineKeyboardButton("🔄 Reset Program", callback_data="referral_admin_reset")],
-            [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+            [InlineKeyboardButton("⬅️ Back to User Management", callback_data="admin_users_menu")]
         ]
         
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -652,7 +652,7 @@ async def handle_referral_admin_menu(update: Update, context: ContextTypes.DEFAU
             [InlineKeyboardButton("📊 View Stats", callback_data="referral_admin_stats")],
             [InlineKeyboardButton("👥 Top Referrers", callback_data="referral_admin_top_referrers")],
             [InlineKeyboardButton("⚙️ Settings", callback_data="referral_admin_settings")],
-            [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+            [InlineKeyboardButton("⬅️ Back to User Management", callback_data="admin_users_menu")]
         ]
         
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -880,7 +880,7 @@ async def handle_referral_admin_stats(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("👥 Top Referrers", callback_data="referral_admin_top_referrers")],
         [InlineKeyboardButton("⚙️ Program Settings", callback_data="referral_admin_settings")],
         [InlineKeyboardButton("📋 Export Report", callback_data="referral_admin_export")],
-        [InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="referral_admin_menu")]
+        [InlineKeyboardButton("⬅️ Back to Referral Admin", callback_data="referral_admin_menu")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -923,7 +923,7 @@ async def handle_referral_admin_settings(update: Update, context: ContextTypes.D
         [InlineKeyboardButton("🛒 Set Min Purchase", callback_data="referral_admin_set_min_purchase")],
         [InlineKeyboardButton("📈 View Statistics", callback_data="referral_admin_stats"),
          InlineKeyboardButton("🔄 Reset All Data", callback_data="referral_admin_reset_confirm")],
-        [InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="referral_admin_menu")]
+        [InlineKeyboardButton("⬅️ Back to Referral Admin", callback_data="referral_admin_menu")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
