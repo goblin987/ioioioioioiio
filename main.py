@@ -1261,14 +1261,11 @@ async def post_init(application: Application) -> None:
         BotCommand("admin", "Access admin panel (Admin only)"),
     ])
     
-    # Initialize userbot system
+    # Initialize userbot connection if configured
     if USERBOT_AVAILABLE:
         try:
-            logger.info("🤖 Initializing userbot system...")
-            await asyncio.to_thread(init_userbot_tables)
-            logger.info("✅ Userbot tables initialized")
-            
-            # Initialize userbot if configured and enabled
+            # Tables already initialized in main startup
+            # Just check if userbot should connect
             if userbot_config.is_configured() and userbot_config.is_enabled():
                 logger.info("🤖 Userbot is configured and enabled, connecting...")
                 await userbot_manager.initialize()
@@ -1279,7 +1276,7 @@ async def post_init(application: Application) -> None:
             else:
                 logger.info("ℹ️ Userbot not configured or not enabled")
         except Exception as e:
-            logger.error(f"❌ Userbot initialization failed: {e}", exc_info=True)
+            logger.error(f"❌ Userbot connection failed: {e}", exc_info=True)
     
     logger.info("Post_init finished.")
 
@@ -1926,6 +1923,15 @@ def main() -> None:
         logger.info("✅ Referral system tables initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize referral tables: {e}", exc_info=True)
+    
+    # 🤖 INITIALIZE USERBOT TABLES!
+    if USERBOT_AVAILABLE:
+        try:
+            logger.info("🤖 Initializing userbot tables...")
+            init_userbot_tables()
+            logger.info("✅ Userbot tables initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize userbot tables: {e}", exc_info=True)
     
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
