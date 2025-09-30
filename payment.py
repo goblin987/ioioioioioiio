@@ -894,7 +894,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
         c = conn.cursor()
         
         # Use IMMEDIATE lock to reduce lock conflicts while still preventing race conditions
-        c.execute("BEGIN IMMEDIATE")
+        c.execute("BEGIN")
         purchase_time_iso = datetime.now(timezone.utc).isoformat()
 
         # Pre-validate all products before processing
@@ -1315,7 +1315,7 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
         conn = get_db_connection()
         c = conn.cursor()
         # Use IMMEDIATE instead of EXCLUSIVE to reduce lock conflicts
-        c.execute("BEGIN IMMEDIATE")
+        c.execute("BEGIN")
         # 1. Verify balance
         c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         current_balance_result = c.fetchone()

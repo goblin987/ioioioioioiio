@@ -1969,10 +1969,10 @@ def get_progress_bar(purchases):
         return get_progress_bar_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-        try:
-            p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
-            filled = min(sum(1 for t in thresholds if p_int >= t), 5)
-            return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
+    try:
+        p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
+        filled = min(sum(1 for t in thresholds if p_int >= t), 5)
+        return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
         except (ValueError, TypeError): 
             return '[⬜️⬜️⬜️⬜️⬜️]'
 
@@ -2038,11 +2038,11 @@ def get_user_status(purchases):
         return get_user_status_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-        try:
-            p_int = int(purchases)
-            if p_int >= 10: return "VIP 👑"
-            elif p_int >= 5: return "Regular ⭐"
-            else: return "New 🌱"
+    try:
+        p_int = int(purchases)
+        if p_int >= 10: return "VIP 👑"
+        elif p_int >= 5: return "Regular ⭐"
+        else: return "New 🌱"
         except (ValueError, TypeError): 
             return "New 🌱"
 
@@ -2074,7 +2074,7 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
 
         product_details = {}
         if potential_prod_ids:
-             placeholders = ','.join('?' * len(potential_prod_ids))
+             placeholders = ','.join('%s' * len(potential_prod_ids))
              # Fetch product_type along with price
              c.execute(f"SELECT id, price, product_type FROM products WHERE id IN ({placeholders})", potential_prod_ids)
              product_details = {row['id']: {'price': Decimal(str(row['price'])), 'type': row['product_type']} for row in c.fetchall()}
@@ -3299,7 +3299,7 @@ def get_verification_attempt_limit():
         return 3  # Default fallback
     finally:
         if conn:
-            conn.close()
+        conn.close()
         
 def get_user_verification_attempts(user_id):
     """Get user's current verification attempt count"""
