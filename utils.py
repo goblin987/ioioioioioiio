@@ -2038,12 +2038,13 @@ def get_user_status(purchases):
         return get_user_status_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-    try:
-        p_int = int(purchases)
-        if p_int >= 10: return "VIP 👑"
-        elif p_int >= 5: return "Regular ⭐"
-        else: return "New 🌱"
-    except (ValueError, TypeError): return "New 🌱"
+        try:
+            p_int = int(purchases)
+            if p_int >= 10: return "VIP 👑"
+            elif p_int >= 5: return "Regular ⭐"
+            else: return "New 🌱"
+        except (ValueError, TypeError): 
+            return "New 🌱"
 
 # --- Modified clear_expired_basket (Individual user focus) ---
 def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
