@@ -187,9 +187,9 @@ try:
         handle_userbot_verification_code_message
     )
     USERBOT_AVAILABLE = True
-    logger.info("✅ Userbot system available")
+    logging.getLogger(__name__).info("✅ Userbot system available")
 except ImportError as e:
-    logger.warning(f"⚠️ Userbot system not available: {e}")
+    logging.getLogger(__name__).warning(f"⚠️ Userbot system not available: {e}")
     USERBOT_AVAILABLE = False
 
 # Import new feature modules
