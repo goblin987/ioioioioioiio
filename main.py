@@ -729,28 +729,6 @@ def callback_query_router(func):
                 # 🚀 PAYMENT MENU REFERRAL HANDLERS
                 "referral_code": handle_referral_code_payment,
                 "cancel_referral_code": handle_cancel_referral_code,
-            }
-            
-            # Add userbot handlers if available
-            if USERBOT_AVAILABLE:
-                KNOWN_HANDLERS.update({
-                    "userbot_control": handle_userbot_control,
-                    "userbot_setup_start": handle_userbot_setup_start,
-                    "userbot_connect": handle_userbot_connect,
-                    "userbot_disconnect": handle_userbot_disconnect,
-                    "userbot_test": handle_userbot_test,
-                    "userbot_settings": handle_userbot_settings,
-                    "userbot_stats": handle_userbot_stats,
-                    "userbot_reset_confirm": handle_userbot_reset_confirm,
-                    "userbot_reset_confirmed": handle_userbot_reset_confirmed,
-                    "userbot_toggle_enabled": handle_userbot_toggle_enabled,
-                    "userbot_toggle_reconnect": handle_userbot_toggle_reconnect,
-                    "userbot_toggle_notifications": handle_userbot_toggle_notifications,
-                })
-                logger.info("✅ Userbot handlers registered")
-            
-            # Additional handlers continue below
-            KNOWN_HANDLERS.update({
                 
     # Testforwarder integration handlers
     "auto_ads_menu": handle_testforwarder_menu,
@@ -994,6 +972,24 @@ def callback_query_router(func):
                 "bot_reset_header": handle_bot_reset_header,
                 "bot_noop": handle_marketing_promotions_menu,  # Placeholder for separator buttons
             }
+            
+            # Add userbot handlers if available
+            if USERBOT_AVAILABLE:
+                KNOWN_HANDLERS.update({
+                    "userbot_control": handle_userbot_control,
+                    "userbot_setup_start": handle_userbot_setup_start,
+                    "userbot_connect": handle_userbot_connect,
+                    "userbot_disconnect": handle_userbot_disconnect,
+                    "userbot_test": handle_userbot_test,
+                    "userbot_settings": handle_userbot_settings,
+                    "userbot_stats": handle_userbot_stats,
+                    "userbot_reset_confirm": handle_userbot_reset_confirm,
+                    "userbot_reset_confirmed": handle_userbot_reset_confirmed,
+                    "userbot_toggle_enabled": handle_userbot_toggle_enabled,
+                    "userbot_toggle_reconnect": handle_userbot_toggle_reconnect,
+                    "userbot_toggle_notifications": handle_userbot_toggle_notifications,
+                })
+                logger.info("✅ Userbot handlers registered")
 
             target_func = KNOWN_HANDLERS.get(command)
 
