@@ -1969,11 +1969,12 @@ def get_progress_bar(purchases):
         return get_progress_bar_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-    try:
-        p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
-        filled = min(sum(1 for t in thresholds if p_int >= t), 5)
-        return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
-    except (ValueError, TypeError): return '[⬜️⬜️⬜️⬜️⬜️]'
+        try:
+            p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
+            filled = min(sum(1 for t in thresholds if p_int >= t), 5)
+            return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
+        except (ValueError, TypeError): 
+            return '[⬜️⬜️⬜️⬜️⬜️]'
 
 async def send_message_with_retry(
     bot: Bot,
