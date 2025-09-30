@@ -46,7 +46,7 @@ class UserbotManager:
         """Initialize userbot client from database config"""
         if not PYROGRAM_AVAILABLE:
             logger.error("❌ Pyrogram not available")
-            await update_connection_status(False, "Pyrogram not installed")
+            await asyncio.to_thread(update_connection_status, False, "Pyrogram not installed")
             return False
         
         if self.is_initializing:
@@ -55,7 +55,7 @@ class UserbotManager:
         
         if not userbot_config.is_configured():
             logger.warning("⚠️ Userbot not configured")
-            await update_connection_status(False, "Not configured")
+            await asyncio.to_thread(update_connection_status, False, "Not configured")
             return False
         
         self.is_initializing = True
@@ -68,7 +68,7 @@ class UserbotManager:
             
             if not api_id or not api_hash:
                 logger.error("❌ Missing API credentials")
-                await update_connection_status(False, "Missing API credentials")
+                await asyncio.to_thread(update_connection_status, False, "Missing API credentials")
                 return False
             
             # Get session string from database
@@ -92,7 +92,7 @@ class UserbotManager:
             logger.info(f"✅ Userbot connected as @{me.username or me.first_name} (ID: {me.id})")
             
             self.is_connected = True
-            await update_connection_status(True, f"Connected as @{me.username or me.first_name}")
+            await asyncio.to_thread(update_connection_status, True, f"Connected as @{me.username or me.first_name}")
             
             # Save session string for future use
             if not session_string:
@@ -108,22 +108,22 @@ class UserbotManager:
             
         except AuthKeyUnregistered:
             logger.error("❌ Session expired - need to re-authenticate")
-            await update_connection_status(False, "Session expired")
+            await asyncio.to_thread(update_connection_status, False, "Session expired")
             return False
             
         except (UserDeactivated, UserDeactivatedBan):
             logger.error("❌ User account deactivated or banned")
-            await update_connection_status(False, "Account deactivated")
+            await asyncio.to_thread(update_connection_status, False, "Account deactivated")
             return False
             
         except ApiIdInvalid:
             logger.error("❌ Invalid API ID or Hash")
-            await update_connection_status(False, "Invalid API credentials")
+            await asyncio.to_thread(update_connection_status, False, "Invalid API credentials")
             return False
             
         except Exception as e:
             logger.error(f"❌ Error initializing userbot: {e}", exc_info=True)
-            await update_connection_status(False, f"Error: {str(e)[:100]}")
+            await asyncio.to_thread(update_connection_status, False, f"Error: {str(e)[:100]}")
             return False
             
         finally:
@@ -141,7 +141,7 @@ class UserbotManager:
                 logger.info("✅ Userbot disconnected")
             
             self.is_connected = False
-            await update_connection_status(False, "Manually disconnected")
+            await asyncio.to_thread(update_connection_status, False, "Manually disconnected")
             return True
             
         except Exception as e:
@@ -172,7 +172,7 @@ class UserbotManager:
                 except Exception as e:
                     logger.warning(f"⚠️ Connection lost: {e}")
                     self.is_connected = False
-                    await update_connection_status(False, "Connection lost")
+                    await asyncio.to_thread(update_connection_status, False, "Connection lost")
                     
                     if userbot_config.auto_reconnect:
                         logger.info("🔄 Auto-reconnecting...")
