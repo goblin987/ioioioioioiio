@@ -52,6 +52,19 @@ def init_referral_tables():
             FOREIGN KEY (referred_user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )''')
         
+        # 🚀 YOLO MODE: ADD MISSING COLUMNS TO USERS TABLE!
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_referrals INTEGER DEFAULT 0")
+            logger.info("✅ Added total_referrals column to users table")
+        except Exception as e:
+            logger.debug(f"total_referrals column might already exist: {e}")
+            
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_earnings REAL DEFAULT 0.0")
+            logger.info("✅ Added total_earnings column to users table")
+        except Exception as e:
+            logger.debug(f"total_earnings column might already exist: {e}")
+        
         conn.commit()
         logger.info("Referral system database tables initialized successfully")
         
@@ -1091,19 +1104,25 @@ async def handle_referral_percentage_message(update: Update, context: ContextTyp
             return
         
         if set_referral_setting('referrer_percentage', str(percentage)):
-            await update.message.reply_text(
-                f"✅ **Referrer Percentage Updated**\n\nReferrers will now earn **{percentage}%** commission on their referrals' first purchase.",
-                parse_mode='Markdown'
-            )
             context.user_data.pop('state', None)
             
-            # Show updated settings menu
-            fake_update = type('obj', (object,), {'callback_query': type('obj', (object,), {
-                'from_user': update.effective_user,
-                'edit_message_text': lambda *args, **kwargs: None
-            })})()
-            # We'll just send a new message instead of editing
-            await update.message.reply_text("Settings updated! Use /admin to access the referral settings again.")
+            # 🚀 YOLO MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
+            msg = f"✅ **Referrer Percentage Updated**\n\n"
+            msg += f"Referrers will now earn **{percentage}%** commission on their referrals' first purchase.\n\n"
+            msg += f"💡 **What's Next?**\n"
+            msg += f"Continue setting up other referral settings or go back to manage more options."
+            
+            keyboard = [
+                [InlineKeyboardButton("⚙️ Back to Referral Settings", callback_data="referral_admin_settings")],
+                [InlineKeyboardButton("📊 View Statistics", callback_data="referral_admin_stats")],
+                [InlineKeyboardButton("⬅️ Back to User Management", callback_data="admin_users_menu")]
+            ]
+            
+            await update.message.reply_text(
+                msg, 
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
         else:
             await update.message.reply_text("❌ **Error**\n\nFailed to update percentage. Please try again.", parse_mode='Markdown')
     
@@ -1132,12 +1151,25 @@ async def handle_referral_bonus_message(update: Update, context: ContextTypes.DE
             return
         
         if set_referral_setting('referred_bonus', str(bonus)):
+            context.user_data.pop('state', None)
+            
+            # 🚀 YOLO MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
+            msg = f"✅ **New User Bonus Updated**\n\n"
+            msg += f"New users will now receive **{format_currency(Decimal(str(bonus)))}** when using a referral code.\n\n"
+            msg += f"💡 **What's Next?**\n"
+            msg += f"Continue setting up other referral settings or go back to manage more options."
+            
+            keyboard = [
+                [InlineKeyboardButton("⚙️ Back to Referral Settings", callback_data="referral_admin_settings")],
+                [InlineKeyboardButton("📊 View Statistics", callback_data="referral_admin_stats")],
+                [InlineKeyboardButton("⬅️ Back to User Management", callback_data="admin_users_menu")]
+            ]
+            
             await update.message.reply_text(
-                f"✅ **New User Bonus Updated**\n\nNew users will now receive **{format_currency(Decimal(str(bonus)))}** when using a referral code.",
+                msg, 
+                reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='Markdown'
             )
-            context.user_data.pop('state', None)
-            await update.message.reply_text("Settings updated! Use /admin to access the referral settings again.")
         else:
             await update.message.reply_text("❌ **Error**\n\nFailed to update bonus. Please try again.", parse_mode='Markdown')
     
@@ -1166,12 +1198,25 @@ async def handle_referral_min_purchase_message(update: Update, context: ContextT
             return
         
         if set_referral_setting('min_purchase', str(min_purchase)):
+            context.user_data.pop('state', None)
+            
+            # 🚀 YOLO MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
+            msg = f"✅ **Minimum Purchase Updated**\n\n"
+            msg += f"Referrers will now earn commission only when their referrals spend at least **{format_currency(Decimal(str(min_purchase)))}**.\n\n"
+            msg += f"💡 **What's Next?**\n"
+            msg += f"Continue setting up other referral settings or go back to manage more options."
+            
+            keyboard = [
+                [InlineKeyboardButton("⚙️ Back to Referral Settings", callback_data="referral_admin_settings")],
+                [InlineKeyboardButton("📊 View Statistics", callback_data="referral_admin_stats")],
+                [InlineKeyboardButton("⬅️ Back to User Management", callback_data="admin_users_menu")]
+            ]
+            
             await update.message.reply_text(
-                f"✅ **Minimum Purchase Updated**\n\nReferrers will now earn commission only when their referrals spend at least **{format_currency(Decimal(str(min_purchase)))}**.",
+                msg, 
+                reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='Markdown'
             )
-            context.user_data.pop('state', None)
-            await update.message.reply_text("Settings updated! Use /admin to access the referral settings again.")
         else:
             await update.message.reply_text("❌ **Error**\n\nFailed to update minimum purchase. Please try again.", parse_mode='Markdown')
     

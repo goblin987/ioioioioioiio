@@ -3410,7 +3410,7 @@ async def handle_adm_discount_value_message(update: Update, context: ContextType
         # Insert new discount code
         c.execute("""
             INSERT INTO discount_codes (code, discount_type, value, is_active, max_uses, uses_count, created_date)
-            VALUES (%s, %s, %s, 1, NULL, 0, %s)
+            VALUES (%s, %s, %s, TRUE, NULL, 0, %s)
         """, (discount_info['code'], discount_info['type'], value, datetime.now(timezone.utc).isoformat()))
         
         conn.commit()
