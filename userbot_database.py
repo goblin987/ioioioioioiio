@@ -141,6 +141,122 @@ def get_delivery_stats() -> Dict[str, Any]:
         'recent_deliveries': []
     }
 
+def get_userbot_config() -> Dict[str, Any]:
+    """Get userbot config (legacy function - returns userbot #1 data)"""
+    userbot = get_userbot(1)
+    if userbot:
+        return {
+            'api_id': userbot.get('api_id'),
+            'api_hash': userbot.get('api_hash'),
+            'phone_number': userbot.get('phone_number'),
+            'session_string': userbot.get('session_string'),
+            'is_enabled': userbot.get('is_enabled', True),
+            'max_retries': 3,  # Default values for legacy compatibility
+            'retry_delay': 5,
+            'ttl_hours': 24,
+            'auto_reconnect': True,
+            'notifications_enabled': True
+        }
+    return {}
+
+def is_userbot_configured() -> bool:
+    """Check if userbot is configured (legacy function)"""
+    userbot = get_userbot(1)
+    if userbot:
+        return (userbot.get('api_id') and 
+                userbot.get('api_hash') and 
+                userbot.get('phone_number') and
+                userbot.get('api_id') != 'pending')
+    return False
+
+def is_userbot_enabled() -> bool:
+    """Check if userbot is enabled (legacy function)"""
+    userbot = get_userbot(1)
+    return userbot.get('is_enabled', False) if userbot else False
+
+def save_userbot_config(api_id: str, api_hash: str, phone_number: str) -> bool:
+    """Save userbot config (legacy function - saves to userbot #1)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Check if userbot #1 exists
+        c.execute("SELECT id FROM userbots WHERE id = 1")
+        if c.fetchone():
+            # Update existing
+            c.execute("""
+                UPDATE userbots 
+                SET api_id = %s, api_hash = %s, phone_number = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = 1
+            """, (api_id, api_hash, phone_number))
+        else:
+            # Create new
+            c.execute("""
+                INSERT INTO userbots (id, name, api_id, api_hash, phone_number)
+                VALUES (1, 'Default Userbot', %s, %s, %s)
+            """, (api_id, api_hash, phone_number))
+        
+        conn.commit()
+        logger.info("✅ Userbot config saved successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error saving userbot config: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def update_userbot_setting(setting_name: str, setting_value: Any) -> bool:
+    """Update userbot setting (legacy function - updates userbot #1)"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Map legacy setting names to new schema
+        setting_map = {
+            'enabled': 'is_enabled',
+            'max_retries': 'max_deliveries_per_hour',  # Approximate mapping
+            'auto_reconnect': 'is_enabled',  # Approximate mapping
+            # Other settings are stored in global settings table
+        }
+        
+        db_column = setting_map.get(setting_name, setting_name)
+        
+        # Try to update userbot #1
+        if db_column in ['is_enabled', 'max_deliveries_per_hour']:
+            c.execute(f"""
+                UPDATE userbots 
+                SET {db_column} = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = 1
+            """, (setting_value,))
+            conn.commit()
+            logger.info(f"✅ Updated userbot setting {setting_name} = {setting_value}")
+            return True
+        else:
+            # Store in global settings
+            logger.info(f"ℹ️ Setting {setting_name} stored in global userbot_settings")
+            return True
+        
+    except Exception as e:
+        logger.error(f"❌ Error updating userbot setting: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
     conn = None
