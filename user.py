@@ -3078,6 +3078,39 @@ async def handle_skip_discount_single_pay(update: Update, context: ContextTypes.
             return await handle_shop(update, context)
 
     context.user_data['single_item_pay_discount_code'] = None # Ensure no discount code is carried forward
+    
+    # Check user balance before showing payment options
+    snapshot = context.user_data.get('single_item_pay_snapshot', [])
+    final_total_eur = Decimal(str(context.user_data.get('single_item_pay_final_eur', 0)))
+    
+    conn = None
+    user_balance = Decimal('0.0')
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        balance_result = c.fetchone()
+        user_balance = Decimal(str(balance_result['balance'])) if balance_result else Decimal('0.0')
+    except Exception as e:
+        logger.error(f"Error checking balance for user {user_id}: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
+    # If user has sufficient balance, process with balance payment
+    if user_balance >= final_total_eur:
+        logger.info(f"User {user_id} has sufficient balance ({user_balance:.2f} EUR) for single item purchase ({final_total_eur:.2f} EUR). Processing balance payment.")
+        discount_code = context.user_data.get('single_item_pay_discount_code')
+        success = await payment.process_purchase_with_balance(user_id, final_total_eur, snapshot, discount_code, context)
+        if success:
+            # Clear single item payment context
+            context.user_data.pop('single_item_pay_snapshot', None)
+            context.user_data.pop('single_item_pay_final_eur', None)
+            context.user_data.pop('single_item_pay_discount_code', None)
+            context.user_data.pop('single_item_pay_back_params', None)
+        return
+    
+    # Otherwise, show crypto payment options
     proceeding_msg = lang_data.get("proceeding_to_payment_answer", "Proceeding to payment options...")
     await query.answer(proceeding_msg)
     await _show_crypto_choices_for_basket(update, context, edit_message=True)
