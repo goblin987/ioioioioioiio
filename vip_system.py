@@ -292,7 +292,7 @@ class VIPManager:
             # Get user's current level from history
             c.execute("""
                 SELECT new_level_name FROM user_vip_history 
-                WHERE user_id = ? 
+                WHERE user_id = %s 
                 ORDER BY level_up_date DESC 
                 LIMIT 1
             """, (user_id,))
@@ -427,10 +427,10 @@ class VIPManager:
             c = conn.cursor()
             
             c.execute('''UPDATE vip_levels 
-                        SET level_name = ?, level_emoji = ?, min_purchases = ?,
-                            max_purchases = ?, level_order = ?, benefits = ?,
-                            discount_percentage = ?, updated_at = ?
-                        WHERE id = ?''',
+                        SET level_name = %s, level_emoji = %s, min_purchases = %s,
+                            max_purchases = %s, level_order = %s, benefits = %s,
+                            discount_percentage = %s, updated_at = %s
+                        WHERE id = %s''',
                      (
                          level_data['level_name'],
                          level_data['level_emoji'],
@@ -1045,7 +1045,7 @@ async def handle_vip_status_menu(update: Update, context: ContextTypes.DEFAULT_T
         c = conn.cursor()
         
         # Get user's purchase count
-        c.execute("SELECT total_purchases FROM users WHERE user_id = ?", (user_id,))
+        c.execute("SELECT total_purchases FROM users WHERE user_id = %s", (user_id,))
         user_result = c.fetchone()
         
         if not user_result:
@@ -1092,7 +1092,7 @@ async def handle_vip_status_menu(update: Update, context: ContextTypes.DEFAULT_T
         c.execute("""
             SELECT old_level_name, new_level_name, level_up_date
             FROM user_vip_history 
-            WHERE user_id = ?
+            WHERE user_id = %s
             ORDER BY level_up_date DESC
             LIMIT 3
         """, (user_id,))
@@ -1656,7 +1656,7 @@ async def handle_vip_toggle_active(update: Update, context: ContextTypes.DEFAULT
         c = conn.cursor()
         
         # Get current status
-        c.execute("SELECT is_active, level_name, level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT is_active, level_name, level_emoji FROM vip_levels WHERE id = %s", (level_id,))
         level_data = c.fetchone()
         
         if not level_data:
@@ -1666,7 +1666,7 @@ async def handle_vip_toggle_active(update: Update, context: ContextTypes.DEFAULT
         new_status = not level_data['is_active']
         
         # Update status
-        c.execute("UPDATE vip_levels SET is_active = ? WHERE id = ?", (new_status, level_id))
+        c.execute("UPDATE vip_levels SET is_active = %s WHERE id = %s", (new_status, level_id))
         conn.commit()
         
         status_text = "✅ Active" if new_status else "❌ Inactive"
@@ -1762,11 +1762,11 @@ async def handle_vip_set_emoji(update: Update, context: ContextTypes.DEFAULT_TYP
         c = conn.cursor()
         
         # Update emoji
-        c.execute("UPDATE vip_levels SET level_emoji = ? WHERE id = ?", (new_emoji, level_id))
+        c.execute("UPDATE vip_levels SET level_emoji = %s WHERE id = %s", (new_emoji, level_id))
         conn.commit()
         
         # Get updated level info
-        c.execute("SELECT level_name FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT level_name FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         msg = f"😀 **Emoji Updated Successfully!**\n\n"
@@ -1806,11 +1806,11 @@ async def handle_vip_set_discount(update: Update, context: ContextTypes.DEFAULT_
         c = conn.cursor()
         
         # Update discount
-        c.execute("UPDATE vip_levels SET discount_percentage = ? WHERE id = ?", (new_discount, level_id))
+        c.execute("UPDATE vip_levels SET discount_percentage = %s WHERE id = %s", (new_discount, level_id))
         conn.commit()
         
         # Get updated level info
-        c.execute("SELECT level_name, level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT level_name, level_emoji FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         msg = f"💰 **Discount Updated Successfully!**\n\n"
@@ -1870,11 +1870,11 @@ async def handle_vip_name_edit_message(update: Update, context: ContextTypes.DEF
         c = conn.cursor()
         
         # Update name
-        c.execute("UPDATE vip_levels SET level_name = ? WHERE id = ?", (new_name, level_id))
+        c.execute("UPDATE vip_levels SET level_name = %s WHERE id = %s", (new_name, level_id))
         conn.commit()
         
         # Get updated level info
-        c.execute("SELECT level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT level_emoji FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         # Clear state
@@ -1917,7 +1917,7 @@ async def handle_vip_confirm_delete(update: Update, context: ContextTypes.DEFAUL
         c = conn.cursor()
         
         # Get level info before deletion
-        c.execute("SELECT level_name, level_emoji FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT level_name, level_emoji FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         if not level:
@@ -1925,8 +1925,8 @@ async def handle_vip_confirm_delete(update: Update, context: ContextTypes.DEFAUL
             return
         
         # Delete the level
-        c.execute("DELETE FROM vip_levels WHERE id = ?", (level_id,))
-        c.execute("DELETE FROM vip_benefits WHERE level_id = ?", (level_id,))
+        c.execute("DELETE FROM vip_levels WHERE id = %s", (level_id,))
+        c.execute("DELETE FROM vip_benefits WHERE level_id = %s", (level_id,))
         conn.commit()
         
         msg = f"✅ **VIP Level Deleted Successfully!**\n\n"
@@ -1997,7 +1997,7 @@ async def handle_vip_priority_support(update: Update, context: ContextTypes.DEFA
         c = conn.cursor()
         
         # Check current priority support status
-        c.execute("SELECT benefits FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT benefits FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         if level and level['benefits']:
@@ -2019,7 +2019,7 @@ async def handle_vip_priority_support(update: Update, context: ContextTypes.DEFA
             status = "✅ Enabled"
         
         # Update benefits
-        c.execute("UPDATE vip_levels SET benefits = ? WHERE id = ?", (str(benefits), level_id))
+        c.execute("UPDATE vip_levels SET benefits = %s WHERE id = %s", (str(benefits), level_id))
         conn.commit()
         
         msg = f"⭐ **Priority Support Updated!**\n\n"
@@ -2063,7 +2063,7 @@ async def handle_vip_early_access(update: Update, context: ContextTypes.DEFAULT_
         c = conn.cursor()
         
         # Check current early access status
-        c.execute("SELECT benefits FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT benefits FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         if level and level['benefits']:
@@ -2085,7 +2085,7 @@ async def handle_vip_early_access(update: Update, context: ContextTypes.DEFAULT_
             status = "✅ Enabled"
         
         # Update benefits
-        c.execute("UPDATE vip_levels SET benefits = ? WHERE id = ?", (str(benefits), level_id))
+        c.execute("UPDATE vip_levels SET benefits = %s WHERE id = %s", (str(benefits), level_id))
         conn.commit()
         
         msg = f"🚀 **Early Access Updated!**\n\n"
@@ -2129,7 +2129,7 @@ async def handle_vip_view_all_benefits(update: Update, context: ContextTypes.DEF
         c = conn.cursor()
         
         # Get level details
-        c.execute("SELECT level_name, level_emoji, discount_percentage, benefits FROM vip_levels WHERE id = ?", (level_id,))
+        c.execute("SELECT level_name, level_emoji, discount_percentage, benefits FROM vip_levels WHERE id = %s", (level_id,))
         level = c.fetchone()
         
         if not level:
