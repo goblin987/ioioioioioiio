@@ -290,7 +290,10 @@ try:
         handle_referral_admin_reset_confirm,
         # 🚀 MESSAGE HANDLERS FOR ADMIN SETTINGS
         handle_referral_percentage_message, handle_referral_bonus_message,
-        handle_referral_min_purchase_message
+        handle_referral_min_purchase_message,
+        # 🚀 PAYMENT MENU REFERRAL HANDLERS
+        handle_referral_code_payment, handle_referral_code_payment_message,
+        handle_cancel_referral_code
     )
 except ImportError:
     import logging
@@ -694,6 +697,9 @@ def callback_query_router(func):
                 "referral_admin_set_min_purchase": handle_referral_admin_set_min_purchase,
                 "referral_admin_reset_confirm": handle_referral_admin_reset_confirm,
                 "referral_admin_reset_confirmed": handle_referral_admin_reset,
+                # 🚀 PAYMENT MENU REFERRAL HANDLERS
+                "referral_code": handle_referral_code_payment,
+                "cancel_referral_code": handle_cancel_referral_code,
                 
     # Testforwarder integration handlers
     "auto_ads_menu": handle_testforwarder_menu,
@@ -1014,6 +1020,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_referral_percentage': handle_referral_percentage_message,
         'awaiting_referral_bonus': handle_referral_bonus_message,
         'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
+        'awaiting_referral_code_payment': handle_referral_code_payment_message,
         
         # Auto ads system message handlers (removed - using testforwarder integration)
         

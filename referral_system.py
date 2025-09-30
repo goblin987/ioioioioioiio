@@ -1226,4 +1226,116 @@ async def handle_referral_min_purchase_message(update: Update, context: ContextT
             parse_mode='Markdown'
         )
 
+async def handle_referral_code_payment(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle referral code entry from payment menu"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check if referral program is enabled
+    settings = get_referral_settings()
+    if not settings['program_enabled']:
+        await query.answer("❌ Referral program is currently disabled.", show_alert=True)
+        return
+    
+    # Check if user already used a referral code
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT id FROM referrals WHERE referred_user_id = %s", (user_id,))
+        if c.fetchone():
+            await query.answer("❌ You have already used a referral code.", show_alert=True)
+            return
+    except Exception as e:
+        logger.error(f"Error checking referral usage: {e}")
+        await query.answer("❌ Error checking referral status.", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    # Set state to await referral code input
+    context.user_data['state'] = 'awaiting_referral_code_payment'
+    
+    msg = "🎁 **Enter Referral Code** 🎁\n\n"
+    msg += "💡 **How it works:**\n"
+    msg += f"• Enter a valid referral code to get **{format_currency(settings['referred_bonus'])}** bonus\n"
+    msg += f"• The code must be from an existing user\n"
+    msg += f"• You can only use one referral code per account\n\n"
+    msg += "📝 **Please type the referral code:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("❌ Cancel", callback_data="cancel_referral_code")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_referral_code_payment_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle referral code input message from payment menu"""
+    if context.user_data.get('state') != 'awaiting_referral_code_payment':
+        return
+    
+    user_id = update.effective_user.id
+    referral_code = update.message.text.strip().upper()
+    
+    if len(referral_code) < 3 or len(referral_code) > 10:
+        await update.message.reply_text(
+            "❌ **Invalid Code Format**\n\nReferral codes are usually 3-10 characters long.",
+            parse_mode='Markdown'
+        )
+        return
+    
+    # Apply the referral code
+    result = await apply_referral_code(user_id, referral_code)
+    
+    context.user_data.pop('state', None)
+    
+    if result['success']:
+        msg = f"🎉 **Referral Code Applied Successfully!** 🎉\n\n"
+        msg += f"✅ **Bonus Added:** {format_currency(result['bonus_amount'])}\n"
+        msg += f"💰 **Your New Balance:** {format_currency(result['new_balance'])}\n\n"
+        msg += f"🙏 **Thank you for using referral code:** `{referral_code}`\n"
+        msg += f"👤 **Referrer:** {result.get('referrer_name', 'Unknown')}"
+        
+        keyboard = [
+            [InlineKeyboardButton("💳 Continue to Payment", callback_data="back_to_payment")],
+            [InlineKeyboardButton("👤 View Profile", callback_data="profile")]
+        ]
+        
+        await update.message.reply_text(
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    else:
+        error_messages = {
+            'referral_already_used': "❌ You have already used a referral code.",
+            'code_not_found': f"❌ Referral code `{referral_code}` not found or inactive.",
+            'self_referral': "❌ You cannot use your own referral code.",
+            'database_error': "❌ Database error occurred. Please try again."
+        }
+        
+        error_msg = error_messages.get(result.get('error'), result.get('message', 'Unknown error'))
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 Try Again", callback_data="referral_code")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_referral_code")]
+        ]
+        
+        await update.message.reply_text(
+            f"**Referral Code Error**\n\n{error_msg}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+async def handle_cancel_referral_code(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle canceling referral code entry"""
+    query = update.callback_query
+    context.user_data.pop('state', None)
+    
+    await query.edit_message_text(
+        "❌ **Referral Code Cancelled**\n\nYou can try again later from the payment menu.",
+        parse_mode='Markdown'
+    )
+
 # --- END OF FILE referral_system.py ---

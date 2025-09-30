@@ -348,7 +348,7 @@ async def handle_marketing_promotions_menu(update: Update, context: ContextTypes
     
     keyboard = [
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="ui_theme_designer")],
-        [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="admin_bot_look_editor")],
+        [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="bot_look_custom")],
         [InlineKeyboardButton("🔥 Hot Deals Manager", callback_data="admin_hot_deals_menu")],
         [InlineKeyboardButton("ℹ️ App Info Manager", callback_data="admin_app_info_menu")],
         [InlineKeyboardButton("🎁 Promotion Codes", callback_data="promotion_codes_menu")],
@@ -4360,6 +4360,7 @@ AVAILABLE_BUTTONS = {
     'payment_menu': [
         {'text': '💳 Pay Now', 'callback': 'pay_now', 'emoji': '💳'},
         {'text': '🎫 Discount Code', 'callback': 'discount', 'emoji': '🎫'},
+        {'text': '🎁 Referral Code', 'callback': 'referral_code', 'emoji': '🎁'},
         {'text': '💰 Add to Wallet', 'callback': 'add_wallet', 'emoji': '💰'},
         {'text': '🛒 Add to Cart', 'callback': 'add_cart', 'emoji': '🛒'},
         {'text': '⬅️ Back', 'callback': 'back', 'emoji': '⬅️'},
@@ -4380,7 +4381,7 @@ PRESET_TEMPLATES = {
             ],
             'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
             'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
-            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code', '🎁 Referral Code'], ['⬅️ Back', '🏠 Home']]
         }
     },
     'minimalist': {
@@ -4393,7 +4394,7 @@ PRESET_TEMPLATES = {
             ],
             'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
             'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
-            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code', '🎁 Referral Code'], ['⬅️ Back', '🏠 Home']]
         }
     },
     'modern': {
@@ -4403,7 +4404,7 @@ PRESET_TEMPLATES = {
             'start_menu': [['🛍️ Shop', '🔥 Hot Deals'], ['👤 Profile', '💳 Top Up']],
             'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
             'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
-            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code', '🎁 Referral Code'], ['⬅️ Back', '🏠 Home']]
         }
     },
     'gaming': {
@@ -4413,7 +4414,7 @@ PRESET_TEMPLATES = {
             'start_menu': [['🛍️ Shop', '🎮 Games'], ['🏆 Leaderboard', '🔥 Hot Deals'], ['👤 Profile', '💳 Top Up']],
             'city_menu': [['🏙️ Vilnius', '🏙️ Kaunas'], ['🏙️ Klaipeda', '🏙️ Siauliai'], ['⬅️ Back', '🏠 Home']],
             'district_menu': [['🏘️ Centras', '🏘️ Naujamestis'], ['🏘️ Senamiestis'], ['⬅️ Back to Cities', '🏠 Home']],
-            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code'], ['⬅️ Back', '🏠 Home']]
+            'payment_menu': [['💳 Pay Now'], ['🎫 Discount Code', '🎁 Referral Code'], ['⬅️ Back', '🏠 Home']]
         }
     }
 }
@@ -5641,7 +5642,7 @@ async def handle_template_name_message(update: Update, context: ContextTypes.DEF
         
         keyboard = [
             [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="ui_theme_designer")],
-            [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="admin_bot_look_editor")],
+            [InlineKeyboardButton("🎛️ Edit Bot Look", callback_data="bot_look_custom")],
             [InlineKeyboardButton("⬅️ Back to Marketing", callback_data="marketing_promotions_menu")]
         ]
         
