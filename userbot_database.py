@@ -97,6 +97,50 @@ def get_connection_status() -> Dict[str, Any]:
         'last_updated': None
     }
 
+def log_delivery(user_id: int, order_id: str, status: str, error_msg: Optional[str] = None):
+    """Log delivery (legacy function - maps to new system)"""
+    # For backwards compatibility, use userbot ID #1
+    if status == 'success':
+        # This would be set when delivery starts - for now just log
+        logger.info(f"Legacy log_delivery called: user={user_id}, order={order_id}, status={status}")
+    else:
+        logger.error(f"Legacy log_delivery: user={user_id}, order={order_id}, status={status}, error={error_msg}")
+
+def save_secret_chat(user_id: int, chat_id: int) -> bool:
+    """Save secret chat ID (legacy function - not needed in new multi-userbot system)"""
+    logger.info(f"Legacy save_secret_chat called: user={user_id}, chat_id={chat_id}")
+    return True
+
+def get_secret_chat_id(user_id: int) -> Optional[int]:
+    """Get secret chat ID (legacy function - not needed in new multi-userbot system)"""
+    logger.info(f"Legacy get_secret_chat_id called: user={user_id}")
+    return None  # New system doesn't use secret chats, uses Saved Messages forwarding
+
+def get_delivery_stats() -> Dict[str, Any]:
+    """Get delivery statistics (legacy function - maps to userbot ID #1)"""
+    stats = get_userbot_stats(1)
+    if stats:
+        total = stats.get('total_deliveries', 0)
+        success = stats.get('successful_deliveries', 0)
+        failed = stats.get('failed_deliveries', 0)
+        success_rate = round((success / total * 100) if total > 0 else 0, 1)
+        
+        return {
+            'total': total,
+            'success': success,
+            'failed': failed,
+            'success_rate': success_rate,
+            'recent_deliveries': []  # TODO: Implement recent deliveries query if needed
+        }
+    
+    return {
+        'total': 0,
+        'success': 0,
+        'failed': 0,
+        'success_rate': 0,
+        'recent_deliveries': []
+    }
+
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
     conn = None
