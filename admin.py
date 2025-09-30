@@ -4162,7 +4162,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                  product_ids_to_delete = [row['id'] for row in c.fetchall()] # Use column name
                  logger.info(f"Admin Action (delete_city): Deleting city '{city_name}'. Associated product IDs to be deleted: {product_ids_to_delete}")
                  if product_ids_to_delete:
-                     placeholders = ','.join('%s' * len(product_ids_to_delete))
+                     placeholders = ','.join(['%s'] * len(product_ids_to_delete))
                      c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_to_delete)
                      for pid in product_ids_to_delete:
                           media_dir_to_del = os.path.join(MEDIA_DIR, str(pid))
@@ -4191,7 +4191,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
                  product_ids_to_delete = [row['id'] for row in c.fetchall()] # Use column name
                  logger.info(f"Admin Action (remove_district): Deleting district '{district_name}' in '{city_name}'. Associated product IDs to be deleted: {product_ids_to_delete}")
                  if product_ids_to_delete:
-                     placeholders = ','.join('%s' * len(product_ids_to_delete))
+                     placeholders = ','.join(['%s'] * len(product_ids_to_delete))
                      c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_to_delete)
                      for pid in product_ids_to_delete:
                           media_dir_to_del = os.path.join(MEDIA_DIR, str(pid))
@@ -4263,7 +4263,7 @@ async def handle_confirm_yes(update: Update, context: ContextTypes.DEFAULT_TYPE,
             product_ids_to_delete_media_for = [row['id'] for row in c.fetchall()]
 
             if product_ids_to_delete_media_for:
-                placeholders = ','.join('%s' * len(product_ids_to_delete_media_for))
+                placeholders = ','.join(['%s'] * len(product_ids_to_delete_media_for))
                 c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_to_delete_media_for)
                 logger.info(f"Force delete: Deleted media entries for {len(product_ids_to_delete_media_for)} products of type '{type_name}'.")
                 for pid in product_ids_to_delete_media_for:

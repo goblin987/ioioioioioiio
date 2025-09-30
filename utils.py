@@ -2075,7 +2075,7 @@ def clear_expired_basket(context: ContextTypes.DEFAULT_TYPE, user_id: int):
 
         product_details = {}
         if potential_prod_ids:
-             placeholders = ','.join('%s' * len(potential_prod_ids))
+             placeholders = ','.join(['%s'] * len(potential_prod_ids))
              # Fetch product_type along with price
              c.execute(f"SELECT id, price, product_type FROM products WHERE id IN ({placeholders})", potential_prod_ids)
              product_details = {row['id']: {'price': Decimal(str(row['price'])), 'type': row['product_type']} for row in c.fetchall()}

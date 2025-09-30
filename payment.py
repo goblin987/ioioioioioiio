@@ -899,7 +899,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
 
         # Pre-validate all products before processing
         product_ids = [item['product_id'] for item in basket_snapshot]
-        placeholders = ','.join('%s' * len(product_ids))
+        placeholders = ','.join(['%s'] * len(product_ids))
         c.execute(f"""
             SELECT id, available, reserved FROM products 
             WHERE id IN ({placeholders})
@@ -1055,7 +1055,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
             try:
                 conn_media = get_db_connection()
                 c_media = conn_media.cursor()
-                media_placeholders = ','.join('%s' * len(processed_product_ids))
+                media_placeholders = ','.join(['%s'] * len(processed_product_ids))
                 c_media.execute(f"SELECT product_id, media_type, telegram_file_id, file_path FROM product_media WHERE product_id IN ({media_placeholders})", processed_product_ids)
                 media_rows = c_media.fetchall()
                 logger.info(f"Fetched {len(media_rows)} media records for products {processed_product_ids} for user {user_id}")
@@ -1266,7 +1266,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 logger.info(f"Purchase Finalization: Attempting to delete product records AFTER media delivery for user {user_id}. IDs: {processed_product_ids}")
                 
                 # Delete product media records first
-                media_delete_placeholders = ','.join('%s' * len(processed_product_ids))
+                media_delete_placeholders = ','.join(['%s'] * len(processed_product_ids))
                 c_del.execute(f"DELETE FROM product_media WHERE product_id IN ({media_delete_placeholders})", processed_product_ids)
                 
                 # Delete product records  
