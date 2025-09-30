@@ -251,8 +251,15 @@ class UserbotManager:
             
             logger.info(f"✅ Authentication successful: @{me.username or me.first_name}")
             
-            # Stop temporary client
-            await self.client.stop()
+            # Stop temporary client safely
+            try:
+                if self.client and not self.client.is_connected:
+                    # Client already disconnected, just clean up
+                    pass
+                else:
+                    await self.client.stop()
+            except Exception as e:
+                logger.warning(f"⚠️ Error stopping temp client (safe to ignore): {e}")
             
             # Reset temp variables
             self.client = None
