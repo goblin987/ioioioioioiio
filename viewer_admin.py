@@ -724,10 +724,10 @@ async def handle_adjust_balance_reason_message(update: Update, context: ContextT
         c.execute("SELECT balance FROM users WHERE user_id=%s", (target_user_id,))
         old_balance_res = c.fetchone(); old_balance_float = old_balance_res['balance'] if old_balance_res else 0.0
         # Update balance
-        update_res = c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float, target_user_id))
-        if update_res.rowcount == 0:
-             logger.error(f"Failed to adjust balance for user {target_user_id} (not found%s).")
-             conn.rollback(); raise sqlite3.Error("User not found during balance update.")
+        c.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount_float, target_user_id))
+        if c.rowcount == 0:
+             logger.error(f"Failed to adjust balance for user {target_user_id} (not found).")
+             conn.rollback(); raise Exception("User not found during balance update.")
         # Fetch new balance
         c.execute("SELECT balance FROM users WHERE user_id = %s", (target_user_id,))
         new_balance_res = c.fetchone(); new_balance_float = new_balance_res['balance'] if new_balance_res else old_balance_float + amount_float
