@@ -378,7 +378,11 @@ def create_multi_userbot_schema():
         return True
         
     except Exception as e:
-        print(f"❌ YOLO: Error creating multi-userbot schema: {e}")
+        print(f"❌ YOLO: Error creating multi-userbot schema!")
+        print(f"❌ YOLO: Error type: {type(e).__name__}")
+        print(f"❌ YOLO: Error message: {str(e)}")
+        import traceback
+        print(f"❌ YOLO: Traceback:\n{traceback.format_exc()}")
         logger.error(f"❌ Error creating multi-userbot schema: {e}", exc_info=True)
         if conn:
             try:
