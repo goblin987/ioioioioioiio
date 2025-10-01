@@ -1231,28 +1231,24 @@ async def handle_new_userbot_phone_message(update: Update, context: ContextTypes
     api_hash = context.user_data.get('new_userbot_api_hash')
     
     try:
-        from userbot_telethon_secret import TelethonSecretChat
+        from telethon import TelegramClient
+        from telethon.sessions import StringSession
         
-        # Create temporary instance for this userbot
-        temp_telethon = TelethonSecretChat()
-        success, message, needs_code = await temp_telethon.authenticate_telethon(
-            int(api_id),
-            api_hash,
-            phone
-        )
+        # Create Telethon client that will stay alive
+        temp_client = TelegramClient(StringSession(), int(api_id), api_hash)
+        await temp_client.connect()
         
-        if not success:
-            await update.message.reply_text(
-                f"❌ <b>Failed to send code:</b>\n\n{message}\n\nPlease start over from Admin → Userbot Control.",
-                parse_mode='HTML'
-            )
-            # Clear state
-            context.user_data.pop('state', None)
-            return
+        # Send code and get phone_code_hash
+        sent_code = await temp_client.send_code_request(phone)
+        phone_code_hash = sent_code.phone_code_hash
         
-        # Store phone_code_hash in context (from the temp instance)
-        context.user_data['new_userbot_phone_code_hash'] = temp_telethon._temp_phone_code_hash
+        # DON'T disconnect! Keep the client alive in context
+        # Store EVERYTHING in context for the next step
+        context.user_data['new_userbot_temp_client'] = temp_client
+        context.user_data['new_userbot_phone_code_hash'] = phone_code_hash
         context.user_data['state'] = 'awaiting_new_userbot_code'
+        
+        logger.info(f"✅ Code sent to {phone}, client kept alive for verification")
         
         name = context.user_data.get('new_userbot_name', 'Userbot')
         
@@ -1286,14 +1282,15 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
     
     await update.message.reply_text("⏳ <b>Verifying code and creating userbot...</b>", parse_mode='HTML')
     
-    # Get all stored data
+    # Get all stored data INCLUDING the temp client
     name = context.user_data.get('new_userbot_name')
     api_id = context.user_data.get('new_userbot_api_id')
     api_hash = context.user_data.get('new_userbot_api_hash')
     phone = context.user_data.get('new_userbot_phone')
     phone_code_hash = context.user_data.get('new_userbot_phone_code_hash')
+    temp_client = context.user_data.get('new_userbot_temp_client')
     
-    if not all([name, api_id, api_hash, phone, phone_code_hash]):
+    if not all([name, api_id, api_hash, phone, phone_code_hash, temp_client]):
         await update.message.reply_text(
             "❌ <b>Error:</b> Setup data lost. Please start over from Admin → Userbot Control.",
             parse_mode='HTML'
@@ -1302,18 +1299,16 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
         return
     
     try:
-        from telethon import TelegramClient
-        from telethon.sessions import StringSession
         from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, PhoneCodeExpiredError
         
-        # Create Telethon client and sign in
-        temp_client = TelegramClient(StringSession(), int(api_id), api_hash)
-        await temp_client.connect()
+        # Use the EXISTING client that sent the code (DON'T create a new one!)
+        logger.info(f"Using existing client to verify code for {phone}")
         
         try:
             await temp_client.sign_in(phone, code, phone_code_hash=phone_code_hash)
         except PhoneCodeExpiredError:
             await temp_client.disconnect()
+            context.user_data.pop('new_userbot_temp_client', None)
             await update.message.reply_text(
                 "❌ <b>Code Expired!</b>\n\n"
                 "⚠️ Telegram codes expire in ~2 minutes.\n\n"
@@ -1323,7 +1318,7 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
             context.user_data.pop('state', None)
             return
         except PhoneCodeInvalidError:
-            await temp_client.disconnect()
+            # DON'T disconnect on invalid code - let user retry
             await update.message.reply_text(
                 "❌ <b>Invalid Code!</b>\n\nPlease try again:",
                 parse_mode='HTML'
@@ -1331,6 +1326,7 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
             return
         except SessionPasswordNeededError:
             await temp_client.disconnect()
+            context.user_data.pop('new_userbot_temp_client', None)
             await update.message.reply_text(
                 "❌ <b>2FA Enabled</b>\n\n"
                 "This account has Two-Factor Authentication enabled.\n"
@@ -1377,13 +1373,14 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
         finally:
             conn.close()
         
-        # Clear state
+        # Clear state and temp client
         context.user_data.pop('state', None)
         context.user_data.pop('new_userbot_name', None)
         context.user_data.pop('new_userbot_api_id', None)
         context.user_data.pop('new_userbot_api_hash', None)
         context.user_data.pop('new_userbot_phone', None)
         context.user_data.pop('new_userbot_phone_code_hash', None)
+        context.user_data.pop('new_userbot_temp_client', None)  # Clear the temp client too
         
         # Success message
         msg = f"🎉 <b>Userbot Created Successfully!</b>\n\n"
