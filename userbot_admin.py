@@ -475,8 +475,13 @@ async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DE
     status = "enabled" if enabled else "disabled"
     await query.answer(f"✅ Delivery {status}!", show_alert=True)
     
-    # Refresh settings
-    await handle_userbot_settings(update, context)
+    # Refresh settings (with a small delay to avoid BadRequest)
+    await asyncio.sleep(0.5)
+    try:
+        await handle_userbot_settings(update, context)
+    except Exception as e:
+        # If refresh fails, just ignore (likely unchanged message)
+        logger.warning(f"Could not refresh settings after toggle: {e}")
 
 async def handle_userbot_toggle_reconnect(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle auto-reconnect"""
@@ -496,8 +501,12 @@ async def handle_userbot_toggle_reconnect(update: Update, context: ContextTypes.
     status = "enabled" if auto_reconnect else "disabled"
     await query.answer(f"✅ Auto-reconnect {status}!", show_alert=True)
     
-    # Refresh settings
-    await handle_userbot_settings(update, context)
+    # Refresh settings (with a small delay to avoid BadRequest)
+    await asyncio.sleep(0.5)
+    try:
+        await handle_userbot_settings(update, context)
+    except Exception as e:
+        logger.warning(f"Could not refresh settings after toggle: {e}")
 
 async def handle_userbot_toggle_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle notifications"""
@@ -517,8 +526,12 @@ async def handle_userbot_toggle_notifications(update: Update, context: ContextTy
     status = "enabled" if notifications else "disabled"
     await query.answer(f"✅ Notifications {status}!", show_alert=True)
     
-    # Refresh settings
-    await handle_userbot_settings(update, context)
+    # Refresh settings (with a small delay to avoid BadRequest)
+    await asyncio.sleep(0.5)
+    try:
+        await handle_userbot_settings(update, context)
+    except Exception as e:
+        logger.warning(f"Could not refresh settings after toggle: {e}")
 
 # ==================== STATISTICS PANEL ====================
 
