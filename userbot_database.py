@@ -305,6 +305,7 @@ def create_multi_userbot_schema():
                 api_hash TEXT NOT NULL,
                 phone_number TEXT NOT NULL UNIQUE,
                 session_string TEXT,
+                session_file BYTEA,
                 is_enabled BOOLEAN DEFAULT TRUE,
                 is_connected BOOLEAN DEFAULT FALSE,
                 status_message TEXT,
@@ -592,6 +593,62 @@ def update_userbot_session(userbot_id: int, session_string: str):
                 conn.rollback()
             except:
                 pass
+    finally:
+        if conn:
+            conn.close()
+
+def save_session_file(userbot_id: int, session_file_data: bytes) -> bool:
+    """Save Pyrogram session file to PostgreSQL (for persistent peer cache)"""
+    conn = None
+    try:
+        import psycopg2
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            UPDATE userbots
+            SET session_file = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (psycopg2.Binary(session_file_data), userbot_id))
+        
+        conn.commit()
+        logger.info(f"✅ Saved session file for userbot {userbot_id} ({len(session_file_data)} bytes)")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving session file: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+        return False
+        
+    finally:
+        if conn:
+            conn.close()
+
+def get_session_file(userbot_id: int) -> Optional[bytes]:
+    """Get Pyrogram session file from PostgreSQL"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("SELECT session_file FROM userbots WHERE id = %s", (userbot_id,))
+        row = c.fetchone()
+        
+        if row and row['session_file']:
+            logger.info(f"✅ Retrieved session file for userbot {userbot_id} ({len(row['session_file'])} bytes)")
+            return bytes(row['session_file'])
+        
+        logger.info(f"ℹ️ No session file found for userbot {userbot_id}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting session file: {e}")
+        return None
+        
     finally:
         if conn:
             conn.close()

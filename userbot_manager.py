@@ -74,8 +74,26 @@ class UserbotManager:
             # Get session string from database
             session_string = get_session_string()
             
+            # 🚀 YOLO MODE: Load session file from PostgreSQL for persistent peer cache!
+            from userbot_database import get_session_file, save_session_file
+            import os
+            
+            # Create workdir if it doesn't exist
+            os.makedirs("./userbot_data", exist_ok=True)
+            
+            # Try to load session file from PostgreSQL
+            session_file_data = get_session_file(1)  # Userbot ID #1 (legacy)
+            if session_file_data:
+                logger.info(f"✅ Loading session file from PostgreSQL ({len(session_file_data)} bytes)")
+                # Write it to disk for Pyrogram to use
+                with open("./userbot_data/userbot_session.session", "wb") as f:
+                    f.write(session_file_data)
+                logger.info("✅ Session file written to disk from PostgreSQL")
+            else:
+                logger.info("ℹ️ No session file in PostgreSQL, starting fresh")
+            
             # Create Pyrogram client
-            # 🚀 YOLO FIX: in_memory=False to persist peer cache across restarts!
+            # 🚀 YOLO FIX: in_memory=False to persist peer cache!
             self.client = Client(
                 name="userbot_session",
                 api_id=int(api_id),
@@ -94,6 +112,17 @@ class UserbotManager:
             
             self.is_connected = True
             await asyncio.to_thread(update_connection_status, True, f"Connected as @{me.username or me.first_name}")
+            
+            # 🚀 YOLO MODE: Save session file to PostgreSQL for persistence!
+            try:
+                session_file_path = "./userbot_data/userbot_session.session"
+                if os.path.exists(session_file_path):
+                    with open(session_file_path, "rb") as f:
+                        session_file_data = f.read()
+                    await asyncio.to_thread(save_session_file, 1, session_file_data)  # Userbot ID #1
+                    logger.info(f"✅ Session file saved to PostgreSQL ({len(session_file_data)} bytes)")
+            except Exception as save_err:
+                logger.warning(f"⚠️ Could not save session file to PostgreSQL: {save_err}")
             
             # Save session string for future use
             if not session_string:
@@ -674,6 +703,19 @@ Thank you! 🎉"""
                     self._cleanup_saved_messages_later(saved_message_ids, delay_hours=6)
                 )
                 logger.info(f"🗑️ Scheduled cleanup of {len(saved_message_ids)} Saved Messages in 6 hours")
+            
+            # 🚀 YOLO MODE: Save session file to PostgreSQL after delivery (updates peer cache!)
+            try:
+                from userbot_database import save_session_file
+                import os
+                session_file_path = "./userbot_data/userbot_session.session"
+                if os.path.exists(session_file_path):
+                    with open(session_file_path, "rb") as f:
+                        session_file_data = f.read()
+                    await asyncio.to_thread(save_session_file, 1, session_file_data)
+                    logger.info(f"✅ Session file updated in PostgreSQL after delivery")
+            except Exception as save_err:
+                logger.warning(f"⚠️ Could not update session file: {save_err}")
             
             # Success!
             success_msg = f"✅ Delivered {forwarded_count} media items to user {buyer_user_id}"
