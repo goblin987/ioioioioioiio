@@ -1,0 +1,179 @@
+"""
+Proper MTProto Secret Chat File Encryption
+Implements AES-256-IGE encryption as per Telegram specification
+"""
+
+import hashlib
+import os
+from typing import Tuple
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+import struct
+
+def aes_ige_encrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
+    """
+    AES-256-IGE encryption (Infinite Garble Extension)
+    This is Telegram's custom encryption mode
+    """
+    assert len(key) == 32  # 256-bit key
+    assert len(iv) == 32   # 256-bit IV
+    assert len(data) % 16 == 0  # Must be 16-byte aligned
+    
+    cipher = AES.new(key, AES.MODE_ECB)
+    
+    # Split IV into two halves for IGE mode
+    iv1 = iv[:16]
+    iv2 = iv[16:]
+    
+    encrypted = bytearray()
+    
+    # Process in 16-byte blocks
+    for i in range(0, len(data), 16):
+        block = data[i:i+16]
+        
+        # XOR with previous ciphertext (IGE mode)
+        xored = bytes(a ^ b for a, b in zip(block, iv1))
+        
+        # Encrypt
+        encrypted_block = cipher.encrypt(xored)
+        
+        # XOR with previous plaintext (IGE mode)
+        result = bytes(a ^ b for a, b in zip(encrypted_block, iv2))
+        
+        encrypted.extend(result)
+        
+        # Update IVs for next block
+        iv1 = result
+        iv2 = block
+    
+    return bytes(encrypted)
+
+
+def aes_ige_decrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
+    """
+    AES-256-IGE decryption (Infinite Garble Extension)
+    """
+    assert len(key) == 32  # 256-bit key
+    assert len(iv) == 32   # 256-bit IV
+    assert len(data) % 16 == 0  # Must be 16-byte aligned
+    
+    cipher = AES.new(key, AES.MODE_ECB)
+    
+    # Split IV into two halves for IGE mode
+    iv1 = iv[:16]
+    iv2 = iv[16:]
+    
+    decrypted = bytearray()
+    
+    # Process in 16-byte blocks
+    for i in range(0, len(data), 16):
+        block = data[i:i+16]
+        
+        # XOR with previous plaintext (IGE mode)
+        xored = bytes(a ^ b for a, b in zip(block, iv2))
+        
+        # Decrypt
+        decrypted_block = cipher.decrypt(xored)
+        
+        # XOR with previous ciphertext (IGE mode)
+        result = bytes(a ^ b for a, b in zip(decrypted_block, iv1))
+        
+        decrypted.extend(result)
+        
+        # Update IVs for next block
+        iv1 = block
+        iv2 = result
+    
+    return bytes(decrypted)
+
+
+def pad_to_16_bytes(data: bytes) -> bytes:
+    """Pad data to 16-byte boundary with random bytes"""
+    padding_needed = (16 - (len(data) % 16)) % 16
+    if padding_needed > 0:
+        padding = os.urandom(padding_needed)
+        return data + padding
+    return data
+
+
+def encrypt_file_for_secret_chat(file_data: bytes) -> Tuple[bytes, bytes, bytes, int]:
+    """
+    Encrypt a file for Telegram Secret Chat according to MTProto spec
+    
+    Returns:
+        encrypted_data: The encrypted file bytes
+        key: 256-bit AES key (to be sent in message)
+        iv: 256-bit initialization vector (to be sent in message)
+        fingerprint: Key fingerprint for verification
+    """
+    # Generate random 256-bit key and IV (as per spec)
+    key = os.urandom(32)  # 256 bits
+    iv = os.urandom(32)   # 256 bits
+    
+    # Pad file data to 16-byte boundary
+    padded_data = pad_to_16_bytes(file_data)
+    
+    # Encrypt using AES-256-IGE
+    encrypted_data = aes_ige_encrypt(padded_data, key, iv)
+    
+    # Compute key fingerprint as per spec:
+    # digest = md5(key + iv)
+    # fingerprint = substr(digest, 0, 4) XOR substr(digest, 4, 4)
+    digest = hashlib.md5(key + iv).digest()
+    fingerprint_bytes = bytes(a ^ b for a, b in zip(digest[:4], digest[4:8]))
+    fingerprint = struct.unpack('<I', fingerprint_bytes)[0]
+    
+    return encrypted_data, key, iv, fingerprint
+
+
+def decrypt_file_from_secret_chat(encrypted_data: bytes, key: bytes, iv: bytes, fingerprint: int) -> bytes:
+    """
+    Decrypt a file received from Telegram Secret Chat
+    
+    Args:
+        encrypted_data: The encrypted file bytes
+        key: 256-bit AES key (from message)
+        iv: 256-bit initialization vector (from message)
+        fingerprint: Key fingerprint for verification
+    
+    Returns:
+        decrypted_data: The original file bytes
+    """
+    # Verify key fingerprint
+    digest = hashlib.md5(key + iv).digest()
+    fingerprint_bytes = bytes(a ^ b for a, b in zip(digest[:4], digest[4:8]))
+    computed_fingerprint = struct.unpack('<I', fingerprint_bytes)[0]
+    
+    if computed_fingerprint != fingerprint:
+        raise ValueError(f"Key fingerprint mismatch! Expected {fingerprint}, got {computed_fingerprint}")
+    
+    # Decrypt using AES-256-IGE
+    decrypted_data = aes_ige_decrypt(encrypted_data, key, iv)
+    
+    return decrypted_data
+
+
+# Test the implementation
+if __name__ == "__main__":
+    # Test data
+    test_data = b"Hello, this is a test video file!" * 100
+    
+    print(f"Original size: {len(test_data)} bytes")
+    
+    # Encrypt
+    encrypted, key, iv, fingerprint = encrypt_file_for_secret_chat(test_data)
+    print(f"Encrypted size: {len(encrypted)} bytes")
+    print(f"Key fingerprint: {fingerprint}")
+    
+    # Decrypt
+    decrypted = decrypt_file_from_secret_chat(encrypted, key, iv, fingerprint)
+    
+    # Verify
+    # Remove padding
+    decrypted = decrypted[:len(test_data)]
+    
+    if decrypted == test_data:
+        print("✅ Encryption/Decryption works correctly!")
+    else:
+        print("❌ Encryption/Decryption FAILED!")
+

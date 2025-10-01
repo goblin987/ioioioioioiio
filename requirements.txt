@@ -13,3 +13,4 @@ qrcode[pil]>=7.0.0
 Pillow>=9.0.0
 pyrogram>=2.0.0
 TgCrypto>=1.2.5
+pycryptodome>=3.18.0
