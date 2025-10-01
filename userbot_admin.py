@@ -43,13 +43,19 @@ async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_T
 async def _show_setup_wizard(query, context):
     """Show initial setup wizard"""
     msg = "🤖 <b>Userbot Setup Wizard</b>\n\n"
-    msg += "Welcome to the userbot configuration!\n\n"
+    msg += "⚠️ <b>PURPOSE:</b> This userbot is used ONLY for delivering products via TRUE encrypted Telegram secret chats.\n\n"
     msg += "<b>What is a userbot?</b>\n"
-    msg += "A userbot delivers products to customers via secret chats with self-destructing messages for enhanced privacy.\n\n"
+    msg += "A Telegram user account that acts as a bot. It can:\n"
+    msg += "• Create TRUE secret chats (end-to-end encrypted)\n"
+    msg += "• Send self-destructing messages\n"
+    msg += "• Deliver media securely with no server storage\n\n"
     msg += "<b>Requirements:</b>\n"
-    msg += "• A separate Telegram account (NOT your bot account)\n"
-    msg += "• API ID and API Hash from https://my.telegram.org\n"
+    msg += "• A separate Telegram account (NOT your main bot account)\n"
+    msg += "• API ID and API Hash from https://my.telegram.org/apps\n"
     msg += "• Phone number for verification\n\n"
+    msg += "<b>Two-Step Setup:</b>\n"
+    msg += "1️⃣ First: Configure userbot credentials (Pyrogram)\n"
+    msg += "2️⃣ Then: Enable secret chats (Telethon)\n\n"
     msg += "Click <b>Start Setup</b> to begin!"
     
     keyboard = [
@@ -700,16 +706,20 @@ async def handle_telethon_setup(update: Update, context: ContextTypes.DEFAULT_TY
     
     # Show setup wizard
     msg = "🔐 <b>Telethon Secret Chat Setup</b>\n\n"
+    msg += "⚠️ <b>IMPORTANT:</b> This userbot is ONLY for delivering products via TRUE encrypted Telegram secret chats.\n\n"
     msg += "<b>What are SECRET CHATS?</b>\n"
-    msg += "Secret chats use end-to-end encryption and are NOT stored on Telegram servers.\n\n"
+    msg += "• End-to-end encrypted (not stored on Telegram servers)\n"
+    msg += "• Self-destructing messages\n"
+    msg += "• Perfect forward secrecy\n"
+    msg += "• Cannot be forwarded or screenshotted without notification\n\n"
     msg += "<b>Why Telethon?</b>\n"
     msg += "Pyrogram doesn't support creating secret chats. We use Telethon for TRUE secret chat delivery.\n\n"
     msg += "<b>Setup Process:</b>\n"
     msg += "1. We'll use your SAME userbot credentials\n"
     msg += "2. Send verification code to your phone\n"
-    msg += "3. Enter the code\n"
+    msg += "3. Enter the code QUICKLY (codes expire in ~2 minutes!)\n"
     msg += "4. Done! Secret chats enabled.\n\n"
-    msg += "<i>Note: This is a one-time setup. Your Telethon session will be saved.</i>\n\n"
+    msg += "<i>Note: This is a one-time setup. Your Telethon session will be saved securely in PostgreSQL.</i>\n\n"
     msg += "Ready to enable TRUE secret chats?"
     
     keyboard = [
@@ -762,10 +772,12 @@ async def handle_telethon_start_auth(update: Update, context: ContextTypes.DEFAU
         
         msg = "🔐 <b>Verification Code Sent!</b>\n\n"
         msg += f"A verification code has been sent to <b>{phone}</b>.\n\n"
+        msg += "⏰ <b>IMPORTANT:</b> Enter the code within 2 minutes!\n\n"
         msg += "📱 Please enter the code you received:\n\n"
         msg += "<i>Example: 12345</i>"
         
         keyboard = [
+            [InlineKeyboardButton("🔄 Request New Code", callback_data="telethon_start_auth")],
             [InlineKeyboardButton("❌ Cancel", callback_data="telethon_cancel_auth")]
         ]
         
@@ -807,10 +819,24 @@ async def handle_telethon_verification_code_message(update: Update, context: Con
         )
         
         if not success:
-            await update.message.reply_text(
-                f"❌ <b>Verification Failed</b>\n\n{message}\n\nPlease try again:",
-                parse_mode='HTML'
-            )
+            # Check if code expired
+            if "expired" in message.lower():
+                await update.message.reply_text(
+                    f"❌ <b>Code Expired!</b>\n\n{message}\n\n"
+                    "⚠️ Telegram codes expire in ~2 minutes.\n\n"
+                    "Please go back to Admin → Userbot Control → Setup Secret Chat and try again with a NEW code.",
+                    parse_mode='HTML'
+                )
+                # Clear state
+                context.user_data.pop('state', None)
+                context.user_data.pop('telethon_api_id', None)
+                context.user_data.pop('telethon_api_hash', None)
+                context.user_data.pop('telethon_phone', None)
+            else:
+                await update.message.reply_text(
+                    f"❌ <b>Verification Failed</b>\n\n{message}\n\nPlease try again:",
+                    parse_mode='HTML'
+                )
             return
         
         # Clear state
