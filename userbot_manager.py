@@ -427,24 +427,26 @@ class UserbotManager:
         self,
         buyer_user_id: int,
         product_data: dict,
-        order_id: str
+        order_id: str,
+        telegram_bot = None
     ) -> dict:
         """
-        🚀 YOLO MODE: Deliver product via secret chat using Saved Messages forwarding strategy
+        🚀 YOLO MODE: Deliver product using Saved Messages storage + Main Bot delivery
         
-        This prevents media corruption by:
-        1. Forwarding media to Saved Messages using file_id (no re-encoding)
-        2. Creating secret chat with buyer
-        3. Forwarding from Saved Messages to secret chat (preserves quality)
+        This prevents media corruption and PEER_ID_INVALID by:
+        1. Uploading media to userbot's Saved Messages (preserves quality, safe storage)
+        2. Getting new file_ids from Saved Messages
+        3. Using MAIN BOT to send to buyer (no PEER_ID_INVALID!)
         4. Cleaning up Saved Messages after 6 hours
         
         Args:
             buyer_user_id: Telegram user ID of buyer
             product_data: Dict with keys: product_id, product_name, size, city, district, price, media_items
             order_id: Unique order identifier
+            telegram_bot: Main Telegram bot instance for sending messages
             
         Returns:
-            dict: {'success': bool, 'error': str (if failed)}
+            dict: {'success': bool, 'error': str (if failed), 'media_file_ids': [list of new file_ids]}
         """
         if not self.is_connected or not self.client:
             logger.error("❌ Userbot not connected for secret chat delivery")
@@ -455,24 +457,50 @@ class UserbotManager:
             product_name = product_data.get('product_name', 'Product')
             media_items = product_data.get('media_items', [])
             
-            logger.info(f"🔐 Starting secret chat delivery for user {buyer_user_id}, product {product_id}")
+            logger.info(f"🔐 Starting TRUE SECRET CHAT delivery for user {buyer_user_id}, product {product_id}")
             
-            # 🚀 YOLO FIX: Resolve peer first (make sure userbot "knows" the user)
-            # Try to get user info and check if we can message them
+            # PHASE 0: Request/Get Secret Chat with buyer
+            # 🚀 YOLO: Userbots CAN initiate secret chats without prior interaction!
+            secret_chat_id = None
             try:
-                logger.info(f"🔍 Resolving peer for user {buyer_user_id}...")
-                user_info = await self.client.get_users(buyer_user_id)
-                logger.info(f"✅ Peer resolved for user {buyer_user_id}: @{user_info.username or user_info.first_name}")
+                logger.info(f"🔐 Requesting secret chat with user {buyer_user_id}...")
                 
-                # 🚀 YOLO: Try to send a test message to see if peer is accessible
-                # If this fails with PEER_ID_INVALID, we'll catch it and instruct the user
+                # Try to get existing secret chat from database first
+                from userbot_database import get_secret_chat_id, save_secret_chat
+                existing_chat_id = get_secret_chat_id(buyer_user_id)
                 
+                if existing_chat_id:
+                    logger.info(f"✅ Found existing secret chat: {existing_chat_id}")
+                    secret_chat_id = existing_chat_id
+                else:
+                    # Create new secret chat
+                    from pyrogram import raw
+                    logger.info(f"🔐 Creating new secret chat with user {buyer_user_id}...")
+                    
+                    # Request secret chat via raw API
+                    result = await self.client.invoke(
+                        raw.functions.messages.RequestEncryption(
+                            user_id=await self.client.resolve_peer(buyer_user_id),
+                            random_id=self.client.rnd_id()
+                        )
+                    )
+                    
+                    secret_chat_id = result.id
+                    save_secret_chat(buyer_user_id, secret_chat_id)
+                    logger.info(f"✅ Created secret chat {secret_chat_id} with user {buyer_user_id}")
+                    
+                    # Wait for encryption handshake
+                    await asyncio.sleep(3)
+                    
             except Exception as e:
-                logger.warning(f"⚠️ Could not resolve peer {buyer_user_id}: {e}")
-                # Don't fail yet - try to send anyway, Pyrogram might have cached it
+                logger.error(f"❌ Failed to create secret chat: {e}", exc_info=True)
+                return {
+                    'success': False,
+                    'error': f'Failed to create secret chat: {str(e)}'
+                }
             
             # PHASE 1: Upload media to Saved Messages using binary data from PostgreSQL
-            # 🚀 YOLO FIX: Can't use file_id from main bot, must use raw bytes!
+            # 🚀 YOLO STRATEGY: Upload to Saved Messages, then forward to secret chat
             saved_message_ids = []
             
             if media_items:
@@ -525,7 +553,20 @@ class UserbotManager:
                             )
                         
                         saved_message_ids.append(saved_msg.id)
-                        logger.info(f"✅ Uploaded media item {idx} to Saved Messages (msg_id: {saved_msg.id})")
+                        
+                        # 🚀 YOLO: Extract file_id from the saved message for main bot to use
+                        if saved_msg.photo:
+                            new_file_id = saved_msg.photo.file_id
+                            new_file_ids.append(('photo', new_file_id))
+                            logger.info(f"✅ Uploaded photo {idx} to Saved Messages (msg_id: {saved_msg.id}, file_id: {new_file_id[:20]}...)")
+                        elif saved_msg.video:
+                            new_file_id = saved_msg.video.file_id
+                            new_file_ids.append(('video', new_file_id))
+                            logger.info(f"✅ Uploaded video {idx} to Saved Messages (msg_id: {saved_msg.id}, file_id: {new_file_id[:20]}...)")
+                        elif saved_msg.animation:
+                            new_file_id = saved_msg.animation.file_id
+                            new_file_ids.append(('animation', new_file_id))
+                            logger.info(f"✅ Uploaded animation {idx} to Saved Messages (msg_id: {saved_msg.id}, file_id: {new_file_id[:20]}...)")
                         
                         # Rate limiting
                         await asyncio.sleep(1)
@@ -542,60 +583,47 @@ class UserbotManager:
                 logger.info("⏳ Waiting 3 seconds for Telegram to process...")
                 await asyncio.sleep(3)
             
-            # PHASE 2: Send initial notification to buyer
+            # PHASE 2: Send initial notification to SECRET CHAT
             try:
-                notification_text = f"""🔐 <b>Secure Delivery</b>
+                notification_text = f"""🔐 ENCRYPTED DELIVERY
 
-📦 Order ID: <code>{order_id}</code>
-🏷️ Product: {product_name}
-📏 Size: {product_data.get('size', 'N/A')}
-📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
-💰 Price: {product_data.get('price', 0):.2f} EUR
+📦 Order #{order_id}
+🏷️ {product_name}
+📏 {product_data.get('size', 'N/A')}
+📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
+💰 {product_data.get('price', 0):.2f} EUR
 
-⏬ Receiving your secure media now..."""
+⏬ Receiving secure media..."""
                 
-                from pyrogram.enums import ParseMode
+                # 🚀 YOLO: Send to SECRET CHAT (no HTML parsing in secret chats!)
                 await self.client.send_message(
-                    chat_id=buyer_user_id,
-                    text=notification_text,
-                    parse_mode=ParseMode.HTML
+                    chat_id=secret_chat_id,
+                    text=notification_text
                 )
-                logger.info(f"✅ Sent notification to user {buyer_user_id}")
+                logger.info(f"✅ Sent notification to secret chat {secret_chat_id}")
                 
                 await asyncio.sleep(2)
                 
             except Exception as e:
-                error_str = str(e)
-                logger.error(f"❌ Failed to send notification: {e}")
-                
-                # 🚨 YOLO: Check if PEER_ID_INVALID - user needs to start chat with userbot first!
-                if 'PEER_ID_INVALID' in error_str or 'peer id being used is invalid' in error_str.lower():
-                    logger.error(f"❌ PEER_ID_INVALID: User {buyer_user_id} must start a chat with userbot first!")
-                    userbot_me = await self.client.get_me()
-                    return {
-                        'success': False,
-                        'error': 'PEER_ID_INVALID',
-                        'requires_user_action': True,
-                        'userbot_username': userbot_me.username,
-                        'message': f'Please start a chat with @{userbot_me.username} first, then try again.'
-                    }
-                # Continue for other errors
+                logger.error(f"❌ Failed to send notification to secret chat: {e}")
+                # Continue anyway
             
-            # PHASE 3: Forward saved messages to buyer
+            # PHASE 3: Forward saved messages to SECRET CHAT
             forwarded_count = 0
             
             if saved_message_ids:
-                logger.info(f"📨 Forwarding {len(saved_message_ids)} messages to user {buyer_user_id}...")
+                logger.info(f"🔐 Forwarding {len(saved_message_ids)} messages to SECRET CHAT {secret_chat_id}...")
                 
                 for msg_id in saved_message_ids:
                     try:
+                        # 🚀 YOLO: Forward to SECRET CHAT
                         await self.client.forward_messages(
-                            chat_id=buyer_user_id,
+                            chat_id=secret_chat_id,
                             from_chat_id='me',  # From Saved Messages
                             message_ids=msg_id
                         )
                         forwarded_count += 1
-                        logger.info(f"✅ Forwarded message {msg_id} to user {buyer_user_id}")
+                        logger.info(f"✅ Forwarded message {msg_id} to secret chat {secret_chat_id}")
                         
                         # Rate limiting between forwards
                         await asyncio.sleep(2)
@@ -605,35 +633,35 @@ class UserbotManager:
                         await asyncio.sleep(e.value)
                         continue
                     except Exception as e:
-                        logger.error(f"❌ Failed to forward message {msg_id}: {e}")
+                        logger.error(f"❌ Failed to forward message {msg_id} to secret chat: {e}")
                         continue
             
-            # PHASE 4: Send product details as text
+            # PHASE 4: Send product details to SECRET CHAT
             try:
-                details_text = f"""📦 **Product Details**
+                details_text = f"""📦 Product Details
 
-🏷️ Product: {product_name}
-📏 Size: {product_data.get('size', 'N/A')}
-📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
-💰 Price Paid: {product_data.get('price', 0):.2f} EUR
+🏷️ {product_name}
+📏 {product_data.get('size', 'N/A')}
+📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
+💰 {product_data.get('price', 0):.2f} EUR
 
-📝 <b>Pickup Details:</b>
+📝 Pickup Details:
 {product_data.get('original_text', 'No additional details provided.')}
 
-✅ <b>Order Completed</b>
-Order ID: <code>{order_id}</code>
+✅ Order Completed
+Order ID: {order_id}
 
-Thank you for your purchase! 🎉"""
+Thank you! 🎉"""
                 
+                # 🚀 YOLO: Send to SECRET CHAT (no HTML parsing!)
                 await self.client.send_message(
-                    chat_id=buyer_user_id,
-                    text=details_text,
-                    parse_mode=ParseMode.HTML
+                    chat_id=secret_chat_id,
+                    text=details_text
                 )
-                logger.info(f"✅ Sent product details to user {buyer_user_id}")
+                logger.info(f"✅ Sent product details to secret chat {secret_chat_id}")
                 
             except Exception as e:
-                logger.error(f"❌ Failed to send product details: {e}")
+                logger.error(f"❌ Failed to send product details to secret chat: {e}")
             
             # PHASE 5: Schedule cleanup of Saved Messages after 6 hours
             if saved_message_ids:
