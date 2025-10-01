@@ -1077,8 +1077,16 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 from userbot_manager import userbot_manager
                 from userbot_config import userbot_config
                 
+                # 🔥 YOLO DEBUG: Log everything!
+                logger.info(f"🔍 YOLO DEBUG: Checking userbot delivery conditions for user {user_id}")
+                logger.info(f"🔍 YOLO DEBUG: userbot_config.is_enabled() = {userbot_config.is_enabled()}")
+                logger.info(f"🔍 YOLO DEBUG: userbot_manager.is_connected = {userbot_manager.is_connected}")
+                logger.info(f"🔍 YOLO DEBUG: userbot_manager instance = {userbot_manager}")
+                logger.info(f"🔍 YOLO DEBUG: userbot_config instance = {userbot_config}")
+                
                 # Check BOTH enabled AND connected
                 use_userbot_delivery = (userbot_config.is_enabled() and userbot_manager.is_connected)
+                logger.info(f"🔍 YOLO DEBUG: use_userbot_delivery = {use_userbot_delivery}")
                 
                 if use_userbot_delivery:
                     logger.info(f"🔐 Using userbot for secret chat delivery to user {user_id} (enabled={userbot_config.is_enabled()}, connected={userbot_manager.is_connected})")
