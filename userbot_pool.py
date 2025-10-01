@@ -309,14 +309,15 @@ class UserbotPool:
                                     w = 0
                                     h = 0
                                     mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
-                                    size = getattr(video_doc, 'size', len(media_binary))
+                                    size = int(getattr(video_doc, 'size', len(media_binary)))
                                     
                                     if hasattr(video_doc, 'attributes'):
                                         for attr in video_doc.attributes:
                                             if isinstance(attr, DocumentAttributeVideo):
-                                                duration = attr.duration
-                                                w = attr.w
-                                                h = attr.h
+                                                # Ensure all values are integers (not None or float)
+                                                duration = int(attr.duration) if attr.duration else 0
+                                                w = int(attr.w) if attr.w else 0
+                                                h = int(attr.h) if attr.h else 0
                                                 break
                                     
                                     await secret_chat_manager.send_secret_video(
