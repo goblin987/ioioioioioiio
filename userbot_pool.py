@@ -150,6 +150,7 @@ class UserbotPool:
     async def deliver_via_secret_chat(
         self,
         buyer_user_id: int,
+        buyer_username: Optional[str],
         product_data: dict,
         media_binary_items: List[Dict],
         order_id: str
@@ -165,16 +166,20 @@ class UserbotPool:
         userbot_id, client, secret_chat_manager = userbot_info
         
         try:
-            logger.info(f"🔐 Starting SECRET CHAT delivery via userbot #{userbot_id} to user {buyer_user_id}")
+            logger.info(f"🔐 Starting SECRET CHAT delivery via userbot #{userbot_id} to user {buyer_user_id} (@{buyer_username or 'no_username'})")
             
-            # 1. Get user entity (Telethon will fetch from server if not cached)
+            # 1. Get user entity - try username first if available, fallback to ID
             try:
-                logger.info(f"🔍 Getting user entity for {buyer_user_id}...")
-                # Use get_input_entity which fetches from Telegram servers if needed
-                user_entity = await client.get_input_entity(buyer_user_id)
-                logger.info(f"✅ Got user entity for {buyer_user_id}")
+                if buyer_username:
+                    logger.info(f"🔍 Getting user entity by username: @{buyer_username}...")
+                    user_entity = await client.get_input_entity(buyer_username)
+                    logger.info(f"✅ Got user entity by username")
+                else:
+                    logger.info(f"🔍 Getting user entity by ID: {buyer_user_id}...")
+                    user_entity = await client.get_input_entity(buyer_user_id)
+                    logger.info(f"✅ Got user entity by ID")
             except Exception as e:
-                logger.error(f"❌ Error getting user entity for {buyer_user_id}: {e}")
+                logger.error(f"❌ Error getting user entity for {buyer_user_id} (@{buyer_username or 'N/A'}): {e}")
                 return False, f"Failed to get user entity: {e}"
             
             # 2. Create or reuse secret chat

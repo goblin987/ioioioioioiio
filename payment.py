@@ -1136,8 +1136,20 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                                     'filename': f"product_{prod_id}_{len(media_binary_items)+1}.{'jpg' if media_item['media_type']=='photo' else 'mp4'}"
                                 })
                         
+                        # Get buyer's username from context (bot knows this user)
+                        buyer_username = None
+                        try:
+                            if hasattr(context, '_user_id') and context._user_id == user_id:
+                                # Try to get user info from bot
+                                user_info = await context.bot.get_chat(user_id)
+                                buyer_username = user_info.username if hasattr(user_info, 'username') else None
+                                logger.info(f"🔍 Got buyer username from bot: @{buyer_username}" if buyer_username else f"🔍 Buyer {user_id} has no username")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Could not get buyer username: {e}")
+                        
                         success, message = await userbot_pool.deliver_via_secret_chat(
                             buyer_user_id=user_id,
+                            buyer_username=buyer_username,
                             product_data=product_data,
                             media_binary_items=media_binary_items,
                             order_id=order_id
