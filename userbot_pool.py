@@ -231,126 +231,21 @@ class UserbotPool:
                             temp_path = temp_file.name
                         
                         try:
-                            #  Upload to Saved Messages first to get attributes (WORKING METHOD from userbot_telethon_secret.py)
-                            logger.info(f"🔐 Uploading {media_type} to secret chat...")
-                            logger.info(f"🔍 DEBUG: media_type='{media_type}', comparing to 'photo': {media_type == 'photo'}, comparing to 'video': {media_type == 'video'}")
+                            # SIMPLE APPROACH: Just use Telethon's send_file directly!
+                            logger.info(f"📤 Sending {media_type} directly to secret chat (bypassing broken library)...")
                             
-                            if media_type == 'photo':
-                                # Upload to Saved Messages first
-                                me = await client.get_me()
-                                temp_msg = await client.send_file(me, temp_path)
-                                
-                                if temp_msg.photo:
-                                    photo = temp_msg.photo
-                                    from PIL import Image
-                                    from telethon.tl.types import PhotoSize, PhotoCachedSize
-                                    
-                                    # Get photo dimensions from file
-                                    with Image.open(temp_path) as img:
-                                        w, h = img.size
-                                    
-                                    # Find a proper thumbnail (not PhotoStrippedSize)
-                                    thumb_bytes = b''
-                                    thumb_w = 160
-                                    thumb_h = 120
-                                    
-                                    for size in photo.sizes:
-                                        if isinstance(size, (PhotoSize, PhotoCachedSize)):
-                                            if hasattr(size, 'bytes'):
-                                                thumb_bytes = size.bytes
-                                            thumb_w = getattr(size, 'w', 160)
-                                            thumb_h = getattr(size, 'h', 120)
-                                            break
-                                    
-                                    await secret_chat_manager.send_secret_photo(
-                                        secret_chat_obj,
-                                        temp_path,
-                                        thumb=thumb_bytes,
-                                        thumb_w=thumb_w,
-                                        thumb_h=thumb_h,
-                                        w=w,
-                                        h=h,
-                                        size=len(media_binary)
-                                    )
-                                    logger.info(f"✅ SECRET CHAT photo {idx} sent")
-                                    
-                                    # Cleanup temp message
-                                    try:
-                                        await temp_msg.delete()
-                                    except:
-                                        pass
-                                        
-                            elif media_type == 'video':
-                                logger.info(f"🎬 ENTERING VIDEO BLOCK - Using PATCHED pyaes encryption!")
-                                
-                                # Upload to Saved Messages first to get video attributes
-                                me = await client.get_me()
-                                logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
-                                temp_msg = await client.send_file(me, temp_path)
-                                
-                                # Extract video attributes
-                                from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
-                                
-                                video_doc = temp_msg.video or temp_msg.document
-                                
-                                thumb_bytes = b''
-                                thumb_w = 160
-                                thumb_h = 120
-                                duration = 0
-                                w = 0
-                                h = 0
-                                mime_type = 'video/mp4'
-                                
-                                if video_doc:
-                                    # Get thumbnail
-                                    if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
-                                        for thumb in video_doc.thumbs:
-                                            if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
-                                                if hasattr(thumb, 'bytes'):
-                                                    thumb_bytes = thumb.bytes
-                                                thumb_w = getattr(thumb, 'w', 160)
-                                                thumb_h = getattr(thumb, 'h', 120)
-                                                break
-                                    
-                                    # Get video dimensions and duration
-                                    mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
-                                    if hasattr(video_doc, 'attributes'):
-                                        for attr in video_doc.attributes:
-                                            if isinstance(attr, DocumentAttributeVideo):
-                                                duration = int(attr.duration) if attr.duration else 0
-                                                w = int(attr.w) if attr.w else 0
-                                                h = int(attr.h) if attr.h else 0
-                                                break
-                                    
-                                    # Delete temp message
-                                    try:
-                                        await temp_msg.delete()
-                                    except:
-                                        pass
-                                
-                                logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, mime={mime_type}")
-                                logger.info(f"🔐 Sending video via SECRET CHAT (pyaes is PATCHED!)...")
-                                
-                                # This will now use OUR patched pyaes encryption!
-                                await secret_chat_manager.send_secret_video(
-                                    secret_chat_obj,
-                                    temp_path,
-                                    thumb=thumb_bytes,
-                                    thumb_w=thumb_w,
-                                    thumb_h=thumb_h,
-                                    duration=duration,
-                                    mime_type=mime_type,
-                                    w=w,
-                                    h=h,
-                                    size=len(media_binary)
-                                )
-                                logger.info(f"✅ SECRET CHAT video {idx} sent with PATCHED encryption!")
-                                        
+                            # Send file directly to the secret chat
+                            await client.send_file(
+                                secret_chat_obj,
+                                temp_path
+                            )
+                            
+                            logger.info(f"✅ SECRET CHAT {media_type} {idx} sent!")
                             sent_media_count += 1
                             
                         except Exception as send_err:
-                            logger.error(f"❌ Failed to send media to secret chat: {send_err}", exc_info=True)
                             # Fallback: send placeholder
+                            logger.error(f"❌ Failed to send media to secret chat: {send_err}", exc_info=True)
                             try:
                                 await secret_chat_manager.send_secret_message(secret_chat_obj, f"[Media {idx}: {filename}]")
                                 logger.warning(f"⚠️ Sent placeholder text for media {idx} instead")

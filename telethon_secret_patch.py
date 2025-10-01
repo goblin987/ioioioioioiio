@@ -11,7 +11,7 @@ import sys
 
 logger = logging.getLogger(__name__)
 
-ENABLE_PATCHES = True
+ENABLE_PATCHES = False  # Library is too broken, use regular secret chat methods
 
 
 def patch_upload_secret_file():
@@ -74,25 +74,11 @@ def patch_upload_secret_file():
                     temp_path = temp_enc.name
                 
                 try:
-                    # Call original but with our encrypted file
-                    # WAIT - we can't do this because it will encrypt AGAIN
-                    # We need to upload directly without encryption
-                    
-                    # Let's just call the Telethon upload directly
-                    from telethon.tl.functions.upload import SaveFilePartRequest, SaveBigFilePartRequest
-                    
-                    # Upload the file using Telethon's client
-                    file_id = await self.client.upload_file(temp_path)
-                    
-                    logger.critical(f"✅✅✅ File uploaded with OUR encryption: {file_id}")
-                    
-                    # Return the file info with our key/iv
-                    return {
-                        'file_id': file_id,
-                        'key': key,
-                        'iv': iv,
-                        'size': len(file_data)
-                    }
+                    # We've encrypted it - now just call the ORIGINAL upload
+                    # But we don't want to use this complex approach
+                    # Just let it fall through to original method
+                    logger.critical(f"⚠️ Encrypted data ready, falling back to original upload")
+                    return await original_upload(self, file, *args, **kwargs)
                     
                 finally:
                     try:
