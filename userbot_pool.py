@@ -182,27 +182,18 @@ class UserbotPool:
                 logger.error(f"❌ Error getting user entity for {buyer_user_id} (@{buyer_username or 'N/A'}): {e}")
                 return False, f"Failed to get user entity: {e}"
             
-            # 2. Create or reuse secret chat
+            # 2. Create secret chat
             secret_chat_obj = None
             try:
-                # Check if we have an existing secret chat with this user
-                existing_chats = secret_chat_manager.get_all_secret_chats()
-                for chat in existing_chats:
-                    if hasattr(chat, 'user_id') and chat.user_id == user_entity.id:
-                        secret_chat_obj = chat
-                        logger.info(f"✅ Reusing existing secret chat, ID: {chat.id}")
-                        break
-                
-                if not secret_chat_obj:
-                    logger.info(f"🔐 Creating NEW secret chat with {user_entity.username or user_entity.first_name}")
-                    secret_chat_obj = await secret_chat_manager.start_secret_chat(user_entity)
-                    logger.info(f"✅ NEW secret chat created, ID: {secret_chat_obj.id}")
-                    # Wait for encryption handshake
-                    await asyncio.sleep(2)
+                logger.info(f"🔐 Starting secret chat with @{buyer_username or buyer_user_id}...")
+                secret_chat_obj = await secret_chat_manager.start_secret_chat(user_entity)
+                logger.info(f"✅ Secret chat started, ID: {secret_chat_obj.id}")
+                # Wait for encryption handshake
+                await asyncio.sleep(2)
                 
             except Exception as e:
-                logger.error(f"❌ Failed to create/get secret chat: {e}")
-                return False, f"Failed to create secret chat: {e}"
+                logger.error(f"❌ Failed to start secret chat: {e}")
+                return False, f"Failed to start secret chat: {e}"
             
             # 3. Send notification
             notification_text = f"""🔐 ENCRYPTED DELIVERY
