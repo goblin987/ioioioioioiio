@@ -124,6 +124,21 @@ class UserbotManager:
             except Exception as save_err:
                 logger.warning(f"⚠️ Could not save session file to PostgreSQL: {save_err}")
             
+            # 🔐 YOLO MODE: Initialize Telethon for secret chat support!
+            try:
+                from userbot_telethon_secret import telethon_secret_chat
+                telethon_initialized = await telethon_secret_chat.initialize(
+                    int(api_id),
+                    api_hash,
+                    session_string
+                )
+                if telethon_initialized:
+                    logger.info("🔐 ✅ Telethon secret chat initialized!")
+                else:
+                    logger.warning("⚠️ Telethon secret chat initialization failed (non-critical)")
+            except Exception as telethon_err:
+                logger.warning(f"⚠️ Telethon secret chat init error (non-critical): {telethon_err}")
+            
             # Save session string for future use
             if not session_string:
                 new_session = await self.client.export_session_string()
@@ -487,44 +502,51 @@ class UserbotManager:
             product_name = product_data.get('product_name', 'Product')
             media_items = product_data.get('media_items', [])
             
-            logger.info(f"🔐 Starting TRUE SECRET CHAT delivery for user {buyer_user_id}, product {product_id}")
+            logger.info(f"🔐 Starting TELETHON SECRET CHAT delivery for user {buyer_user_id}, product {product_id}")
             
-            # PHASE 0: Request/Get Secret Chat with buyer
-            # 🚀 YOLO: Userbots CAN initiate secret chats without prior interaction!
-            secret_chat_id = None
+            # 🔐 YOLO MODE: Use Telethon for TRUE secret chat delivery!
             try:
-                logger.info(f"🔐 Requesting secret chat with user {buyer_user_id}...")
+                from userbot_telethon_secret import telethon_secret_chat
                 
-                # Try to get existing secret chat from database first
-                from userbot_database import get_secret_chat_id, save_secret_chat
-                existing_chat_id = get_secret_chat_id(buyer_user_id)
-                
-                if existing_chat_id:
-                    logger.info(f"✅ Found existing secret chat: {existing_chat_id}")
-                    secret_chat_id = existing_chat_id
-                else:
-                    # 🚀 YOLO MODE: Use buyer's USER ID as chat_id for direct private chat
-                    # Pyrogram can send directly to user_id!
-                    logger.info(f"🔐 Using user {buyer_user_id} as chat destination...")
-                    secret_chat_id = buyer_user_id
+                if not telethon_secret_chat.is_connected:
+                    logger.warning("⚠️ Telethon not connected, trying to initialize...")
                     
-                    # Save for future use
-                    save_secret_chat(buyer_user_id, secret_chat_id)
-                    logger.info(f"✅ Will deliver to user {buyer_user_id} via private chat")
+                    # Try to initialize Telethon
+                    from userbot_database import get_session_string
+                    session_str = get_session_string()
                     
-            except Exception as e:
-                logger.error(f"❌ Failed to create secret chat: {e}", exc_info=True)
+                    if session_str:
+                        telethon_initialized = await telethon_secret_chat.initialize(
+                            int(userbot_config.api_id),
+                            userbot_config.api_hash,
+                            session_str
+                        )
+                        
+                        if not telethon_initialized:
+                            logger.error("❌ Failed to initialize Telethon")
+                            return {
+                                'success': False,
+                                'error': 'Telethon secret chat not available'
+                            }
+                    else:
+                        logger.error("❌ No session string available for Telethon")
+                        return {
+                            'success': False,
+                            'error': 'No session available for secret chat'
+                        }
+            except Exception as init_err:
+                logger.error(f"❌ Telethon initialization error: {init_err}")
                 return {
                     'success': False,
-                    'error': f'Failed to create secret chat: {str(e)}'
+                    'error': f'Telethon init failed: {str(init_err)}'
                 }
             
-            # PHASE 1: Upload media to Saved Messages using binary data from PostgreSQL
-            # 🚀 YOLO STRATEGY: Upload to Saved Messages, then forward to secret chat
-            saved_message_ids = []
+            # 🔐 DELEGATE TO TELETHON FOR SECRET CHAT DELIVERY!
+            # Prepare media items with binary data
+            media_binary_items = []
             
             if media_items:
-                logger.info(f"📤 Uploading {len(media_items)} media items to Saved Messages from PostgreSQL...")
+                logger.info(f"📦 Preparing {len(media_items)} media items from PostgreSQL for Telethon...")
                 
                 for idx, media_item in enumerate(media_items, 1):
                     media_binary = media_item.get('media_binary')
@@ -534,6 +556,61 @@ class UserbotManager:
                         logger.warning(f"⚠️ No binary data for media item {idx}, skipping")
                         continue
                     
+                    # Add to Telethon media list
+                    media_binary_items.append({
+                        'media_type': media_type,
+                        'media_binary': media_binary,
+                        'filename': f"product_{product_id}_{idx}.{'jpg' if media_type == 'photo' else 'mp4'}"
+                    })
+                    logger.info(f"✅ Prepared media item {idx}: {media_type} ({len(media_binary)} bytes)")
+            
+            # 🔐 CALL TELETHON SECRET CHAT DELIVERY!
+            logger.info(f"🔐 Calling Telethon secret chat delivery...")
+            success, message = await telethon_secret_chat.deliver_via_secret_chat(
+                buyer_user_id=buyer_user_id,
+                product_data=product_data,
+                media_binary_items=media_binary_items,
+                order_id=order_id
+            )
+            
+            if success:
+                logger.info(f"✅ TELETHON SECRET CHAT: {message}")
+                return {
+                    'success': True,
+                    'media_count': len(media_binary_items),
+                    'message': message
+                }
+            else:
+                logger.error(f"❌ TELETHON SECRET CHAT: {message}")
+                return {
+                    'success': False,
+                    'error': message
+                }
+            
+        except Exception as e:
+            logger.error(f"❌ Secret chat delivery failed: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Delivery error: {str(e)}'
+            }
+
+
+# DEPRECATED OLD CODE BELOW - KEEPING FOR REFERENCE
+"""
+OLD PYROGRAM DELIVERY CODE - NOW REPLACED WITH TELETHON SECRET CHAT
+
+            if media_items:
+                logger.info(f"📤 OLD METHOD - DEPRECATED...")
+                
+                for idx, media_item in enumerate(media_items, 1):
+                    media_binary = media_item.get('media_binary')
+                    media_type = media_item.get('media_type')
+                    
+                    if not media_binary:
+                        logger.warning(f"⚠️ No binary data for media item {idx}, skipping")
+                        continue
+                    
+                    # (OLD DEPRECATED CODE - NOW USING TELETHON)
                     try:
                         # Create BytesIO object for upload
                         import io
@@ -713,9 +790,8 @@ Thank you! 🎉"""
                 'message': success_msg
             }
             
-        except Exception as e:
-            logger.error(f"❌ Secret chat delivery failed: {e}", exc_info=True)
-            return {'success': False, 'error': str(e)}
+"""
+# END OF DEPRECATED OLD CODE
     
     async def _cleanup_saved_messages_later(self, message_ids: list, delay_hours: int = 6):
         """Cleanup Saved Messages after specified delay"""
