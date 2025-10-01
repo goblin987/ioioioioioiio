@@ -2055,6 +2055,11 @@ def main() -> None:
         try:
             await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
+            
+            # 🔥 YOLO FIX: Manually call post_init in webhook mode!
+            logger.info("🔧 Manually calling post_init for webhook mode...")
+            await post_init(application)
+            logger.info("✅ post_init completed successfully")
         except Exception as e:
             logger.error(f"❌ Failed to start Telegram application: {e}")
             return
