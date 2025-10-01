@@ -288,61 +288,61 @@ class UserbotPool:
                                     
                                     # Video might be in temp_msg.document or temp_msg.video
                                     video_doc = temp_msg.video or temp_msg.document
-                                
-                                if video_doc:
-                                    from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
                                     
-                                    # Find a proper thumbnail (not PhotoStrippedSize)
-                                    thumb_bytes = b''
-                                    thumb_w = 160
-                                    thumb_h = 120
-                                    
-                                    if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
-                                        for thumb in video_doc.thumbs:
-                                            if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
-                                                if hasattr(thumb, 'bytes'):
-                                                    thumb_bytes = thumb.bytes
-                                                thumb_w = getattr(thumb, 'w', 160)
-                                                thumb_h = getattr(thumb, 'h', 120)
-                                                break
-                                    
-                                    # Extract video attributes from Document attributes
-                                    duration = 0
-                                    w = 0
-                                    h = 0
-                                    mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
-                                    size = int(getattr(video_doc, 'size', len(media_binary)))
-                                    
-                                    if hasattr(video_doc, 'attributes'):
-                                        for attr in video_doc.attributes:
-                                            if isinstance(attr, DocumentAttributeVideo):
-                                                # Ensure all values are integers (not None or float)
-                                                duration = int(attr.duration) if attr.duration else 0
-                                                w = int(attr.w) if attr.w else 0
-                                                h = int(attr.h) if attr.h else 0
-                                                break
-                                    
-                                    logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, size={size}, mime={mime_type}")
-                                    
-                                    await secret_chat_manager.send_secret_video(
-                                        secret_chat_obj,
-                                        temp_path,
-                                        thumb=thumb_bytes,
-                                        thumb_w=thumb_w,
-                                        thumb_h=thumb_h,
-                                        duration=duration,
-                                        mime_type=mime_type,
-                                        w=w,
-                                        h=h,
-                                        size=size
-                                    )
-                                    logger.info(f"✅ SECRET CHAT video {idx} sent")
-                                    
-                                    # Cleanup temp message
-                                    try:
-                                        await temp_msg.delete()
-                                    except:
-                                        pass
+                                    if video_doc:
+                                        from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
+                                        
+                                        # Find a proper thumbnail (not PhotoStrippedSize)
+                                        thumb_bytes = b''
+                                        thumb_w = 160
+                                        thumb_h = 120
+                                        
+                                        if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
+                                            for thumb in video_doc.thumbs:
+                                                if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
+                                                    if hasattr(thumb, 'bytes'):
+                                                        thumb_bytes = thumb.bytes
+                                                    thumb_w = getattr(thumb, 'w', 160)
+                                                    thumb_h = getattr(thumb, 'h', 120)
+                                                    break
+                                        
+                                        # Extract video attributes from Document attributes
+                                        duration = 0
+                                        w = 0
+                                        h = 0
+                                        mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
+                                        size = int(getattr(video_doc, 'size', len(media_binary)))
+                                        
+                                        if hasattr(video_doc, 'attributes'):
+                                            for attr in video_doc.attributes:
+                                                if isinstance(attr, DocumentAttributeVideo):
+                                                    # Ensure all values are integers (not None or float)
+                                                    duration = int(attr.duration) if attr.duration else 0
+                                                    w = int(attr.w) if attr.w else 0
+                                                    h = int(attr.h) if attr.h else 0
+                                                    break
+                                        
+                                        logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, size={size}, mime={mime_type}")
+                                        
+                                        await secret_chat_manager.send_secret_video(
+                                            secret_chat_obj,
+                                            temp_path,
+                                            thumb=thumb_bytes,
+                                            thumb_w=thumb_w,
+                                            thumb_h=thumb_h,
+                                            duration=duration,
+                                            mime_type=mime_type,
+                                            w=w,
+                                            h=h,
+                                            size=size
+                                        )
+                                        logger.info(f"✅ SECRET CHAT video {idx} sent")
+                                        
+                                        # Cleanup temp message
+                                        try:
+                                            await temp_msg.delete()
+                                        except:
+                                            pass
                                         
                             sent_media_count += 1
                             
