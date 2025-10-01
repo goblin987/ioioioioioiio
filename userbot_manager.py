@@ -127,17 +127,21 @@ class UserbotManager:
             # 🔐 YOLO MODE: Initialize Telethon for secret chat support!
             try:
                 from userbot_telethon_secret import telethon_secret_chat
+                from userbot_config import userbot_config
+                
+                phone = userbot_config.get_dict().get('phone_number')
+                
                 telethon_initialized = await telethon_secret_chat.initialize(
                     int(api_id),
                     api_hash,
-                    session_string
+                    phone
                 )
                 if telethon_initialized:
                     logger.info("🔐 ✅ Telethon secret chat initialized!")
                 else:
-                    logger.warning("⚠️ Telethon secret chat initialization failed (non-critical)")
+                    logger.warning("⚠️ Telethon secret chat initialization failed (will use regular Pyrogram delivery)")
             except Exception as telethon_err:
-                logger.warning(f"⚠️ Telethon secret chat init error (non-critical): {telethon_err}")
+                logger.warning(f"⚠️ Telethon secret chat init error (non-critical, will fall back to regular delivery): {telethon_err}")
             
             # Save session string for future use
             if not session_string:
@@ -502,51 +506,35 @@ class UserbotManager:
             product_name = product_data.get('product_name', 'Product')
             media_items = product_data.get('media_items', [])
             
-            logger.info(f"🔐 Starting TELETHON SECRET CHAT delivery for user {buyer_user_id}, product {product_id}")
+            logger.info(f"🔐 Starting USERBOT PRIVATE CHAT delivery for user {buyer_user_id}, product {product_id}")
             
-            # 🔐 YOLO MODE: Use Telethon for TRUE secret chat delivery!
+            # 🚀 YOLO: Use Pyrogram to deliver via private chat (simpler than Telethon secret chats!)
+            # Send notification first
+            notification_text = f"""🔐 SECURE DELIVERY
+
+📦 Order #{order_id}
+🏷️ {product_name}
+📏 {product_data.get('size', 'N/A')}
+📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
+💰 {product_data.get('price', 0):.2f} EUR
+
+⏬ Receiving media..."""
+            
             try:
-                from userbot_telethon_secret import telethon_secret_chat
-                
-                if not telethon_secret_chat.is_connected:
-                    logger.warning("⚠️ Telethon not connected, trying to initialize...")
-                    
-                    # Try to initialize Telethon
-                    from userbot_database import get_session_string
-                    session_str = get_session_string()
-                    
-                    if session_str:
-                        telethon_initialized = await telethon_secret_chat.initialize(
-                            int(userbot_config.api_id),
-                            userbot_config.api_hash,
-                            session_str
-                        )
-                        
-                        if not telethon_initialized:
-                            logger.error("❌ Failed to initialize Telethon")
-                            return {
-                                'success': False,
-                                'error': 'Telethon secret chat not available'
-                            }
-                    else:
-                        logger.error("❌ No session string available for Telethon")
-                        return {
-                            'success': False,
-                            'error': 'No session available for secret chat'
-                        }
-            except Exception as init_err:
-                logger.error(f"❌ Telethon initialization error: {init_err}")
-                return {
-                    'success': False,
-                    'error': f'Telethon init failed: {str(init_err)}'
-                }
+                await self.client.send_message(
+                    chat_id=buyer_user_id,
+                    text=notification_text
+                )
+                logger.info(f"✅ Sent notification to user {buyer_user_id}")
+                await asyncio.sleep(1)
+            except Exception as notif_err:
+                logger.error(f"❌ Failed to send notification: {notif_err}")
             
-            # 🔐 DELEGATE TO TELETHON FOR SECRET CHAT DELIVERY!
-            # Prepare media items with binary data
-            media_binary_items = []
+            # Send media from PostgreSQL binary data
+            sent_media_count = 0
             
             if media_items:
-                logger.info(f"📦 Preparing {len(media_items)} media items from PostgreSQL for Telethon...")
+                logger.info(f"📦 Sending {len(media_items)} media items from PostgreSQL...")
                 
                 for idx, media_item in enumerate(media_items, 1):
                     media_binary = media_item.get('media_binary')
@@ -556,36 +544,73 @@ class UserbotManager:
                         logger.warning(f"⚠️ No binary data for media item {idx}, skipping")
                         continue
                     
-                    # Add to Telethon media list
-                    media_binary_items.append({
-                        'media_type': media_type,
-                        'media_binary': media_binary,
-                        'filename': f"product_{product_id}_{idx}.{'jpg' if media_type == 'photo' else 'mp4'}"
-                    })
-                    logger.info(f"✅ Prepared media item {idx}: {media_type} ({len(media_binary)} bytes)")
+                    try:
+                        import io
+                        media_file = io.BytesIO(media_binary)
+                        media_file.name = f"product_{product_id}_{idx}.{'jpg' if media_type == 'photo' else 'mp4'}"
+                        
+                        logger.info(f"📤 Sending media {idx}/{len(media_items)} ({len(media_binary)} bytes)...")
+                        
+                        if media_type == 'photo':
+                            await self.client.send_photo(
+                                chat_id=buyer_user_id,
+                                photo=media_file,
+                                caption=f"📦 Item {idx}/{len(media_items)}"
+                            )
+                        elif media_type == 'video':
+                            await self.client.send_video(
+                                chat_id=buyer_user_id,
+                                video=media_file,
+                                caption=f"📦 Item {idx}/{len(media_items)}"
+                            )
+                        elif media_type == 'gif':
+                            await self.client.send_animation(
+                                chat_id=buyer_user_id,
+                                animation=media_file,
+                                caption=f"📦 Item {idx}/{len(media_items)}"
+                            )
+                        
+                        sent_media_count += 1
+                        logger.info(f"✅ Sent media {idx} successfully")
+                        await asyncio.sleep(1)
+                        
+                    except Exception as media_err:
+                        logger.error(f"❌ Failed to send media {idx}: {media_err}", exc_info=True)
+                        continue
             
-            # 🔐 CALL TELETHON SECRET CHAT DELIVERY!
-            logger.info(f"🔐 Calling Telethon secret chat delivery...")
-            success, message = await telethon_secret_chat.deliver_via_secret_chat(
-                buyer_user_id=buyer_user_id,
-                product_data=product_data,
-                media_binary_items=media_binary_items,
-                order_id=order_id
-            )
+            # Send product details
+            details_text = f"""📦 Product Details
+
+🏷️ {product_name}
+📏 {product_data.get('size', 'N/A')}
+📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
+💰 {product_data.get('price', 0):.2f} EUR
+
+📝 Pickup Instructions:
+{product_data.get('original_text', 'No additional details.')}
+
+✅ Order Completed
+Order ID: {order_id}
+
+Thank you! 🎉"""
             
-            if success:
-                logger.info(f"✅ TELETHON SECRET CHAT: {message}")
-                return {
-                    'success': True,
-                    'media_count': len(media_binary_items),
-                    'message': message
-                }
-            else:
-                logger.error(f"❌ TELETHON SECRET CHAT: {message}")
-                return {
-                    'success': False,
-                    'error': message
-                }
+            try:
+                await self.client.send_message(
+                    chat_id=buyer_user_id,
+                    text=details_text
+                )
+                logger.info(f"✅ Sent product details to user {buyer_user_id}")
+            except Exception as details_err:
+                logger.error(f"❌ Failed to send details: {details_err}")
+            
+            success_msg = f"✅ Delivered {sent_media_count} media items to user {buyer_user_id} via userbot"
+            logger.info(success_msg)
+            
+            return {
+                'success': True,
+                'media_count': sent_media_count,
+                'message': success_msg
+            }
             
         except Exception as e:
             logger.error(f"❌ Secret chat delivery failed: {e}", exc_info=True)

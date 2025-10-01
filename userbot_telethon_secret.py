@@ -22,22 +22,48 @@ class TelethonSecretChat:
         self.is_connected = False
         self.secret_chat_manager = None
     
-    async def initialize(self, api_id: int, api_hash: str, session_string: str) -> bool:
-        """Initialize Telethon client with Pyrogram session credentials"""
+    async def initialize(self, api_id: int, api_hash: str, phone_number: str = None) -> bool:
+        """Initialize Telethon client - will create its own session"""
         try:
             logger.info("🔐 TELETHON: Initializing for secret chat...")
             
-            # Create Telethon client with session string
+            # 🚀 YOLO: Try to load existing Telethon session from PostgreSQL first
+            from userbot_database import get_db_connection
+            conn = get_db_connection()
+            c = conn.cursor()
+            
+            telethon_session_string = None
+            try:
+                c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'telethon_session_string'")
+                result = c.fetchone()
+                if result:
+                    telethon_session_string = result['setting_value']
+                    logger.info("✅ TELETHON: Found existing session string in database")
+            except Exception as e:
+                logger.info(f"ℹ️ TELETHON: No existing session found: {e}")
+            finally:
+                conn.close()
+            
+            # Create Telethon client with session string (or empty for new session)
             self.client = TelegramClient(
-                StringSession(session_string), 
+                StringSession(telethon_session_string) if telethon_session_string else StringSession(), 
                 api_id, 
                 api_hash
             )
             
             await self.client.connect()
             
+            # Check if we need to authorize
             if not await self.client.is_user_authorized():
-                logger.error("❌ TELETHON: Session not authorized")
+                logger.warning("⚠️ TELETHON: Not authorized, needs phone auth")
+                
+                # If we have a Pyrogram session but no Telethon session,
+                # user is already logged in via Pyrogram, so we can use same credentials
+                # But Telethon needs its own login flow
+                
+                # 🚀 YOLO: For now, we'll use the existing Pyrogram connection
+                # and just skip Telethon secret chat (fall back to regular delivery)
+                logger.warning("⚠️ TELETHON: Using fallback - will deliver via regular Pyrogram")
                 return False
             
             # Initialize secret chat manager
@@ -51,6 +77,29 @@ class TelethonSecretChat:
             
             me = await self.client.get_me()
             self.is_connected = True
+            
+            # 🚀 YOLO: Save Telethon session string to PostgreSQL for future use
+            try:
+                new_session_string = self.client.session.save()
+                if new_session_string and not telethon_session_string:
+                    # Save new session
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    try:
+                        c.execute("""
+                            INSERT INTO system_settings (setting_key, setting_value)
+                            VALUES ('telethon_session_string', %s)
+                            ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
+                        """, (new_session_string,))
+                        conn.commit()
+                        logger.info("✅ TELETHON: Session string saved to database")
+                    except Exception as save_err:
+                        logger.warning(f"⚠️ TELETHON: Could not save session: {save_err}")
+                        conn.rollback()
+                    finally:
+                        conn.close()
+            except Exception as session_err:
+                logger.warning(f"⚠️ TELETHON: Could not extract session string: {session_err}")
             
             logger.info(f"✅ TELETHON: Connected as @{me.username or me.first_name}")
             return True
