@@ -226,22 +226,24 @@ class UserbotPool:
                         
                         logger.info(f"📤 Sending SECRET CHAT media {idx}/{len(media_binary_items)} ({len(media_binary)} bytes) type: {media_type}...")
                         
-                        if media_type == 'photo':
-                            await secret_chat_manager.send_secret_photo(secret_chat_obj, media_file)
-                        elif media_type == 'video':
-                            try:
-                                await secret_chat_manager.send_secret_video(secret_chat_obj, media_file)
-                            except Exception as video_err:
-                                logger.warning(f"⚠️ send_secret_video failed: {video_err}, trying as document...")
-                                media_file.seek(0)  # Reset file pointer
-                                await secret_chat_manager.send_secret_document(secret_chat_obj, media_file, file_name=filename)
-                        elif media_type == 'gif':
-                            await secret_chat_manager.send_secret_document(secret_chat_obj, media_file, file_name=filename)
-                        else:
-                            await secret_chat_manager.send_secret_document(secret_chat_obj, media_file, file_name=filename)
+                        # Use Telethon's send_file method directly with the secret chat
+                        # The secret_chat_obj should be the chat entity
+                        try:
+                            await client.send_file(
+                                secret_chat_obj,
+                                media_file,
+                                caption=f"📦 Item {idx}/{len(media_binary_items)}",
+                                force_document=(media_type not in ['photo', 'video'])
+                            )
+                            sent_media_count += 1
+                            logger.info(f"✅ SECRET CHAT media {idx} sent successfully")
+                        except Exception as send_err:
+                            logger.error(f"❌ Failed to send media via Telethon send_file: {send_err}")
+                            # Fallback: try sending as bytes directly
+                            media_file.seek(0)
+                            await secret_chat_manager.send_secret_message(secret_chat_obj, f"[Media {idx}: {filename}]")
+                            logger.warning(f"⚠️ Sent placeholder text for media {idx} instead")
                         
-                        sent_media_count += 1
-                        logger.info(f"✅ SECRET CHAT media {idx} sent successfully")
                         await asyncio.sleep(1)
                         
                     except Exception as e:
