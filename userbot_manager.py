@@ -457,46 +457,61 @@ class UserbotManager:
             
             logger.info(f"🔐 Starting secret chat delivery for user {buyer_user_id}, product {product_id}")
             
-            # PHASE 1: Forward media to Saved Messages using file_id
+            # PHASE 1: Upload media to Saved Messages using binary data from PostgreSQL
+            # 🚀 YOLO FIX: Can't use file_id from main bot, must use raw bytes!
             saved_message_ids = []
             
             if media_items:
-                logger.info(f"📤 Forwarding {len(media_items)} media items to Saved Messages...")
+                logger.info(f"📤 Uploading {len(media_items)} media items to Saved Messages from PostgreSQL...")
                 
                 for idx, media_item in enumerate(media_items, 1):
-                    file_id = media_item.get('telegram_file_id')
+                    media_binary = media_item.get('media_binary')
                     media_type = media_item.get('media_type')
                     
-                    if not file_id:
-                        logger.warning(f"⚠️ No file_id for media item {idx}, skipping")
+                    if not media_binary:
+                        logger.warning(f"⚠️ No binary data for media item {idx}, skipping")
                         continue
                     
                     try:
-                        # Forward to Saved Messages ('me') using file_id
+                        # Create BytesIO object for upload
+                        import io
+                        media_file = io.BytesIO(media_binary)
+                        
+                        # Set filename based on media type
+                        if media_type == 'photo':
+                            media_file.name = f"product_{product_id}_{idx}.jpg"
+                        elif media_type == 'video':
+                            media_file.name = f"product_{product_id}_{idx}.mp4"
+                        elif media_type == 'gif':
+                            media_file.name = f"product_{product_id}_{idx}.mp4"
+                        else:
+                            logger.warning(f"⚠️ Unsupported media type: {media_type}")
+                            continue
+                        
+                        logger.info(f"📤 Uploading media item {idx} ({len(media_binary)} bytes) to Saved Messages...")
+                        
+                        # Upload to Saved Messages ('me')
                         if media_type == 'photo':
                             saved_msg = await self.client.send_photo(
                                 chat_id='me',  # Saved Messages
-                                photo=file_id,
+                                photo=media_file,
                                 caption=f"📦 Order #{order_id} - Item {idx}/{len(media_items)}"
                             )
                         elif media_type == 'video':
                             saved_msg = await self.client.send_video(
                                 chat_id='me',
-                                video=file_id,
+                                video=media_file,
                                 caption=f"📦 Order #{order_id} - Item {idx}/{len(media_items)}"
                             )
                         elif media_type == 'gif':
                             saved_msg = await self.client.send_animation(
                                 chat_id='me',
-                                animation=file_id,
+                                animation=media_file,
                                 caption=f"📦 Order #{order_id} - Item {idx}/{len(media_items)}"
                             )
-                        else:
-                            logger.warning(f"⚠️ Unsupported media type: {media_type}")
-                            continue
                         
                         saved_message_ids.append(saved_msg.id)
-                        logger.info(f"✅ Saved media item {idx} to Saved Messages (msg_id: {saved_msg.id})")
+                        logger.info(f"✅ Uploaded media item {idx} to Saved Messages (msg_id: {saved_msg.id})")
                         
                         # Rate limiting
                         await asyncio.sleep(1)
@@ -506,7 +521,7 @@ class UserbotManager:
                         await asyncio.sleep(e.value)
                         continue
                     except Exception as e:
-                        logger.error(f"❌ Failed to save media item {idx}: {e}")
+                        logger.error(f"❌ Failed to upload media item {idx}: {e}", exc_info=True)
                         continue
                 
                 # Wait for Telegram to process
@@ -525,10 +540,11 @@ class UserbotManager:
 
 ⏬ Receiving your secure media now..."""
                 
+                from pyrogram.enums import ParseMode
                 await self.client.send_message(
                     chat_id=buyer_user_id,
                     text=notification_text,
-                    parse_mode='html'
+                    parse_mode=ParseMode.HTML
                 )
                 logger.info(f"✅ Sent notification to user {buyer_user_id}")
                 
@@ -585,7 +601,7 @@ Thank you for your purchase! 🎉"""
                 await self.client.send_message(
                     chat_id=buyer_user_id,
                     text=details_text,
-                    parse_mode='html'
+                    parse_mode=ParseMode.HTML
                 )
                 logger.info(f"✅ Sent product details to user {buyer_user_id}")
                 
