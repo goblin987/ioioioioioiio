@@ -61,6 +61,8 @@ async def _show_setup_wizard(query, context):
 
 async def _show_status_dashboard(query, context):
     """Show userbot status dashboard"""
+    # 🚀 YOLO: Force reload from DB to get fresh config
+    userbot_config.reload()
     config = userbot_config.get_dict()
     status = get_connection_status()
     stats = get_delivery_stats()
@@ -416,6 +418,8 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
         await query.answer("Access denied", show_alert=True)
         return
     
+    # 🚀 YOLO: Force reload from DB to get fresh config
+    userbot_config.reload()
     config = userbot_config.get_dict()
     
     msg = "⚙️ <b>Userbot Settings</b>\n\n"

@@ -1137,7 +1137,6 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                     media_items_for_product = media_details.get(prod_id, [])
                     photo_video_group_details = []
                     animations_to_send_details = []
-                    opened_files = []
 
                     logger.info(f"Processing media for P{prod_id} user {user_id}: Found {len(media_items_for_product)} media items")
 
@@ -1159,7 +1158,6 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                     # --- Send Photos/Videos Group (No Caption) ---
                     if photo_video_group_details:
                         media_group_input = []
-                        files_for_this_group = []
                         logger.info(f"Attempting to send {len(photo_video_group_details)} photos/videos for P{prod_id} user {user_id}")
                         
                         # Validate that we don't exceed Telegram's media group limit (10 items)
@@ -1169,22 +1167,25 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                         
                         try:
                             for item in photo_video_group_details:
-                                input_media = None; file_handle = None
+                                input_media = None
                                 
-                                # Skip file_id completely and go straight to local files for now
-                                # This avoids the "wrong file identifier" error entirely
-                                logger.debug(f"Using local file for P{prod_id} (skipping file_id due to token change)")
+                                # 🚀 YOLO FIX: Use telegram_file_id (永久存储) instead of ephemeral file paths
+                                # Render deletes files on restart, but Telegram stores media forever!
+                                file_id = item.get('id')
                                 
-                                # Use file path directly
-                                if item['path'] and await asyncio.to_thread(os.path.exists, item['path']):
-                                    logger.debug(f"Using file path for P{prod_id}: {item['path']}")
-                                    file_handle = await asyncio.to_thread(open, item['path'], 'rb')
-                                    opened_files.append(file_handle)
-                                    files_for_this_group.append(file_handle)
-                                    if item['type'] == 'photo': input_media = InputMediaPhoto(media=file_handle)
-                                    elif item['type'] == 'video': input_media = InputMediaVideo(media=file_handle)
+                                if file_id:
+                                    logger.debug(f"Using Telegram file_id for P{prod_id}: {file_id[:20]}...")
+                                    try:
+                                        if item['type'] == 'photo': 
+                                            input_media = InputMediaPhoto(media=file_id)
+                                        elif item['type'] == 'video': 
+                                            input_media = InputMediaVideo(media=file_id)
+                                        logger.debug(f"✅ Created InputMedia for P{prod_id} from file_id")
+                                    except Exception as media_err:
+                                        logger.warning(f"Failed to use file_id for P{prod_id}: {media_err}")
+                                        input_media = None
                                 else:
-                                    logger.warning(f"No valid media source for P{prod_id}: Path exists={await asyncio.to_thread(os.path.exists, item['path']) if item['path'] else False}")
+                                    logger.warning(f"❌ No file_id available for P{prod_id} media: {item}")
                                     
                                 if input_media: 
                                     media_group_input.append(input_media)
@@ -1198,79 +1199,32 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                                     await context.bot.send_media_group(chat_id, media=media_group_input, connect_timeout=30, read_timeout=30)
                                     logger.info(f"✅ Successfully sent photo/video group ({len(media_group_input)}) for P{prod_id} user {user_id}")
                                 except Exception as send_error:
-                                    # If sending fails due to invalid file IDs, try to rebuild with file paths only
-                                    if "wrong file identifier" in str(send_error).lower():
-                                        logger.warning(f"Media group send failed due to invalid file IDs for P{prod_id}. Attempting fallback with file paths only.")
-                                        
-                                        # Rebuild media group using only file paths
-                                        fallback_media_group = []
-                                        fallback_files = []
-                                        for item in photo_video_group_details:
-                                            if item['path'] and await asyncio.to_thread(os.path.exists, item['path']):
-                                                try:
-                                                    fallback_file_handle = await asyncio.to_thread(open, item['path'], 'rb')
-                                                    fallback_files.append(fallback_file_handle)
-                                                    if item['type'] == 'photo': 
-                                                        fallback_media_group.append(InputMediaPhoto(media=fallback_file_handle))
-                                                    elif item['type'] == 'video': 
-                                                        fallback_media_group.append(InputMediaVideo(media=fallback_file_handle))
-                                                except Exception as fallback_error:
-                                                    logger.error(f"Error preparing fallback media for P{prod_id}: {fallback_error}")
-                                    
-                                    if fallback_media_group:
-                                        try:
-                                            await context.bot.send_media_group(chat_id, media=fallback_media_group, connect_timeout=30, read_timeout=30)
-                                            logger.info(f"✅ Successfully sent fallback media group for P{prod_id} user {user_id}")
-                                        except Exception as fallback_send_error:
-                                            logger.error(f"❌ Fallback media group send also failed for P{prod_id}: {fallback_send_error}")
-                                        finally:
-                                            # Close fallback files
-                                            for f in fallback_files:
-                                                try:
-                                                    if not f.closed: await asyncio.to_thread(f.close)
-                                                except Exception: pass
-                                    else:
-                                        logger.error(f"❌ No fallback media available for P{prod_id}")
-                                else:
-                                    logger.error(f"❌ Media group send failed for P{prod_id} (non-file-ID error): {send_error}")
+                                    logger.error(f"❌ Failed to send media group for P{prod_id}: {send_error}")
+                                    media_delivery_successful = False
                             else:
                                 logger.warning(f"No media items prepared for sending P{prod_id} user {user_id}")
                         except Exception as group_e:
                             logger.error(f"❌ Error sending photo/video group P{prod_id} user {user_id}: {group_e}", exc_info=True)
-                        finally:
-                            for f in files_for_this_group:
-                             try:
-                                 if not f.closed: await asyncio.to_thread(f.close); opened_files.remove(f)
-                             except Exception: pass
 
                     # --- Send Animations (GIFs) Separately (No Caption) ---
                     if animations_to_send_details:
                         logger.info(f"Attempting to send {len(animations_to_send_details)} animations for P{prod_id} user {user_id}")
                         for item in animations_to_send_details:
-                            anim_file_handle = None
                             try:
-                                # Skip file_id completely and go straight to local files for now
-                                # This avoids the "wrong file identifier" error entirely
-                                logger.debug(f"Using local file for animation P{prod_id} (skipping file_id due to token change)")
-                                media_to_send_ref = None
+                                # 🚀 YOLO FIX: Use telegram_file_id instead of ephemeral file paths
+                                file_id = item.get('id')
                                 
-                                # Use file path directly
-                                if item['path'] and await asyncio.to_thread(os.path.exists, item['path']):
-                                    logger.debug(f"Using file path for animation P{prod_id}: {item['path']}")
-                                    anim_file_handle = await asyncio.to_thread(open, item['path'], 'rb')
-                                    opened_files.append(anim_file_handle)
-                                    media_to_send_ref = anim_file_handle
-                                    await context.bot.send_animation(chat_id=chat_id, animation=media_to_send_ref)
-                                    logger.info(f"✅ Successfully sent animation with file path for P{prod_id} user {user_id}")
+                                if file_id:
+                                    logger.debug(f"Using Telegram file_id for animation P{prod_id}: {file_id[:20]}...")
+                                    await context.bot.send_animation(chat_id=chat_id, animation=file_id)
+                                    logger.info(f"✅ Successfully sent animation for P{prod_id} user {user_id}")
                                 else:
-                                    logger.warning(f"Could not find GIF source for P{prod_id}: Path exists={await asyncio.to_thread(os.path.exists, item['path']) if item['path'] else False}")
+                                    logger.warning(f"❌ No file_id available for animation P{prod_id}: {item}")
                                     continue
                             except Exception as anim_e:
                                 logger.error(f"❌ Error sending animation P{prod_id} user {user_id}: {anim_e}", exc_info=True)
                             finally:
-                                if anim_file_handle and anim_file_handle in opened_files:
-                                    try: await asyncio.to_thread(anim_file_handle.close); opened_files.remove(anim_file_handle)
-                                    except Exception: pass
+                                pass  # No file handles to close when using file_id
 
                     # --- Always Send Combined Text Separately ---
                     if combined_caption:
