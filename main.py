@@ -185,6 +185,14 @@ try:
     print("🔍 YOLO DEBUG: Importing userbot_admin handlers...")
     from userbot_admin import (
         handle_userbot_control,
+        handle_userbot_add_new,
+        handle_userbot_add_start_name,
+        handle_new_userbot_name_message,
+        handle_new_userbot_api_id_message,
+        handle_new_userbot_api_hash_message,
+        handle_new_userbot_phone_message,
+        handle_new_userbot_code_message,
+        # Legacy handlers (kept for compatibility)
         handle_userbot_setup_start,
         handle_userbot_connect,
         handle_userbot_disconnect,
@@ -205,6 +213,13 @@ try:
         handle_telethon_verification_code_message,
         handle_telethon_cancel_auth,
         handle_telethon_disconnect
+    )
+    
+    from userbot_admin_individual import (
+        handle_userbot_manage,
+        handle_userbot_toggle_enable_single,
+        handle_userbot_delete_confirm,
+        handle_userbot_delete_confirmed
     )
     print("✅ YOLO DEBUG: userbot_admin handlers imported successfully")
     
@@ -1006,7 +1021,16 @@ def callback_query_router(func):
             # Add userbot handlers if available
             if USERBOT_AVAILABLE:
                 KNOWN_HANDLERS.update({
+                    # Multi-userbot system handlers
                     "userbot_control": handle_userbot_control,
+                    "userbot_add_new": handle_userbot_add_new,
+                    "userbot_add_start_name": handle_userbot_add_start_name,
+                    "userbot_manage": handle_userbot_manage,
+                    "userbot_toggle_enable": handle_userbot_toggle_enable_single,
+                    "userbot_delete_confirm": handle_userbot_delete_confirm,
+                    "userbot_delete_confirmed": handle_userbot_delete_confirmed,
+                    
+                    # Legacy handlers (kept for compatibility)
                     "userbot_setup_start": handle_userbot_setup_start,
                     "userbot_connect": handle_userbot_connect,
                     "userbot_disconnect": handle_userbot_disconnect,
@@ -1104,7 +1128,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
         'awaiting_referral_code_payment': handle_referral_code_payment_message,
         
-        # Userbot setup message handlers
+        # Userbot setup message handlers (NEW multi-userbot system)
+        'awaiting_new_userbot_name': handle_new_userbot_name_message if USERBOT_AVAILABLE else None,
+        'awaiting_new_userbot_api_id': handle_new_userbot_api_id_message if USERBOT_AVAILABLE else None,
+        'awaiting_new_userbot_api_hash': handle_new_userbot_api_hash_message if USERBOT_AVAILABLE else None,
+        'awaiting_new_userbot_phone': handle_new_userbot_phone_message if USERBOT_AVAILABLE else None,
+        'awaiting_new_userbot_code': handle_new_userbot_code_message if USERBOT_AVAILABLE else None,
+        
+        # Legacy userbot setup message handlers (kept for compatibility)
         'awaiting_userbot_api_id': handle_userbot_api_id_message if USERBOT_AVAILABLE else None,
         'awaiting_userbot_api_hash': handle_userbot_api_hash_message if USERBOT_AVAILABLE else None,
         'awaiting_userbot_phone': handle_userbot_phone_message if USERBOT_AVAILABLE else None,

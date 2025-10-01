@@ -42,7 +42,7 @@ async def _show_userbot_dashboard(query, context):
     
     update_time = time.strftime("%H:%M:%S")
     
-    msg = "🔐 <b>Secret Chat Userbots</b> <i>(Updated: {update_time})</i>\n\n"
+    msg = f"🔐 <b>Secret Chat Userbots</b> <i>(Updated: {update_time})</i>\n\n"
     msg += "⚠️ <b>PURPOSE:</b> These userbots deliver products via TRUE encrypted Telegram secret chats ONLY.\n\n"
     
     # Get all userbots from database
