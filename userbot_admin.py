@@ -1057,3 +1057,330 @@ async def handle_telethon_disconnect(update: Update, context: ContextTypes.DEFAU
         logger.error(f"Error disconnecting Telethon: {e}")
         await query.answer(f"❌ Error: {str(e)}", show_alert=True)
 
+# ==================== NEW USERBOT ADD FLOW (Message Handlers) ====================
+
+async def handle_new_userbot_name_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new userbot name input"""
+    if context.user_data.get('state') != 'awaiting_new_userbot_name':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    name = update.message.text.strip()
+    
+    if len(name) < 3:
+        await update.message.reply_text(
+            "❌ Name too short. Please enter at least 3 characters:",
+            parse_mode='HTML'
+        )
+        return
+    
+    # Check if name already exists
+    from userbot_database import get_db_connection
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT id FROM userbots WHERE name = %s", (name,))
+        if c.fetchone():
+            await update.message.reply_text(
+                f"❌ A userbot with name '<b>{name}</b>' already exists.\n\nPlease choose a different name:",
+                parse_mode='HTML'
+            )
+            return
+    finally:
+        conn.close()
+    
+    # Store name and move to next step
+    context.user_data['new_userbot_name'] = name
+    context.user_data['state'] = 'awaiting_new_userbot_api_id'
+    
+    msg = f"➕ <b>Step 2/5: API ID</b>\n\n"
+    msg += f"Userbot Name: <b>{name}</b>\n\n"
+    msg += "Now enter your <b>API ID</b>.\n\n"
+    msg += "🔗 Get it from: https://my.telegram.org/apps\n\n"
+    msg += "📝 Example: 12345678"
+    
+    await update.message.reply_text(msg, parse_mode='HTML')
+
+async def handle_new_userbot_api_id_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new userbot API ID input"""
+    if context.user_data.get('state') != 'awaiting_new_userbot_api_id':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    api_id = update.message.text.strip()
+    
+    if not api_id.isdigit():
+        await update.message.reply_text(
+            "❌ API ID must be a number.\n\nPlease try again:",
+            parse_mode='HTML'
+        )
+        return
+    
+    context.user_data['new_userbot_api_id'] = api_id
+    context.user_data['state'] = 'awaiting_new_userbot_api_hash'
+    
+    name = context.user_data.get('new_userbot_name', 'Userbot')
+    
+    msg = f"➕ <b>Step 3/5: API Hash</b>\n\n"
+    msg += f"Userbot Name: <b>{name}</b>\n"
+    msg += f"API ID: <code>{api_id}</code>\n\n"
+    msg += "Now enter your <b>API Hash</b>.\n\n"
+    msg += "🔗 Get it from: https://my.telegram.org/apps\n\n"
+    msg += "📝 Example: 1234567890abcdef1234567890abcdef"
+    
+    await update.message.reply_text(msg, parse_mode='HTML')
+
+async def handle_new_userbot_api_hash_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new userbot API Hash input"""
+    if context.user_data.get('state') != 'awaiting_new_userbot_api_hash':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    api_hash = update.message.text.strip()
+    
+    if len(api_hash) < 32:
+        await update.message.reply_text(
+            "❌ API Hash seems too short (should be 32 characters).\n\nPlease try again:",
+            parse_mode='HTML'
+        )
+        return
+    
+    context.user_data['new_userbot_api_hash'] = api_hash
+    context.user_data['state'] = 'awaiting_new_userbot_phone'
+    
+    name = context.user_data.get('new_userbot_name', 'Userbot')
+    api_id = context.user_data.get('new_userbot_api_id', 'N/A')
+    
+    msg = f"➕ <b>Step 4/5: Phone Number</b>\n\n"
+    msg += f"Userbot Name: <b>{name}</b>\n"
+    msg += f"API ID: <code>{api_id}</code>\n"
+    msg += f"API Hash: <code>{api_hash[:8]}...{api_hash[-8:]}</code>\n\n"
+    msg += "Now enter your <b>Phone Number</b> (with country code).\n\n"
+    msg += "📱 <b>Format:</b> +1234567890\n\n"
+    msg += "⚠️ Must start with +"
+    
+    await update.message.reply_text(msg, parse_mode='HTML')
+
+async def handle_new_userbot_phone_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new userbot phone number input and send verification code"""
+    if context.user_data.get('state') != 'awaiting_new_userbot_phone':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    phone = update.message.text.strip()
+    
+    if not phone.startswith('+'):
+        await update.message.reply_text(
+            "❌ Phone number must start with + and include country code.\n\nExample: +1234567890\n\nPlease try again:",
+            parse_mode='HTML'
+        )
+        return
+    
+    # Check if phone already exists
+    from userbot_database import get_db_connection
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT id FROM userbots WHERE phone_number = %s", (phone,))
+        if c.fetchone():
+            await update.message.reply_text(
+                f"❌ A userbot with phone <b>{phone}</b> already exists.\n\nPlease use a different phone number:",
+                parse_mode='HTML'
+            )
+            return
+    finally:
+        conn.close()
+    
+    context.user_data['new_userbot_phone'] = phone
+    
+    # Send verification code via Telethon
+    await update.message.reply_text("⏳ <b>Sending verification code...</b>", parse_mode='HTML')
+    
+    api_id = context.user_data.get('new_userbot_api_id')
+    api_hash = context.user_data.get('new_userbot_api_hash')
+    
+    try:
+        from userbot_telethon_secret import TelethonSecretChat
+        
+        # Create temporary instance for this userbot
+        temp_telethon = TelethonSecretChat()
+        success, message, needs_code = await temp_telethon.authenticate_telethon(
+            int(api_id),
+            api_hash,
+            phone
+        )
+        
+        if not success:
+            await update.message.reply_text(
+                f"❌ <b>Failed to send code:</b>\n\n{message}\n\nPlease start over from Admin → Userbot Control.",
+                parse_mode='HTML'
+            )
+            # Clear state
+            context.user_data.pop('state', None)
+            return
+        
+        # Store phone_code_hash in context (from the temp instance)
+        context.user_data['new_userbot_phone_code_hash'] = temp_telethon._temp_phone_code_hash
+        context.user_data['state'] = 'awaiting_new_userbot_code'
+        
+        name = context.user_data.get('new_userbot_name', 'Userbot')
+        
+        msg = f"➕ <b>Step 5/5: Verification Code</b>\n\n"
+        msg += f"Userbot Name: <b>{name}</b>\n"
+        msg += f"Phone: <b>{phone}</b>\n\n"
+        msg += f"✅ Verification code sent to <b>{phone}</b>!\n\n"
+        msg += "⏰ <b>IMPORTANT:</b> Enter the code within 2 minutes!\n\n"
+        msg += "📱 Please enter the code you received:"
+        
+        await update.message.reply_text(msg, parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Error sending code for new userbot: {e}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ <b>Error:</b> {str(e)}\n\nPlease start over from Admin → Userbot Control.",
+            parse_mode='HTML'
+        )
+        context.user_data.pop('state', None)
+
+async def handle_new_userbot_code_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new userbot verification code and complete setup"""
+    if context.user_data.get('state') != 'awaiting_new_userbot_code':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    code = update.message.text.strip()
+    
+    await update.message.reply_text("⏳ <b>Verifying code and creating userbot...</b>", parse_mode='HTML')
+    
+    # Get all stored data
+    name = context.user_data.get('new_userbot_name')
+    api_id = context.user_data.get('new_userbot_api_id')
+    api_hash = context.user_data.get('new_userbot_api_hash')
+    phone = context.user_data.get('new_userbot_phone')
+    phone_code_hash = context.user_data.get('new_userbot_phone_code_hash')
+    
+    if not all([name, api_id, api_hash, phone, phone_code_hash]):
+        await update.message.reply_text(
+            "❌ <b>Error:</b> Setup data lost. Please start over from Admin → Userbot Control.",
+            parse_mode='HTML'
+        )
+        context.user_data.pop('state', None)
+        return
+    
+    try:
+        from telethon import TelegramClient
+        from telethon.sessions import StringSession
+        from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, PhoneCodeExpiredError
+        
+        # Create Telethon client and sign in
+        temp_client = TelegramClient(StringSession(), int(api_id), api_hash)
+        await temp_client.connect()
+        
+        try:
+            await temp_client.sign_in(phone, code, phone_code_hash=phone_code_hash)
+        except PhoneCodeExpiredError:
+            await temp_client.disconnect()
+            await update.message.reply_text(
+                "❌ <b>Code Expired!</b>\n\n"
+                "⚠️ Telegram codes expire in ~2 minutes.\n\n"
+                "Please go back to Admin → Userbot Control → Add New Userbot and try again.",
+                parse_mode='HTML'
+            )
+            context.user_data.pop('state', None)
+            return
+        except PhoneCodeInvalidError:
+            await temp_client.disconnect()
+            await update.message.reply_text(
+                "❌ <b>Invalid Code!</b>\n\nPlease try again:",
+                parse_mode='HTML'
+            )
+            return
+        except SessionPasswordNeededError:
+            await temp_client.disconnect()
+            await update.message.reply_text(
+                "❌ <b>2FA Enabled</b>\n\n"
+                "This account has Two-Factor Authentication enabled.\n"
+                "Please disable it temporarily and try again.",
+                parse_mode='HTML'
+            )
+            context.user_data.pop('state', None)
+            return
+        
+        # Get user info
+        me = await temp_client.get_me()
+        username = me.username or me.first_name
+        
+        # Get session string
+        session_string = temp_client.session.save()
+        
+        await temp_client.disconnect()
+        
+        # Save to database
+        from userbot_database import get_db_connection
+        conn = get_db_connection()
+        c = conn.cursor()
+        try:
+            c.execute("""
+                INSERT INTO userbots (name, api_id, api_hash, phone_number, session_string, is_enabled, is_connected)
+                VALUES (%s, %s, %s, %s, %s, TRUE, FALSE)
+                RETURNING id
+            """, (name, api_id, api_hash, phone, session_string))
+            
+            new_userbot_id = c.fetchone()['id']
+            conn.commit()
+            
+            logger.info(f"✅ New userbot created: ID={new_userbot_id}, Name={name}, Phone={phone}")
+            
+        except Exception as db_err:
+            logger.error(f"Error saving userbot to database: {db_err}")
+            conn.rollback()
+            await update.message.reply_text(
+                f"❌ <b>Database Error:</b> {str(db_err)}\n\nPlease try again.",
+                parse_mode='HTML'
+            )
+            context.user_data.pop('state', None)
+            return
+        finally:
+            conn.close()
+        
+        # Clear state
+        context.user_data.pop('state', None)
+        context.user_data.pop('new_userbot_name', None)
+        context.user_data.pop('new_userbot_api_id', None)
+        context.user_data.pop('new_userbot_api_hash', None)
+        context.user_data.pop('new_userbot_phone', None)
+        context.user_data.pop('new_userbot_phone_code_hash', None)
+        
+        # Success message
+        msg = f"🎉 <b>Userbot Created Successfully!</b>\n\n"
+        msg += f"✅ Name: <b>{name}</b>\n"
+        msg += f"📱 Phone: <b>{phone}</b>\n"
+        msg += f"👤 Logged in as: <b>@{username}</b>\n\n"
+        msg += f"🔐 This userbot is now ready for TRUE SECRET CHAT delivery!\n\n"
+        msg += f"The userbot will automatically connect and start delivering products via encrypted secret chats."
+        
+        await update.message.reply_text(msg, parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Error completing new userbot setup: {e}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ <b>Error:</b> {str(e)}\n\nPlease try again or contact support.",
+            parse_mode='HTML'
+        )
+        context.user_data.pop('state', None)
+
