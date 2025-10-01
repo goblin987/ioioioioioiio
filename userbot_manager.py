@@ -75,13 +75,14 @@ class UserbotManager:
             session_string = get_session_string()
             
             # Create Pyrogram client
+            # 🚀 YOLO FIX: in_memory=False to persist peer cache across restarts!
             self.client = Client(
                 name="userbot_session",
                 api_id=int(api_id),
                 api_hash=api_hash,
                 session_string=session_string,
                 workdir="./userbot_data",
-                in_memory=True
+                in_memory=False  # Must be False to save peers to disk!
             )
             
             # Connect to Telegram
