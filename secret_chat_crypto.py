@@ -92,6 +92,10 @@ def aes_ige_decrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
 
 def pad_to_16_bytes(data: bytes) -> bytes:
     """Pad data to 16-byte boundary with random bytes"""
+    # Convert memoryview to bytes if needed
+    if isinstance(data, memoryview):
+        data = bytes(data)
+    
     padding_needed = (16 - (len(data) % 16)) % 16
     if padding_needed > 0:
         padding = os.urandom(padding_needed)
