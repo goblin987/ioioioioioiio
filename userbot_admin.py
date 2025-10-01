@@ -66,7 +66,11 @@ async def _show_status_dashboard(query, context):
     status = get_connection_status()
     stats = get_delivery_stats()
     
-    msg = "🤖 <b>Userbot Control Panel</b>\n\n"
+    # 🚀 YOLO: Add timestamp to force message update
+    import time
+    update_time = time.strftime("%H:%M:%S")
+    
+    msg = f"🤖 <b>Userbot Control Panel</b> <i>(Updated: {update_time})</i>\n\n"
     
     # Configuration status
     config_status = "✅ Configured" if userbot_config.is_configured() else "❌ Not Configured"
@@ -420,7 +424,11 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
     # 🚀 YOLO: Force FRESH read from DB, bypass cache completely
     config = userbot_config.get_dict(force_fresh=True)
     
-    msg = "⚙️ <b>Userbot Settings</b>\n\n"
+    # 🚀 YOLO: Add microsecond timestamp to force message text change
+    import time
+    update_time = time.strftime("%H:%M:%S")
+    
+    msg = f"⚙️ <b>Userbot Settings</b> <i>(Updated: {update_time})</i>\n\n"
     msg += "Configure userbot behavior:\n\n"
     
     # Current settings
