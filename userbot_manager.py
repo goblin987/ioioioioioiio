@@ -127,7 +127,6 @@ class UserbotManager:
             # 🔐 YOLO MODE: Initialize Telethon for secret chat support!
             try:
                 from userbot_telethon_secret import telethon_secret_chat
-                from userbot_config import userbot_config
                 
                 phone = userbot_config.get_dict().get('phone_number')
                 
