@@ -2225,8 +2225,8 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
             
             c.execute("""INSERT INTO products
                             (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s)""", insert_params)
-            product_id = c.lastrowid
+                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s) RETURNING id""", insert_params)
+            product_id = c.fetchone()['id']
             
             # Handle media for this product
             if product_id and media_list and temp_dir:
@@ -5372,8 +5372,8 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
             
             c.execute("""INSERT INTO products
                             (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s)""", insert_params)
-            product_id = c.lastrowid
+                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s) RETURNING id""", insert_params)
+            product_id = c.fetchone()['id']
             
             # Handle media for this product
             if product_id and media_list and temp_dir:
