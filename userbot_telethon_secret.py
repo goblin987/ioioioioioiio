@@ -22,12 +22,12 @@ class TelethonSecretChat:
         self.is_connected = False
         self.secret_chat_manager = None
     
-    async def initialize(self, api_id: int, api_hash: str, phone_number: str = None) -> bool:
-        """Initialize Telethon client - will create its own session"""
+    async def initialize(self, api_id: int, api_hash: str, phone_number: str = None, use_existing_pyrogram: bool = True) -> bool:
+        """Initialize Telethon client for secret chats"""
         try:
             logger.info("🔐 TELETHON: Initializing for secret chat...")
             
-            # 🚀 YOLO: Try to load existing Telethon session from PostgreSQL first
+            # 🚀 YOLO: Load Telethon session from PostgreSQL
             from userbot_database import get_db_connection
             conn = get_db_connection()
             c = conn.cursor()
@@ -44,7 +44,13 @@ class TelethonSecretChat:
             finally:
                 conn.close()
             
-            # Create Telethon client with session string (or empty for new session)
+            # If no Telethon session exists AND we should use existing Pyrogram session
+            if not telethon_session_string and use_existing_pyrogram:
+                logger.info("🔄 TELETHON: No session found, will need manual authentication")
+                logger.info("ℹ️ TELETHON: Admin needs to set up Telethon in admin panel")
+                return False
+            
+            # Create Telethon client
             self.client = TelegramClient(
                 StringSession(telethon_session_string) if telethon_session_string else StringSession(), 
                 api_id, 
@@ -53,17 +59,9 @@ class TelethonSecretChat:
             
             await self.client.connect()
             
-            # Check if we need to authorize
+            # Check authorization
             if not await self.client.is_user_authorized():
-                logger.warning("⚠️ TELETHON: Not authorized, needs phone auth")
-                
-                # If we have a Pyrogram session but no Telethon session,
-                # user is already logged in via Pyrogram, so we can use same credentials
-                # But Telethon needs its own login flow
-                
-                # 🚀 YOLO: For now, we'll use the existing Pyrogram connection
-                # and just skip Telethon secret chat (fall back to regular delivery)
-                logger.warning("⚠️ TELETHON: Using fallback - will deliver via regular Pyrogram")
+                logger.warning("⚠️ TELETHON: Not authorized - needs authentication via admin panel")
                 return False
             
             # Initialize secret chat manager
@@ -118,6 +116,88 @@ class TelethonSecretChat:
             logger.info("✅ TELETHON: Disconnected")
         except Exception as e:
             logger.error(f"❌ TELETHON: Error disconnecting: {e}")
+    
+    async def authenticate_telethon(self, api_id: int, api_hash: str, phone_number: str) -> tuple:
+        """
+        Start Telethon authentication process
+        Returns: (success: bool, message: str, needs_code: bool)
+        """
+        try:
+            logger.info(f"🔐 TELETHON AUTH: Starting for {phone_number}")
+            
+            # Create temp client
+            temp_client = TelegramClient(StringSession(), api_id, api_hash)
+            await temp_client.connect()
+            
+            # Send code
+            await temp_client.send_code_request(phone_number)
+            
+            # Disconnect temp client (will reconnect with code)
+            await temp_client.disconnect()
+            
+            logger.info(f"✅ TELETHON AUTH: Code sent to {phone_number}")
+            return True, f"Verification code sent to {phone_number}", True
+            
+        except Exception as e:
+            logger.error(f"❌ TELETHON AUTH: Failed to send code: {e}")
+            return False, f"Error: {str(e)}", False
+    
+    async def complete_telethon_auth(self, api_id: int, api_hash: str, phone_number: str, code: str, password: str = None) -> tuple:
+        """
+        Complete Telethon authentication with code
+        Returns: (success: bool, message: str, session_string: str)
+        """
+        try:
+            logger.info(f"🔐 TELETHON AUTH: Completing with code for {phone_number}")
+            
+            # Create client
+            temp_client = TelegramClient(StringSession(), api_id, api_hash)
+            await temp_client.connect()
+            
+            # Sign in with code
+            try:
+                await temp_client.sign_in(phone_number, code)
+            except SessionPasswordNeededError:
+                if not password:
+                    await temp_client.disconnect()
+                    return False, "2FA password required", None
+                
+                await temp_client.sign_in(password=password)
+            
+            # Get session string
+            session_string = temp_client.session.save()
+            
+            # Get user info
+            me = await temp_client.get_me()
+            username = me.username or me.first_name
+            
+            await temp_client.disconnect()
+            
+            # Save session to database
+            from userbot_database import get_db_connection
+            conn = get_db_connection()
+            c = conn.cursor()
+            try:
+                c.execute("""
+                    INSERT INTO system_settings (setting_key, setting_value)
+                    VALUES ('telethon_session_string', %s)
+                    ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
+                """, (session_string,))
+                conn.commit()
+                logger.info("✅ TELETHON AUTH: Session saved to database")
+            except Exception as save_err:
+                logger.error(f"❌ TELETHON AUTH: Could not save session: {save_err}")
+                conn.rollback()
+                return False, f"Could not save session: {str(save_err)}", None
+            finally:
+                conn.close()
+            
+            logger.info(f"✅ TELETHON AUTH: Authenticated as @{username}")
+            return True, f"Authenticated as @{username}", session_string
+            
+        except Exception as e:
+            logger.error(f"❌ TELETHON AUTH: Failed: {e}", exc_info=True)
+            return False, f"Authentication failed: {str(e)}", None
     
     async def deliver_via_secret_chat(
         self, 

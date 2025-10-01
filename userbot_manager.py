@@ -506,111 +506,84 @@ class UserbotManager:
             product_name = product_data.get('product_name', 'Product')
             media_items = product_data.get('media_items', [])
             
-            logger.info(f"🔐 Starting USERBOT PRIVATE CHAT delivery for user {buyer_user_id}, product {product_id}")
+            logger.info(f"🔐 Starting TELETHON SECRET CHAT delivery for user {buyer_user_id}, product {product_id}")
             
-            # 🚀 YOLO: Use Pyrogram to deliver via private chat (simpler than Telethon secret chats!)
-            # Send notification first
-            notification_text = f"""🔐 SECURE DELIVERY
-
-📦 Order #{order_id}
-🏷️ {product_name}
-📏 {product_data.get('size', 'N/A')}
-📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
-💰 {product_data.get('price', 0):.2f} EUR
-
-⏬ Receiving media..."""
-            
+            # 🔐 Try to use Telethon for TRUE SECRET CHAT delivery!
             try:
-                await self.client.send_message(
-                    chat_id=buyer_user_id,
-                    text=notification_text
-                )
-                logger.info(f"✅ Sent notification to user {buyer_user_id}")
-                await asyncio.sleep(1)
-            except Exception as notif_err:
-                logger.error(f"❌ Failed to send notification: {notif_err}")
-            
-            # Send media from PostgreSQL binary data
-            sent_media_count = 0
-            
-            if media_items:
-                logger.info(f"📦 Sending {len(media_items)} media items from PostgreSQL...")
+                from userbot_telethon_secret import telethon_secret_chat
                 
-                for idx, media_item in enumerate(media_items, 1):
-                    media_binary = media_item.get('media_binary')
-                    media_type = media_item.get('media_type')
+                if not telethon_secret_chat.is_connected:
+                    logger.warning("⚠️ Telethon not connected, trying to initialize...")
                     
-                    if not media_binary:
-                        logger.warning(f"⚠️ No binary data for media item {idx}, skipping")
-                        continue
+                    phone = userbot_config.get_dict().get('phone_number')
                     
-                    try:
-                        import io
-                        media_file = io.BytesIO(media_binary)
-                        media_file.name = f"product_{product_id}_{idx}.{'jpg' if media_type == 'photo' else 'mp4'}"
+                    if phone:
+                        telethon_initialized = await telethon_secret_chat.initialize(
+                            int(userbot_config.api_id),
+                            userbot_config.api_hash,
+                            phone
+                        )
                         
-                        logger.info(f"📤 Sending media {idx}/{len(media_items)} ({len(media_binary)} bytes)...")
+                        if not telethon_initialized:
+                            logger.error("❌ Telethon not available - admin needs to set up Telethon in admin panel")
+                            return {
+                                'success': False,
+                                'error': 'Telethon secret chat not configured. Admin must set up Telethon authentication in admin panel.'
+                            }
+                    else:
+                        logger.error("❌ No phone number available")
+                        return {
+                            'success': False,
+                            'error': 'No phone available for secret chat'
+                        }
+                
+                # Prepare media for Telethon
+                media_binary_items = []
+                
+                if media_items:
+                    for idx, media_item in enumerate(media_items, 1):
+                        media_binary = media_item.get('media_binary')
+                        media_type = media_item.get('media_type')
                         
-                        if media_type == 'photo':
-                            await self.client.send_photo(
-                                chat_id=buyer_user_id,
-                                photo=media_file,
-                                caption=f"📦 Item {idx}/{len(media_items)}"
-                            )
-                        elif media_type == 'video':
-                            await self.client.send_video(
-                                chat_id=buyer_user_id,
-                                video=media_file,
-                                caption=f"📦 Item {idx}/{len(media_items)}"
-                            )
-                        elif media_type == 'gif':
-                            await self.client.send_animation(
-                                chat_id=buyer_user_id,
-                                animation=media_file,
-                                caption=f"📦 Item {idx}/{len(media_items)}"
-                            )
+                        if not media_binary:
+                            logger.warning(f"⚠️ No binary data for media item {idx}")
+                            continue
                         
-                        sent_media_count += 1
-                        logger.info(f"✅ Sent media {idx} successfully")
-                        await asyncio.sleep(1)
-                        
-                    except Exception as media_err:
-                        logger.error(f"❌ Failed to send media {idx}: {media_err}", exc_info=True)
-                        continue
-            
-            # Send product details
-            details_text = f"""📦 Product Details
-
-🏷️ {product_name}
-📏 {product_data.get('size', 'N/A')}
-📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
-💰 {product_data.get('price', 0):.2f} EUR
-
-📝 Pickup Instructions:
-{product_data.get('original_text', 'No additional details.')}
-
-✅ Order Completed
-Order ID: {order_id}
-
-Thank you! 🎉"""
-            
-            try:
-                await self.client.send_message(
-                    chat_id=buyer_user_id,
-                    text=details_text
+                        media_binary_items.append({
+                            'media_type': media_type,
+                            'media_binary': media_binary,
+                            'filename': f"product_{product_id}_{idx}.{'jpg' if media_type == 'photo' else 'mp4'}"
+                        })
+                
+                # Call Telethon secret chat delivery
+                logger.info(f"🔐 Calling Telethon SECRET CHAT delivery...")
+                success, message = await telethon_secret_chat.deliver_via_secret_chat(
+                    buyer_user_id=buyer_user_id,
+                    product_data=product_data,
+                    media_binary_items=media_binary_items,
+                    order_id=order_id
                 )
-                logger.info(f"✅ Sent product details to user {buyer_user_id}")
-            except Exception as details_err:
-                logger.error(f"❌ Failed to send details: {details_err}")
-            
-            success_msg = f"✅ Delivered {sent_media_count} media items to user {buyer_user_id} via userbot"
-            logger.info(success_msg)
-            
-            return {
-                'success': True,
-                'media_count': sent_media_count,
-                'message': success_msg
-            }
+                
+                if success:
+                    logger.info(f"✅ TELETHON SECRET CHAT: {message}")
+                    return {
+                        'success': True,
+                        'media_count': len(media_binary_items),
+                        'message': message
+                    }
+                else:
+                    logger.error(f"❌ TELETHON SECRET CHAT: {message}")
+                    return {
+                        'success': False,
+                        'error': message
+                    }
+                    
+            except Exception as telethon_err:
+                logger.error(f"❌ Telethon error: {telethon_err}", exc_info=True)
+                return {
+                    'success': False,
+                    'error': f'Telethon delivery failed: {str(telethon_err)}'
+                }
             
         except Exception as e:
             logger.error(f"❌ Secret chat delivery failed: {e}", exc_info=True)
