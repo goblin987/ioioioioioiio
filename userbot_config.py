@@ -169,8 +169,20 @@ class UserbotConfig:
             self.reload()
         return success
     
-    def get_dict(self) -> Dict:
-        """Get configuration as dictionary"""
+    def get_dict(self, force_fresh: bool = False) -> Dict:
+        """Get configuration as dictionary
+        
+        Args:
+            force_fresh: If True, bypasses cache and reads directly from DB
+        """
+        if force_fresh:
+            # 🚀 YOLO: Force fresh read from DB, bypass cache completely
+            fresh_config = get_userbot_config()
+            if fresh_config:
+                self._config = fresh_config  # Update cache for next time
+                return fresh_config
+            return {}
+        
         if not self._config:
             self.load_from_database()
         return self._config if self._config else {}

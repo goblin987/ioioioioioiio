@@ -61,9 +61,8 @@ async def _show_setup_wizard(query, context):
 
 async def _show_status_dashboard(query, context):
     """Show userbot status dashboard"""
-    # 🚀 YOLO: Force reload from DB to get fresh config
-    userbot_config.reload()
-    config = userbot_config.get_dict()
+    # 🚀 YOLO: Force FRESH read from DB, bypass cache completely
+    config = userbot_config.get_dict(force_fresh=True)
     status = get_connection_status()
     stats = get_delivery_stats()
     
@@ -418,9 +417,8 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
         await query.answer("Access denied", show_alert=True)
         return
     
-    # 🚀 YOLO: Force reload from DB to get fresh config
-    userbot_config.reload()
-    config = userbot_config.get_dict()
+    # 🚀 YOLO: Force FRESH read from DB, bypass cache completely
+    config = userbot_config.get_dict(force_fresh=True)
     
     msg = "⚙️ <b>Userbot Settings</b>\n\n"
     msg += "Configure userbot behavior:\n\n"
@@ -482,11 +480,9 @@ async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DE
     timestamp = time.strftime("%H:%M:%S")
     await query.answer(f"✅ Delivery {status}! ({timestamp})", show_alert=True)
     
-    # Refresh settings (with delay and force reload)
+    # Refresh settings (force_fresh=True will bypass cache)
     await asyncio.sleep(0.5)
     try:
-        # Force a complete reload before showing settings
-        userbot_config.reload()
         await handle_userbot_settings(update, context)
     except Exception as e:
         # If refresh fails, just ignore (likely unchanged message)
