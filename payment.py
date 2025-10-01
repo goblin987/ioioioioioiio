@@ -1075,12 +1075,17 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
             try:
                 # 🚀 YOLO MODE: Use userbot for secret chat delivery with Saved Messages strategy
                 from userbot_manager import userbot_manager
-                use_userbot_delivery = userbot_manager.is_connected
+                from userbot_config import userbot_config
+                
+                # Check BOTH enabled AND connected
+                use_userbot_delivery = (userbot_config.is_enabled() and userbot_manager.is_connected)
                 
                 if use_userbot_delivery:
-                    logger.info(f"🔐 Using userbot for secret chat delivery to user {user_id}")
+                    logger.info(f"🔐 Using userbot for secret chat delivery to user {user_id} (enabled={userbot_config.is_enabled()}, connected={userbot_manager.is_connected})")
                 else:
-                    logger.info(f"📱 Using bot for regular delivery to user {user_id} (userbot not connected)")
+                    enabled_status = "enabled" if userbot_config.is_enabled() else "disabled"
+                    connected_status = "connected" if userbot_manager.is_connected else "disconnected"
+                    logger.info(f"📱 Using bot for regular delivery to user {user_id} (userbot {enabled_status} and {connected_status})")
                     success_title = lang_data.get("purchase_success", "🎉 Purchase Complete! Pickup details below:")
                     await send_message_with_retry(context.bot, chat_id, success_title, parse_mode=None)
 
