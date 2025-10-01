@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # ==================== MAIN USERBOT CONTROL PANEL ====================
 
 async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Main userbot control panel"""
+    """Main userbot control panel - shows list of all userbots"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -32,13 +32,137 @@ async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("Access denied", show_alert=True)
         return
     
-    # Check if configured
-    if not userbot_config.is_configured():
-        await _show_setup_wizard(query, context)
+    # Always show userbot list/dashboard
+    await _show_userbot_dashboard(query, context)
+
+async def _show_userbot_dashboard(query, context):
+    """Show dashboard with list of all userbots"""
+    import time
+    from userbot_database import get_db_connection
+    
+    update_time = time.strftime("%H:%M:%S")
+    
+    msg = "🔐 <b>Secret Chat Userbots</b> <i>(Updated: {update_time})</i>\n\n"
+    msg += "⚠️ <b>PURPOSE:</b> These userbots deliver products via TRUE encrypted Telegram secret chats ONLY.\n\n"
+    
+    # Get all userbots from database
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            SELECT id, name, phone_number, is_enabled, is_connected, 
+                   status_message, last_connected_at, session_string
+            FROM userbots 
+            ORDER BY priority DESC, id ASC
+        """)
+        userbots = c.fetchall()
+    except Exception as e:
+        logger.error(f"Error fetching userbots: {e}")
+        userbots = []
+    finally:
+        conn.close()
+    
+    if not userbots:
+        msg += "📭 <b>No userbots configured yet.</b>\n\n"
+        msg += "Click <b>➕ Add Userbot</b> to add your first secret chat delivery account!"
+    else:
+        msg += f"📊 <b>Total Userbots:</b> {len(userbots)}\n\n"
+        
+        for ub in userbots:
+            userbot_id = ub['id']
+            name = ub['name']
+            phone = ub['phone_number']
+            enabled = ub['is_enabled']
+            connected = ub['is_connected']
+            has_session = bool(ub['session_string'])
+            
+            status_icon = "✅" if (enabled and connected and has_session) else "⚠️" if enabled else "❌"
+            
+            msg += f"{status_icon} <b>{name}</b>\n"
+            msg += f"   📱 {phone}\n"
+            
+            if has_session and connected:
+                msg += f"   🟢 Connected & Ready\n"
+            elif has_session and not connected:
+                msg += f"   🟡 Session exists, not connected\n"
+            elif not has_session:
+                msg += f"   🔴 No Telethon session (needs setup)\n"
+            
+            if not enabled:
+                msg += f"   ⏸️ Disabled\n"
+            
+            msg += "\n"
+    
+    # Keyboard
+    keyboard = []
+    
+    if userbots:
+        # Show userbot management buttons
+        for ub in userbots[:5]:  # Show max 5 userbots in quick access
+            userbot_id = ub['id']
+            name = ub['name']
+            keyboard.append([InlineKeyboardButton(f"⚙️ {name}", callback_data=f"userbot_manage:{userbot_id}")])
+    
+    keyboard.append([InlineKeyboardButton("➕ Add New Userbot", callback_data="userbot_add_new")])
+    
+    if userbots:
+        keyboard.append([InlineKeyboardButton("📊 Statistics", callback_data="userbot_stats_all")])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
+async def handle_userbot_add_new(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start add new userbot wizard"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
         return
     
-    # Show status dashboard
-    await _show_status_dashboard(query, context)
+    msg = "➕ <b>Add New Secret Chat Userbot</b>\n\n"
+    msg += "⚠️ <b>PURPOSE:</b> This account will ONLY be used for delivering products via TRUE encrypted Telegram secret chats.\n\n"
+    msg += "<b>What you need:</b>\n"
+    msg += "1️⃣ A separate Telegram account (phone number)\n"
+    msg += "2️⃣ API credentials from https://my.telegram.org/apps\n\n"
+    msg += "<b>Setup Steps:</b>\n"
+    msg += "• Enter account name (e.g., 'Userbot 1')\n"
+    msg += "• Enter API ID\n"
+    msg += "• Enter API Hash\n"
+    msg += "• Enter phone number\n"
+    msg += "• Verify with Telegram code\n"
+    msg += "• Done! Userbot ready for secret chat delivery!\n\n"
+    msg += "Ready to add a new userbot?"
+    
+    keyboard = [
+        [InlineKeyboardButton("🚀 Start", callback_data="userbot_add_start_name")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
+async def handle_userbot_add_start_name(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Step 1: Ask for userbot name"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    msg = "➕ <b>Step 1/5: Userbot Name</b>\n\n"
+    msg += "Give this userbot a name (for identification).\n\n"
+    msg += "📝 <b>Examples:</b>\n"
+    msg += "• Userbot 1\n"
+    msg += "• Secret Chat Account\n"
+    msg += "• Delivery Bot\n\n"
+    msg += "Please enter the name:"
+    
+    context.user_data['state'] = 'awaiting_new_userbot_name'
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
 async def _show_setup_wizard(query, context):
     """Show initial setup wizard"""
