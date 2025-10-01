@@ -106,7 +106,10 @@ async def _show_userbot_dashboard(query, context):
     keyboard.append([InlineKeyboardButton("➕ Add New Userbot", callback_data="userbot_add_new")])
     
     if userbots:
-        keyboard.append([InlineKeyboardButton("📊 Statistics", callback_data="userbot_stats_all")])
+        keyboard.append([
+            InlineKeyboardButton("🔄 Reconnect All", callback_data="userbot_reconnect_all"),
+            InlineKeyboardButton("📊 Statistics", callback_data="userbot_stats_all")
+        ])
     
     keyboard.append([InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")])
     
@@ -182,6 +185,37 @@ async def handle_userbot_stats_all(update: Update, context: ContextTypes.DEFAULT
     
     keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
+async def handle_userbot_reconnect_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Reconnect all userbots in the pool"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer("🔄 Reconnecting all userbots...", show_alert=False)
+    
+    try:
+        from userbot_pool import userbot_pool
+        
+        # Disconnect all first
+        await userbot_pool.disconnect_all()
+        
+        # Re-initialize pool
+        await userbot_pool.initialize()
+        
+        connected_count = len(userbot_pool.clients)
+        
+        await query.answer(f"✅ Reconnected {connected_count} userbot(s)!", show_alert=True)
+        
+        # Refresh dashboard
+        await handle_userbot_control(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error reconnecting userbots: {e}", exc_info=True)
+        await query.answer(f"❌ Error: {str(e)}", show_alert=True)
 
 async def _show_setup_wizard(query, context):
     """Show initial setup wizard"""
