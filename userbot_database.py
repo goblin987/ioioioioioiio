@@ -150,11 +150,14 @@ def get_userbot_config() -> Dict[str, Any]:
             'api_hash': userbot.get('api_hash'),
             'phone_number': userbot.get('phone_number'),
             'session_string': userbot.get('session_string'),
-            'is_enabled': userbot.get('is_enabled', True),
+            'enabled': userbot.get('is_enabled', True),  # 🚀 YOLO: Map is_enabled → enabled for UI
+            'is_enabled': userbot.get('is_enabled', True),  # Keep both for compatibility
             'max_retries': 3,  # Default values for legacy compatibility
             'retry_delay': 5,
+            'secret_chat_ttl': 86400,  # 24 hours in seconds
             'ttl_hours': 24,
             'auto_reconnect': True,
+            'send_notifications': True,  # 🚀 YOLO: Add this key for UI
             'notifications_enabled': True
         }
     return {}
