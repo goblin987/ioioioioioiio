@@ -88,6 +88,18 @@ async def _show_status_dashboard(query, context):
     if last_updated:
         msg += f"<b>Last Updated:</b> {last_updated.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
     
+    # 🔐 Telethon Secret Chat Status
+    msg += "\n<b>🔐 Secret Chat (Telethon):</b>\n"
+    try:
+        from userbot_telethon_secret import telethon_secret_chat
+        if telethon_secret_chat.is_connected:
+            msg += "✅ Telethon Connected - TRUE SECRET CHATS ENABLED!\n"
+        else:
+            msg += "⚠️ Telethon Not Connected - Regular delivery only\n"
+            msg += "<i>Set up Telethon for encrypted secret chats</i>\n"
+    except Exception as e:
+        msg += "❌ Telethon Not Available\n"
+    
     msg += "\n<b>Settings:</b>\n"
     
     # Enabled status
@@ -133,6 +145,7 @@ async def _show_status_dashboard(query, context):
     keyboard.extend([
         [InlineKeyboardButton("⚙️ Settings", callback_data="userbot_settings"),
          InlineKeyboardButton("📊 Stats", callback_data="userbot_stats")],
+        [InlineKeyboardButton("🔐 Setup Secret Chat", callback_data="telethon_setup")],
         [InlineKeyboardButton("🗑️ Reset Config", callback_data="userbot_reset_confirm")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ])
@@ -643,4 +656,254 @@ async def handle_userbot_reset_confirmed(update: Update, context: ContextTypes.D
 
 # Import asyncio for the phone verification handler
 import asyncio
+
+# ==================== TELETHON SECRET CHAT SETUP ====================
+
+async def handle_telethon_setup(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show Telethon secret chat setup wizard"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    # Check if Telethon is already connected
+    try:
+        from userbot_telethon_secret import telethon_secret_chat
+        if telethon_secret_chat.is_connected:
+            msg = "🔐 <b>Telethon Secret Chat Status</b>\n\n"
+            msg += "✅ <b>Already Connected!</b>\n\n"
+            msg += "TRUE SECRET CHATS are enabled.\n"
+            msg += "All deliveries will use end-to-end encrypted secret chats.\n\n"
+            msg += "<b>Features:</b>\n"
+            msg += "• End-to-end encryption\n"
+            msg += "• Self-destructing messages\n"
+            msg += "• No server storage\n"
+            msg += "• Perfect forward secrecy\n"
+            
+            keyboard = [
+                [InlineKeyboardButton("🔌 Disconnect Telethon", callback_data="telethon_disconnect")],
+                [InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]
+            ]
+            
+            await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+            return
+    except Exception as e:
+        logger.error(f"Error checking Telethon status: {e}")
+    
+    # Check if userbot is configured
+    if not userbot_config.is_configured():
+        await query.answer("❌ Please set up userbot first!", show_alert=True)
+        await _show_setup_wizard(query, context)
+        return
+    
+    # Show setup wizard
+    msg = "🔐 <b>Telethon Secret Chat Setup</b>\n\n"
+    msg += "<b>What are SECRET CHATS?</b>\n"
+    msg += "Secret chats use end-to-end encryption and are NOT stored on Telegram servers.\n\n"
+    msg += "<b>Why Telethon?</b>\n"
+    msg += "Pyrogram doesn't support creating secret chats. We use Telethon for TRUE secret chat delivery.\n\n"
+    msg += "<b>Setup Process:</b>\n"
+    msg += "1. We'll use your SAME userbot credentials\n"
+    msg += "2. Send verification code to your phone\n"
+    msg += "3. Enter the code\n"
+    msg += "4. Done! Secret chats enabled.\n\n"
+    msg += "<i>Note: This is a one-time setup. Your Telethon session will be saved.</i>\n\n"
+    msg += "Ready to enable TRUE secret chats?"
+    
+    keyboard = [
+        [InlineKeyboardButton("🚀 Start Setup", callback_data="telethon_start_auth")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
+async def handle_telethon_start_auth(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start Telethon authentication process"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer("⏳ Sending code...", show_alert=False)
+    
+    try:
+        from userbot_telethon_secret import telethon_secret_chat
+        
+        # Get userbot config
+        config = userbot_config.get_dict()
+        api_id = config.get('api_id')
+        api_hash = config.get('api_hash')
+        phone = config.get('phone_number')
+        
+        if not all([api_id, api_hash, phone]):
+            await query.answer("❌ Missing userbot config!", show_alert=True)
+            return
+        
+        # Start authentication
+        success, message, needs_code = await telethon_secret_chat.authenticate_telethon(
+            int(api_id),
+            api_hash,
+            phone
+        )
+        
+        if not success:
+            await query.answer(f"❌ {message}", show_alert=True)
+            return
+        
+        # Store auth data in context for verification step
+        context.user_data['telethon_api_id'] = api_id
+        context.user_data['telethon_api_hash'] = api_hash
+        context.user_data['telethon_phone'] = phone
+        context.user_data['state'] = 'awaiting_telethon_code'
+        
+        msg = "🔐 <b>Verification Code Sent!</b>\n\n"
+        msg += f"A verification code has been sent to <b>{phone}</b>.\n\n"
+        msg += "📱 Please enter the code you received:\n\n"
+        msg += "<i>Example: 12345</i>"
+        
+        keyboard = [
+            [InlineKeyboardButton("❌ Cancel", callback_data="telethon_cancel_auth")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Error starting Telethon auth: {e}", exc_info=True)
+        await query.answer(f"❌ Error: {str(e)}", show_alert=True)
+
+async def handle_telethon_verification_code_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle Telethon verification code input"""
+    if context.user_data.get('state') != 'awaiting_telethon_code':
+        return
+    
+    user_id = update.effective_user.id
+    if not is_primary_admin(user_id):
+        return
+    
+    code = update.message.text.strip()
+    api_id = context.user_data.get('telethon_api_id')
+    api_hash = context.user_data.get('telethon_api_hash')
+    phone = context.user_data.get('telethon_phone')
+    
+    if not all([api_id, api_hash, phone]):
+        await update.message.reply_text("❌ <b>Error:</b> Setup data lost. Please start again.", parse_mode='HTML')
+        context.user_data.pop('state', None)
+        return
+    
+    await update.message.reply_text("⏳ <b>Verifying code...</b>", parse_mode='HTML')
+    
+    try:
+        from userbot_telethon_secret import telethon_secret_chat
+        
+        success, message, session_string = await telethon_secret_chat.complete_telethon_auth(
+            int(api_id),
+            api_hash,
+            phone,
+            code
+        )
+        
+        if not success:
+            await update.message.reply_text(
+                f"❌ <b>Verification Failed</b>\n\n{message}\n\nPlease try again:",
+                parse_mode='HTML'
+            )
+            return
+        
+        # Clear state
+        context.user_data.pop('state', None)
+        context.user_data.pop('telethon_api_id', None)
+        context.user_data.pop('telethon_api_hash', None)
+        context.user_data.pop('telethon_phone', None)
+        
+        # Success message
+        msg = "🎉 <b>Telethon Setup Complete!</b>\n\n"
+        msg += f"✅ {message}\n\n"
+        msg += "🔐 <b>TRUE SECRET CHATS ENABLED!</b>\n\n"
+        msg += "All product deliveries will now use:\n"
+        msg += "• End-to-end encryption\n"
+        msg += "• Self-destructing messages\n"
+        msg += "• No server storage\n"
+        msg += "• Perfect forward secrecy\n\n"
+        msg += "Your buyers will receive products in encrypted secret chats! 🎯"
+        
+        await update.message.reply_text(msg, parse_mode='HTML')
+        
+        # Now re-initialize Telethon to connect it
+        await asyncio.sleep(1)
+        await update.message.reply_text("⏳ <b>Connecting Telethon...</b>", parse_mode='HTML')
+        
+        telethon_initialized = await telethon_secret_chat.initialize(
+            int(api_id),
+            api_hash,
+            phone,
+            use_existing_pyrogram=False
+        )
+        
+        if telethon_initialized:
+            await update.message.reply_text(
+                "✅ <b>Telethon Connected!</b>\n\nSecret chat delivery is now active! 🔐",
+                parse_mode='HTML'
+            )
+        else:
+            await update.message.reply_text(
+                "⚠️ <b>Telethon saved but not connected</b>\n\nIt will connect on next restart.",
+                parse_mode='HTML'
+            )
+        
+    except Exception as e:
+        logger.error(f"Error completing Telethon auth: {e}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ <b>Error:</b> {str(e)}\n\nPlease try again or contact support.",
+            parse_mode='HTML'
+        )
+
+async def handle_telethon_cancel_auth(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Cancel Telethon authentication"""
+    query = update.callback_query
+    
+    # Clear state
+    context.user_data.pop('state', None)
+    context.user_data.pop('telethon_api_id', None)
+    context.user_data.pop('telethon_api_hash', None)
+    context.user_data.pop('telethon_phone', None)
+    
+    await query.answer("❌ Setup cancelled", show_alert=False)
+    await handle_userbot_control(update, context)
+
+async def handle_telethon_disconnect(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Disconnect Telethon"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    try:
+        from userbot_telethon_secret import telethon_secret_chat
+        await telethon_secret_chat.disconnect()
+        
+        # Also remove session from database
+        from userbot_database import get_db_connection
+        conn = get_db_connection()
+        c = conn.cursor()
+        try:
+            c.execute("DELETE FROM system_settings WHERE setting_key = 'telethon_session_string'")
+            conn.commit()
+        except Exception as e:
+            logger.warning(f"Could not remove Telethon session from DB: {e}")
+            conn.rollback()
+        finally:
+            conn.close()
+        
+        await query.answer("✅ Telethon disconnected!", show_alert=True)
+        await handle_userbot_control(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error disconnecting Telethon: {e}")
+        await query.answer(f"❌ Error: {str(e)}", show_alert=True)
 

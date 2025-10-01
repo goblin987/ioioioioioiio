@@ -199,7 +199,12 @@ try:
         handle_userbot_api_id_message,
         handle_userbot_api_hash_message,
         handle_userbot_phone_message,
-        handle_userbot_verification_code_message
+        handle_userbot_verification_code_message,
+        handle_telethon_setup,
+        handle_telethon_start_auth,
+        handle_telethon_verification_code_message,
+        handle_telethon_cancel_auth,
+        handle_telethon_disconnect
     )
     print("✅ YOLO DEBUG: userbot_admin handlers imported successfully")
     
@@ -1013,6 +1018,10 @@ def callback_query_router(func):
                     "userbot_toggle_enabled": handle_userbot_toggle_enabled,
                     "userbot_toggle_reconnect": handle_userbot_toggle_reconnect,
                     "userbot_toggle_notifications": handle_userbot_toggle_notifications,
+                    "telethon_setup": handle_telethon_setup,
+                    "telethon_start_auth": handle_telethon_start_auth,
+                    "telethon_cancel_auth": handle_telethon_cancel_auth,
+                    "telethon_disconnect": handle_telethon_disconnect,
                 })
                 logger.info("✅ Userbot handlers registered")
 
@@ -1100,6 +1109,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_userbot_api_hash': handle_userbot_api_hash_message if USERBOT_AVAILABLE else None,
         'awaiting_userbot_phone': handle_userbot_phone_message if USERBOT_AVAILABLE else None,
         'awaiting_userbot_verification_code': handle_userbot_verification_code_message if USERBOT_AVAILABLE else None,
+        'awaiting_telethon_code': handle_telethon_verification_code_message if USERBOT_AVAILABLE else None,
         
         # Auto ads system message handlers (removed - using testforwarder integration)
         
