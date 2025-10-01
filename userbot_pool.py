@@ -168,16 +168,16 @@ class UserbotPool:
         try:
             logger.info(f"🔐 Starting SECRET CHAT delivery via userbot #{userbot_id} to user {buyer_user_id} (@{buyer_username or 'no_username'})")
             
-            # 1. Get user entity - try username first if available, fallback to ID
+            # 1. Get FULL user entity (not just InputPeer) - try username first
             try:
                 if buyer_username:
-                    logger.info(f"🔍 Getting user entity by username: @{buyer_username}...")
-                    user_entity = await client.get_input_entity(buyer_username)
-                    logger.info(f"✅ Got user entity by username")
+                    logger.info(f"🔍 Getting FULL user entity by username: @{buyer_username}...")
+                    user_entity = await client.get_entity(buyer_username)
+                    logger.info(f"✅ Got full user entity by username: {user_entity.id}")
                 else:
-                    logger.info(f"🔍 Getting user entity by ID: {buyer_user_id}...")
-                    user_entity = await client.get_input_entity(buyer_user_id)
-                    logger.info(f"✅ Got user entity by ID")
+                    logger.info(f"🔍 Getting FULL user entity by ID: {buyer_user_id}...")
+                    user_entity = await client.get_entity(buyer_user_id)
+                    logger.info(f"✅ Got full user entity by ID: {user_entity.id}")
             except Exception as e:
                 logger.error(f"❌ Error getting user entity for {buyer_user_id} (@{buyer_username or 'N/A'}): {e}")
                 return False, f"Failed to get user entity: {e}"
@@ -185,9 +185,9 @@ class UserbotPool:
             # 2. Create secret chat
             secret_chat_obj = None
             try:
-                logger.info(f"🔐 Starting secret chat with @{buyer_username or buyer_user_id}...")
+                logger.info(f"🔐 Starting secret chat with user {user_entity.id} (@{buyer_username or 'N/A'})...")
                 secret_chat_obj = await secret_chat_manager.start_secret_chat(user_entity)
-                logger.info(f"✅ Secret chat started, ID: {secret_chat_obj.id}")
+                logger.info(f"✅ Secret chat started successfully!")
                 # Wait for encryption handshake
                 await asyncio.sleep(2)
                 
