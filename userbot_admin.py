@@ -472,6 +472,9 @@ async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DE
     enabled = params[0] == 'True'
     userbot_config.set_enabled(enabled)
     
+    # Force reload config from database to ensure display is updated
+    userbot_config.load()
+    
     status = "enabled" if enabled else "disabled"
     await query.answer(f"✅ Delivery {status}!", show_alert=True)
     
@@ -498,6 +501,9 @@ async def handle_userbot_toggle_reconnect(update: Update, context: ContextTypes.
     auto_reconnect = params[0] == 'True'
     userbot_config.set_auto_reconnect(auto_reconnect)
     
+    # Force reload config from database to ensure display is updated
+    userbot_config.load()
+    
     status = "enabled" if auto_reconnect else "disabled"
     await query.answer(f"✅ Auto-reconnect {status}!", show_alert=True)
     
@@ -522,6 +528,9 @@ async def handle_userbot_toggle_notifications(update: Update, context: ContextTy
     
     notifications = params[0] == 'True'
     userbot_config.set_notifications(notifications)
+    
+    # Force reload config from database to ensure display is updated
+    userbot_config.load()
     
     status = "enabled" if notifications else "disabled"
     await query.answer(f"✅ Notifications {status}!", show_alert=True)
