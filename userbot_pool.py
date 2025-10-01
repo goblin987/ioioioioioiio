@@ -167,13 +167,15 @@ class UserbotPool:
         try:
             logger.info(f"🔐 Starting SECRET CHAT delivery via userbot #{userbot_id} to user {buyer_user_id}")
             
-            # 1. Get user entity
+            # 1. Get user entity (Telethon will fetch from server if not cached)
             try:
-                user_entity = await client.get_entity(buyer_user_id)
-                logger.info(f"✅ Found user entity for {buyer_user_id}")
+                logger.info(f"🔍 Getting user entity for {buyer_user_id}...")
+                # Use get_input_entity which fetches from Telegram servers if needed
+                user_entity = await client.get_input_entity(buyer_user_id)
+                logger.info(f"✅ Got user entity for {buyer_user_id}")
             except Exception as e:
-                logger.error(f"❌ Error finding user {buyer_user_id}: {e}")
-                return False, f"Error finding user {buyer_user_id}: {e}"
+                logger.error(f"❌ Error getting user entity for {buyer_user_id}: {e}")
+                return False, f"Failed to get user entity: {e}"
             
             # 2. Create or reuse secret chat
             secret_chat_obj = None
