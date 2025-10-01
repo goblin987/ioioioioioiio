@@ -120,10 +120,10 @@ def get_delivery_stats() -> Dict[str, Any]:
     """Get delivery statistics (legacy function - maps to userbot ID #1)"""
     stats = get_userbot_stats(1)
     if stats:
-        total = stats.get('total_deliveries', 0)
-        success = stats.get('successful_deliveries', 0)
-        failed = stats.get('failed_deliveries', 0)
-        success_rate = round((success / total * 100) if total > 0 else 0, 1)
+        total = stats.get('total_deliveries') or 0
+        success = stats.get('successful_deliveries') or 0
+        failed = stats.get('failed_deliveries') or 0
+        success_rate = round((success / total * 100) if total and total > 0 else 0, 1)
         
         return {
             'total': total,

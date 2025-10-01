@@ -515,9 +515,9 @@ class UserbotManager:
             
             # PHASE 2: Send initial notification to buyer
             try:
-                notification_text = f"""🔐 **Secure Delivery**
+                notification_text = f"""🔐 <b>Secure Delivery</b>
 
-📦 Order ID: `{order_id}`
+📦 Order ID: <code>{order_id}</code>
 🏷️ Product: {product_name}
 📏 Size: {product_data.get('size', 'N/A')}
 📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
@@ -528,7 +528,7 @@ class UserbotManager:
                 await self.client.send_message(
                     chat_id=buyer_user_id,
                     text=notification_text,
-                    parse_mode='markdown'
+                    parse_mode='html'
                 )
                 logger.info(f"✅ Sent notification to user {buyer_user_id}")
                 
@@ -574,18 +574,18 @@ class UserbotManager:
 📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
 💰 Price Paid: {product_data.get('price', 0):.2f} EUR
 
-📝 **Pickup Details:**
+📝 <b>Pickup Details:</b>
 {product_data.get('original_text', 'No additional details provided.')}
 
-✅ **Order Completed**
-Order ID: `{order_id}`
+✅ <b>Order Completed</b>
+Order ID: <code>{order_id}</code>
 
 Thank you for your purchase! 🎉"""
                 
                 await self.client.send_message(
                     chat_id=buyer_user_id,
                     text=details_text,
-                    parse_mode='markdown'
+                    parse_mode='html'
                 )
                 logger.info(f"✅ Sent product details to user {buyer_user_id}")
                 
