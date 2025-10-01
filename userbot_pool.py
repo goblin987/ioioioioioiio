@@ -280,6 +280,7 @@ class UserbotPool:
                                         pass
                                         
                                 elif media_type == 'video':
+                                    logger.info(f"🎬 ENTERING VIDEO BLOCK")
                                     # Upload to Saved Messages first to get proper video attributes
                                     me = await client.get_me()
                                     logger.info(f"🔼 Uploading video to Saved Messages first to extract attributes...")
@@ -288,8 +289,10 @@ class UserbotPool:
                                     
                                     # Video might be in temp_msg.document or temp_msg.video
                                     video_doc = temp_msg.video or temp_msg.document
+                                    logger.info(f"📦 video_doc type: {type(video_doc)}, has video: {temp_msg.video is not None}, has document: {temp_msg.document is not None}")
                                     
                                     if video_doc:
+                                        logger.info(f"✅ video_doc exists, processing attributes...")
                                         from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
                                         
                                         # Find a proper thumbnail (not PhotoStrippedSize)
@@ -323,6 +326,7 @@ class UserbotPool:
                                                     break
                                         
                                         logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, size={size}, mime={mime_type}")
+                                        logger.info(f"🚀 CALLING send_secret_video NOW...")
                                         
                                         await secret_chat_manager.send_secret_video(
                                             secret_chat_obj,
@@ -343,6 +347,8 @@ class UserbotPool:
                                             await temp_msg.delete()
                                         except:
                                             pass
+                                    else:
+                                        logger.error(f"❌ video_doc is None! Cannot send video.")
                                         
                             sent_media_count += 1
                             
