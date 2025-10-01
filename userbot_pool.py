@@ -279,13 +279,15 @@ class UserbotPool:
                                     except:
                                         pass
                                         
-                            elif media_type == 'video':
-                                # Upload to Saved Messages first
-                                me = await client.get_me()
-                                temp_msg = await client.send_file(me, temp_path)
-                                
-                                # Video might be in temp_msg.document or temp_msg.video
-                                video_doc = temp_msg.video or temp_msg.document
+                                elif media_type == 'video':
+                                    # Upload to Saved Messages first to get proper video attributes
+                                    me = await client.get_me()
+                                    logger.info(f"🔼 Uploading video to Saved Messages first to extract attributes...")
+                                    temp_msg = await client.send_file(me, temp_path)
+                                    logger.info(f"✅ Video uploaded to Saved Messages (check if it plays correctly there!)")
+                                    
+                                    # Video might be in temp_msg.document or temp_msg.video
+                                    video_doc = temp_msg.video or temp_msg.document
                                 
                                 if video_doc:
                                     from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
@@ -319,6 +321,8 @@ class UserbotPool:
                                                 w = int(attr.w) if attr.w else 0
                                                 h = int(attr.h) if attr.h else 0
                                                 break
+                                    
+                                    logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, size={size}, mime={mime_type}")
                                     
                                     await secret_chat_manager.send_secret_video(
                                         secret_chat_obj,
