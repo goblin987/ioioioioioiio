@@ -2251,7 +2251,16 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
                             
                             try:
                                 await asyncio.to_thread(shutil.copy2, temp_file_path, final_persistent_path)
-                                media_inserts.append((product_id, media_item["type"], final_persistent_path, media_item["file_id"]))
+                                
+                                # 🚀 YOLO: Read media binary for PostgreSQL (RENDER-SAFE for userbot delivery)
+                                media_binary = None
+                                try:
+                                    with open(final_persistent_path, 'rb') as f:
+                                        media_binary = psycopg2.Binary(f.read())
+                                except Exception as read_err:
+                                    logger.error(f"❌ Failed to read media binary for bulk product: {read_err}")
+                                
+                                media_inserts.append((product_id, media_item["type"], final_persistent_path, media_item["file_id"], media_binary))
                             except OSError as move_err:
                                 logger.error(f"Error copying media {temp_file_path}: {move_err}")
                         else:
@@ -2261,8 +2270,8 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
                 
                 # Insert all media records at once (outside the loop)
                 if media_inserts:
-                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (%s, %s, %s, %s)", media_inserts)
-                    logger.info(f"Successfully inserted {len(media_inserts)} media records for bulk product {product_id}")
+                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id, media_binary) VALUES (%s, %s, %s, %s, %s)", media_inserts)
+                    logger.info(f"✅ BULK: Inserted {len(media_inserts)} media records WITH BINARY for product {product_id}")
                 else:
                     logger.warning(f"No media was inserted for product {product_id}. Media list: {media_list}, Temp dir: {temp_dir}")
             
@@ -5389,7 +5398,16 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
                             
                             try:
                                 await asyncio.to_thread(shutil.copy2, temp_file_path, final_persistent_path)
-                                media_inserts.append((product_id, media_item["type"], final_persistent_path, media_item["file_id"]))
+                                
+                                # 🚀 YOLO: Read media binary for PostgreSQL (RENDER-SAFE for userbot delivery)
+                                media_binary = None
+                                try:
+                                    with open(final_persistent_path, 'rb') as f:
+                                        media_binary = psycopg2.Binary(f.read())
+                                except Exception as read_err:
+                                    logger.error(f"❌ Failed to read media binary for bulk message product: {read_err}")
+                                
+                                media_inserts.append((product_id, media_item["type"], final_persistent_path, media_item["file_id"], media_binary))
                             except OSError as move_err:
                                 logger.error(f"Error copying media {temp_file_path}: {move_err}")
                         else:
@@ -5399,8 +5417,8 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
                 
                 # Insert all media records at once (outside the loop)
                 if media_inserts:
-                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (%s, %s, %s, %s)", media_inserts)
-                    logger.info(f"Successfully inserted {len(media_inserts)} media records for bulk product {product_id}")
+                    c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id, media_binary) VALUES (%s, %s, %s, %s, %s)", media_inserts)
+                    logger.info(f"✅ BULK MESSAGES: Inserted {len(media_inserts)} media records WITH BINARY for product {product_id}")
                 else:
                     logger.warning(f"No media was inserted for product {product_id}. Media list: {media_list}, Temp dir: {temp_dir}")
             
