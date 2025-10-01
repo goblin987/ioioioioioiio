@@ -1635,7 +1635,17 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
                         
                         try:
                             await asyncio.to_thread(shutil.copy2, temp_file_path, final_persistent_path)
-                            media_inserts.append((product_id, media_item["type"], final_persistent_path, media_item["file_id"]))
+                            
+                            # 🚀 YOLO: Read file as binary for PostgreSQL storage (RENDER-SAFE!)
+                            media_binary = None
+                            try:
+                                with open(temp_file_path, 'rb') as f:
+                                    media_binary = f.read()
+                                logger.info(f"✅ Read {len(media_binary)} bytes for P{product_id} media")
+                            except Exception as read_err:
+                                logger.error(f"Could not read binary for {temp_file_path}: {read_err}")
+                            
+                            media_inserts.append((product_id, media_item["type"], final_persistent_path, media_item["file_id"], psycopg2.Binary(media_binary) if media_binary else None))
                         except OSError as move_err:
                             logger.error(f"Error copying media {temp_file_path}: {move_err}")
                     else:
@@ -1645,8 +1655,12 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
             
             # Insert all media records at once (outside the loop)
             if media_inserts:
-                c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id) VALUES (%s, %s, %s, %s)", media_inserts)
-                logger.info(f"Successfully inserted {len(media_inserts)} media records for bulk product {product_id}")
+                c.executemany("INSERT INTO product_media (product_id, media_type, file_path, telegram_file_id, media_binary) VALUES (%s, %s, %s, %s, %s)", media_inserts)
+                logger.info(f"✅ Successfully inserted {len(media_inserts)} media records (with binary data) for product {product_id}")
+                
+                # Calculate total storage
+                total_bytes = sum(len(m[4].adapted) if m[4] else 0 for m in media_inserts)
+                logger.info(f"📊 Stored {total_bytes / 1024 / 1024:.2f} MB in PostgreSQL for P{product_id}")
             else:
                 logger.warning(f"No media was inserted for product {product_id}. Media list: {media_list}, Temp dir: {temp_dir}")
 

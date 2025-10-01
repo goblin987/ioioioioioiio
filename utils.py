@@ -1310,9 +1310,19 @@ def init_db():
             logger.info(f"🔧 Creating product_media table...")
             c.execute('''CREATE TABLE IF NOT EXISTS product_media (
                 id SERIAL PRIMARY KEY, product_id INTEGER NOT NULL,
-                media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT
+                media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
+                media_binary BYTEA
             )''')
             logger.info(f"✅ Product_media table created successfully")
+            
+            # 🚀 YOLO: Add media_binary column if it doesn't exist (for existing databases)
+            try:
+                c.execute("ALTER TABLE product_media ADD COLUMN IF NOT EXISTS media_binary BYTEA")
+                conn.commit()
+                logger.info(f"✅ media_binary column added to product_media table")
+            except Exception as e:
+                conn.rollback()
+                logger.info(f"ℹ️ media_binary column handling: {e}")
             # purchases table
             logger.info(f"🔧 Creating purchases table...")
             c.execute('''CREATE TABLE IF NOT EXISTS purchases (

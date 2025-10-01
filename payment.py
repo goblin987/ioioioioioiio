@@ -1056,12 +1056,14 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 conn_media = get_db_connection()
                 c_media = conn_media.cursor()
                 media_placeholders = ','.join(['%s'] * len(processed_product_ids))
-                c_media.execute(f"SELECT product_id, media_type, telegram_file_id, file_path FROM product_media WHERE product_id IN ({media_placeholders})", processed_product_ids)
+                # 🚀 YOLO: Fetch media_binary from PostgreSQL for RENDER-SAFE storage
+                c_media.execute(f"SELECT product_id, media_type, telegram_file_id, file_path, media_binary FROM product_media WHERE product_id IN ({media_placeholders})", processed_product_ids)
                 media_rows = c_media.fetchall()
                 logger.info(f"Fetched {len(media_rows)} media records for products {processed_product_ids} for user {user_id}")
                 for row in media_rows: 
                     media_details[row['product_id']].append(dict(row))
-                    logger.debug(f"Media for P{row['product_id']}: {row['media_type']} - FileID: {'Yes' if row['telegram_file_id'] else 'No'}, Path: {row['file_path']}")
+                    has_binary = 'Yes' if row.get('media_binary') else 'No'
+                    logger.debug(f"Media for P{row['product_id']}: {row['media_type']} - FileID: {'Yes' if row['telegram_file_id'] else 'No'}, Binary: {has_binary}")
             except sqlite3.Error as e: 
                 logger.error(f"DB error fetching media post-purchase: {e}")
             finally:
@@ -1147,9 +1149,19 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                         file_path = media_item.get('file_path')
                         logger.debug(f"Processing media item P{prod_id}: Type={media_type}, FileID={'Yes' if file_id else 'No'}, Path={file_path}")
                         if media_type in ['photo', 'video']:
-                            photo_video_group_details.append({'type': media_type, 'id': file_id, 'path': file_path})
+                            photo_video_group_details.append({
+                                'type': media_type, 
+                                'id': file_id, 
+                                'path': file_path,
+                                'binary': media_item.get('media_binary')  # PostgreSQL BYTEA
+                            })
                         elif media_type == 'gif':
-                            animations_to_send_details.append({'type': media_type, 'id': file_id, 'path': file_path})
+                            animations_to_send_details.append({
+                                'type': media_type, 
+                                'id': file_id, 
+                                'path': file_path,
+                                'binary': media_item.get('media_binary')
+                            })
                         else:
                             logger.warning(f"Unsupported media type '{media_type}' found for P{prod_id}")
 
@@ -1169,9 +1181,13 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                             for item in photo_video_group_details:
                                 input_media = None
                                 
-                                # 🚀 YOLO FIX: Use telegram_file_id (永久存储) instead of ephemeral file paths
-                                # Render deletes files on restart, but Telegram stores media forever!
+                                # 🚀 YOLO FIX: 3-tier fallback for maximum reliability
+                                # 1. Try telegram_file_id (fastest, Telegram cloud storage)
+                                # 2. Try binary data from PostgreSQL (RENDER-SAFE!)
+                                # 3. Fail gracefully
+                                
                                 file_id = item.get('id')
+                                media_binary = item.get('binary')  # PostgreSQL BYTEA data
                                 
                                 if file_id:
                                     logger.debug(f"Using Telegram file_id for P{prod_id}: {file_id[:20]}...")
@@ -1182,10 +1198,29 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                                             input_media = InputMediaVideo(media=file_id)
                                         logger.debug(f"✅ Created InputMedia for P{prod_id} from file_id")
                                     except Exception as media_err:
-                                        logger.warning(f"Failed to use file_id for P{prod_id}: {media_err}")
+                                        logger.warning(f"file_id failed for P{prod_id}, trying PostgreSQL backup: {media_err}")
                                         input_media = None
-                                else:
-                                    logger.warning(f"❌ No file_id available for P{prod_id} media: {item}")
+                                
+                                # Fallback to PostgreSQL binary data
+                                if not input_media and media_binary:
+                                    logger.info(f"🔄 Using PostgreSQL binary data for P{prod_id} ({len(media_binary)} bytes)")
+                                    try:
+                                        # Convert binary data to file-like object
+                                        import io
+                                        media_file = io.BytesIO(media_binary)
+                                        media_file.name = f"product_{prod_id}.{'jpg' if item['type'] == 'photo' else 'mp4'}"
+                                        
+                                        if item['type'] == 'photo': 
+                                            input_media = InputMediaPhoto(media=media_file)
+                                        elif item['type'] == 'video': 
+                                            input_media = InputMediaVideo(media=media_file)
+                                        logger.info(f"✅ Created InputMedia for P{prod_id} from PostgreSQL binary")
+                                    except Exception as binary_err:
+                                        logger.error(f"PostgreSQL binary failed for P{prod_id}: {binary_err}")
+                                        input_media = None
+                                
+                                if not input_media:
+                                    logger.error(f"❌ All methods failed for P{prod_id} media: {item}")
                                     
                                 if input_media: 
                                     media_group_input.append(input_media)
