@@ -1,14 +1,17 @@
 """
 Proper MTProto Secret Chat File Encryption
 Implements AES-256-IGE encryption as per Telegram specification
+Based on official MTProto 2.0 documentation with KDF (Key Derivation Function)
 """
 
 import hashlib
 import os
 from typing import Tuple
 from Crypto.Cipher import AES
-from Crypto.Util import Counter
 import struct
+import logging
+
+logger = logging.getLogger(__name__)
 
 def aes_ige_encrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
     """
@@ -94,6 +97,34 @@ def pad_to_16_bytes(data: bytes) -> bytes:
         padding = os.urandom(padding_needed)
         return data + padding
     return data
+
+
+def derive_aes_key_iv_mtproto2(msg_key: bytes, auth_key: bytes, is_client: bool = True) -> Tuple[bytes, bytes]:
+    """
+    MTProto 2.0 Key Derivation Function (KDF)
+    As shown in the official diagram
+    
+    Args:
+        msg_key: 128-bit message key (from SHA-256 of plaintext)
+        auth_key: 256-bit shared secret chat key
+        is_client: True if encrypting from client, False if from server
+    
+    Returns:
+        (aes_key, aes_iv): 256-bit AES key and 256-bit IV
+    """
+    x = 0 if is_client else 8  # Client uses x=0, server uses x=8
+    
+    # Multiple SHA-256 operations as per MTProto 2.0 spec
+    sha256_a = hashlib.sha256(msg_key + auth_key[x:x+36]).digest()
+    sha256_b = hashlib.sha256(auth_key[40+x:40+x+36] + msg_key).digest()
+    
+    # Derive AES key (256 bits)
+    aes_key = sha256_a[:8] + sha256_b[8:24] + sha256_a[24:32]
+    
+    # Derive AES IV (256 bits)
+    aes_iv = sha256_b[:8] + sha256_a[8:24] + sha256_b[24:32]
+    
+    return aes_key, aes_iv
 
 
 def encrypt_file_for_secret_chat(file_data: bytes) -> Tuple[bytes, bytes, bytes, int]:

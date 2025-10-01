@@ -1342,6 +1342,19 @@ async def post_init(application: Application) -> None:
         BotCommand("admin", "Access admin panel (Admin only)"),
     ])
     
+    # Apply telethon-secret-chat patches BEFORE initializing userbots
+    if USERBOT_AVAILABLE:
+        try:
+            logger.info("🔧 Applying telethon-secret-chat patches for video fix...")
+            from telethon_secret_patch import apply_all_patches
+            patch_success = apply_all_patches()
+            if patch_success:
+                logger.info("✅ Secret chat patches applied - videos should work now!")
+            else:
+                logger.warning("⚠️ Patch application had issues, proceeding anyway...")
+        except Exception as patch_err:
+            logger.error(f"❌ Failed to apply patches: {patch_err}", exc_info=True)
+    
     # Initialize userbot pool (NEW multi-userbot system)
     if USERBOT_AVAILABLE:
         try:
