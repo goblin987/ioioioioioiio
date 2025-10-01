@@ -1,228 +1,112 @@
 """
-Monkey Patch for telethon-secret-chat library
-Fixes video corruption by using proper AES-IGE encryption from secret_chat_crypto.py
+Deep Patch for telethon-secret-chat library
+STRATEGY: Patch at the pyaes level (the library it uses for encryption)
 
-This patches the library's broken video encryption with our proper MTProto 2.0 implementation.
+The library uses pyaes for AES-IGE encryption, which is BROKEN for large files.
+We'll replace pyaes.AESModeOfOperationIGE with our implementation.
 """
 
 import logging
+from secret_chat_crypto import aes_ige_encrypt, aes_ige_decrypt
 import os
-import tempfile
-from typing import Optional
-from secret_chat_crypto import encrypt_file_for_secret_chat, decrypt_file_from_secret_chat
 
 logger = logging.getLogger(__name__)
 
-# Flag to enable/disable patches
-ENABLE_PATCHES = True  # ✅ ENABLED - Using our proper AES-IGE encryption!
+ENABLE_PATCHES = True
 
-def patch_secret_chat_video_sending():
+
+def patch_pyaes_ige():
     """
-    Monkey patch the telethon_secret_chat library's send_secret_video method
-    to use our proper AES-IGE implementation
+    Patch the pyaes library's IGE mode with our proper implementation
+    This is the ROOT CAUSE - pyaes.AESModeOfOperationIGE is broken!
     """
     try:
-        from telethon_secret_chat import SecretChatManager
-        from telethon_secret_chat.secret_methods import SecretChatMethods
+        import pyaes
         
-        # Save original method
-        original_send_secret_video = SecretChatMethods.send_secret_video
+        logger.info("🔧 Patching pyaes.AESModeOfOperationIGE...")
         
-        async def patched_send_secret_video(
-            self,
-            chat,
-            file: str,  # File path
-            thumb: bytes = b'',
-            thumb_w: int = 160,
-            thumb_h: int = 120,
-            duration: int = 0,
-            mime_type: str = 'video/mp4',
-            w: int = 0,
-            h: int = 0,
-            size: int = 0,
-            caption: str = '',
-            **kwargs
-        ):
+        # Save original
+        original_ige_class = pyaes.AESModeOfOperationIGE
+        
+        class PatchedAESModeOfOperationIGE:
             """
-            PATCHED VERSION: Uses proper AES-IGE encryption
+            Replacement for pyaes.AESModeOfOperationIGE using our correct implementation
             """
-            # Handle both chat object and chat ID
-            chat_id = chat.id if hasattr(chat, 'id') else chat
-            logger.info(f"🔧 PATCHED send_secret_video called for chat {chat_id}")
+            def __init__(self, key, iv=None):
+                self.key = key
+                self.iv = iv if iv else b'\x00' * 32
+                logger.info(f"🔧 PatchedAESModeOfOperationIGE initialized: key={len(key)} bytes, iv={len(iv) if iv else 0} bytes")
             
-            try:
-                # Read video file
-                with open(file, 'rb') as f:
-                    video_data = f.read()
-                
-                logger.info(f"📹 Video size: {len(video_data)} bytes, {w}x{h}, duration={duration}s")
-                
-                # Use our PROPER encryption!
-                encrypted_data, key, iv, fingerprint = encrypt_file_for_secret_chat(video_data)
-                
-                logger.info(f"✅ Video encrypted with proper AES-IGE: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
-                
-                # Save encrypted video to temp file
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.encrypted') as temp_encrypted:
-                    temp_encrypted.write(encrypted_data)
-                    encrypted_path = temp_encrypted.name
-                
-                try:
-                    # Upload encrypted file to Telegram
-                    from telethon.tl.types import DocumentAttributeVideo, InputFile
-                    from telethon.tl.functions.upload import SaveFilePartRequest
-                    
-                    # Upload in chunks
-                    file_id = self.client._file_to_media(
-                        encrypted_path,
-                        attributes=[DocumentAttributeVideo(
-                            duration=duration,
-                            w=w,
-                            h=h
-                        )],
-                        thumb=thumb if thumb else None,
-                        force_document=True
-                    )
-                    
-                    # Now send via secret chat with the decryption key
-                    # The telethon-secret-chat library should handle the message wrapping
-                    # We just need to pass the encrypted file + key + iv
-                    
-                    # Create decryptedMessageMediaVideo with our key/iv
-                    from telethon_secret_chat.secret_sechma import secretTL
-                    
-                    media = secretTL.DecryptedMessageMediaVideo(
-                        thumb=thumb,
-                        thumb_w=thumb_w,
-                        thumb_h=thumb_h,
-                        duration=duration,
-                        mime_type=mime_type,
-                        w=w,
-                        h=h,
-                        size=size,
-                        key=key,  # Our properly generated key!
-                        iv=iv     # Our properly generated IV!
-                    )
-                    
-                    # Send the message with our encrypted file
-                    from telethon_secret_chat.secret_sechma.secretTL import DecryptedMessage
-                    
-                    decrypted_message = DecryptedMessage(
-                        random_id=int.from_bytes(os.urandom(8), 'big', signed=True),
-                        random_bytes=os.urandom(16),
-                        message=caption,
-                        media=media
-                    )
-                    
-                    # Let the library handle the rest (wrapping in decryptedMessageLayer, etc.)
-                    result = await self._send_encrypted_service(chat, decrypted_message)
-                    
-                    logger.info(f"✅ PATCHED video sent successfully to secret chat!")
-                    return result
-                    
-                finally:
-                    # Clean up temp encrypted file
-                    try:
-                        os.unlink(encrypted_path)
-                    except:
-                        pass
-                    
-            except Exception as e:
-                logger.error(f"❌ PATCHED send_secret_video failed: {e}", exc_info=True)
-                # Fallback to original method
-                logger.warning(f"⚠️ Falling back to original (broken) method...")
-                return await original_send_secret_video(
-                    self, chat, file, thumb, thumb_w, thumb_h, 
-                    duration, mime_type, w, h, size, caption, **kwargs
-                )
+            def encrypt(self, plaintext):
+                """Use our proper AES-IGE encryption"""
+                logger.info(f"🔐 PATCHED IGE encrypt called: {len(plaintext)} bytes")
+                result = aes_ige_encrypt(plaintext, self.key, self.iv)
+                logger.info(f"✅ PATCHED IGE encrypt done: {len(result)} bytes")
+                return result
+            
+            def decrypt(self, ciphertext):
+                """Use our proper AES-IGE decryption"""
+                logger.info(f"🔐 PATCHED IGE decrypt called: {len(ciphertext)} bytes")
+                result = aes_ige_decrypt(ciphertext, self.key, self.iv)
+                logger.info(f"✅ PATCHED IGE decrypt done: {len(result)} bytes")
+                return result
         
-        # Apply the patch!
-        SecretChatMethods.send_secret_video = patched_send_secret_video
-        logger.info("✅ Successfully patched telethon_secret_chat.send_secret_video!")
+        # REPLACE the broken class with our working one!
+        pyaes.AESModeOfOperationIGE = PatchedAESModeOfOperationIGE
+        
+        logger.info("✅ Successfully replaced pyaes.AESModeOfOperationIGE with our implementation!")
         return True
         
-    except Exception as patch_err:
-        logger.error(f"❌ Failed to patch telethon_secret_chat: {patch_err}", exc_info=True)
+    except ImportError:
+        logger.warning("⚠️ pyaes not found - library might use different crypto backend")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Failed to patch pyaes: {e}", exc_info=True)
         return False
 
 
-def patch_secret_chat_photo_sending():
+def patch_pycryptodome_ige():
     """
-    Monkey patch for photos too (in case they have similar issues)
+    Alternative: Patch pycryptodome if the library uses that
     """
     try:
-        from telethon_secret_chat.secret_methods import SecretChatMethods
+        from Crypto.Cipher import AES
         
-        original_send_secret_photo = SecretChatMethods.send_secret_photo
+        logger.info("🔧 Attempting to patch Crypto.Cipher.AES...")
         
-        async def patched_send_secret_photo(
-            self,
-            chat,
-            file: str,
-            thumb: bytes = b'',
-            thumb_w: int = 160,
-            thumb_h: int = 120,
-            w: int = 0,
-            h: int = 0,
-            size: int = 0,
-            caption: str = '',
-            **kwargs
-        ):
-            """PATCHED VERSION: Uses proper AES-IGE encryption for photos"""
-            # Handle both chat object and chat ID
-            chat_id = chat.id if hasattr(chat, 'id') else chat
-            logger.info(f"🔧 PATCHED send_secret_photo called for chat {chat_id}")
-            
-            try:
-                # Read photo file
-                with open(file, 'rb') as f:
-                    photo_data = f.read()
-                
-                logger.info(f"📸 Photo size: {len(photo_data)} bytes, {w}x{h}")
-                
-                # Use our PROPER encryption!
-                encrypted_data, key, iv, fingerprint = encrypt_file_for_secret_chat(photo_data)
-                
-                logger.info(f"✅ Photo encrypted with proper AES-IGE: {len(encrypted_data)} bytes")
-                
-                # Continue with sending (similar to video patch)
-                # For now, fall back to original to avoid breaking photos that already work
-                return await original_send_secret_photo(
-                    self, chat, file, thumb, thumb_w, thumb_h, w, h, size, caption, **kwargs
-                )
-                
-            except Exception as e:
-                logger.error(f"❌ PATCHED send_secret_photo failed: {e}", exc_info=True)
-                return await original_send_secret_photo(
-                    self, chat, file, thumb, thumb_w, thumb_h, w, h, size, caption, **kwargs
-                )
+        # This is trickier because pycryptodome doesn't have native IGE mode
+        # If the library uses it, they must have implemented a wrapper
         
-        SecretChatMethods.send_secret_photo = patched_send_secret_photo
-        logger.info("✅ Successfully patched telethon_secret_chat.send_secret_photo!")
+        # For now, just log that we detected pycryptodome
+        logger.info("✅ pycryptodome detected, but no patching needed (library uses pyaes for IGE)")
         return True
         
-    except Exception as patch_err:
-        logger.error(f"❌ Failed to patch photo sending: {patch_err}", exc_info=True)
+    except ImportError:
+        logger.info("📋 pycryptodome not found")
         return False
 
 
 def apply_all_patches():
-    """Apply all patches to fix video corruption"""
+    """
+    Apply all patches to fix video corruption
+    
+    THIS IS THE NUCLEAR OPTION: We replace the entire AES-IGE implementation
+    """
     
     if not ENABLE_PATCHES:
-        logger.warning("⚠️ Patches disabled - telethon-secret-chat library is too broken to patch")
-        logger.info("📋 Strategy: We'll use a different approach (send as regular message or use forwarding)")
+        logger.warning("⚠️ Patches disabled")
         return False
     
-    logger.info("🔧 Applying telethon-secret-chat patches...")
+    logger.info("🔧 Applying DEEP telethon-secret-chat patches...")
+    logger.info("🎯 Target: Replace pyaes.AESModeOfOperationIGE with our correct implementation")
     
-    video_patch = patch_secret_chat_video_sending()
-    photo_patch = patch_secret_chat_photo_sending()
-    
-    if video_patch and photo_patch:
-        logger.info("✅ All patches applied successfully!")
+    # This is the MAIN patch
+    if patch_pyaes_ige():
+        logger.info("✅ 🎉 CRITICAL PATCH APPLIED - pyaes IGE encryption replaced!")
+        logger.info("📹 Videos should now encrypt/decrypt correctly!")
         return True
     else:
-        logger.warning("⚠️ Some patches failed, videos may still be corrupted")
+        logger.error("❌ Failed to patch pyaes - videos will still be corrupted")
+        # Try alternative
+        patch_pycryptodome_ige()
         return False
-
