@@ -281,25 +281,70 @@ class UserbotPool:
                                         pass
                                         
                             elif media_type == 'video':
-                                logger.info(f"🎬 ENTERING VIDEO BLOCK - HYBRID APPROACH")
-                                logger.info(f"⚠️ telethon-secret-chat library has broken video encryption")
-                                logger.info(f"💡 Solution: Send video as REGULAR MESSAGE (server-client encryption)")
-                                logger.info(f"📝 Text/photos stay in secret chat, only videos use regular delivery")
+                                logger.info(f"🎬 ENTERING VIDEO BLOCK - Using PATCHED pyaes encryption!")
                                 
-                                # HYBRID APPROACH: Secret chat is too broken for videos
-                                # Send videos as regular private messages instead
-                                try:
-                                    # Get user entity for regular message
-                                    logger.info(f"📤 Sending video as regular private message (fallback)...")
-                                    await client.send_file(
-                                        user_entity,
-                                        temp_path,
-                                        caption=f"🎬 Video {idx}/{len(media_binary_items)}"
-                                    )
-                                    logger.info(f"✅ Video {idx} sent via REGULAR MESSAGE (not secret chat)")
+                                # Upload to Saved Messages first to get video attributes
+                                me = await client.get_me()
+                                logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
+                                temp_msg = await client.send_file(me, temp_path)
+                                
+                                # Extract video attributes
+                                from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
+                                
+                                video_doc = temp_msg.video or temp_msg.document
+                                
+                                thumb_bytes = b''
+                                thumb_w = 160
+                                thumb_h = 120
+                                duration = 0
+                                w = 0
+                                h = 0
+                                mime_type = 'video/mp4'
+                                
+                                if video_doc:
+                                    # Get thumbnail
+                                    if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
+                                        for thumb in video_doc.thumbs:
+                                            if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
+                                                if hasattr(thumb, 'bytes'):
+                                                    thumb_bytes = thumb.bytes
+                                                thumb_w = getattr(thumb, 'w', 160)
+                                                thumb_h = getattr(thumb, 'h', 120)
+                                                break
                                     
-                                except Exception as video_err:
-                                    logger.error(f"❌ Failed to send video: {video_err}", exc_info=True)
+                                    # Get video dimensions and duration
+                                    mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
+                                    if hasattr(video_doc, 'attributes'):
+                                        for attr in video_doc.attributes:
+                                            if isinstance(attr, DocumentAttributeVideo):
+                                                duration = int(attr.duration) if attr.duration else 0
+                                                w = int(attr.w) if attr.w else 0
+                                                h = int(attr.h) if attr.h else 0
+                                                break
+                                    
+                                    # Delete temp message
+                                    try:
+                                        await temp_msg.delete()
+                                    except:
+                                        pass
+                                
+                                logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, mime={mime_type}")
+                                logger.info(f"🔐 Sending video via SECRET CHAT (pyaes is PATCHED!)...")
+                                
+                                # This will now use OUR patched pyaes encryption!
+                                await secret_chat_manager.send_secret_video(
+                                    secret_chat_obj,
+                                    temp_path,
+                                    thumb=thumb_bytes,
+                                    thumb_w=thumb_w,
+                                    thumb_h=thumb_h,
+                                    duration=duration,
+                                    mime_type=mime_type,
+                                    w=w,
+                                    h=h,
+                                    size=len(media_binary)
+                                )
+                                logger.info(f"✅ SECRET CHAT video {idx} sent with PATCHED encryption!")
                                         
                             sent_media_count += 1
                             
