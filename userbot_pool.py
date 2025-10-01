@@ -233,6 +233,7 @@ class UserbotPool:
                         try:
                             #  Upload to Saved Messages first to get attributes (WORKING METHOD from userbot_telethon_secret.py)
                             logger.info(f"🔐 Uploading {media_type} to secret chat...")
+                            logger.info(f"🔍 DEBUG: media_type='{media_type}', comparing to 'photo': {media_type == 'photo'}, comparing to 'video': {media_type == 'video'}")
                             
                             if media_type == 'photo':
                                 # Upload to Saved Messages first
