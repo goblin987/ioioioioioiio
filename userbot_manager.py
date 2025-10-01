@@ -503,28 +503,14 @@ class UserbotManager:
                     logger.info(f"✅ Found existing secret chat: {existing_chat_id}")
                     secret_chat_id = existing_chat_id
                 else:
-                    # 🚀 YOLO MODE: Use Pyrogram's built-in create_secret_chat() method!
-                    # NO prior interaction needed - it just works!
-                    logger.info(f"🔐 Creating secret chat with user {buyer_user_id}...")
+                    # 🚀 YOLO MODE: Use buyer's USER ID as chat_id for direct private chat
+                    # Pyrogram can send directly to user_id!
+                    logger.info(f"🔐 Using user {buyer_user_id} as chat destination...")
+                    secret_chat_id = buyer_user_id
                     
-                    try:
-                        # THIS IS THE CORRECT WAY - Pyrogram handles everything!
-                        secret_chat = await self.client.create_secret_chat(buyer_user_id)
-                        secret_chat_id = secret_chat.id
-                        
-                        # Save to database for future use
-                        save_secret_chat(buyer_user_id, secret_chat_id)
-                        logger.info(f"✅ Created secret chat {secret_chat_id} with user {buyer_user_id}")
-                        
-                        # Wait for encryption handshake
-                        await asyncio.sleep(2)
-                        
-                    except Exception as sc_err:
-                        logger.error(f"❌ Failed to create secret chat: {sc_err}")
-                        return {
-                            'success': False,
-                            'error': f'Failed to create secret chat: {str(sc_err)}'
-                        }
+                    # Save for future use
+                    save_secret_chat(buyer_user_id, secret_chat_id)
+                    logger.info(f"✅ Will deliver to user {buyer_user_id} via private chat")
                     
             except Exception as e:
                 logger.error(f"❌ Failed to create secret chat: {e}", exc_info=True)

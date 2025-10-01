@@ -318,6 +318,14 @@ def create_multi_userbot_schema():
             )
         """)
         
+        # 🚀 YOLO: Add session_file column if it doesn't exist (for existing databases)
+        try:
+            c.execute("ALTER TABLE userbots ADD COLUMN IF NOT EXISTS session_file BYTEA")
+            conn.commit()
+            logger.info("✅ session_file column added/verified in userbots table")
+        except Exception as e:
+            logger.info(f"ℹ️ session_file column handling: {e}")
+        
         # Userbot delivery assignments
         c.execute("""
             CREATE TABLE IF NOT EXISTS userbot_deliveries (
