@@ -242,16 +242,31 @@ class UserbotPool:
                                 if temp_msg.photo:
                                     photo = temp_msg.photo
                                     from PIL import Image
+                                    from telethon.tl.types import PhotoSize, PhotoCachedSize
+                                    
                                     # Get photo dimensions from file
                                     with Image.open(temp_path) as img:
                                         w, h = img.size
                                     
+                                    # Find a proper thumbnail (not PhotoStrippedSize)
+                                    thumb_bytes = b''
+                                    thumb_w = 160
+                                    thumb_h = 120
+                                    
+                                    for size in photo.sizes:
+                                        if isinstance(size, (PhotoSize, PhotoCachedSize)):
+                                            if hasattr(size, 'bytes'):
+                                                thumb_bytes = size.bytes
+                                            thumb_w = getattr(size, 'w', 160)
+                                            thumb_h = getattr(size, 'h', 120)
+                                            break
+                                    
                                     await secret_chat_manager.send_secret_photo(
                                         secret_chat_obj,
                                         temp_path,
-                                        thumb=photo.sizes[0].bytes if photo.sizes else b'',
-                                        thumb_w=photo.sizes[0].w if photo.sizes else 160,
-                                        thumb_h=photo.sizes[0].h if photo.sizes else 120,
+                                        thumb=thumb_bytes,
+                                        thumb_w=thumb_w,
+                                        thumb_h=thumb_h,
                                         w=w,
                                         h=h,
                                         size=len(media_binary)
@@ -271,12 +286,28 @@ class UserbotPool:
                                 
                                 if temp_msg.video:
                                     video = temp_msg.video
+                                    from telethon.tl.types import PhotoSize, PhotoCachedSize
+                                    
+                                    # Find a proper thumbnail (not PhotoStrippedSize)
+                                    thumb_bytes = b''
+                                    thumb_w = 160
+                                    thumb_h = 120
+                                    
+                                    if video.thumbs:
+                                        for thumb in video.thumbs:
+                                            if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
+                                                if hasattr(thumb, 'bytes'):
+                                                    thumb_bytes = thumb.bytes
+                                                thumb_w = getattr(thumb, 'w', 160)
+                                                thumb_h = getattr(thumb, 'h', 120)
+                                                break
+                                    
                                     await secret_chat_manager.send_secret_video(
                                         secret_chat_obj,
                                         temp_path,
-                                        thumb=video.thumbs[0].bytes if video.thumbs else b'',
-                                        thumb_w=video.thumbs[0].w if video.thumbs else 160,
-                                        thumb_h=video.thumbs[0].h if video.thumbs else 120,
+                                        thumb=thumb_bytes,
+                                        thumb_w=thumb_w,
+                                        thumb_h=thumb_h,
                                         duration=video.duration,
                                         mime_type=video.mime_type,
                                         w=video.w,
