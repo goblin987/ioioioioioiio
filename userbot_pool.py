@@ -231,25 +231,76 @@ class UserbotPool:
                             temp_path = temp_file.name
                         
                         try:
-                            # Use secret_chat_manager to upload the file
-                            logger.info(f"🔐 Uploading {media_type} to secret chat from temp file...")
+                            #  Upload to Saved Messages first to get attributes (WORKING METHOD from userbot_telethon_secret.py)
+                            logger.info(f"🔐 Uploading {media_type} to secret chat...")
                             
-                            # Upload file using the secret chat manager's upload method
                             if media_type == 'photo':
-                                await secret_chat_manager.send_secret_photo(secret_chat_obj, temp_path)
+                                # Upload to Saved Messages first
+                                me = await client.get_me()
+                                temp_msg = await client.send_file(me, temp_path)
+                                
+                                if temp_msg.photo:
+                                    photo = temp_msg.photo
+                                    from PIL import Image
+                                    # Get photo dimensions from file
+                                    with Image.open(temp_path) as img:
+                                        w, h = img.size
+                                    
+                                    await secret_chat_manager.send_secret_photo(
+                                        secret_chat_obj,
+                                        temp_path,
+                                        thumb=photo.sizes[0].bytes if photo.sizes else b'',
+                                        thumb_w=photo.sizes[0].w if photo.sizes else 160,
+                                        thumb_h=photo.sizes[0].h if photo.sizes else 120,
+                                        w=w,
+                                        h=h,
+                                        size=len(media_binary)
+                                    )
+                                    logger.info(f"✅ SECRET CHAT photo {idx} sent")
+                                    
+                                    # Cleanup temp message
+                                    try:
+                                        await temp_msg.delete()
+                                    except:
+                                        pass
+                                        
                             elif media_type == 'video':
-                                await secret_chat_manager.send_secret_video(secret_chat_obj, temp_path)
-                            else:
-                                await secret_chat_manager.send_secret_document(secret_chat_obj, temp_path)
-                            
+                                # Upload to Saved Messages first
+                                me = await client.get_me()
+                                temp_msg = await client.send_file(me, temp_path)
+                                
+                                if temp_msg.video:
+                                    video = temp_msg.video
+                                    await secret_chat_manager.send_secret_video(
+                                        secret_chat_obj,
+                                        temp_path,
+                                        thumb=video.thumbs[0].bytes if video.thumbs else b'',
+                                        thumb_w=video.thumbs[0].w if video.thumbs else 160,
+                                        thumb_h=video.thumbs[0].h if video.thumbs else 120,
+                                        duration=video.duration,
+                                        mime_type=video.mime_type,
+                                        w=video.w,
+                                        h=video.h,
+                                        size=video.size
+                                    )
+                                    logger.info(f"✅ SECRET CHAT video {idx} sent")
+                                    
+                                    # Cleanup temp message
+                                    try:
+                                        await temp_msg.delete()
+                                    except:
+                                        pass
+                                        
                             sent_media_count += 1
-                            logger.info(f"✅ SECRET CHAT media {idx} sent successfully")
                             
                         except Exception as send_err:
-                            logger.error(f"❌ Failed to send media to secret chat: {send_err}")
+                            logger.error(f"❌ Failed to send media to secret chat: {send_err}", exc_info=True)
                             # Fallback: send placeholder
-                            await secret_chat_manager.send_secret_message(secret_chat_obj, f"[Media {idx}: {filename}]")
-                            logger.warning(f"⚠️ Sent placeholder text for media {idx} instead")
+                            try:
+                                await secret_chat_manager.send_secret_message(secret_chat_obj, f"[Media {idx}: {filename}]")
+                                logger.warning(f"⚠️ Sent placeholder text for media {idx} instead")
+                            except:
+                                pass
                         finally:
                             # Clean up temp file
                             try:
