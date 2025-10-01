@@ -7,6 +7,7 @@ import shutil
 import time
 import secrets # For generating random codes
 import asyncio
+import psycopg2  # 🚀 YOLO: For Binary() wrapper in PostgreSQL storage
 from datetime import datetime, timedelta, timezone # <<< Added timezone import
 from collections import defaultdict
 import math # Add math for pagination calculation

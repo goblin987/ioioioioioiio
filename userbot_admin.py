@@ -476,15 +476,17 @@ async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DE
     enabled = params[0] == 'True'
     userbot_config.set_enabled(enabled)
     
-    # Force reload config from database to ensure display is updated
-    userbot_config.reload()
-    
+    # 🚀 YOLO: Add timestamp to force message change (Telegram won't reject "unchanged" message)
+    import time
     status = "enabled" if enabled else "disabled"
-    await query.answer(f"✅ Delivery {status}!", show_alert=True)
+    timestamp = time.strftime("%H:%M:%S")
+    await query.answer(f"✅ Delivery {status}! ({timestamp})", show_alert=True)
     
-    # Refresh settings (with a small delay to avoid BadRequest)
+    # Refresh settings (with delay and force reload)
     await asyncio.sleep(0.5)
     try:
+        # Force a complete reload before showing settings
+        userbot_config.reload()
         await handle_userbot_settings(update, context)
     except Exception as e:
         # If refresh fails, just ignore (likely unchanged message)
@@ -505,11 +507,11 @@ async def handle_userbot_toggle_reconnect(update: Update, context: ContextTypes.
     auto_reconnect = params[0] == 'True'
     userbot_config.set_auto_reconnect(auto_reconnect)
     
-    # Force reload config from database to ensure display is updated
-    userbot_config.reload()
-    
+    # 🚀 YOLO: Add timestamp to force UI update
+    import time
     status = "enabled" if auto_reconnect else "disabled"
-    await query.answer(f"✅ Auto-reconnect {status}!", show_alert=True)
+    timestamp = time.strftime("%H:%M:%S")
+    await query.answer(f"✅ Auto-reconnect {status}! ({timestamp})", show_alert=True)
     
     # Refresh settings (with a small delay to avoid BadRequest)
     await asyncio.sleep(0.5)
@@ -533,11 +535,11 @@ async def handle_userbot_toggle_notifications(update: Update, context: ContextTy
     notifications = params[0] == 'True'
     userbot_config.set_notifications(notifications)
     
-    # Force reload config from database to ensure display is updated
-    userbot_config.reload()
-    
+    # 🚀 YOLO: Add timestamp to force UI update
+    import time
     status = "enabled" if notifications else "disabled"
-    await query.answer(f"✅ Notifications {status}!", show_alert=True)
+    timestamp = time.strftime("%H:%M:%S")
+    await query.answer(f"✅ Notifications {status}! ({timestamp})", show_alert=True)
     
     # Refresh settings (with a small delay to avoid BadRequest)
     await asyncio.sleep(0.5)
