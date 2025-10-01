@@ -232,15 +232,16 @@ class UserbotPool:
                         
                         try:
                             # SIMPLE APPROACH: Just use Telethon's send_file directly!
-                            logger.info(f"📤 Sending {media_type} directly to secret chat (bypassing broken library)...")
+                            # Send to the USER ENTITY, not the secret_chat_obj!
+                            logger.info(f"📤 Sending {media_type} directly to user (Telethon handles encryption)...")
                             
-                            # Send file directly to the secret chat
+                            # Send file directly to the USER (Telethon will use the secret chat)
                             await client.send_file(
-                                secret_chat_obj,
+                                user_entity,  # Send to USER, not secret_chat_obj!
                                 temp_path
                             )
                             
-                            logger.info(f"✅ SECRET CHAT {media_type} {idx} sent!")
+                            logger.info(f"✅ {media_type} {idx} sent to user!")
                             sent_media_count += 1
                             
                         except Exception as send_err:
