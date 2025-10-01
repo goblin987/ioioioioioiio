@@ -284,22 +284,39 @@ class UserbotPool:
                                 me = await client.get_me()
                                 temp_msg = await client.send_file(me, temp_path)
                                 
-                                if temp_msg.video:
-                                    video = temp_msg.video
-                                    from telethon.tl.types import PhotoSize, PhotoCachedSize
+                                # Video might be in temp_msg.document or temp_msg.video
+                                video_doc = temp_msg.video or temp_msg.document
+                                
+                                if video_doc:
+                                    from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
                                     
                                     # Find a proper thumbnail (not PhotoStrippedSize)
                                     thumb_bytes = b''
                                     thumb_w = 160
                                     thumb_h = 120
                                     
-                                    if video.thumbs:
-                                        for thumb in video.thumbs:
+                                    if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
+                                        for thumb in video_doc.thumbs:
                                             if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
                                                 if hasattr(thumb, 'bytes'):
                                                     thumb_bytes = thumb.bytes
                                                 thumb_w = getattr(thumb, 'w', 160)
                                                 thumb_h = getattr(thumb, 'h', 120)
+                                                break
+                                    
+                                    # Extract video attributes from Document attributes
+                                    duration = 0
+                                    w = 0
+                                    h = 0
+                                    mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
+                                    size = getattr(video_doc, 'size', len(media_binary))
+                                    
+                                    if hasattr(video_doc, 'attributes'):
+                                        for attr in video_doc.attributes:
+                                            if isinstance(attr, DocumentAttributeVideo):
+                                                duration = attr.duration
+                                                w = attr.w
+                                                h = attr.h
                                                 break
                                     
                                     await secret_chat_manager.send_secret_video(
@@ -308,11 +325,11 @@ class UserbotPool:
                                         thumb=thumb_bytes,
                                         thumb_w=thumb_w,
                                         thumb_h=thumb_h,
-                                        duration=video.duration,
-                                        mime_type=video.mime_type,
-                                        w=video.w,
-                                        h=video.h,
-                                        size=video.size
+                                        duration=duration,
+                                        mime_type=mime_type,
+                                        w=w,
+                                        h=h,
+                                        size=size
                                     )
                                     logger.info(f"✅ SECRET CHAT video {idx} sent")
                                     
