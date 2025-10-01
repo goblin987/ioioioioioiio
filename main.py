@@ -1328,28 +1328,20 @@ async def post_init(application: Application) -> None:
         BotCommand("admin", "Access admin panel (Admin only)"),
     ])
     
-    # Initialize userbot connection if configured
+    # Initialize userbot pool (NEW multi-userbot system)
     if USERBOT_AVAILABLE:
         try:
-            # 🔥 YOLO DEBUG: Aggressive logging!
-            logger.info("🔍 YOLO DEBUG: USERBOT_AVAILABLE = True, checking config...")
-            logger.info(f"🔍 YOLO DEBUG: userbot_config.is_configured() = {userbot_config.is_configured()}")
-            logger.info(f"🔍 YOLO DEBUG: userbot_config.is_enabled() = {userbot_config.is_enabled()}")
-            logger.info(f"🔍 YOLO DEBUG: userbot_config = {userbot_config.get_dict()}")
+            logger.info("🔄 Initializing multi-userbot pool system...")
+            from userbot_pool import userbot_pool
+            await userbot_pool.initialize()
             
-            # Tables already initialized in main startup
-            # Just check if userbot should connect
-            if userbot_config.is_configured() and userbot_config.is_enabled():
-                logger.info("🤖 Userbot is configured and enabled, connecting...")
-                await userbot_manager.initialize()
-                if userbot_manager.is_connected:
-                    logger.info("✅ Userbot connected successfully")
-                else:
-                    logger.warning("⚠️ Userbot failed to connect")
+            if userbot_pool.clients:
+                logger.info(f"✅ Userbot pool initialized with {len(userbot_pool.clients)} active userbot(s)")
             else:
-                logger.info(f"ℹ️ Userbot not configured or not enabled (configured={userbot_config.is_configured()}, enabled={userbot_config.is_enabled()})")
+                logger.warning("⚠️ No userbots available in pool. Add userbots via Admin → Userbot Control.")
+            
         except Exception as e:
-            logger.error(f"❌ Userbot connection failed: {e}", exc_info=True)
+            logger.error(f"❌ Userbot pool initialization failed: {e}", exc_info=True)
     
     logger.info("Post_init finished.")
 

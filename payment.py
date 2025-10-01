@@ -1080,13 +1080,15 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 # 🔥 YOLO DEBUG: Log everything!
                 logger.info(f"🔍 YOLO DEBUG: Checking userbot delivery conditions for user {user_id}")
                 logger.info(f"🔍 YOLO DEBUG: userbot_config.is_enabled() = {userbot_config.is_enabled()}")
-                logger.info(f"🔍 YOLO DEBUG: userbot_manager.is_connected = {userbot_manager.is_connected}")
-                logger.info(f"🔍 YOLO DEBUG: userbot_manager instance = {userbot_manager}")
-                logger.info(f"🔍 YOLO DEBUG: userbot_config instance = {userbot_config}")
-                
-                # Check BOTH enabled AND connected
-                use_userbot_delivery = (userbot_config.is_enabled() and userbot_manager.is_connected)
-                logger.info(f"🔍 YOLO DEBUG: use_userbot_delivery = {use_userbot_delivery}")
+                # NEW: Check if userbot pool has available userbots
+                use_userbot_delivery = False
+                try:
+                    from userbot_pool import userbot_pool
+                    use_userbot_delivery = (userbot_pool.is_initialized and len(userbot_pool.clients) > 0)
+                    logger.info(f"🔍 Userbot pool available: {use_userbot_delivery} ({len(userbot_pool.clients) if userbot_pool.is_initialized else 0} active userbots)")
+                except Exception as e:
+                    logger.warning(f"⚠️ Userbot pool check failed: {e}")
+                    use_userbot_delivery = False
                 
                 if use_userbot_delivery:
                     logger.info(f"🔐 Using userbot for secret chat delivery to user {user_id} (enabled={userbot_config.is_enabled()}, connected={userbot_manager.is_connected})")
@@ -1121,12 +1123,27 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                         import uuid
                         order_id = str(uuid.uuid4())[:8].upper()
                         
-                        # Deliver via userbot with Saved Messages strategy
-                        result = await userbot_manager.deliver_product_via_secret_chat(
+                        # Deliver via userbot pool (multi-userbot system)
+                        from userbot_pool import userbot_pool
+                        
+                        # Prepare media binary items for delivery
+                        media_binary_items = []
+                        for media_item in product_data.get('media_items', []):
+                            if media_item.get('media_binary'):
+                                media_binary_items.append({
+                                    'media_type': media_item['media_type'],
+                                    'media_binary': media_item['media_binary'],
+                                    'filename': f"product_{prod_id}_{len(media_binary_items)+1}.{'jpg' if media_item['media_type']=='photo' else 'mp4'}"
+                                })
+                        
+                        success, message = await userbot_pool.deliver_via_secret_chat(
                             buyer_user_id=user_id,
                             product_data=product_data,
+                            media_binary_items=media_binary_items,
                             order_id=order_id
                         )
+                        
+                        result = {'success': success, 'message': message if success else None, 'error': message if not success else None}
                         
                         if result['success']:
                             logger.info(f"✅ Userbot delivery successful for P{prod_id}: {result.get('message')}")
