@@ -1132,6 +1132,31 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                             logger.info(f"✅ Userbot delivery successful for P{prod_id}: {result.get('message')}")
                         else:
                             logger.error(f"❌ Userbot delivery failed for P{prod_id}: {result.get('error')}")
+                            
+                            # 🚨 YOLO: Handle PEER_ID_INVALID - tell user to start chat with userbot
+                            if result.get('error') == 'PEER_ID_INVALID' and result.get('requires_user_action'):
+                                userbot_username = result.get('userbot_username', 'our_delivery_bot')
+                                instruction_msg = f"""🔐 <b>Secure Delivery Setup Required</b>
+
+To receive your products securely via encrypted chat, please:
+
+1️⃣ Click here: @{userbot_username}
+2️⃣ Press "START" or send any message
+3️⃣ Return here and type /start to try again
+
+<i>This one-time setup ensures your privacy and security! 🔒</i>"""
+                                
+                                try:
+                                    await send_message_with_retry(
+                                        context.bot, 
+                                        chat_id, 
+                                        instruction_msg,
+                                        parse_mode='HTML'
+                                    )
+                                    logger.info(f"✅ Sent PEER_ID_INVALID instructions to user {user_id}")
+                                except Exception as msg_err:
+                                    logger.error(f"❌ Failed to send instructions: {msg_err}")
+                            
                             media_delivery_successful = False
                 else:
                     # Fallback to bot delivery (old method)

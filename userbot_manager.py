@@ -457,6 +457,20 @@ class UserbotManager:
             
             logger.info(f"🔐 Starting secret chat delivery for user {buyer_user_id}, product {product_id}")
             
+            # 🚀 YOLO FIX: Resolve peer first (make sure userbot "knows" the user)
+            # Try to get user info and check if we can message them
+            try:
+                logger.info(f"🔍 Resolving peer for user {buyer_user_id}...")
+                user_info = await self.client.get_users(buyer_user_id)
+                logger.info(f"✅ Peer resolved for user {buyer_user_id}: @{user_info.username or user_info.first_name}")
+                
+                # 🚀 YOLO: Try to send a test message to see if peer is accessible
+                # If this fails with PEER_ID_INVALID, we'll catch it and instruct the user
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Could not resolve peer {buyer_user_id}: {e}")
+                # Don't fail yet - try to send anyway, Pyrogram might have cached it
+            
             # PHASE 1: Upload media to Saved Messages using binary data from PostgreSQL
             # 🚀 YOLO FIX: Can't use file_id from main bot, must use raw bytes!
             saved_message_ids = []
@@ -551,8 +565,21 @@ class UserbotManager:
                 await asyncio.sleep(2)
                 
             except Exception as e:
+                error_str = str(e)
                 logger.error(f"❌ Failed to send notification: {e}")
-                # Continue anyway, media delivery is more important
+                
+                # 🚨 YOLO: Check if PEER_ID_INVALID - user needs to start chat with userbot first!
+                if 'PEER_ID_INVALID' in error_str or 'peer id being used is invalid' in error_str.lower():
+                    logger.error(f"❌ PEER_ID_INVALID: User {buyer_user_id} must start a chat with userbot first!")
+                    userbot_me = await self.client.get_me()
+                    return {
+                        'success': False,
+                        'error': 'PEER_ID_INVALID',
+                        'requires_user_action': True,
+                        'userbot_username': userbot_me.username,
+                        'message': f'Please start a chat with @{userbot_me.username} first, then try again.'
+                    }
+                # Continue for other errors
             
             # PHASE 3: Forward saved messages to buyer
             forwarded_count = 0
