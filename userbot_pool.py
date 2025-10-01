@@ -231,18 +231,48 @@ class UserbotPool:
                             temp_path = temp_file.name
                         
                         try:
-                            # SIMPLE APPROACH: Just use Telethon's send_file directly!
-                            # Send to the USER ENTITY, not the secret_chat_obj!
-                            logger.info(f"📤 Sending {media_type} directly to user (Telethon handles encryption)...")
+                            # MANUAL ENCRYPTION APPROACH (MTProto spec compliant!)
+                            # 1. Encrypt the file ourselves with AES-256-IGE
+                            # 2. Upload encrypted file to Telegram
+                            # 3. Send decryption key via secret chat
                             
-                            # Send file directly to the USER (Telethon will use the secret chat)
-                            await client.send_file(
-                                user_entity,  # Send to USER, not secret_chat_obj!
-                                temp_path
-                            )
+                            logger.info(f"🔐 Manually encrypting {media_type} with AES-256-IGE...")
                             
-                            logger.info(f"✅ {media_type} {idx} sent to user!")
-                            sent_media_count += 1
+                            from secret_chat_crypto import encrypt_file_for_secret_chat
+                            
+                            # Encrypt the file
+                            encrypted_data, key, iv, fingerprint = encrypt_file_for_secret_chat(media_binary)
+                            logger.info(f"✅ File encrypted: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
+                            
+                            # Save encrypted data to temp file
+                            encrypted_path = temp_path + '.enc'
+                            with open(encrypted_path, 'wb') as f:
+                                f.write(encrypted_data)
+                            
+                            try:
+                                # Upload encrypted file to Telegram (as regular file, not via secret chat)
+                                logger.info(f"📤 Uploading encrypted {media_type} to Telegram...")
+                                uploaded_file = await client.upload_file(encrypted_path)
+                                logger.info(f"✅ Encrypted file uploaded!")
+                                
+                                # Send decryption info via secret chat message
+                                decrypt_message = f"🔐 Encrypted {media_type} {idx}/{len(media_binary_items)}\n"
+                                decrypt_message += f"📎 File: {filename}\n"
+                                decrypt_message += f"🔑 Key: {key.hex()}\n"
+                                decrypt_message += f"🎲 IV: {iv.hex()}\n"
+                                decrypt_message += f"🔢 Fingerprint: {fingerprint}\n"
+                                decrypt_message += f"📏 Original size: {len(media_binary)} bytes"
+                                
+                                await secret_chat_manager.send_secret_message(secret_chat_obj, decrypt_message)
+                                logger.info(f"✅ Decryption info sent via secret chat!")
+                                
+                                sent_media_count += 1
+                                
+                            finally:
+                                try:
+                                    os.unlink(encrypted_path)
+                                except:
+                                    pass
                             
                         except Exception as send_err:
                             # Fallback: send placeholder
