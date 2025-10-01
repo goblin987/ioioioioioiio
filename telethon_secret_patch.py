@@ -80,13 +80,36 @@ def discover_and_patch_ige():
                 original_ige256_encrypt = tgcrypto.ige256_encrypt
                 
                 def patched_ige256_encrypt(data, key, iv):
-                    logger.info(f"🔧 PATCHED tgcrypto.ige256_encrypt called: {len(data)} bytes")
-                    result = aes_ige_encrypt(data, key, iv)
-                    logger.info(f"✅ PATCHED tgcrypto.ige256_encrypt done: {len(result)} bytes")
-                    return result
+                    logger.critical(f"🔧🔧🔧 PATCHED tgcrypto.ige256_encrypt CALLED: {len(data)} bytes, key={len(key)}, iv={len(iv)}")
+                    try:
+                        result = aes_ige_encrypt(data, key, iv)
+                        logger.critical(f"✅✅✅ PATCHED tgcrypto.ige256_encrypt SUCCESS: {len(result)} bytes")
+                        return result
+                    except Exception as e:
+                        logger.critical(f"❌❌❌ PATCHED encryption FAILED: {e}")
+                        # Fallback to original
+                        return original_ige256_encrypt(data, key, iv)
                 
                 tgcrypto.ige256_encrypt = patched_ige256_encrypt
-                logger.info("✅ Patched tgcrypto.ige256_encrypt!")
+                logger.critical("✅✅✅ tgcrypto.ige256_encrypt PATCHED with CRITICAL logging!")
+                
+                # Also patch decrypt for completeness
+                if hasattr(tgcrypto, 'ige256_decrypt'):
+                    original_ige256_decrypt = tgcrypto.ige256_decrypt
+                    
+                    def patched_ige256_decrypt(data, key, iv):
+                        logger.critical(f"🔧🔧🔧 PATCHED tgcrypto.ige256_decrypt CALLED: {len(data)} bytes")
+                        try:
+                            result = aes_ige_decrypt(data, key, iv)
+                            logger.critical(f"✅✅✅ PATCHED decrypt SUCCESS: {len(result)} bytes")
+                            return result
+                        except Exception as e:
+                            logger.critical(f"❌❌❌ PATCHED decryption FAILED: {e}")
+                            return original_ige256_decrypt(data, key, iv)
+                    
+                    tgcrypto.ige256_decrypt = patched_ige256_decrypt
+                    logger.critical("✅✅✅ tgcrypto.ige256_decrypt also PATCHED!")
+                
                 return True
                 
         except ImportError:
