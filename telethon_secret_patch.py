@@ -1,96 +1,110 @@
 """
-Deep Patch for telethon-secret-chat library
-STRATEGY: Patch at the pyaes level (the library it uses for encryption)
+Deep Runtime Patch for telethon-secret-chat library
+STRATEGY: Find and replace the IGE encryption function at runtime
 
-The library uses pyaes for AES-IGE encryption, which is BROKEN for large files.
-We'll replace pyaes.AESModeOfOperationIGE with our implementation.
+The library must use SOME AES-IGE implementation - we'll find it and replace it!
 """
 
 import logging
 from secret_chat_crypto import aes_ige_encrypt, aes_ige_decrypt
-import os
+import sys
 
 logger = logging.getLogger(__name__)
 
 ENABLE_PATCHES = True
 
 
-def patch_pyaes_ige():
+def discover_and_patch_ige():
     """
-    Patch the pyaes library's IGE mode with our proper implementation
-    This is the ROOT CAUSE - pyaes.AESModeOfOperationIGE is broken!
+    Discover which IGE implementation the library uses and patch it
     """
     try:
-        import pyaes
+        from telethon_secret_chat import secret_methods
         
-        logger.info("🔧 Patching pyaes.AESModeOfOperationIGE...")
+        logger.info("🔍 Searching for IGE encryption implementation...")
         
-        # Save original
-        original_ige_class = pyaes.AESModeOfOperationIGE
-        
-        class PatchedAESModeOfOperationIGE:
-            """
-            Replacement for pyaes.AESModeOfOperationIGE using our correct implementation
-            """
-            def __init__(self, key, iv=None):
-                self.key = key
-                self.iv = iv if iv else b'\x00' * 32
-                logger.info(f"🔧 PatchedAESModeOfOperationIGE initialized: key={len(key)} bytes, iv={len(iv) if iv else 0} bytes")
+        # Check what the library actually has
+        if hasattr(secret_methods, 'SecretChatMethods'):
+            methods_class = secret_methods.SecretChatMethods
+            logger.info(f"📋 SecretChatMethods attributes: {dir(methods_class)}")
             
-            def encrypt(self, plaintext):
-                """Use our proper AES-IGE encryption"""
-                logger.info(f"🔐 PATCHED IGE encrypt called: {len(plaintext)} bytes")
-                result = aes_ige_encrypt(plaintext, self.key, self.iv)
-                logger.info(f"✅ PATCHED IGE encrypt done: {len(result)} bytes")
-                return result
+            # Look for any method with 'crypt' or 'ige' in the name
+            for attr_name in dir(methods_class):
+                if 'crypt' in attr_name.lower() or 'ige' in attr_name.lower():
+                    logger.info(f"🔍 Found potential crypto method: {attr_name}")
+        
+        # Try to patch the telethon_secret_chat.ige module if it exists
+        try:
+            from telethon_secret_chat import ige as ige_module
+            logger.info(f"📦 Found IGE module: {ige_module}")
+            logger.info(f"📋 IGE module contents: {dir(ige_module)}")
             
-            def decrypt(self, ciphertext):
-                """Use our proper AES-IGE decryption"""
-                logger.info(f"🔐 PATCHED IGE decrypt called: {len(ciphertext)} bytes")
-                result = aes_ige_decrypt(ciphertext, self.key, self.iv)
-                logger.info(f"✅ PATCHED IGE decrypt done: {len(result)} bytes")
-                return result
+            # Patch the encrypt/decrypt functions in the IGE module
+            if hasattr(ige_module, 'encrypt'):
+                original_encrypt = ige_module.encrypt
+                
+                def patched_ige_encrypt(data, key, iv):
+                    logger.info(f"🔧 PATCHED IGE encrypt called: {len(data)} bytes")
+                    result = aes_ige_encrypt(data, key, iv)
+                    logger.info(f"✅ PATCHED IGE encrypt done: {len(result)} bytes")
+                    return result
+                
+                ige_module.encrypt = patched_ige_encrypt
+                logger.info("✅ Patched telethon_secret_chat.ige.encrypt!")
+                return True
+            
+            if hasattr(ige_module, 'ige_encrypt'):
+                original_ige_encrypt = ige_module.ige_encrypt
+                
+                def patched_ige_encrypt(data, key, iv):
+                    logger.info(f"🔧 PATCHED ige_encrypt called: {len(data)} bytes")
+                    result = aes_ige_encrypt(data, key, iv)
+                    logger.info(f"✅ PATCHED ige_encrypt done: {len(result)} bytes")
+                    return result
+                
+                ige_module.ige_encrypt = patched_ige_encrypt
+                logger.info("✅ Patched telethon_secret_chat.ige.ige_encrypt!")
+                return True
+                
+        except ImportError:
+            logger.warning("⚠️ No ige module found in telethon_secret_chat")
         
-        # REPLACE the broken class with our working one!
-        pyaes.AESModeOfOperationIGE = PatchedAESModeOfOperationIGE
+        # Try to find and patch the AES implementation the library uses
+        # Check if the library uses tgcrypto
+        try:
+            import tgcrypto
+            logger.info(f"📦 Found tgcrypto: {tgcrypto}")
+            logger.info(f"📋 tgcrypto contents: {dir(tgcrypto)}")
+            
+            if hasattr(tgcrypto, 'ige256_encrypt'):
+                original_ige256_encrypt = tgcrypto.ige256_encrypt
+                
+                def patched_ige256_encrypt(data, key, iv):
+                    logger.info(f"🔧 PATCHED tgcrypto.ige256_encrypt called: {len(data)} bytes")
+                    result = aes_ige_encrypt(data, key, iv)
+                    logger.info(f"✅ PATCHED tgcrypto.ige256_encrypt done: {len(result)} bytes")
+                    return result
+                
+                tgcrypto.ige256_encrypt = patched_ige256_encrypt
+                logger.info("✅ Patched tgcrypto.ige256_encrypt!")
+                return True
+                
+        except ImportError:
+            logger.info("📋 tgcrypto not found")
         
-        logger.info("✅ Successfully replaced pyaes.AESModeOfOperationIGE with our implementation!")
-        return True
-        
-    except ImportError:
-        logger.warning("⚠️ pyaes not found - library might use different crypto backend")
+        logger.error("❌ Could not find IGE encryption implementation to patch!")
         return False
+        
     except Exception as e:
-        logger.error(f"❌ Failed to patch pyaes: {e}", exc_info=True)
-        return False
-
-
-def patch_pycryptodome_ige():
-    """
-    Alternative: Patch pycryptodome if the library uses that
-    """
-    try:
-        from Crypto.Cipher import AES
-        
-        logger.info("🔧 Attempting to patch Crypto.Cipher.AES...")
-        
-        # This is trickier because pycryptodome doesn't have native IGE mode
-        # If the library uses it, they must have implemented a wrapper
-        
-        # For now, just log that we detected pycryptodome
-        logger.info("✅ pycryptodome detected, but no patching needed (library uses pyaes for IGE)")
-        return True
-        
-    except ImportError:
-        logger.info("📋 pycryptodome not found")
+        logger.error(f"❌ Failed to discover and patch IGE: {e}", exc_info=True)
         return False
 
 
 def apply_all_patches():
     """
-    Apply all patches to fix video corruption
+    Apply patches to fix video corruption
     
-    THIS IS THE NUCLEAR OPTION: We replace the entire AES-IGE implementation
+    This will discover and replace whatever IGE implementation the library uses
     """
     
     if not ENABLE_PATCHES:
@@ -98,15 +112,12 @@ def apply_all_patches():
         return False
     
     logger.info("🔧 Applying DEEP telethon-secret-chat patches...")
-    logger.info("🎯 Target: Replace pyaes.AESModeOfOperationIGE with our correct implementation")
+    logger.info("🎯 Target: Discover and replace the library's IGE encryption")
     
-    # This is the MAIN patch
-    if patch_pyaes_ige():
-        logger.info("✅ 🎉 CRITICAL PATCH APPLIED - pyaes IGE encryption replaced!")
+    if discover_and_patch_ige():
+        logger.info("✅ 🎉 IGE encryption patched successfully!")
         logger.info("📹 Videos should now encrypt/decrypt correctly!")
         return True
     else:
-        logger.error("❌ Failed to patch pyaes - videos will still be corrupted")
-        # Try alternative
-        patch_pycryptodome_ige()
+        logger.error("❌ Failed to patch IGE - videos will still be corrupted")
         return False
