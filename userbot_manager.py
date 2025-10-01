@@ -475,22 +475,48 @@ class UserbotManager:
                 else:
                     # Create new secret chat
                     from pyrogram import raw
+                    from pyrogram.raw import types
                     logger.info(f"🔐 Creating new secret chat with user {buyer_user_id}...")
                     
-                    # Request secret chat via raw API
-                    result = await self.client.invoke(
-                        raw.functions.messages.RequestEncryption(
-                            user_id=await self.client.resolve_peer(buyer_user_id),
-                            random_id=self.client.rnd_id()
+                    # 🚀 YOLO FIX: Fetch user info first to cache the peer!
+                    try:
+                        logger.info(f"🔍 Fetching user info for {buyer_user_id}...")
+                        user_info = await self.client.get_users(buyer_user_id)
+                        logger.info(f"✅ User info fetched: @{user_info.username or user_info.first_name}")
+                    except Exception as fetch_err:
+                        logger.error(f"❌ Failed to fetch user info: {fetch_err}")
+                        return {
+                            'success': False,
+                            'error': f'Cannot access user {buyer_user_id}. User may have blocked the userbot or deleted their account.'
+                        }
+                    
+                    # Now request secret chat using InputUser
+                    try:
+                        input_user = types.InputUser(
+                            user_id=buyer_user_id,
+                            access_hash=user_info.access_hash
                         )
-                    )
-                    
-                    secret_chat_id = result.id
-                    save_secret_chat(buyer_user_id, secret_chat_id)
-                    logger.info(f"✅ Created secret chat {secret_chat_id} with user {buyer_user_id}")
-                    
-                    # Wait for encryption handshake
-                    await asyncio.sleep(3)
+                        
+                        result = await self.client.invoke(
+                            raw.functions.messages.RequestEncryption(
+                                user_id=input_user,
+                                random_id=self.client.rnd_id()
+                            )
+                        )
+                        
+                        secret_chat_id = result.id
+                        save_secret_chat(buyer_user_id, secret_chat_id)
+                        logger.info(f"✅ Created secret chat {secret_chat_id} with user {buyer_user_id}")
+                        
+                        # Wait for encryption handshake
+                        await asyncio.sleep(3)
+                        
+                    except Exception as sc_err:
+                        logger.error(f"❌ Failed to create secret chat: {sc_err}")
+                        return {
+                            'success': False,
+                            'error': f'Failed to create secret chat: {str(sc_err)}'
+                        }
                     
             except Exception as e:
                 logger.error(f"❌ Failed to create secret chat: {e}", exc_info=True)
