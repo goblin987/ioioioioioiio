@@ -6,7 +6,7 @@ We'll patch the PYTHON function that calls tgcrypto, not tgcrypto itself!
 """
 
 import logging
-from secret_chat_crypto import aes_ige_encrypt, aes_ige_decrypt
+from secret_chat_crypto import aes_ige_encrypt, aes_ige_decrypt, pad_to_16_bytes
 import sys
 
 logger = logging.getLogger(__name__)
@@ -55,8 +55,12 @@ def patch_upload_secret_file():
             logger.critical(f"🔐 Encrypting with OUR AES-IGE: {len(file_data)} bytes")
             
             try:
+                # PAD to 16-byte boundary first!
+                padded_data = pad_to_16_bytes(file_data)
+                logger.critical(f"📦 Padded to: {len(padded_data)} bytes")
+                
                 # Use OUR correct encryption!
-                encrypted_data = aes_ige_encrypt(file_data, key, iv)
+                encrypted_data = aes_ige_encrypt(padded_data, key, iv)
                 logger.critical(f"✅✅✅ OUR ENCRYPTION SUCCESS: {len(encrypted_data)} bytes")
                 
                 # Now we need to upload the encrypted data and return the result
@@ -147,8 +151,12 @@ def patch_send_secret_video():
             logger.critical(f"🔐 Encrypting video with OUR AES-IGE...")
             
             try:
+                # PAD to 16-byte boundary first!
+                padded_video = pad_to_16_bytes(video_data)
+                logger.critical(f"📦 Padded video to: {len(padded_video)} bytes")
+                
                 # Encrypt with OUR implementation
-                encrypted_video = aes_ige_encrypt(video_data, key, iv)
+                encrypted_video = aes_ige_encrypt(padded_video, key, iv)
                 logger.critical(f"✅✅✅ Video encrypted: {len(encrypted_video)} bytes")
                 
                 # Save encrypted video to temp file
