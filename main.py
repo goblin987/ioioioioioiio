@@ -187,6 +187,7 @@ try:
         handle_userbot_control,
         handle_userbot_add_new,
         handle_userbot_add_start_name,
+        handle_userbot_stats_all,
         handle_new_userbot_name_message,
         handle_new_userbot_api_id_message,
         handle_new_userbot_api_hash_message,
@@ -586,9 +587,19 @@ def callback_query_router(func):
         
         query = update.callback_query
         if query and query.data:
-            parts = query.data.split('|')
-            command = parts[0]
-            params = parts[1:]
+            # Support both | and : as parameter separators
+            if '|' in query.data:
+                parts = query.data.split('|')
+                command = parts[0]
+                params = parts[1:]
+            elif ':' in query.data:
+                parts = query.data.split(':', 1)  # Split only on first :
+                command = parts[0]
+                params = [parts[1]] if len(parts) > 1 else []
+            else:
+                command = query.data
+                params = []
+            
             target_func_name = f"handle_{command}"
 
             KNOWN_HANDLERS = {
@@ -1025,6 +1036,7 @@ def callback_query_router(func):
                     "userbot_control": handle_userbot_control,
                     "userbot_add_new": handle_userbot_add_new,
                     "userbot_add_start_name": handle_userbot_add_start_name,
+                    "userbot_stats_all": handle_userbot_stats_all,
                     "userbot_manage": handle_userbot_manage,
                     "userbot_toggle_enable": handle_userbot_toggle_enable_single,
                     "userbot_delete_confirm": handle_userbot_delete_confirm,

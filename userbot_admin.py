@@ -164,6 +164,25 @@ async def handle_userbot_add_start_name(update: Update, context: ContextTypes.DE
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="userbot_control")]]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
+async def handle_userbot_stats_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show statistics for all userbots"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    msg = "📊 <b>Userbot Statistics</b>\n\n"
+    msg += "Coming soon! This will show:\n"
+    msg += "• Total deliveries per userbot\n"
+    msg += "• Success rates\n"
+    msg += "• Uptime statistics\n"
+    msg += "• Load distribution\n"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
 async def _show_setup_wizard(query, context):
     """Show initial setup wizard"""
     msg = "🤖 <b>Userbot Setup Wizard</b>\n\n"
