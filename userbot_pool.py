@@ -213,8 +213,8 @@ class UserbotPool:
             
             # 4. Send media files
             sent_media_count = 0
-            if media_binary_items:
-                logger.info(f"📂 Sending {len(media_binary_items)} media items...")
+            if media_binary_items and len(media_binary_items) > 0:
+                logger.info(f"📂 Sending {len(media_binary_items)} media items via SECRET CHAT...")
                 for idx, media_item in enumerate(media_binary_items, 1):
                     media_type = media_item['media_type']
                     media_binary = media_item['media_binary']
@@ -224,14 +224,16 @@ class UserbotPool:
                         media_file = io.BytesIO(media_binary)
                         media_file.name = filename
                         
-                        logger.info(f"📤 Sending media {idx}/{len(media_binary_items)} ({len(media_binary)} bytes) type: {media_type}...")
+                        logger.info(f"📤 Sending SECRET CHAT media {idx}/{len(media_binary_items)} ({len(media_binary)} bytes) type: {media_type}...")
                         
                         if media_type == 'photo':
                             await secret_chat_manager.send_secret_photo(secret_chat_obj, media_file)
                         elif media_type == 'video':
                             try:
                                 await secret_chat_manager.send_secret_video(secret_chat_obj, media_file)
-                            except:
+                            except Exception as video_err:
+                                logger.warning(f"⚠️ send_secret_video failed: {video_err}, trying as document...")
+                                media_file.seek(0)  # Reset file pointer
                                 await secret_chat_manager.send_secret_document(secret_chat_obj, media_file, file_name=filename)
                         elif media_type == 'gif':
                             await secret_chat_manager.send_secret_document(secret_chat_obj, media_file, file_name=filename)
@@ -239,11 +241,13 @@ class UserbotPool:
                             await secret_chat_manager.send_secret_document(secret_chat_obj, media_file, file_name=filename)
                         
                         sent_media_count += 1
-                        logger.info(f"✅ Media {idx} sent successfully")
+                        logger.info(f"✅ SECRET CHAT media {idx} sent successfully")
                         await asyncio.sleep(1)
                         
                     except Exception as e:
-                        logger.error(f"❌ Failed to send media {idx}: {e}", exc_info=True)
+                        logger.error(f"❌ Failed to send SECRET CHAT media {idx}: {e}", exc_info=True)
+            else:
+                logger.warning(f"⚠️ No media items to send for order {order_id} (Product ID: {product_data.get('product_id')}). Product has no media in database!")
             
             # 5. Send product details
             details_text = f"""📦 Product Details
