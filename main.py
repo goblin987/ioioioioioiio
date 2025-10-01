@@ -1290,6 +1290,12 @@ async def post_init(application: Application) -> None:
     # Initialize userbot connection if configured
     if USERBOT_AVAILABLE:
         try:
+            # 🔥 YOLO DEBUG: Aggressive logging!
+            logger.info("🔍 YOLO DEBUG: USERBOT_AVAILABLE = True, checking config...")
+            logger.info(f"🔍 YOLO DEBUG: userbot_config.is_configured() = {userbot_config.is_configured()}")
+            logger.info(f"🔍 YOLO DEBUG: userbot_config.is_enabled() = {userbot_config.is_enabled()}")
+            logger.info(f"🔍 YOLO DEBUG: userbot_config = {userbot_config.get_dict()}")
+            
             # Tables already initialized in main startup
             # Just check if userbot should connect
             if userbot_config.is_configured() and userbot_config.is_enabled():
@@ -1300,7 +1306,7 @@ async def post_init(application: Application) -> None:
                 else:
                     logger.warning("⚠️ Userbot failed to connect")
             else:
-                logger.info("ℹ️ Userbot not configured or not enabled")
+                logger.info(f"ℹ️ Userbot not configured or not enabled (configured={userbot_config.is_configured()}, enabled={userbot_config.is_enabled()})")
         except Exception as e:
             logger.error(f"❌ Userbot connection failed: {e}", exc_info=True)
     
