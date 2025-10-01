@@ -478,17 +478,65 @@ class UserbotManager:
                     from pyrogram.raw import types
                     logger.info(f"🔐 Creating new secret chat with user {buyer_user_id}...")
                     
-                    # 🚀 YOLO FIX: Fetch user info first to cache the peer!
+                    # 🚀 YOLO MODE: Create temp group to establish contact, then secret chat!
                     try:
-                        logger.info(f"🔍 Fetching user info for {buyer_user_id}...")
+                        logger.info(f"🔍 Attempting to fetch user info for {buyer_user_id}...")
                         user_info = await self.client.get_users(buyer_user_id)
                         logger.info(f"✅ User info fetched: @{user_info.username or user_info.first_name}")
                     except Exception as fetch_err:
-                        logger.error(f"❌ Failed to fetch user info: {fetch_err}")
-                        return {
-                            'success': False,
-                            'error': f'Cannot access user {buyer_user_id}. User may have blocked the userbot or deleted their account.'
-                        }
+                        logger.warning(f"⚠️ Cannot fetch user directly: {fetch_err}")
+                        logger.info(f"🔥 YOLO MODE: Creating temporary group to establish contact...")
+                        
+                        # Create temp group with userbot + buyer
+                        try:
+                            from pyrogram import raw
+                            from pyrogram.raw import types
+                            import random
+                            
+                            # Generate random group title
+                            temp_title = f"Secure Delivery #{random.randint(10000, 99999)}"
+                            
+                            logger.info(f"📝 Creating temp group '{temp_title}'...")
+                            temp_group = await self.client.create_group(
+                                title=temp_title,
+                                users=[buyer_user_id]
+                            )
+                            
+                            logger.info(f"✅ Temp group created: {temp_group.id}")
+                            
+                            # Wait for Telegram to process
+                            await asyncio.sleep(2)
+                            
+                            # Now try to fetch user info again (should work now!)
+                            try:
+                                user_info = await self.client.get_users(buyer_user_id)
+                                logger.info(f"✅ User info fetched after group: @{user_info.username or user_info.first_name}")
+                            except Exception as fetch_err2:
+                                logger.error(f"❌ Still cannot fetch user: {fetch_err2}")
+                                # Delete temp group and fail
+                                try:
+                                    await self.client.delete_chat(temp_group.id)
+                                except:
+                                    pass
+                                return {
+                                    'success': False,
+                                    'error': f'Cannot establish contact with user {buyer_user_id}. User may have privacy settings preventing group invites.'
+                                }
+                            
+                            # Delete temp group now that we have contact
+                            try:
+                                logger.info(f"🗑️ Deleting temp group {temp_group.id}...")
+                                await self.client.delete_chat(temp_group.id)
+                                logger.info(f"✅ Temp group deleted")
+                            except Exception as del_err:
+                                logger.warning(f"⚠️ Failed to delete temp group: {del_err}")
+                            
+                        except Exception as group_err:
+                            logger.error(f"❌ Failed to create temp group: {group_err}")
+                            return {
+                                'success': False,
+                                'error': f'Cannot establish contact with user {buyer_user_id}: {str(group_err)}'
+                            }
                     
                     # Now request secret chat using InputUser
                     try:
