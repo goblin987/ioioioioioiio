@@ -1,19 +1,20 @@
 """
 Monkey Patch for telethon-secret-chat library
-Fixes video corruption by using proper AES-IGE encryption
+Fixes video corruption by using proper AES-IGE encryption from secret_chat_crypto.py
 
-SIMPLIFIED APPROACH: Just bypass the broken library and send as document with manual encryption
+This patches the library's broken video encryption with our proper MTProto 2.0 implementation.
 """
 
 import logging
 import os
 import tempfile
 from typing import Optional
+from secret_chat_crypto import encrypt_file_for_secret_chat, decrypt_file_from_secret_chat
 
 logger = logging.getLogger(__name__)
 
-# Flag to disable patches if they cause issues
-ENABLE_PATCHES = False  # Disabled for now - library is too broken to patch safely
+# Flag to enable/disable patches
+ENABLE_PATCHES = True  # ✅ ENABLED - Using our proper AES-IGE encryption!
 
 def patch_secret_chat_video_sending():
     """

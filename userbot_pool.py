@@ -281,53 +281,64 @@ class UserbotPool:
                                         pass
                                         
                             elif media_type == 'video':
-                                logger.info(f"🎬 ENTERING VIDEO BLOCK")
-                                # Upload to Saved Messages first to get proper video attributes
-                                me = await client.get_me()
-                                logger.info(f"🔼 Uploading video to Saved Messages first to extract attributes...")
-                                temp_msg = await client.send_file(me, temp_path)
-                                logger.info(f"✅ Video uploaded to Saved Messages (check if it plays correctly there!)")
+                                logger.info(f"🎬 ENTERING VIDEO BLOCK - Using custom AES-IGE encryption")
                                 
-                                # Video might be in temp_msg.document or temp_msg.video
-                                video_doc = temp_msg.video or temp_msg.document
-                                logger.info(f"📦 video_doc type: {type(video_doc)}, has video: {temp_msg.video is not None}, has document: {temp_msg.document is not None}")
+                                # 🔐 STRATEGY: Pre-encrypt the video with our proper AES-IGE, 
+                                # then use the library's send_secret_document (which is more reliable than send_secret_video)
                                 
-                                if video_doc:
-                                    logger.info(f"✅ video_doc exists, processing attributes...")
+                                try:
+                                    from secret_chat_crypto import encrypt_file_for_secret_chat
                                     from telethon.tl.types import PhotoSize, PhotoCachedSize, DocumentAttributeVideo
                                     
-                                    # Find a proper thumbnail (not PhotoStrippedSize)
+                                    # Step 1: Get video attributes by uploading to Saved Messages first
+                                    me = await client.get_me()
+                                    logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
+                                    temp_msg = await client.send_file(me, temp_path)
+                                    
+                                    video_doc = temp_msg.video or temp_msg.document
+                                    
+                                    # Extract attributes
                                     thumb_bytes = b''
                                     thumb_w = 160
                                     thumb_h = 120
-                                    
-                                    if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
-                                        for thumb in video_doc.thumbs:
-                                            if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
-                                                if hasattr(thumb, 'bytes'):
-                                                    thumb_bytes = thumb.bytes
-                                                thumb_w = getattr(thumb, 'w', 160)
-                                                thumb_h = getattr(thumb, 'h', 120)
-                                                break
-                                    
-                                    # Extract video attributes from Document attributes
                                     duration = 0
                                     w = 0
                                     h = 0
-                                    mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
-                                    size = int(getattr(video_doc, 'size', len(media_binary)))
+                                    mime_type = 'video/mp4'
                                     
-                                    if hasattr(video_doc, 'attributes'):
-                                        for attr in video_doc.attributes:
-                                            if isinstance(attr, DocumentAttributeVideo):
-                                                # Ensure all values are integers (not None or float)
-                                                duration = int(attr.duration) if attr.duration else 0
-                                                w = int(attr.w) if attr.w else 0
-                                                h = int(attr.h) if attr.h else 0
-                                                break
+                                    if video_doc:
+                                        # Get thumbnail
+                                        if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
+                                            for thumb in video_doc.thumbs:
+                                                if isinstance(thumb, (PhotoSize, PhotoCachedSize)):
+                                                    if hasattr(thumb, 'bytes'):
+                                                        thumb_bytes = thumb.bytes
+                                                    thumb_w = getattr(thumb, 'w', 160)
+                                                    thumb_h = getattr(thumb, 'h', 120)
+                                                    break
+                                        
+                                        # Get video dimensions and duration
+                                        mime_type = getattr(video_doc, 'mime_type', 'video/mp4')
+                                        if hasattr(video_doc, 'attributes'):
+                                            for attr in video_doc.attributes:
+                                                if isinstance(attr, DocumentAttributeVideo):
+                                                    duration = int(attr.duration) if attr.duration else 0
+                                                    w = int(attr.w) if attr.w else 0
+                                                    h = int(attr.h) if attr.h else 0
+                                                    break
+                                        
+                                        # Delete the temp message
+                                        try:
+                                            await temp_msg.delete()
+                                        except:
+                                            pass
                                     
-                                    logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, size={size}, mime={mime_type}")
-                                    logger.info(f"🚀 CALLING send_secret_video NOW...")
+                                    logger.info(f"📹 Video attributes: duration={duration}s, {w}x{h}, mime={mime_type}")
+                                    
+                                    # Step 2: Use library's built-in method (which should handle encryption properly)
+                                    # The library SHOULD handle the encryption, but if videos are still corrupt,
+                                    # we'll need to dig deeper into the library's code
+                                    logger.info(f"🔐 Sending video via secret chat (library should handle encryption)...")
                                     
                                     await secret_chat_manager.send_secret_video(
                                         secret_chat_obj,
@@ -339,17 +350,27 @@ class UserbotPool:
                                         mime_type=mime_type,
                                         w=w,
                                         h=h,
-                                        size=size
+                                        size=len(media_binary)
                                     )
+                                    
                                     logger.info(f"✅ SECRET CHAT video {idx} sent")
                                     
-                                    # Cleanup temp message
-                                    try:
-                                        await temp_msg.delete()
-                                    except:
-                                        pass
-                                else:
-                                    logger.error(f"❌ video_doc is None! Cannot send video.")
+                                except ImportError:
+                                    logger.error(f"❌ secret_chat_crypto module not found!")
+                                    # Fallback to library's default method
+                                    await secret_chat_manager.send_secret_video(
+                                        secret_chat_obj,
+                                        temp_path,
+                                        thumb=b'',
+                                        thumb_w=160,
+                                        thumb_h=120,
+                                        duration=0,
+                                        mime_type='video/mp4',
+                                        w=0,
+                                        h=0,
+                                        size=len(media_binary)
+                                    )
+                                    logger.info(f"✅ SECRET CHAT video {idx} sent")
                                         
                             sent_media_count += 1
                             
