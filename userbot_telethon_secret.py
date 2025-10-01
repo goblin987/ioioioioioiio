@@ -21,6 +21,7 @@ class TelethonSecretChat:
         self.client = None
         self.is_connected = False
         self.secret_chat_manager = None
+        self._temp_phone_code_hash = None  # Store phone_code_hash for authentication
     
     async def initialize(self, api_id: int, api_hash: str, phone_number: str = None, use_existing_pyrogram: bool = True) -> bool:
         """Initialize Telethon client for secret chats"""
@@ -129,13 +130,14 @@ class TelethonSecretChat:
             temp_client = TelegramClient(StringSession(), api_id, api_hash)
             await temp_client.connect()
             
-            # Send code
-            await temp_client.send_code_request(phone_number)
+            # Send code and get phone_code_hash
+            sent_code = await temp_client.send_code_request(phone_number)
+            self._temp_phone_code_hash = sent_code.phone_code_hash  # 🚀 YOLO: Store hash!
             
             # Disconnect temp client (will reconnect with code)
             await temp_client.disconnect()
             
-            logger.info(f"✅ TELETHON AUTH: Code sent to {phone_number}")
+            logger.info(f"✅ TELETHON AUTH: Code sent to {phone_number}, hash stored")
             return True, f"Verification code sent to {phone_number}", True
             
         except Exception as e:
@@ -150,13 +152,17 @@ class TelethonSecretChat:
         try:
             logger.info(f"🔐 TELETHON AUTH: Completing with code for {phone_number}")
             
+            # Check if we have phone_code_hash
+            if not self._temp_phone_code_hash:
+                return False, "Authentication session expired. Please start again.", None
+            
             # Create client
             temp_client = TelegramClient(StringSession(), api_id, api_hash)
             await temp_client.connect()
             
-            # Sign in with code
+            # Sign in with code and phone_code_hash
             try:
-                await temp_client.sign_in(phone_number, code)
+                await temp_client.sign_in(phone_number, code, phone_code_hash=self._temp_phone_code_hash)
             except SessionPasswordNeededError:
                 if not password:
                     await temp_client.disconnect()
@@ -192,11 +198,16 @@ class TelethonSecretChat:
             finally:
                 conn.close()
             
+            # Clear temp hash after successful auth
+            self._temp_phone_code_hash = None
+            
             logger.info(f"✅ TELETHON AUTH: Authenticated as @{username}")
             return True, f"Authenticated as @{username}", session_string
             
         except Exception as e:
             logger.error(f"❌ TELETHON AUTH: Failed: {e}", exc_info=True)
+            # Clear temp hash on error too
+            self._temp_phone_code_hash = None
             return False, f"Authentication failed: {str(e)}", None
     
     async def deliver_via_secret_chat(
