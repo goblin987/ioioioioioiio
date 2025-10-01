@@ -360,8 +360,9 @@ def create_multi_userbot_schema():
         """)
         
         # Insert default settings if not exists
-        c.execute("SELECT COUNT(*) FROM userbot_settings WHERE id = 1")
-        if c.fetchone()[0] == 0:
+        c.execute("SELECT COUNT(*) as count FROM userbot_settings WHERE id = 1")
+        result = c.fetchone()
+        if result and result['count'] == 0:
             c.execute("INSERT INTO userbot_settings (id) VALUES (1)")
         
         # Create indexes
