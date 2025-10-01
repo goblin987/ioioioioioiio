@@ -5,6 +5,8 @@ Manages multiple Telethon userbots for secret chat delivery with load balancing
 
 import logging
 import asyncio
+import os
+import tempfile
 from typing import Optional, Dict, List, Tuple, Any
 from datetime import datetime, timezone
 from telethon import TelegramClient
@@ -224,7 +226,6 @@ class UserbotPool:
                         logger.info(f"📤 Sending SECRET CHAT media {idx}/{len(media_binary_items)} ({len(media_binary)} bytes) type: {media_type}...")
                         
                         # Save to temp file (secret chat library needs file path)
-                        import tempfile
                         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
                             temp_file.write(media_binary)
                             temp_path = temp_file.name
