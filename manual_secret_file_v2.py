@@ -113,16 +113,22 @@ async def send_video_with_manual_encryption(
             # Serialize the message using library's serializer
             from telethon_secret_chat.secret_sechma import secretTL as TL
             
-            # Build DecryptedMessage layer 73
-            decrypted_msg = TL.DecryptedMessage_73(
-                ttl=0,
-                message="",
-                media=media,
-                random_id=random_id,
-                via_bot_name=None,
-                reply_to_random_id=None,
-                entities=[]
-            )
+            # Build DecryptedMessage (use the correct layer version)
+            # Try different layer versions until one works
+            try:
+                decrypted_msg = TL.DecryptedMessage(
+                    random_id=random_id,
+                    message="",
+                    media=media
+                )
+            except TypeError:
+                # Try layer 23
+                decrypted_msg = TL.DecryptedMessage23(
+                    random_id=random_id,
+                    ttl=0,
+                    message="",
+                    media=media
+                )
             
             # Encrypt the message using the library's encryption
             encrypted_msg_data = secret_chat_manager._encrypt_secret_message_data(
@@ -167,7 +173,8 @@ async def send_video_with_manual_encryption(
                     thumb_w=90,
                     thumb_h=160,
                     mime_type="video/mp4",
-                    size=len(encrypted_data)
+                    size=len(encrypted_data),
+                    file_name=filename  # REQUIRED parameter!
                 )
                 
                 logger.info(f"✅ Sent via fallback method!")
