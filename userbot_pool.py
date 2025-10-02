@@ -301,23 +301,25 @@ class UserbotPool:
                                     await temp_msg.delete()
                                     logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
                                     
-                                    # 🚀 ATTEMPT #15: Just use send_secret_document (photos work, maybe documents work too)
-                                    logger.info(f"🚀 ATTEMPT #15: Sending video as secret_document...")
+                                    # 🔥 ATTEMPT #16: Manual encryption with library's message builder!
+                                    logger.info(f"🔥 ATTEMPT #16: Using manual encryption...")
                                     
-                                    await secret_chat_manager.send_secret_document(
-                                        secret_chat_obj,
-                                        temp_path,
-                                        thumb=video_thumb if video_thumb else b'',
-                                        thumb_w=video_thumb_w if video_thumb_w else 90,
-                                        thumb_h=video_thumb_h if video_thumb_h else 160,
-                                        mime_type="video/mp4",
-                                        size=file_size,
-                                        file_name=filename
+                                    from manual_secret_file_v2 import send_video_with_manual_encryption
+                                    
+                                    success = await send_video_with_manual_encryption(
+                                        client=client,
+                                        secret_chat_manager=secret_chat_manager,
+                                        secret_chat_obj=secret_chat_obj,
+                                        video_data=media_binary,
+                                        filename=filename
                                     )
                                     
-                                    logger.info(f"✅ Video {idx} sent as secret document!")
-                                    sent_media_count += 1
-                                    continue
+                                    if success:
+                                        logger.info(f"✅ Video {idx} sent via ATTEMPT #16!")
+                                        sent_media_count += 1
+                                        continue
+                                    else:
+                                        logger.error(f"❌ ATTEMPT #16 failed for video {idx}")
                                     
                                 except Exception as manual_err:
                                     logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)
