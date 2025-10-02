@@ -311,7 +311,10 @@ class UserbotPool:
                                         secret_chat_manager=secret_chat_manager,
                                         secret_chat_obj=secret_chat_obj,
                                         video_data=media_binary,
-                                        filename=filename
+                                        filename=filename,
+                                        duration=video_duration,
+                                        width=video_w,
+                                        height=video_h
                                     )
                                     
                                     if success:

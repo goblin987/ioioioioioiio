@@ -13,7 +13,7 @@ from telethon.tl.functions.messages import SendEncryptedFileRequest
 from telethon.tl.types import InputEncryptedChat, InputEncryptedFileUploaded
 
 from secret_chat_crypto import encrypt_file_for_secret_chat
-from tl_serializer import DecryptedMessage, DecryptedMessageMediaDocument, encrypt_message_for_secret_chat
+from tl_serializer import DecryptedMessage, DecryptedMessageMediaDocument, DocumentAttributeVideo, encrypt_message_for_secret_chat
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,10 @@ async def send_video_mtproto_full(
     secret_chat_manager,
     secret_chat_obj,
     video_data: bytes,
-    filename: str = "video.mp4"
+    filename: str = "video.mp4",
+    duration: int = 0,
+    width: int = 0,
+    height: int = 0
 ) -> bool:
     """
     🔥 ATTEMPT #17: Full MTProto 2.0 implementation WITHOUT library's broken encryption
@@ -88,6 +91,18 @@ async def send_video_mtproto_full(
         # ============================================================================
         logger.info(f"🏗️ Step 4: Building TL structure...")
         
+        # Create video attributes
+        attributes = []
+        if duration > 0 and width > 0 and height > 0:
+            video_attr = DocumentAttributeVideo(
+                duration=duration,
+                w=width,
+                h=height,
+                supports_streaming=True
+            )
+            attributes.append(video_attr)
+            logger.info(f"✅ Added video attributes: {duration}s, {width}x{height}")
+        
         media = DecryptedMessageMediaDocument(
             thumb=b'',
             thumb_w=90,
@@ -96,7 +111,7 @@ async def send_video_mtproto_full(
             size=len(video_data),  # ORIGINAL size (not encrypted size!)
             key=file_key,  # OUR file encryption key
             iv=file_iv,    # OUR file IV
-            attributes=[],
+            attributes=attributes,  # NOW WITH VIDEO ATTRIBUTES!
             caption=""
         )
         

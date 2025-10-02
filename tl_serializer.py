@@ -45,6 +45,43 @@ def serialize_long(value: int) -> bytes:
     return struct.pack('<q', value)
 
 
+class DocumentAttributeVideo:
+    """
+    DocumentAttributeVideo for secret chats
+    
+    documentAttributeVideo#0ef02ce6 
+        flags:# 
+        round_message:flags.0?true 
+        supports_streaming:flags.1?true 
+        duration:int 
+        w:int 
+        h:int 
+        = DocumentAttribute;
+    """
+    CONSTRUCTOR_ID = 0x0ef02ce6
+    
+    def __init__(self, duration: int, w: int, h: int, round_message: bool = False, supports_streaming: bool = True):
+        self.duration = duration
+        self.w = w
+        self.h = h
+        self.round_message = round_message
+        self.supports_streaming = supports_streaming
+    
+    def serialize(self) -> bytes:
+        flags = 0
+        if self.round_message:
+            flags |= (1 << 0)
+        if self.supports_streaming:
+            flags |= (1 << 1)
+        
+        data = struct.pack('<I', self.CONSTRUCTOR_ID)
+        data += serialize_int(flags)
+        data += serialize_int(self.duration)
+        data += serialize_int(self.w)
+        data += serialize_int(self.h)
+        return data
+
+
 class DecryptedMessageMediaDocument:
     """
     DecryptedMessageMediaDocument structure for secret chats
