@@ -429,25 +429,26 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🎯 ATTEMPT #33: MINIMAL VALID PARAMS - Don't pass file bytes/attrs!
-                                        # Library REQUIRES params but maybe reads file itself if we don't pass binary data
-                                        logger.info(f"🚀 ATTEMPT #33: Minimal valid params - let library READ file!")
+                                        # 🎯 ATTEMPT #34: Use ACTUAL extracted values!
+                                        # We extract real values but were passing zeros - that's the bug!
+                                        logger.info(f"🚀 ATTEMPT #34: Using REAL extracted values!")
+                                        logger.info(f"📊 Values: {video_duration}s, {video_w}x{video_h}, {len(video_bytes)} bytes")
                                         
                                         try:
-                                            # Use MINIMAL placeholders - library should read actual file
+                                            # Use ACTUAL values from the video file
                                             await secret_chat_manager.send_secret_video(
                                                 secret_chat_obj,
                                                 fresh_temp_path,
-                                                thumb=b'',  # Empty bytes instead of None
-                                                thumb_w=1,
-                                                thumb_h=1,
-                                                duration=0,  # 0 = let library detect
+                                                thumb=thumb_bytes if thumb_bytes else b'',
+                                                thumb_w=thumb_w,
+                                                thumb_h=thumb_h,
+                                                duration=video_duration,  # REAL duration!
                                                 mime_type="video/mp4",
-                                                w=0,  # 0 = let library detect
-                                                h=0,  # 0 = let library detect
-                                                size=0  # 0 = let library detect
+                                                w=video_w,  # REAL width!
+                                                h=video_h,  # REAL height!
+                                                size=len(video_bytes)  # REAL size!
                                             )
-                                            logger.info(f"✅ Video {idx} sent with MINIMAL params!")
+                                            logger.info(f"✅ Video {idx} sent with REAL extracted values!")
                                         except Exception as attempt33_err:
                                             logger.error(f"❌ ATTEMPT #33 failed: {attempt33_err}")
                                             # Fallback to document
