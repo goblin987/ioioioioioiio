@@ -200,10 +200,10 @@ def encrypt_message_for_secret_chat(message_data: bytes, secret_key: bytes, is_s
         (encrypted_data, msg_key)
     """
     import hashlib
+    import random
     from secret_chat_crypto import aes_ige_encrypt, pad_to_16_bytes
     
     # Add random padding (12-1024 bytes, multiple of 16)
-    import random
     padding_length = random.randint(12, 1024)
     padding_length = ((padding_length + 15) // 16) * 16
     padding = os.urandom(padding_length)
@@ -214,7 +214,6 @@ def encrypt_message_for_secret_chat(message_data: bytes, secret_key: bytes, is_s
     x = 0 if is_sender else 8
     
     # Calculate msg_key_large = SHA256(substr(secret_key, 88+x, 32) + plaintext + padding)
-    import os
     key_part = secret_key[88+x:88+x+32]
     msg_key_large = hashlib.sha256(key_part + plaintext).digest()
     msg_key = msg_key_large[8:24]  # 16 bytes
