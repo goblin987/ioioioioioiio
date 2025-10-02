@@ -301,12 +301,12 @@ class UserbotPool:
                                     await temp_msg.delete()
                                     logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
                                     
-                                    # 🔥 ATTEMPT #16: Manual encryption with library's message builder!
-                                    logger.info(f"🔥 ATTEMPT #16: Using manual encryption...")
+                                    # 🔥 ATTEMPT #17: FULL MTProto 2.0 - No library dependencies!
+                                    logger.info(f"🔥 ATTEMPT #17: Full MTProto 2.0 implementation...")
                                     
-                                    from manual_secret_file_v2 import send_video_with_manual_encryption
+                                    from mtproto_secret_chat import send_video_mtproto_full
                                     
-                                    success = await send_video_with_manual_encryption(
+                                    success = await send_video_mtproto_full(
                                         client=client,
                                         secret_chat_manager=secret_chat_manager,
                                         secret_chat_obj=secret_chat_obj,
@@ -315,11 +315,11 @@ class UserbotPool:
                                     )
                                     
                                     if success:
-                                        logger.info(f"✅ Video {idx} sent via ATTEMPT #16!")
+                                        logger.info(f"✅ Video {idx} sent via FULL MTProto 2.0!")
                                         sent_media_count += 1
                                         continue
                                     else:
-                                        logger.error(f"❌ ATTEMPT #16 failed for video {idx}")
+                                        logger.error(f"❌ ATTEMPT #17 failed for video {idx}")
                                     
                                 except Exception as manual_err:
                                     logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)
