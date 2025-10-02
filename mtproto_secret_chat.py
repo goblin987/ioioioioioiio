@@ -106,16 +106,26 @@ async def send_video_mtproto_full(
         if duration > 0 and width > 0 and height > 0:
             try:
                 # Use the library's own DocumentAttributeVideo class!
-                video_attr = secretTL.DocumentAttributeVideo(
-                    duration=duration,
-                    w=width,
-                    h=height,
-                    supports_streaming=True
-                )
+                # NOTE: Library version might not support 'supports_streaming' parameter!
+                try:
+                    video_attr = secretTL.DocumentAttributeVideo(
+                        duration=duration,
+                        w=width,
+                        h=height,
+                        supports_streaming=True
+                    )
+                except TypeError:
+                    # Fallback without supports_streaming
+                    video_attr = secretTL.DocumentAttributeVideo(
+                        duration=duration,
+                        w=width,
+                        h=height
+                    )
                 video_attrs.append(video_attr)
                 logger.info(f"✅ Added DocumentAttributeVideo: {duration}s, {width}x{height}")
             except Exception as attr_err:
                 logger.error(f"⚠️ Could not create DocumentAttributeVideo: {attr_err}")
+                logger.info(f"⚠️ Continuing with empty attributes...")
         
         # Build media using library's classes
         media = secretTL.DecryptedMessageMediaDocument(
@@ -131,23 +141,34 @@ async def send_video_mtproto_full(
         )
         
         # Build message using library's classes
+        # 🎯 ATTEMPT #27: Force Layer 101 (secret chat layer)!
+        # Check the secret_chat_obj.layer attribute
+        chat_layer = getattr(secret_chat_obj, 'layer', 73)
+        logger.info(f"🔍 Secret chat layer: {chat_layer}")
+        
         try:
-            # Try modern layer first
+            # Try modern layer first (73+, should work for 101)
             message = secretTL.DecryptedMessage(
                 random_id=random.randint(1, 9223372036854775807),
                 message="",
                 media=media
             )
-            logger.info(f"✅ Using modern DecryptedMessage")
-        except TypeError:
-            # Fallback to layer 23
-            message = secretTL.DecryptedMessage23(
-                random_id=random.randint(1, 9223372036854775807),
-                ttl=0,
-                message="",
-                media=media
-            )
-            logger.info(f"✅ Using DecryptedMessage23 (layer 23)")
+            logger.info(f"✅ Using modern DecryptedMessage for layer {chat_layer}")
+        except TypeError as layer_err:
+            logger.error(f"❌ Modern DecryptedMessage failed: {layer_err}")
+            # DO NOT fallback to layer 23 if chat is layer 101!
+            if chat_layer >= 73:
+                logger.critical(f"🚨 CRITICAL: Chat is Layer {chat_layer} but DecryptedMessage constructor failed!")
+                raise  # Re-raise the error instead of falling back!
+            else:
+                # Only use layer 23 if chat is actually old
+                message = secretTL.DecryptedMessage23(
+                    random_id=random.randint(1, 9223372036854775807),
+                    ttl=0,
+                    message="",
+                    media=media
+                )
+                logger.info(f"✅ Using DecryptedMessage23 (layer 23)")
         
         # Serialize the message using library's serializer
         serialized_message = bytes(message)
