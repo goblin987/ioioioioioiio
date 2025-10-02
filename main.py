@@ -1433,7 +1433,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-    except Exception as e:
+            except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
