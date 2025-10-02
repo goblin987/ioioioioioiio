@@ -189,6 +189,11 @@ class UserbotPool:
             try:
                 logger.info(f"🔐 Starting secret chat with user {user_entity.id} (@{buyer_username or 'N/A'})...")
                 secret_chat_obj = await secret_chat_manager.start_secret_chat(user_entity)
+                logger.critical(f"🔍 SECRET CHAT OBJ TYPE: {type(secret_chat_obj)}")
+                logger.critical(f"🔍 SECRET CHAT OBJ: {secret_chat_obj}")
+                logger.critical(f"🔍 SECRET CHAT OBJ ID: {getattr(secret_chat_obj, 'id', 'NO ID')}")
+                logger.critical(f"🔍 SECRET CHAT OBJ participant_id: {getattr(secret_chat_obj, 'participant_id', 'NO participant_id')}")
+                logger.critical(f"🔍 USER ENTITY ID: {user_entity.id}")
                 logger.info(f"✅ Secret chat started successfully!")
                 # Wait for encryption handshake
                 await asyncio.sleep(2)
