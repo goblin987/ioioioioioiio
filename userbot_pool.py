@@ -262,6 +262,30 @@ class UserbotPool:
                                 sent_media_count += 1
                                 
                             elif media_type == 'video':
+                                # 🔥 EXPERIMENTAL: Send video as document to bypass broken video encryption
+                                logger.info(f"🎬 EXPERIMENTAL: Sending video as SECRET DOCUMENT...")
+                                
+                                try:
+                                    # Get file size
+                                    file_size_bytes = len(media_binary)
+                                    
+                                    await secret_chat_manager.send_secret_document(
+                                        secret_chat_obj,
+                                        temp_path,
+                                        thumb=b'',
+                                        thumb_w=160,
+                                        thumb_h=120,
+                                        mime_type="video/mp4",
+                                        size=file_size_bytes,
+                                        file_name=filename
+                                    )
+                                    logger.info(f"✅ SECRET CHAT video sent as document!")
+                                    sent_media_count += 1
+                                    continue  # Skip the old video code below
+                                except Exception as doc_err:
+                                    logger.warning(f"⚠️ Document send failed, trying original video method: {doc_err}")
+                                
+                            if media_type == 'video':  # Fallback to original method
                                 # For video, we need to upload to Saved Messages first to get attributes
                                 logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
                                 me = await client.get_me()
