@@ -443,6 +443,7 @@ class UserbotPool:
                                                 duration=video_duration,
                                                 w=video_w,
                                                 h=video_h,
+                                                mime_type="video/mp4",  # REQUIRED!
                                                 size=len(video_bytes)
                                             )
                                             logger.info(f"✅ Video {idx} sent via library's send_secret_video!")
