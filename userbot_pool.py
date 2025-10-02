@@ -334,9 +334,21 @@ class UserbotPool:
                                                     thumb_h = thumb.h
                                                     break
                                         
-                                        # 🎯 ATTEMPT #22: Send video as DOCUMENT instead of video!
-                                        # send_secret_video() is corrupting files, try send_secret_document()
-                                        logger.info(f"🎯 ATTEMPT #22: Sending video as DOCUMENT...")
+                                        # 🎯 ATTEMPT #23: Send document WITH video attributes!
+                                        # The file needs DocumentAttributeVideo so Telegram recognizes it
+                                        logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
+                                        
+                                        # Build video attributes
+                                        from telethon.tl.types import DocumentAttributeVideo as TelethonDocAttrVideo
+                                        video_attrs = [
+                                            TelethonDocAttrVideo(
+                                                duration=video_duration,
+                                                w=video_w,
+                                                h=video_h,
+                                                supports_streaming=True
+                                            )
+                                        ]
+                                        
                                         await secret_chat_manager.send_secret_document(
                                             secret_chat_obj,
                                             fresh_temp_path,  # FRESH file from download!
@@ -345,7 +357,8 @@ class UserbotPool:
                                             thumb_h=thumb_h,
                                             file_name="video.mp4",
                                             mime_type="video/mp4",
-                                            size=len(video_bytes)
+                                            size=len(video_bytes),
+                                            attributes=video_attrs  # ADDED VIDEO ATTRIBUTES!
                                         )
                                         
                                         logger.info(f"✅ Video {idx} sent as DOCUMENT with FRESH file!")
