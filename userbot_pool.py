@@ -190,15 +190,28 @@ class UserbotPool:
             secret_chat_obj = None
             try:
                 # 🎯 ATTEMPT #28: Check for existing secret chat FIRST!
-                existing_chats = secret_chat_manager.get_secret_chats()
+                # Try multiple methods to get existing chats
                 existing_chat = None
                 
-                if existing_chats:
-                    for chat in existing_chats:
-                        if hasattr(chat, 'user_id') and chat.user_id == user_entity.id:
-                            existing_chat = chat
-                            logger.info(f"♻️ Found existing secret chat with user {user_entity.id}! Reusing chat ID: {chat.id}")
-                            break
+                try:
+                    # Method 1: Try session.get_all_secret_chats()
+                    if hasattr(secret_chat_manager, 'session'):
+                        session = secret_chat_manager.session
+                        if hasattr(session, 'get_all_secret_chats'):
+                            existing_chats = session.get_all_secret_chats()
+                            logger.info(f"♻️ Found {len(existing_chats)} existing secret chats via session")
+                            for chat in existing_chats:
+                                if hasattr(chat, 'user_id') and chat.user_id == user_entity.id:
+                                    existing_chat = chat
+                                    logger.info(f"♻️ Found existing chat with user {user_entity.id}! Chat ID: {chat.id}")
+                                    break
+                        elif hasattr(session, 'get_secret_chat_by_user_id'):
+                            # Method 2: Direct lookup by user_id
+                            existing_chat = session.get_secret_chat_by_user_id(user_entity.id)
+                            if existing_chat:
+                                logger.info(f"♻️ Found existing chat via user_id lookup: {existing_chat.id}")
+                except Exception as lookup_err:
+                    logger.info(f"ℹ️ Could not lookup existing chats: {lookup_err}")
                 
                 if existing_chat:
                     # Reuse existing chat!
