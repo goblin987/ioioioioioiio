@@ -338,45 +338,21 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # Build video attributes
-                                        from telethon.tl.types import DocumentAttributeVideo as TelethonDocAttrVideo
-                                        video_attrs = [
-                                            TelethonDocAttrVideo(
-                                                duration=video_duration,
-                                                w=video_w,
-                                                h=video_h,
-                                                supports_streaming=True
-                                            )
-                                        ]
-                                        
-                                        try:
-                                            logger.info(f"🔍 Attempting send_secret_document with attributes...")
-                                            await secret_chat_manager.send_secret_document(
-                                                secret_chat_obj,
-                                                fresh_temp_path,  # FRESH file from download!
-                                                thumb=thumb_bytes,
-                                                thumb_w=thumb_w,
-                                                thumb_h=thumb_h,
-                                                file_name="video.mp4",
-                                                mime_type="video/mp4",
-                                                size=len(video_bytes),
-                                                attributes=video_attrs  # ADDED VIDEO ATTRIBUTES!
-                                            )
-                                            logger.info(f"✅ Video {idx} sent as DOCUMENT with attributes!")
-                                        except TypeError as te:
-                                            logger.warning(f"⚠️ attributes parameter not supported: {te}")
-                                            logger.info(f"🔄 Retrying without attributes...")
-                                            await secret_chat_manager.send_secret_document(
-                                                secret_chat_obj,
-                                                fresh_temp_path,
-                                                thumb=thumb_bytes,
-                                                thumb_w=thumb_w,
-                                                thumb_h=thumb_h,
-                                                file_name="video.mp4",
-                                                mime_type="video/mp4",
-                                                size=len(video_bytes)
-                                            )
-                                            logger.info(f"✅ Video {idx} sent as DOCUMENT without attributes!")
+                                        # 🎯 ATTEMPT #24: Send as PLAIN DOCUMENT (no attributes parameter!)
+                                        # The attributes parameter was SILENTLY accepted but NOTHING was sent!
+                                        logger.info(f"🔍 Sending as PLAIN document (no attributes)...")
+                                        await secret_chat_manager.send_secret_document(
+                                            secret_chat_obj,
+                                            fresh_temp_path,  # FRESH file from download!
+                                            thumb=thumb_bytes,
+                                            thumb_w=thumb_w,
+                                            thumb_h=thumb_h,
+                                            file_name="video.mp4",
+                                            mime_type="video/mp4",
+                                            size=len(video_bytes)
+                                            # NO attributes parameter!
+                                        )
+                                        logger.info(f"✅ Video {idx} sent as PLAIN DOCUMENT!")
                                         
                                         # Cleanup
                                         try:
