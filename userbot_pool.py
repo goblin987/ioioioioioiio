@@ -199,6 +199,15 @@ class UserbotPool:
                 secret_chat_obj = secret_chat_manager.get_secret_chat(secret_chat_id)
                 logger.info(f"✅ Retrieved secret chat object: {type(secret_chat_obj)}")
                 
+                # 🔍 CRITICAL DEBUG: Check secret chat layer!
+                try:
+                    if hasattr(secret_chat_obj, 'layer'):
+                        logger.critical(f"🎯 SECRET CHAT LAYER: {secret_chat_obj.layer}")
+                    if hasattr(secret_chat_obj, '__dict__'):
+                        logger.critical(f"🔍 SECRET CHAT ATTRIBUTES: {list(secret_chat_obj.__dict__.keys())}")
+                except Exception as layer_err:
+                    logger.error(f"❌ Could not inspect secret chat: {layer_err}")
+                
             except Exception as e:
                 logger.error(f"❌ Failed to start secret chat: {e}")
                 return False, f"Failed to start secret chat: {e}"
