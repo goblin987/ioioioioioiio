@@ -590,9 +590,9 @@ def callback_query_router(func):
         if query and query.data:
             # Support both | and : as parameter separators
             if '|' in query.data:
-                parts = query.data.split('|')
-                command = parts[0]
-                params = parts[1:]
+            parts = query.data.split('|')
+            command = parts[0]
+            params = parts[1:]
             elif ':' in query.data:
                 parts = query.data.split(':', 1)  # Split only on first :
                 command = parts[0]
@@ -1433,7 +1433,7 @@ async def stock_alerts_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode='Markdown'
                 )
                 logger.info("📧 Sent low stock alert to admin")
-            except Exception as e:
+    except Exception as e:
                 logger.error(f"Failed to send stock alert: {e}")
     except Exception as e:
         logger.error(f"Error in stock alerts job: {e}", exc_info=True)
