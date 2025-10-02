@@ -590,9 +590,9 @@ def callback_query_router(func):
         if query and query.data:
             # Support both | and : as parameter separators
             if '|' in query.data:
-                parts = query.data.split('|')
-                command = parts[0]
-                params = parts[1:]
+            parts = query.data.split('|')
+            command = parts[0]
+            params = parts[1:]
             elif ':' in query.data:
                 parts = query.data.split(':', 1)  # Split only on first :
                 command = parts[0]
@@ -1264,7 +1264,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Handle document uploads
                 bot = get_testforwarder_bot()
                 await bot.handle_document(update, context)
-            else:
+    else:
                 await handle_testforwarder_message(update, context)
             return  # If testforwarder handled it, don't process further
         except Exception as e:
