@@ -298,67 +298,71 @@ class UserbotPool:
                                                     video_thumb_h = int(thumb_obj.h) if thumb_obj.h else 120
                                                     break
                                     
-                                    # Delete temp message
-                                    await temp_msg.delete()
                                     logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
                                     
-                                    # 🎯 ATTEMPT #20: FORWARD METHOD - Upload normally, then forward!
-                                    # USER SAID: "if i try to forward message with video to the secrect chat i can and it dosent get corrupted"
-                                    # THIS IS THE KEY! Forwarding works because the video is uploaded WITHOUT encryption first!
-                                    logger.info(f"🎯 ATTEMPT #20: Upload to Saved Messages, then FORWARD to secret chat!")
+                                    # 🎯 ATTEMPT #21: Download saved message as BYTES and send with library
+                                    # The key insight: User said forwarding works because client downloads & re-uploads!
+                                    # We'll use send_secret_video() but with FRESH download from Saved Messages
+                                    logger.info(f"🎯 ATTEMPT #21: Download from Saved Messages & send_secret_video!")
                                     
                                     try:
-                                        # Step 1: Send video to Saved Messages (no encryption)
-                                        logger.info(f"📤 Uploading video to Saved Messages first...")
-                                        saved_msg = await client.send_file(
-                                            'me',  # Send to self
-                                            temp_path,
-                                            caption=f"Temp video for forwarding",
-                                            video_note=False,
-                                            supports_streaming=True
-                                        )
-                                        logger.info(f"✅ Video uploaded to Saved Messages, msg_id={saved_msg.id}")
+                                        # Download the video as bytes BEFORE deleting message
+                                        logger.info(f"📥 Downloading video from Saved Messages as bytes...")
+                                        video_bytes = await temp_msg.download_media(bytes)
+                                        logger.info(f"✅ Downloaded {len(video_bytes)} bytes")
                                         
-                                        # Step 2: Forward the message to secret chat
-                                        logger.info(f"🔄 Forwarding video to secret chat...")
-                                        await client.forward_messages(
-                                            secret_chat_obj,  # Forward TO secret chat
-                                            saved_msg.id,     # Message to forward
-                                            'me'              # Forward FROM saved messages
-                                        )
-                                        logger.info(f"✅ Video FORWARDED to secret chat!")
-                                        
-                                        # Step 3: Delete from Saved Messages
-                                        await saved_msg.delete()
+                                        # NOW delete temp message
+                                        await temp_msg.delete()
                                         logger.info(f"🗑️ Deleted temp message from Saved Messages")
+                                        
+                                        # Save to temp file
+                                        import tempfile
+                                        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as fresh_tf:
+                                            fresh_tf.write(video_bytes)
+                                            fresh_temp_path = fresh_tf.name
+                                        
+                                        logger.info(f"📤 Sending video via send_secret_video with FRESH file...")
+                                        
+                                        # Find proper thumbnail
+                                        thumb_bytes = b''
+                                        thumb_w = 90
+                                        thumb_h = 160
+                                        video_obj = temp_msg.video or temp_msg.document
+                                        if video_obj and hasattr(video_obj, 'thumbs') and video_obj.thumbs:
+                                            for thumb in video_obj.thumbs:
+                                                if hasattr(thumb, 'w') and hasattr(thumb, 'h'):
+                                                    thumb_w = thumb.w
+                                                    thumb_h = thumb.h
+                                                    break
+                                        
+                                        # Send with library's method but with FRESH file
+                                        await secret_chat_manager.send_secret_video(
+                                            secret_chat_obj,
+                                            fresh_temp_path,  # FRESH file from download!
+                                            thumb=thumb_bytes,
+                                            thumb_w=thumb_w,
+                                            thumb_h=thumb_h,
+                                            duration=video_duration,
+                                            w=video_w,
+                                            h=video_h,
+                                            size=len(video_bytes),
+                                            mime_type="video/mp4"
+                                        )
+                                        
+                                        logger.info(f"✅ Video {idx} sent via send_secret_video with FRESH file!")
+                                        
+                                        # Cleanup
+                                        import os
+                                        try:
+                                            os.unlink(fresh_temp_path)
+                                        except:
+                                            pass
                                         
                                         sent_media_count += 1
                                         continue
                                         
-                                    except Exception as forward_err:
-                                        logger.error(f"❌ ATTEMPT #20 forward failed: {forward_err}")
-                                        
-                                        # Fallback to ATTEMPT #19
-                                        logger.info(f"🔄 Falling back to ATTEMPT #19...")
-                                        from mtproto_secret_chat import send_video_mtproto_full
-                                        
-                                        success = await send_video_mtproto_full(
-                                            client=client,
-                                            secret_chat_manager=secret_chat_manager,
-                                            secret_chat_obj=secret_chat_obj,
-                                            video_data=media_binary,
-                                            filename=filename,
-                                            duration=video_duration,
-                                            width=video_w,
-                                            height=video_h
-                                        )
-                                        
-                                        if success:
-                                            logger.info(f"✅ Video {idx} sent via ATTEMPT #19!")
-                                            sent_media_count += 1
-                                            continue
-                                        else:
-                                            logger.error(f"❌ ATTEMPT #19 also failed")
+                                    except Exception as fresh_err:
+                                        logger.error(f"❌ ATTEMPT #21 failed: {fresh_err}", exc_info=True)
                                     
                                 except Exception as manual_err:
                                     logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)
