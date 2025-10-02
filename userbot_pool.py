@@ -349,19 +349,34 @@ class UserbotPool:
                                             )
                                         ]
                                         
-                                        await secret_chat_manager.send_secret_document(
-                                            secret_chat_obj,
-                                            fresh_temp_path,  # FRESH file from download!
-                                            thumb=thumb_bytes,
-                                            thumb_w=thumb_w,
-                                            thumb_h=thumb_h,
-                                            file_name="video.mp4",
-                                            mime_type="video/mp4",
-                                            size=len(video_bytes),
-                                            attributes=video_attrs  # ADDED VIDEO ATTRIBUTES!
-                                        )
-                                        
-                                        logger.info(f"✅ Video {idx} sent as DOCUMENT with FRESH file!")
+                                        try:
+                                            logger.info(f"🔍 Attempting send_secret_document with attributes...")
+                                            await secret_chat_manager.send_secret_document(
+                                                secret_chat_obj,
+                                                fresh_temp_path,  # FRESH file from download!
+                                                thumb=thumb_bytes,
+                                                thumb_w=thumb_w,
+                                                thumb_h=thumb_h,
+                                                file_name="video.mp4",
+                                                mime_type="video/mp4",
+                                                size=len(video_bytes),
+                                                attributes=video_attrs  # ADDED VIDEO ATTRIBUTES!
+                                            )
+                                            logger.info(f"✅ Video {idx} sent as DOCUMENT with attributes!")
+                                        except TypeError as te:
+                                            logger.warning(f"⚠️ attributes parameter not supported: {te}")
+                                            logger.info(f"🔄 Retrying without attributes...")
+                                            await secret_chat_manager.send_secret_document(
+                                                secret_chat_obj,
+                                                fresh_temp_path,
+                                                thumb=thumb_bytes,
+                                                thumb_w=thumb_w,
+                                                thumb_h=thumb_h,
+                                                file_name="video.mp4",
+                                                mime_type="video/mp4",
+                                                size=len(video_bytes)
+                                            )
+                                            logger.info(f"✅ Video {idx} sent as DOCUMENT without attributes!")
                                         
                                         # Cleanup
                                         try:
