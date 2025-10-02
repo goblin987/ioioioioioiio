@@ -262,59 +262,70 @@ class UserbotPool:
                                 sent_media_count += 1
                                 
                             elif media_type == 'video':
-                                # 🔥 ATTEMPT #13: Manual encryption + send via regular Telethon
-                                logger.info(f"🔐 MANUAL ENCRYPTION: Bypassing broken library...")
+                                # 🔥 ATTEMPT #14: Full MTProto 2.0 manual implementation!
+                                logger.info(f"🚀 ATTEMPT #14: Using manual MTProto 2.0 implementation...")
                                 
                                 try:
-                                    from secret_chat_crypto import encrypt_file_for_secret_chat
+                                    # First, extract video attributes
+                                    logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
+                                    me = await client.get_me()
+                                    temp_msg = await client.send_file(me, temp_path, force_document=False)
                                     
-                                    # 1. Encrypt the video with OUR working encryption
-                                    logger.info(f"🔒 Encrypting video with AES-256-IGE...")
-                                    encrypted_data, key, iv, fingerprint = encrypt_file_for_secret_chat(media_binary)
-                                    logger.info(f"✅ Video encrypted: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
+                                    # Extract attributes
+                                    video_duration = 0
+                                    video_w = 640
+                                    video_h = 480
+                                    video_thumb = b''
+                                    video_thumb_w = 160
+                                    video_thumb_h = 120
                                     
-                                    # 2. Save encrypted video to temp file
-                                    encrypted_path = temp_path + '.encrypted'
-                                    with open(encrypted_path, 'wb') as f:
-                                        f.write(encrypted_data)
+                                    if temp_msg.video:
+                                        video_doc = temp_msg.video
+                                        if hasattr(video_doc, 'attributes'):
+                                            for attr in video_doc.attributes:
+                                                if hasattr(attr, 'duration'):
+                                                    video_duration = int(attr.duration) if attr.duration else 0
+                                                if hasattr(attr, 'w') and hasattr(attr, 'h'):
+                                                    video_w = int(attr.w) if attr.w else 640
+                                                    video_h = int(attr.h) if attr.h else 480
+                                        
+                                        # Get thumbnail
+                                        if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
+                                            for thumb_obj in video_doc.thumbs:
+                                                if hasattr(thumb_obj, 'w') and hasattr(thumb_obj, 'h'):
+                                                    video_thumb_w = int(thumb_obj.w) if thumb_obj.w else 160
+                                                    video_thumb_h = int(thumb_obj.h) if thumb_obj.h else 120
+                                                    break
                                     
-                                    try:
-                                        # 3. Send encrypted file as REGULAR document to secret chat
-                                        # (using Telethon's regular send_file, NOT the broken library)
-                                        logger.info(f"📤 Sending encrypted file via Telethon...")
-                                        await client.send_file(
-                                            user_entity,  # Send to user entity, not secret chat object
-                                            encrypted_path,
-                                            caption=f"🔐 Encrypted Video {idx}\n📎 {filename}"
-                                        )
-                                        logger.info(f"✅ Encrypted file sent!")
-                                        
-                                        # 4. Send decryption keys via secret chat TEXT message
-                                        decrypt_msg = f"""🔑 **Decryption Keys for Video {idx}**
-
-📎 File: {filename}
-🔑 Key: `{key.hex()}`
-🎲 IV: `{iv.hex()}`
-🔢 Fingerprint: {fingerprint}
-📏 Size: {len(media_binary)} bytes
-
-ℹ️ Download the encrypted file above and decrypt it using these keys."""
-                                        
-                                        await secret_chat_manager.send_secret_message(secret_chat_obj, decrypt_msg)
-                                        logger.info(f"✅ Decryption keys sent via secret chat!")
-                                        
+                                    # Delete temp message
+                                    await temp_msg.delete()
+                                    logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
+                                    
+                                    # Use our manual implementation
+                                    from manual_secret_file import send_encrypted_video_manual
+                                    
+                                    success = await send_encrypted_video_manual(
+                                        client=client,
+                                        secret_chat_id=secret_chat_obj.id if hasattr(secret_chat_obj, 'id') else secret_chat_obj,
+                                        video_data=media_binary,
+                                        duration=video_duration,
+                                        w=video_w,
+                                        h=video_h,
+                                        mime_type="video/mp4",
+                                        thumb=video_thumb,
+                                        thumb_w=video_thumb_w,
+                                        thumb_h=video_thumb_h
+                                    )
+                                    
+                                    if success:
+                                        logger.info(f"✅ Video {idx} sent via MANUAL MTProto 2.0!")
                                         sent_media_count += 1
-                                        
-                                    finally:
-                                        try:
-                                            os.unlink(encrypted_path)
-                                        except:
-                                            pass
-                                    
-                                    continue  # Skip old video code
+                                        continue
+                                    else:
+                                        logger.error(f"❌ Manual MTProto 2.0 failed for video {idx}")
                                     
                                 except Exception as manual_err:
-                                    logger.error(f"❌ Manual encryption failed: {manual_err}", exc_info=True)
+                                    logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)
                                 
                             if media_type == 'video':  # Fallback to original method
                                 # For video, we need to upload to Saved Messages first to get attributes

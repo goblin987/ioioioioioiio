@@ -146,10 +146,62 @@ async def send_encrypted_photo_manual(
             iv=iv
         )
         
-        # Step 5: Encrypt the media_data itself with the secret chat key
-        # (This is where we'd need to access the secret chat's shared key)
-        # For now, we'll use telethon-secret-chat for this part
-        # TODO: Implement this encryption step
+        # Step 5: Use telethon-secret-chat to send the message part
+        # The library will encrypt the message (containing key+IV) with secret chat key
+        # But we provide the ALREADY ENCRYPTED file!
+        
+        # Get secret chat manager
+        from telethon_secret_chat import SecretChatManager
+        secret_manager = SecretChatManager(client)
+        
+        # Get the secret chat object
+        secret_chat = secret_manager.get_secret_chat(secret_chat_id)
+        
+        if not secret_chat:
+            raise Exception(f"Secret chat {secret_chat_id} not found")
+        
+        # Build the raw TL object for DecryptedMessageMediaPhoto
+        from telethon_secret_chat.secret_sechma import secretTL
+        
+        media = secretTL.DecryptedMessageMediaPhoto(
+            thumb=thumb if thumb else b'',
+            thumb_w=thumb_w,
+            thumb_h=thumb_h,
+            w=w,
+            h=h,
+            size=len(photo_data),
+            key=key,  # Our encryption key!
+            iv=iv     # Our IV!
+        )
+        
+        # Send via messages.sendEncryptedFile with OUR encrypted file
+        from telethon.tl.functions.messages import SendEncryptedFileRequest
+        from telethon.tl.types import InputEncryptedChat
+        
+        # Create message with media
+        message = secretTL.DecryptedMessage(
+            random_id=int.from_bytes(os.urandom(8), 'big'),
+            random_bytes=os.urandom(15),
+            message="",  # No text, just media
+            media=media
+        )
+        
+        # Let secret_manager encrypt the MESSAGE (not the file - we already did that!)
+        encrypted_message = await secret_manager.encrypt_secret_message(
+            secret_chat,
+            message
+        )
+        
+        # Send the encrypted message with our encrypted file
+        await client(SendEncryptedFileRequest(
+            peer=InputEncryptedChat(
+                chat_id=abs(secret_chat_id),
+                access_hash=secret_chat.access_hash
+            ),
+            random_id=message.random_id,
+            data=encrypted_message,
+            file=input_encrypted_file  # Our pre-encrypted file!
+        ))
         
         logger.info(f"✅ Photo sent via manual MTProto 2.0!")
         return True
@@ -186,6 +238,7 @@ async def send_encrypted_video_manual(
         input_file = await upload_encrypted_file(client, encrypted_data, file_id)
         
         # Step 3: Create InputEncryptedFileUploaded
+        from telethon.tl.types import InputEncryptedFileUploaded
         input_encrypted_file = InputEncryptedFileUploaded(
             id=file_id,
             parts=input_file.parts,
@@ -193,8 +246,58 @@ async def send_encrypted_video_manual(
             key_fingerprint=fingerprint
         )
         
-        # TODO: Complete implementation
-        # Need to construct DecryptedMessageMediaVideo and encrypt it
+        # Step 4: Get secret chat manager and secret chat
+        from telethon_secret_chat import SecretChatManager
+        secret_manager = SecretChatManager(client)
+        secret_chat = secret_manager.get_secret_chat(secret_chat_id)
+        
+        if not secret_chat:
+            raise Exception(f"Secret chat {secret_chat_id} not found")
+        
+        # Step 5: Build DecryptedMessageMediaVideo with OUR keys
+        from telethon_secret_chat.secret_sechma import secretTL
+        
+        media = secretTL.DecryptedMessageMediaVideo(
+            thumb=thumb if thumb else b'',
+            thumb_w=thumb_w,
+            thumb_h=thumb_h,
+            duration=duration,
+            mime_type=mime_type,
+            w=w,
+            h=h,
+            size=len(video_data),
+            key=key,  # Our encryption key!
+            iv=iv,    # Our IV!
+            caption=""
+        )
+        
+        # Step 6: Create message with media
+        message = secretTL.DecryptedMessage(
+            random_id=int.from_bytes(os.urandom(8), 'big'),
+            random_bytes=os.urandom(15),
+            message="",  # No text, just media
+            media=media
+        )
+        
+        # Step 7: Let secret_manager encrypt the MESSAGE (containing key+IV)
+        encrypted_message = await secret_manager.encrypt_secret_message(
+            secret_chat,
+            message
+        )
+        
+        # Step 8: Send via messages.sendEncryptedFile
+        from telethon.tl.functions.messages import SendEncryptedFileRequest
+        from telethon.tl.types import InputEncryptedChat
+        
+        await client(SendEncryptedFileRequest(
+            peer=InputEncryptedChat(
+                chat_id=abs(secret_chat_id),
+                access_hash=secret_chat.access_hash
+            ),
+            random_id=message.random_id,
+            data=encrypted_message,
+            file=input_encrypted_file  # Our pre-encrypted file!
+        ))
         
         logger.info(f"✅ Video sent via manual MTProto 2.0!")
         return True
