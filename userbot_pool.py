@@ -261,9 +261,17 @@ class UserbotPool:
                             continue
                         
                         try:
+                            # CRITICAL: Re-fetch user entity using the NEW client's session!
+                            logger.info(f"🔄 Re-fetching user entity for userbot #{alt_userbot_id}...")
+                            if buyer_username:
+                                alt_user_entity = await alt_client.get_entity(buyer_username)
+                            else:
+                                alt_user_entity = await alt_client.get_entity(buyer_user_id)
+                            logger.info(f"✅ Got user entity for alt userbot")
+                            
                             # Try creating secret chat with alternative userbot
                             logger.info(f"🔐 Creating secret chat with userbot #{alt_userbot_id}...")
-                            alt_secret_chat_id = await alt_secret_chat_manager.start_secret_chat(user_entity)
+                            alt_secret_chat_id = await alt_secret_chat_manager.start_secret_chat(alt_user_entity)
                             logger.info(f"✅ Secret chat created with alt userbot! ID: {alt_secret_chat_id}")
                             await asyncio.sleep(2)
                             
