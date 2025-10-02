@@ -185,18 +185,18 @@ class UserbotPool:
                 return False, f"Failed to get user entity: {e}"
             
             # 2. Create secret chat
+            secret_chat_id = None
             secret_chat_obj = None
             try:
                 logger.info(f"🔐 Starting secret chat with user {user_entity.id} (@{buyer_username or 'N/A'})...")
-                secret_chat_obj = await secret_chat_manager.start_secret_chat(user_entity)
-                logger.critical(f"🔍 SECRET CHAT OBJ TYPE: {type(secret_chat_obj)}")
-                logger.critical(f"🔍 SECRET CHAT OBJ: {secret_chat_obj}")
-                logger.critical(f"🔍 SECRET CHAT OBJ ID: {getattr(secret_chat_obj, 'id', 'NO ID')}")
-                logger.critical(f"🔍 SECRET CHAT OBJ participant_id: {getattr(secret_chat_obj, 'participant_id', 'NO participant_id')}")
-                logger.critical(f"🔍 USER ENTITY ID: {user_entity.id}")
-                logger.info(f"✅ Secret chat started successfully!")
+                secret_chat_id = await secret_chat_manager.start_secret_chat(user_entity)
+                logger.info(f"✅ Secret chat started! ID: {secret_chat_id}")
                 # Wait for encryption handshake
                 await asyncio.sleep(2)
+                
+                # Get the actual secret chat object from the manager
+                secret_chat_obj = secret_chat_manager.get_secret_chat(secret_chat_id)
+                logger.info(f"✅ Retrieved secret chat object: {type(secret_chat_obj)}")
                 
             except Exception as e:
                 logger.error(f"❌ Failed to start secret chat: {e}")
@@ -269,12 +269,27 @@ class UserbotPool:
                                 
                                 if temp_msg.video:
                                     video = temp_msg.video
+                                    
+                                    # Find a proper thumbnail (skip PhotoStrippedSize)
+                                    thumb_bytes = b''
+                                    thumb_w = 160
+                                    thumb_h = 120
+                                    if video.thumbs:
+                                        for thumb in video.thumbs:
+                                            # Skip PhotoStrippedSize, use PhotoSize or PhotoCachedSize
+                                            if hasattr(thumb, 'w') and hasattr(thumb, 'h'):
+                                                thumb_w = thumb.w
+                                                thumb_h = thumb.h
+                                                if hasattr(thumb, 'bytes'):
+                                                    thumb_bytes = thumb.bytes
+                                                break
+                                    
                                     await secret_chat_manager.send_secret_video(
                                         secret_chat_obj,
                                         temp_path,
-                                        thumb=video.thumbs[0].bytes if video.thumbs else b'',
-                                        thumb_w=video.thumbs[0].w if video.thumbs else 160,
-                                        thumb_h=video.thumbs[0].h if video.thumbs else 120,
+                                        thumb=thumb_bytes,
+                                        thumb_w=thumb_w,
+                                        thumb_h=thumb_h,
                                         duration=video.duration,
                                         mime_type=video.mime_type,
                                         w=video.w,
