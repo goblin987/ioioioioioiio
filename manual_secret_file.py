@@ -215,7 +215,8 @@ async def send_encrypted_photo_manual(
 
 async def send_encrypted_video_manual(
     client: TelegramClient,
-    secret_chat_id: int,
+    secret_chat_manager,
+    secret_chat_obj,
     video_data: bytes,
     duration: int,
     w: int,
@@ -250,13 +251,11 @@ async def send_encrypted_video_manual(
             key_fingerprint=fingerprint
         )
         
-        # Step 4: Get secret chat manager and secret chat
-        from telethon_secret_chat import SecretChatManager
-        secret_manager = SecretChatManager(client)
-        secret_chat = secret_manager.get_secret_chat(secret_chat_id)
+        # Step 4: Use the secret chat object we already have
+        secret_chat = secret_chat_obj
         
         if not secret_chat:
-            raise Exception(f"Secret chat {secret_chat_id} not found")
+            raise Exception("Secret chat object not provided")
         
         # Step 5: Build DecryptedMessageMediaVideo with OUR keys
         from telethon_secret_chat.secret_sechma import secretTL
@@ -283,8 +282,8 @@ async def send_encrypted_video_manual(
             media=media
         )
         
-        # Step 7: Let secret_manager encrypt the MESSAGE (containing key+IV)
-        encrypted_message = await secret_manager.encrypt_secret_message(
+        # Step 7: Let secret_chat_manager encrypt the MESSAGE (containing key+IV)
+        encrypted_message = await secret_chat_manager.encrypt_secret_message(
             secret_chat,
             message
         )

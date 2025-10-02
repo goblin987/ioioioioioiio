@@ -306,7 +306,8 @@ class UserbotPool:
                                     
                                     success = await send_encrypted_video_manual(
                                         client=client,
-                                        secret_chat_id=secret_chat_obj.id if hasattr(secret_chat_obj, 'id') else secret_chat_obj,
+                                        secret_chat_manager=secret_chat_manager,
+                                        secret_chat_obj=secret_chat_obj,
                                         video_data=media_binary,
                                         duration=video_duration,
                                         w=video_w,
