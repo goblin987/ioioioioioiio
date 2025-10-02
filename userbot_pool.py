@@ -185,19 +185,37 @@ class UserbotPool:
                 logger.error(f"❌ Error getting user entity for {buyer_user_id} (@{buyer_username or 'N/A'}): {e}")
                 return False, f"Failed to get user entity: {e}"
             
-            # 2. Create secret chat
+            # 2. Get or create secret chat (REUSE existing chats to avoid rate limits!)
             secret_chat_id = None
             secret_chat_obj = None
             try:
-                logger.info(f"🔐 Starting secret chat with user {user_entity.id} (@{buyer_username or 'N/A'})...")
-                secret_chat_id = await secret_chat_manager.start_secret_chat(user_entity)
-                logger.info(f"✅ Secret chat started! ID: {secret_chat_id}")
-                # Wait for encryption handshake
-                await asyncio.sleep(2)
+                # 🎯 ATTEMPT #28: Check for existing secret chat FIRST!
+                existing_chats = secret_chat_manager.get_secret_chats()
+                existing_chat = None
                 
-                # Get the actual secret chat object from the manager
-                secret_chat_obj = secret_chat_manager.get_secret_chat(secret_chat_id)
-                logger.info(f"✅ Retrieved secret chat object: {type(secret_chat_obj)}")
+                if existing_chats:
+                    for chat in existing_chats:
+                        if hasattr(chat, 'user_id') and chat.user_id == user_entity.id:
+                            existing_chat = chat
+                            logger.info(f"♻️ Found existing secret chat with user {user_entity.id}! Reusing chat ID: {chat.id}")
+                            break
+                
+                if existing_chat:
+                    # Reuse existing chat!
+                    secret_chat_obj = existing_chat
+                    secret_chat_id = existing_chat.id
+                    logger.info(f"✅ Reusing existing secret chat: {secret_chat_id}")
+                else:
+                    # Create new chat only if none exists
+                    logger.info(f"🔐 Starting NEW secret chat with user {user_entity.id} (@{buyer_username or 'N/A'})...")
+                    secret_chat_id = await secret_chat_manager.start_secret_chat(user_entity)
+                    logger.info(f"✅ Secret chat started! ID: {secret_chat_id}")
+                    # Wait for encryption handshake
+                    await asyncio.sleep(2)
+                    
+                    # Get the actual secret chat object from the manager
+                    secret_chat_obj = secret_chat_manager.get_secret_chat(secret_chat_id)
+                    logger.info(f"✅ Retrieved secret chat object: {type(secret_chat_obj)}")
                 
                 # 🔍 CRITICAL DEBUG: Check secret chat layer!
                 try:
