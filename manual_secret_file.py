@@ -122,7 +122,9 @@ async def send_encrypted_photo_manual(
         logger.info(f"✅ Photo encrypted: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
         
         # Step 2: Upload encrypted file to Telegram
-        file_id = int.from_bytes(os.urandom(8), 'big')  # Random file ID
+        # CRITICAL: file_id must be a SIGNED 64-bit integer (not unsigned!)
+        import random
+        file_id = random.randint(1, 9223372036854775807)  # Max signed int64
         input_file = await upload_encrypted_file(client, encrypted_data, file_id)
         
         # Step 3: Create InputEncryptedFileUploaded
@@ -234,7 +236,9 @@ async def send_encrypted_video_manual(
         logger.info(f"✅ Video encrypted: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
         
         # Step 2: Upload encrypted file
-        file_id = int.from_bytes(os.urandom(8), 'big')
+        # CRITICAL: file_id must be a SIGNED 64-bit integer (not unsigned!)
+        import random
+        file_id = random.randint(1, 9223372036854775807)  # Max signed int64
         input_file = await upload_encrypted_file(client, encrypted_data, file_id)
         
         # Step 3: Create InputEncryptedFileUploaded
