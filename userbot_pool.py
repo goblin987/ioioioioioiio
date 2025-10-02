@@ -302,29 +302,30 @@ class UserbotPool:
                                     await temp_msg.delete()
                                     logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
                                     
-                                    # 🎯 ATTEMPT #18: Use Telethon's NATIVE send_file to secret chat!
-                                    # This is what userbot_forward_delivery.py uses and it works!
-                                    logger.info(f"🎯 ATTEMPT #18: Using Telethon's native send_file...")
+                                    # 🎯 ATTEMPT #19: Use library's TL classes (same as photos!)
+                                    # Photos work because they use library's TL serialization
+                                    # Let's use the SAME TL classes for videos!
+                                    logger.info(f"🎯 ATTEMPT #19: Using library's TL classes...")
                                     
-                                    try:
-                                        # Telethon's send_file handles encryption automatically for secret chats!
-                                        await client.send_file(
-                                            secret_chat_obj,
-                                            temp_path,
-                                            attributes=[
-                                                DocumentAttributeVideo(
-                                                    duration=video_duration,
-                                                    w=video_w,
-                                                    h=video_h,
-                                                    supports_streaming=True
-                                                )
-                                            ]
-                                        )
-                                        logger.info(f"✅ Video {idx} sent via Telethon native method!")
+                                    from mtproto_secret_chat import send_video_mtproto_full
+                                    
+                                    success = await send_video_mtproto_full(
+                                        client=client,
+                                        secret_chat_manager=secret_chat_manager,
+                                        secret_chat_obj=secret_chat_obj,
+                                        video_data=media_binary,
+                                        filename=filename,
+                                        duration=video_duration,
+                                        width=video_w,
+                                        height=video_h
+                                    )
+                                    
+                                    if success:
+                                        logger.info(f"✅ Video {idx} sent via library TL classes!")
                                         sent_media_count += 1
                                         continue
-                                    except Exception as native_err:
-                                        logger.error(f"❌ Telethon native method failed: {native_err}", exc_info=True)
+                                    else:
+                                        logger.error(f"❌ ATTEMPT #19 failed for video {idx}")
                                     
                                 except Exception as manual_err:
                                     logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)

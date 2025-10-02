@@ -13,7 +13,8 @@ from telethon.tl.functions.messages import SendEncryptedFileRequest
 from telethon.tl.types import InputEncryptedChat, InputEncryptedFileUploaded
 
 from secret_chat_crypto import encrypt_file_for_secret_chat
-from tl_serializer import DecryptedMessage, DecryptedMessageMediaDocument, DocumentAttributeVideo, encrypt_message_for_secret_chat
+from tl_serializer import DocumentAttributeVideo, encrypt_message_for_secret_chat
+from telethon_secret_chat.secret_sechma import secretTL
 
 logger = logging.getLogger(__name__)
 
@@ -91,41 +92,45 @@ async def send_video_mtproto_full(
         # ============================================================================
         logger.info(f"🏗️ Step 4: Building TL structure...")
         
-        # Create video attributes
-        attributes = []
-        if duration > 0 and width > 0 and height > 0:
-            video_attr = DocumentAttributeVideo(
-                duration=duration,
-                w=width,
-                h=height,
-                supports_streaming=True
-            )
-            attributes.append(video_attr)
-            logger.info(f"✅ Added video attributes: {duration}s, {width}x{height}")
+        # 🎯 ATTEMPT #19: Use library's TL classes (same as photos!)
+        # Photos work, so use EXACT same TL objects!
+        logger.info(f"🎯 Using library's TL classes...")
         
-        media = DecryptedMessageMediaDocument(
+        # Build media using library's classes
+        media = secretTL.DecryptedMessageMediaDocument(
             thumb=b'',
             thumb_w=90,
             thumb_h=160,
             mime_type="video/mp4",
-            size=len(video_data),  # ORIGINAL size (not encrypted size!)
-            key=file_key,  # OUR file encryption key
-            iv=file_iv,    # OUR file IV
-            attributes=attributes,  # NOW WITH VIDEO ATTRIBUTES!
+            size=len(video_data),  # ORIGINAL size
+            key=file_key,  # OUR encryption key
+            iv=file_iv,    # OUR IV
+            # Library might need attributes in a specific format
+            attributes=[],  # Try without attributes first
             caption=""
         )
         
-        # ============================================================================
-        # STEP 5: Build DecryptedMessage
-        # ============================================================================
-        message = DecryptedMessage(
-            random_id=random.randint(1, 9223372036854775807),
-            message="",  # No text, just media
-            media=media
-        )
+        # Build message using library's classes
+        try:
+            # Try modern layer first
+            message = secretTL.DecryptedMessage(
+                random_id=random.randint(1, 9223372036854775807),
+                message="",
+                media=media
+            )
+            logger.info(f"✅ Using modern DecryptedMessage")
+        except TypeError:
+            # Fallback to layer 23
+            message = secretTL.DecryptedMessage23(
+                random_id=random.randint(1, 9223372036854775807),
+                ttl=0,
+                message="",
+                media=media
+            )
+            logger.info(f"✅ Using DecryptedMessage23 (layer 23)")
         
-        # Serialize the message
-        serialized_message = message.serialize()
+        # Serialize the message using library's serializer
+        serialized_message = bytes(message)
         logger.info(f"✅ Message serialized: {len(serialized_message)} bytes")
         
         # ============================================================================
