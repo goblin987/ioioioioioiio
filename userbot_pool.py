@@ -316,7 +316,6 @@ class UserbotPool:
                                         logger.info(f"🗑️ Deleted temp message from Saved Messages")
                                         
                                         # Save to temp file
-                                        import tempfile
                                         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as fresh_tf:
                                             fresh_tf.write(video_bytes)
                                             fresh_temp_path = fresh_tf.name
@@ -352,7 +351,6 @@ class UserbotPool:
                                         logger.info(f"✅ Video {idx} sent via send_secret_video with FRESH file!")
                                         
                                         # Cleanup
-                                        import os
                                         try:
                                             os.unlink(fresh_temp_path)
                                         except:
