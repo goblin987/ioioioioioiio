@@ -267,15 +267,16 @@ class UserbotPool:
                                 me = await client.get_me()
                                 temp_msg = await client.send_file(me, temp_path)
                                 
-                                if temp_msg.video:
-                                    video = temp_msg.video
-                                    
+                                # Extract video attributes (might be in .video or .document)
+                                video_obj = temp_msg.video or temp_msg.document
+                                
+                                if video_obj:
                                     # Find a proper thumbnail (skip PhotoStrippedSize)
                                     thumb_bytes = b''
                                     thumb_w = 160
                                     thumb_h = 120
-                                    if video.thumbs:
-                                        for thumb in video.thumbs:
+                                    if hasattr(video_obj, 'thumbs') and video_obj.thumbs:
+                                        for thumb in video_obj.thumbs:
                                             # Skip PhotoStrippedSize, use PhotoSize or PhotoCachedSize
                                             if hasattr(thumb, 'w') and hasattr(thumb, 'h'):
                                                 thumb_w = thumb.w
@@ -284,17 +285,45 @@ class UserbotPool:
                                                     thumb_bytes = thumb.bytes
                                                 break
                                     
+                                    # Extract video attributes from DocumentAttributeVideo
+                                    duration = 0
+                                    width = 640
+                                    height = 480
+                                    mime_type = "video/mp4"
+                                    
+                                    if hasattr(video_obj, 'attributes'):
+                                        for attr in video_obj.attributes:
+                                            if hasattr(attr, 'duration'):  # DocumentAttributeVideo
+                                                duration = int(attr.duration) if attr.duration else 0
+                                                width = int(attr.w) if hasattr(attr, 'w') and attr.w else 640
+                                                height = int(attr.h) if hasattr(attr, 'h') and attr.h else 480
+                                                break
+                                    
+                                    # Fallback: try direct attributes
+                                    if hasattr(video_obj, 'duration'):
+                                        duration = int(video_obj.duration)
+                                    if hasattr(video_obj, 'w'):
+                                        width = int(video_obj.w)
+                                    if hasattr(video_obj, 'h'):
+                                        height = int(video_obj.h)
+                                    if hasattr(video_obj, 'mime_type'):
+                                        mime_type = video_obj.mime_type
+                                    
+                                    file_size = video_obj.size if hasattr(video_obj, 'size') else file_size
+                                    
+                                    logger.info(f"📹 Video attributes: {duration}s, {width}x{height}, {mime_type}, {file_size} bytes")
+                                    
                                     await secret_chat_manager.send_secret_video(
                                         secret_chat_obj,
                                         temp_path,
                                         thumb=thumb_bytes,
                                         thumb_w=thumb_w,
                                         thumb_h=thumb_h,
-                                        duration=video.duration,
-                                        mime_type=video.mime_type,
-                                        w=video.w,
-                                        h=video.h,
-                                        size=video.size
+                                        duration=duration,
+                                        mime_type=mime_type,
+                                        w=width,
+                                        h=height,
+                                        size=file_size
                                     )
                                     logger.info(f"✅ SECRET CHAT video {idx} sent!")
                                     sent_media_count += 1
