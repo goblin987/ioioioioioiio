@@ -262,28 +262,59 @@ class UserbotPool:
                                 sent_media_count += 1
                                 
                             elif media_type == 'video':
-                                # 🔥 EXPERIMENTAL: Send video as document to bypass broken video encryption
-                                logger.info(f"🎬 EXPERIMENTAL: Sending video as SECRET DOCUMENT...")
+                                # 🔥 ATTEMPT #13: Manual encryption + send via regular Telethon
+                                logger.info(f"🔐 MANUAL ENCRYPTION: Bypassing broken library...")
                                 
                                 try:
-                                    # Get file size
-                                    file_size_bytes = len(media_binary)
+                                    from secret_chat_crypto import encrypt_file_for_secret_chat
                                     
-                                    await secret_chat_manager.send_secret_document(
-                                        secret_chat_obj,
-                                        temp_path,
-                                        thumb=b'',
-                                        thumb_w=160,
-                                        thumb_h=120,
-                                        mime_type="video/mp4",
-                                        size=file_size_bytes,
-                                        file_name=filename
-                                    )
-                                    logger.info(f"✅ SECRET CHAT video sent as document!")
-                                    sent_media_count += 1
-                                    continue  # Skip the old video code below
-                                except Exception as doc_err:
-                                    logger.warning(f"⚠️ Document send failed, trying original video method: {doc_err}")
+                                    # 1. Encrypt the video with OUR working encryption
+                                    logger.info(f"🔒 Encrypting video with AES-256-IGE...")
+                                    encrypted_data, key, iv, fingerprint = encrypt_file_for_secret_chat(media_binary)
+                                    logger.info(f"✅ Video encrypted: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
+                                    
+                                    # 2. Save encrypted video to temp file
+                                    encrypted_path = temp_path + '.encrypted'
+                                    with open(encrypted_path, 'wb') as f:
+                                        f.write(encrypted_data)
+                                    
+                                    try:
+                                        # 3. Send encrypted file as REGULAR document to secret chat
+                                        # (using Telethon's regular send_file, NOT the broken library)
+                                        logger.info(f"📤 Sending encrypted file via Telethon...")
+                                        await client.send_file(
+                                            user_entity,  # Send to user entity, not secret chat object
+                                            encrypted_path,
+                                            caption=f"🔐 Encrypted Video {idx}\n📎 {filename}"
+                                        )
+                                        logger.info(f"✅ Encrypted file sent!")
+                                        
+                                        # 4. Send decryption keys via secret chat TEXT message
+                                        decrypt_msg = f"""🔑 **Decryption Keys for Video {idx}**
+
+📎 File: {filename}
+🔑 Key: `{key.hex()}`
+🎲 IV: `{iv.hex()}`
+🔢 Fingerprint: {fingerprint}
+📏 Size: {len(media_binary)} bytes
+
+ℹ️ Download the encrypted file above and decrypt it using these keys."""
+                                        
+                                        await secret_chat_manager.send_secret_message(secret_chat_obj, decrypt_msg)
+                                        logger.info(f"✅ Decryption keys sent via secret chat!")
+                                        
+                                        sent_media_count += 1
+                                        
+                                    finally:
+                                        try:
+                                            os.unlink(encrypted_path)
+                                        except:
+                                            pass
+                                    
+                                    continue  # Skip old video code
+                                    
+                                except Exception as manual_err:
+                                    logger.error(f"❌ Manual encryption failed: {manual_err}", exc_info=True)
                                 
                             if media_type == 'video':  # Fallback to original method
                                 # For video, we need to upload to Saved Messages first to get attributes
