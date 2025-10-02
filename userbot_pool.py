@@ -302,30 +302,63 @@ class UserbotPool:
                                     await temp_msg.delete()
                                     logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
                                     
-                                    # 🎯 ATTEMPT #19: Use library's TL classes (same as photos!)
-                                    # Photos work because they use library's TL serialization
-                                    # Let's use the SAME TL classes for videos!
-                                    logger.info(f"🎯 ATTEMPT #19: Using library's TL classes...")
+                                    # 🎯 ATTEMPT #20: FORWARD METHOD - Upload normally, then forward!
+                                    # USER SAID: "if i try to forward message with video to the secrect chat i can and it dosent get corrupted"
+                                    # THIS IS THE KEY! Forwarding works because the video is uploaded WITHOUT encryption first!
+                                    logger.info(f"🎯 ATTEMPT #20: Upload to Saved Messages, then FORWARD to secret chat!")
                                     
-                                    from mtproto_secret_chat import send_video_mtproto_full
-                                    
-                                    success = await send_video_mtproto_full(
-                                        client=client,
-                                        secret_chat_manager=secret_chat_manager,
-                                        secret_chat_obj=secret_chat_obj,
-                                        video_data=media_binary,
-                                        filename=filename,
-                                        duration=video_duration,
-                                        width=video_w,
-                                        height=video_h
-                                    )
-                                    
-                                    if success:
-                                        logger.info(f"✅ Video {idx} sent via library TL classes!")
+                                    try:
+                                        # Step 1: Send video to Saved Messages (no encryption)
+                                        logger.info(f"📤 Uploading video to Saved Messages first...")
+                                        saved_msg = await client.send_file(
+                                            'me',  # Send to self
+                                            temp_path,
+                                            caption=f"Temp video for forwarding",
+                                            video_note=False,
+                                            supports_streaming=True
+                                        )
+                                        logger.info(f"✅ Video uploaded to Saved Messages, msg_id={saved_msg.id}")
+                                        
+                                        # Step 2: Forward the message to secret chat
+                                        logger.info(f"🔄 Forwarding video to secret chat...")
+                                        await client.forward_messages(
+                                            secret_chat_obj,  # Forward TO secret chat
+                                            saved_msg.id,     # Message to forward
+                                            'me'              # Forward FROM saved messages
+                                        )
+                                        logger.info(f"✅ Video FORWARDED to secret chat!")
+                                        
+                                        # Step 3: Delete from Saved Messages
+                                        await saved_msg.delete()
+                                        logger.info(f"🗑️ Deleted temp message from Saved Messages")
+                                        
                                         sent_media_count += 1
                                         continue
-                                    else:
-                                        logger.error(f"❌ ATTEMPT #19 failed for video {idx}")
+                                        
+                                    except Exception as forward_err:
+                                        logger.error(f"❌ ATTEMPT #20 forward failed: {forward_err}")
+                                        
+                                        # Fallback to ATTEMPT #19
+                                        logger.info(f"🔄 Falling back to ATTEMPT #19...")
+                                        from mtproto_secret_chat import send_video_mtproto_full
+                                        
+                                        success = await send_video_mtproto_full(
+                                            client=client,
+                                            secret_chat_manager=secret_chat_manager,
+                                            secret_chat_obj=secret_chat_obj,
+                                            video_data=media_binary,
+                                            filename=filename,
+                                            duration=video_duration,
+                                            width=video_w,
+                                            height=video_h
+                                        )
+                                        
+                                        if success:
+                                            logger.info(f"✅ Video {idx} sent via ATTEMPT #19!")
+                                            sent_media_count += 1
+                                            continue
+                                        else:
+                                            logger.error(f"❌ ATTEMPT #19 also failed")
                                     
                                 except Exception as manual_err:
                                     logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)

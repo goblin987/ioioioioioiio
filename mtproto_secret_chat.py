@@ -14,7 +14,6 @@ from telethon.tl.types import InputEncryptedChat, InputEncryptedFileUploaded
 
 from secret_chat_crypto import encrypt_file_for_secret_chat
 from tl_serializer import DocumentAttributeVideo, encrypt_message_for_secret_chat
-from telethon_secret_chat.secret_sechma import secretTL
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +94,9 @@ async def send_video_mtproto_full(
         # 🎯 ATTEMPT #19: Use library's TL classes (same as photos!)
         # Photos work, so use EXACT same TL objects!
         logger.info(f"🎯 Using library's TL classes...")
+        
+        # Import library's TL classes
+        from telethon_secret_chat.secret_sechma import secretTL
         
         # Build media using library's classes
         media = secretTL.DecryptedMessageMediaDocument(
