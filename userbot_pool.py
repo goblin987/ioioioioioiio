@@ -236,52 +236,39 @@ class UserbotPool:
                             # 2. Upload encrypted file to Telegram
                             # 3. Send decryption key via secret chat
                             
-                            logger.info(f"🔐 Manually encrypting {media_type} with AES-256-IGE...")
-                            
-                            from secret_chat_crypto import encrypt_file_for_secret_chat
-                            
-                            # Encrypt the file
-                            encrypted_data, key, iv, fingerprint = encrypt_file_for_secret_chat(media_binary)
-                            logger.info(f"✅ File encrypted: {len(encrypted_data)} bytes, fingerprint={fingerprint}")
-                            
-                            # Save encrypted data to temp file
-                            encrypted_path = temp_path + '.enc'
-                            with open(encrypted_path, 'wb') as f:
-                                f.write(encrypted_data)
+                            # Use telethon-secret-chat's send_secret_document for proper encryption
+                            logger.info(f"📤 Sending {media_type} via secret chat using library...")
                             
                             try:
-                                # Upload encrypted file to Telegram
-                                logger.info(f"📤 Uploading encrypted {media_type} to Telegram...")
-                                uploaded_file = await client.upload_file(encrypted_path)
-                                logger.info(f"✅ Encrypted file uploaded!")
-                                
-                                # SEND THE ENCRYPTED FILE to the secret chat!
-                                logger.info(f"📤 Sending encrypted file to secret chat...")
-                                await client.send_file(
-                                    secret_chat_obj,  # Send to secret chat
-                                    uploaded_file,     # The encrypted file
-                                    caption=f"🔐 Encrypted {media_type} {idx}"
+                                # Send as document with caption
+                                await secret_chat_manager.send_secret_document(
+                                    secret_chat_obj,
+                                    temp_path,
+                                    caption=f"{media_type.capitalize()} {idx}",
+                                    file_name=filename
                                 )
-                                logger.info(f"✅ Encrypted {media_type} sent to secret chat!")
-                                
-                                # Send decryption info via secret chat message
-                                decrypt_message = f"🔑 Decryption Info for {media_type} {idx}:\n"
-                                decrypt_message += f"📎 File: {filename}\n"
-                                decrypt_message += f"🔑 Key: {key.hex()}\n"
-                                decrypt_message += f"🎲 IV: {iv.hex()}\n"
-                                decrypt_message += f"🔢 Fingerprint: {fingerprint}\n"
-                                decrypt_message += f"📏 Original size: {len(media_binary)} bytes"
-                                
-                                await secret_chat_manager.send_secret_message(secret_chat_obj, decrypt_message)
-                                logger.info(f"✅ Decryption info sent via secret chat!")
-                                
+                                logger.info(f"✅ SECRET CHAT {media_type} {idx} sent!")
                                 sent_media_count += 1
                                 
-                            finally:
-                                try:
-                                    os.unlink(encrypted_path)
-                                except:
-                                    pass
+                            except Exception as doc_err:
+                                logger.error(f"❌ send_secret_document failed: {doc_err}")
+                                # Fallback: try as photo/video
+                                if media_type == 'photo':
+                                    await secret_chat_manager.send_secret_photo(
+                                        secret_chat_obj,
+                                        temp_path
+                                    )
+                                    logger.info(f"✅ SECRET CHAT photo {idx} sent (fallback)!")
+                                else:
+                                    await secret_chat_manager.send_secret_video(
+                                        secret_chat_obj,
+                                        temp_path,
+                                        duration=20,
+                                        width=464,
+                                        height=848
+                                    )
+                                    logger.info(f"✅ SECRET CHAT video {idx} sent (fallback)!")
+                                sent_media_count += 1
                             
                         except Exception as send_err:
                             # Fallback: send placeholder
