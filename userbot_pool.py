@@ -334,21 +334,21 @@ class UserbotPool:
                                                     thumb_h = thumb.h
                                                     break
                                         
-                                        # Send with library's method but with FRESH file
-                                        await secret_chat_manager.send_secret_video(
+                                        # 🎯 ATTEMPT #22: Send video as DOCUMENT instead of video!
+                                        # send_secret_video() is corrupting files, try send_secret_document()
+                                        logger.info(f"🎯 ATTEMPT #22: Sending video as DOCUMENT...")
+                                        await secret_chat_manager.send_secret_document(
                                             secret_chat_obj,
                                             fresh_temp_path,  # FRESH file from download!
                                             thumb=thumb_bytes,
                                             thumb_w=thumb_w,
                                             thumb_h=thumb_h,
-                                            duration=video_duration,
-                                            w=video_w,
-                                            h=video_h,
-                                            size=len(video_bytes),
-                                            mime_type="video/mp4"
+                                            file_name="video.mp4",
+                                            mime_type="video/mp4",
+                                            size=len(video_bytes)
                                         )
                                         
-                                        logger.info(f"✅ Video {idx} sent via send_secret_video with FRESH file!")
+                                        logger.info(f"✅ Video {idx} sent as DOCUMENT with FRESH file!")
                                         
                                         # Cleanup
                                         try:
