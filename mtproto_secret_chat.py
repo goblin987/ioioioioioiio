@@ -98,6 +98,25 @@ async def send_video_mtproto_full(
         # Import library's TL classes
         from telethon_secret_chat.secret_sechma import secretTL
         
+        # 🎯 ATTEMPT #26: Add proper DocumentAttributeVideo using LIBRARY's classes!
+        # This is what makes videos recognizable vs "data" files!
+        logger.info(f"🎬 Building DocumentAttributeVideo with duration={duration}s, {width}x{height}")
+        
+        video_attrs = []
+        if duration > 0 and width > 0 and height > 0:
+            try:
+                # Use the library's own DocumentAttributeVideo class!
+                video_attr = secretTL.DocumentAttributeVideo(
+                    duration=duration,
+                    w=width,
+                    h=height,
+                    supports_streaming=True
+                )
+                video_attrs.append(video_attr)
+                logger.info(f"✅ Added DocumentAttributeVideo: {duration}s, {width}x{height}")
+            except Exception as attr_err:
+                logger.error(f"⚠️ Could not create DocumentAttributeVideo: {attr_err}")
+        
         # Build media using library's classes
         media = secretTL.DecryptedMessageMediaDocument(
             thumb=b'',
@@ -107,8 +126,7 @@ async def send_video_mtproto_full(
             size=len(video_data),  # ORIGINAL size
             key=file_key,  # OUR encryption key
             iv=file_iv,    # OUR IV
-            # Library might need attributes in a specific format
-            attributes=[],  # Try without attributes first
+            attributes=video_attrs,  # NOW WITH PROPER ATTRIBUTES!
             caption=""
         )
         
