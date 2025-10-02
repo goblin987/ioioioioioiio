@@ -148,8 +148,10 @@ async def send_video_mtproto_full(
         
         try:
             # Try modern layer first (73+, should work for 101)
+            # Layer 101 requires ttl parameter!
             message = secretTL.DecryptedMessage(
                 random_id=random.randint(1, 9223372036854775807),
+                ttl=0,  # Time-to-live (0 = no auto-delete)
                 message="",
                 media=media
             )
