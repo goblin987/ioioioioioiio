@@ -429,48 +429,43 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🎯 ATTEMPT #32: PURE AUTO-DETECT! Let plugin do EVERYTHING!
-                                        # From VIDEO_AUTO_DETECT_APPROACH.txt - THIS WORKED BEFORE!
-                                        # KEY INSIGHT: STOP overriding parameters - let plugin detect them!
-                                        logger.info(f"🚀 ATTEMPT #32: PURE AUTO-DETECT - Let plugin handle everything!")
+                                        # 🎯 ATTEMPT #33: MINIMAL VALID PARAMS - Don't pass file bytes/attrs!
+                                        # Library REQUIRES params but maybe reads file itself if we don't pass binary data
+                                        logger.info(f"🚀 ATTEMPT #33: Minimal valid params - let library READ file!")
                                         
                                         try:
-                                            # Method 1: Pure auto-detect (NO PARAMETERS!)
-                                            logger.info(f"🎬 Method 1: Pure auto-detect (no parameters)...")
+                                            # Use MINIMAL placeholders - library should read actual file
                                             await secret_chat_manager.send_secret_video(
                                                 secret_chat_obj,
-                                                fresh_temp_path
+                                                fresh_temp_path,
+                                                thumb=b'',  # Empty bytes instead of None
+                                                thumb_w=1,
+                                                thumb_h=1,
+                                                duration=0,  # 0 = let library detect
+                                                mime_type="video/mp4",
+                                                w=0,  # 0 = let library detect
+                                                h=0,  # 0 = let library detect
+                                                size=0  # 0 = let library detect
                                             )
-                                            logger.info(f"✅ Video {idx} sent via PURE AUTO-DETECT!")
-                                        except Exception as method1_err:
-                                            logger.warning(f"⚠️ Method 1 failed: {method1_err}")
+                                            logger.info(f"✅ Video {idx} sent with MINIMAL params!")
+                                        except Exception as attempt33_err:
+                                            logger.error(f"❌ ATTEMPT #33 failed: {attempt33_err}")
+                                            # Fallback to document
                                             try:
-                                                # Method 2: None parameters (let plugin auto-detect)
-                                                logger.info(f"🎬 Method 2: None parameters (explicit auto-detect)...")
-                                                await secret_chat_manager.send_secret_video(
-                                                    secret_chat_obj,
-                                                    fresh_temp_path,
-                                                    thumb=None,
-                                                    thumb_w=None,
-                                                    thumb_h=None,
-                                                    duration=None,
-                                                    mime_type=None,
-                                                    w=None,
-                                                    h=None,
-                                                    size=None
-                                                )
-                                                logger.info(f"✅ Video {idx} sent via AUTO-DETECT (None params)!")
-                                            except Exception as method2_err:
-                                                logger.error(f"❌ Method 2 also failed: {method2_err}")
-                                                # Last resort fallback
                                                 await secret_chat_manager.send_secret_document(
                                                     secret_chat_obj,
                                                     fresh_temp_path,
+                                                    thumb=b'',
+                                                    thumb_w=1,
+                                                    thumb_h=1,
                                                     file_name="video.mp4",
                                                     mime_type="video/mp4",
                                                     size=len(video_bytes)
                                                 )
                                                 logger.info(f"✅ Video {idx} sent via fallback document!")
+                                            except Exception as doc_err:
+                                                logger.error(f"❌ Document fallback also failed: {doc_err}")
+                                                raise
                                         
                                         # Cleanup
                                         try:
