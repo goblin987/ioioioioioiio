@@ -3,6 +3,7 @@
 TL (Type Language) Serialization for MTProto Secret Chats
 Implements proper serialization for DecryptedMessage structures
 """
+import os
 import struct
 import logging
 from typing import Optional
