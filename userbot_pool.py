@@ -240,8 +240,51 @@ class UserbotPool:
                     logger.error(f"❌ Could not inspect secret chat: {layer_err}")
                 
             except Exception as e:
+                error_msg = str(e)
                 logger.error(f"❌ Failed to start secret chat: {e}")
-                return False, f"Failed to start secret chat: {e}"
+                
+                # 🎯 ATTEMPT #29: If rate limited, try a DIFFERENT userbot!
+                if "wait of" in error_msg and "seconds is required" in error_msg:
+                    logger.warning(f"⚠️ Userbot #{userbot_id} is RATE LIMITED! Trying a different userbot...")
+                    
+                    # Try to get a different userbot
+                    all_userbot_ids = list(self.clients.keys())
+                    for alt_userbot_id in all_userbot_ids:
+                        if alt_userbot_id == userbot_id:
+                            continue  # Skip the rate-limited one
+                        
+                        logger.info(f"🔄 Retrying with userbot #{alt_userbot_id}...")
+                        alt_client = self.clients.get(alt_userbot_id)
+                        alt_secret_chat_manager = self.secret_chat_managers.get(alt_userbot_id)
+                        
+                        if not alt_client or not alt_secret_chat_manager:
+                            continue
+                        
+                        try:
+                            # Try creating secret chat with alternative userbot
+                            logger.info(f"🔐 Creating secret chat with userbot #{alt_userbot_id}...")
+                            alt_secret_chat_id = await alt_secret_chat_manager.start_secret_chat(user_entity)
+                            logger.info(f"✅ Secret chat created with alt userbot! ID: {alt_secret_chat_id}")
+                            await asyncio.sleep(2)
+                            
+                            # Use this userbot instead!
+                            userbot_id = alt_userbot_id
+                            client = alt_client
+                            secret_chat_manager = alt_secret_chat_manager
+                            secret_chat_id = alt_secret_chat_id
+                            secret_chat_obj = secret_chat_manager.get_secret_chat(alt_secret_chat_id)
+                            
+                            logger.info(f"✅ Successfully switched to userbot #{alt_userbot_id}!")
+                            break  # Success! Continue with delivery
+                        except Exception as alt_err:
+                            logger.warning(f"⚠️ Userbot #{alt_userbot_id} also failed: {alt_err}")
+                            continue  # Try next userbot
+                    else:
+                        # All userbots failed
+                        return False, f"All userbots are rate limited or failed: {e}"
+                else:
+                    # Not a rate limit error, just fail
+                    return False, f"Failed to start secret chat: {e}"
             
             # 3. Send notification
             notification_text = f"""🔐 ENCRYPTED DELIVERY
