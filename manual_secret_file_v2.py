@@ -77,15 +77,16 @@ async def send_video_with_manual_encryption(
         from telethon_secret_chat.secret_sechma import secretTL
         
         # Build media object with OUR key and IV
+        # Note: Using correct parameters for DecryptedMessageMediaDocument
         media = secretTL.DecryptedMessageMediaDocument(
             thumb=b'',
             thumb_w=90,
             thumb_h=160,
-            file_name=filename,
             mime_type="video/mp4",
             size=len(video_data),  # ORIGINAL size (before encryption)
             key=key,  # OUR encryption key
             iv=iv,    # OUR IV
+            attributes=[],  # Document attributes
             caption=""
         )
         
@@ -166,8 +167,7 @@ async def send_video_with_manual_encryption(
                     thumb_w=90,
                     thumb_h=160,
                     mime_type="video/mp4",
-                    size=len(encrypted_data),
-                    file_name=filename
+                    size=len(encrypted_data)
                 )
                 
                 logger.info(f"✅ Sent via fallback method!")
