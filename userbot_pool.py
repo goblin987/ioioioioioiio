@@ -236,39 +236,54 @@ class UserbotPool:
                             # 2. Upload encrypted file to Telegram
                             # 3. Send decryption key via secret chat
                             
-                            # Use telethon-secret-chat's send_secret_document for proper encryption
-                            logger.info(f"📤 Sending {media_type} via secret chat using library...")
+                            # Send via secret chat with proper parameters
+                            logger.info(f"📤 Sending {media_type} via secret chat...")
                             
-                            try:
-                                # Send as document with caption
-                                await secret_chat_manager.send_secret_document(
+                            file_size = len(media_binary)
+                            
+                            if media_type == 'photo':
+                                # Send photo with required parameters
+                                await secret_chat_manager.send_secret_photo(
                                     secret_chat_obj,
                                     temp_path,
-                                    caption=f"{media_type.capitalize()} {idx}",
-                                    file_name=filename
+                                    thumb=b'',
+                                    thumb_w=100,
+                                    thumb_h=100,
+                                    w=960,
+                                    h=1280,
+                                    size=file_size
                                 )
-                                logger.info(f"✅ SECRET CHAT {media_type} {idx} sent!")
+                                logger.info(f"✅ SECRET CHAT photo {idx} sent!")
                                 sent_media_count += 1
                                 
-                            except Exception as doc_err:
-                                logger.error(f"❌ send_secret_document failed: {doc_err}")
-                                # Fallback: try as photo/video
-                                if media_type == 'photo':
-                                    await secret_chat_manager.send_secret_photo(
-                                        secret_chat_obj,
-                                        temp_path
-                                    )
-                                    logger.info(f"✅ SECRET CHAT photo {idx} sent (fallback)!")
-                                else:
+                            elif media_type == 'video':
+                                # For video, we need to upload to Saved Messages first to get attributes
+                                logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
+                                me = await client.get_me()
+                                temp_msg = await client.send_file(me, temp_path)
+                                
+                                if temp_msg.video:
+                                    video = temp_msg.video
                                     await secret_chat_manager.send_secret_video(
                                         secret_chat_obj,
                                         temp_path,
-                                        duration=20,
-                                        width=464,
-                                        height=848
+                                        thumb=video.thumbs[0].bytes if video.thumbs else b'',
+                                        thumb_w=video.thumbs[0].w if video.thumbs else 160,
+                                        thumb_h=video.thumbs[0].h if video.thumbs else 120,
+                                        duration=video.duration,
+                                        mime_type=video.mime_type,
+                                        w=video.w,
+                                        h=video.h,
+                                        size=video.size
                                     )
-                                    logger.info(f"✅ SECRET CHAT video {idx} sent (fallback)!")
-                                sent_media_count += 1
+                                    logger.info(f"✅ SECRET CHAT video {idx} sent!")
+                                    sent_media_count += 1
+                                    
+                                    # Delete from Saved Messages
+                                    await client.delete_messages(me, temp_msg.id)
+                                else:
+                                    logger.error(f"❌ Failed to get video attributes from temp message")
+                                    raise Exception("No video attributes")
                             
                         except Exception as send_err:
                             # Fallback: send placeholder
