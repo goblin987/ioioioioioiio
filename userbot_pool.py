@@ -429,43 +429,48 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🔥 ATTEMPT #35: ACCEPT DEFEAT - Send via PRIVATE MESSAGE instead!
-                                        # After 34 attempts, library video encryption is BROKEN and can't be fixed
-                                        # Solution: Send video to PRIVATE MESSAGE (still encrypted, just not E2E)
-                                        # Secret chat gets notification: "🎬 Video sent to your private messages"
+                                        # 🔥 ATTEMPT #36: USE TELETHON'S NATIVE send_file() LIKE OLD CODE DID!
+                                        # Found userbot_forward_delivery.py uses: await client.send_file(secret_chat_obj, path)
+                                        # This worked in September! Let's try it again but PROPERLY!
                                         
-                                        logger.critical(f"🎬 ATTEMPT #35: Sending video to PRIVATE MESSAGE (library E2E video encryption is broken)")
+                                        logger.critical(f"🎬 ATTEMPT #36: Using Telethon's NATIVE send_file() with secret chat object!")
                                         logger.info(f"📊 Video: {video_duration}s, {video_w}x{video_h}, {len(video_bytes)} bytes")
                                         
                                         try:
-                                            # Send video to PRIVATE MESSAGE instead of secret chat
-                                            logger.info(f"📤 Sending video to PRIVATE MESSAGE...")
+                                            # Use Telethon's NATIVE send_file() - same as userbot_forward_delivery.py!
+                                            logger.info(f"📤 Sending video via TELETHON NATIVE send_file()...")
                                             await client.send_file(
-                                                user_entity,
+                                                secret_chat_obj,  # Pass the SecretChat object directly!
                                                 fresh_temp_path,
-                                                caption=f"🎬 **Video for your order**\n\n"
-                                                        f"⏱️ Duration: {video_duration}s\n"
-                                                        f"📐 Resolution: {video_w}x{video_h}\n\n"
-                                                        f"_This video was sent to your private messages because "
-                                                        f"Telegram's secret chat video encryption has a bug. "
-                                                        f"Your privacy is still protected with regular encryption._",
-                                                force_document=False
+                                                force_document=False  # Send as video, not document
                                             )
-                                            logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE!")
+                                            logger.info(f"✅ Video {idx} sent via TELETHON NATIVE send_file()!")
                                             
-                                            # Send notification to SECRET CHAT
-                                            await secret_chat_manager.send_secret_text(
-                                                secret_chat_obj,
-                                                f"🎬 **Video Notification**\n\n"
-                                                f"Your video has been sent to your **private messages** "
-                                                f"because Telegram's secret chat cannot play videos correctly.\n\n"
-                                                f"📱 Check your **regular chat** with this bot to watch the video!\n\n"
-                                                f"✅ Your privacy is protected with Telegram's standard encryption."
-                                            )
-                                            logger.info(f"✅ Sent video notification to secret chat")
+                                        except TypeError as type_err:
+                                            logger.error(f"❌ ATTEMPT #36 TypeError: {type_err}")
+                                            logger.info(f"🔄 Falling back to library's send_secret_video...")
                                             
-                                        except Exception as attempt35_err:
-                                            logger.error(f"❌ ATTEMPT #35 failed: {attempt35_err}")
+                                            # Fallback: Try library's send_secret_video with REAL values
+                                            try:
+                                                await secret_chat_manager.send_secret_video(
+                                                    secret_chat_obj,
+                                                    fresh_temp_path,
+                                                    thumb=thumb_bytes if thumb_bytes else b'',
+                                                    thumb_w=thumb_w,
+                                                    thumb_h=thumb_h,
+                                                    duration=video_duration,
+                                                    mime_type="video/mp4",
+                                                    w=video_w,
+                                                    h=video_h,
+                                                    size=len(video_bytes)
+                                                )
+                                                logger.info(f"✅ Video {idx} sent via library fallback!")
+                                            except Exception as lib_err:
+                                                logger.error(f"❌ Library fallback also failed: {lib_err}")
+                                                raise
+                                            
+                                        except Exception as attempt36_err:
+                                            logger.error(f"❌ ATTEMPT #36 failed: {attempt36_err}")
                                             raise
                                         
                                         # Cleanup

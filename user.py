@@ -79,7 +79,7 @@ EMOJI_PAY_NOW = "💳" # <<< ADDED Emoji for Pay Now
 # NOTE: This list will be dynamically validated against NOWPayments API
 SUPPORTED_CRYPTO = {
     'btc': 'BTC',
-    'ltc': 'LTC', 
+    'ltc': 'LTC',
     'eth': 'ETH',
     'sol': 'SOL',
     'usdttrc20': 'USDT (TRC20)', # TRC20 USDT - commonly supported
@@ -298,7 +298,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         return custom_header_message, reply_markup
     else:
         logger.info(f"Using default welcome message for user {user_id}")
-        return full_welcome, reply_markup
+    return full_welcome, reply_markup
 
 
 # --- User Command Handlers ---
@@ -2359,7 +2359,7 @@ async def _show_crypto_choices_for_basket(update: Update, context: ContextTypes.
 
     # Filter currencies to only show those supported by NOWPayments API
     from utils import is_currency_supported
-    
+
     asset_buttons = []
     row = []
     supported_currencies = {}
