@@ -347,21 +347,38 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🎯 ATTEMPT #24: Send as PLAIN DOCUMENT (no attributes parameter!)
-                                        # The attributes parameter was SILENTLY accepted but NOTHING was sent!
-                                        logger.info(f"🔍 Sending as PLAIN document (no attributes)...")
-                                        await secret_chat_manager.send_secret_document(
-                                            secret_chat_obj,
-                                            fresh_temp_path,  # FRESH file from download!
-                                            thumb=thumb_bytes,
-                                            thumb_w=thumb_w,
-                                            thumb_h=thumb_h,
-                                            file_name="video.mp4",
-                                            mime_type="video/mp4",
-                                            size=len(video_bytes)
-                                            # NO attributes parameter!
+                                        # 🎯 ATTEMPT #26: Use MTProto 2.0 with LIBRARY's Layer 101 classes!
+                                        logger.info(f"🚀 ATTEMPT #26: Using full MTProto 2.0 with Layer 101 support...")
+                                        
+                                        from mtproto_secret_chat import send_video_mtproto_full
+                                        
+                                        success = await send_video_mtproto_full(
+                                            client=client,
+                                            secret_chat_manager=secret_chat_manager,
+                                            secret_chat_obj=secret_chat_obj,
+                                            video_data=video_bytes,  # FRESH bytes!
+                                            filename="video.mp4",
+                                            duration=video_duration,
+                                            width=video_w,
+                                            height=video_h
                                         )
-                                        logger.info(f"✅ Video {idx} sent as PLAIN DOCUMENT!")
+                                        
+                                        if success:
+                                            logger.info(f"✅ Video {idx} sent via MTProto 2.0!")
+                                        else:
+                                            logger.error(f"❌ MTProto 2.0 failed, trying fallback...")
+                                            # Fallback to document
+                                            await secret_chat_manager.send_secret_document(
+                                                secret_chat_obj,
+                                                fresh_temp_path,
+                                                thumb=thumb_bytes,
+                                                thumb_w=thumb_w,
+                                                thumb_h=thumb_h,
+                                                file_name="video.mp4",
+                                                mime_type="video/mp4",
+                                                size=len(video_bytes)
+                                            )
+                                            logger.info(f"✅ Video {idx} sent via fallback document!")
                                         
                                         # Cleanup
                                         try:
