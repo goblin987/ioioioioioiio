@@ -156,7 +156,8 @@ def encrypt_file_for_secret_chat(file_data: bytes) -> Tuple[bytes, bytes, bytes,
     # fingerprint = substr(digest, 0, 4) XOR substr(digest, 4, 4)
     digest = hashlib.md5(key + iv).digest()
     fingerprint_bytes = bytes(a ^ b for a, b in zip(digest[:4], digest[4:8]))
-    fingerprint = struct.unpack('<I', fingerprint_bytes)[0]
+    # Use signed int32 format (Telegram expects this)
+    fingerprint = struct.unpack('<i', fingerprint_bytes)[0]
     
     return encrypted_data, key, iv, fingerprint
 
@@ -177,7 +178,8 @@ def decrypt_file_from_secret_chat(encrypted_data: bytes, key: bytes, iv: bytes, 
     # Verify key fingerprint
     digest = hashlib.md5(key + iv).digest()
     fingerprint_bytes = bytes(a ^ b for a, b in zip(digest[:4], digest[4:8]))
-    computed_fingerprint = struct.unpack('<I', fingerprint_bytes)[0]
+    # Use signed int32 format (Telegram uses this)
+    computed_fingerprint = struct.unpack('<i', fingerprint_bytes)[0]
     
     if computed_fingerprint != fingerprint:
         raise ValueError(f"Key fingerprint mismatch! Expected {fingerprint}, got {computed_fingerprint}")
