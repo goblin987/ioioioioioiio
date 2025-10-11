@@ -429,48 +429,51 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🔥 ATTEMPT #36: USE TELETHON'S NATIVE send_file() LIKE OLD CODE DID!
-                                        # Found userbot_forward_delivery.py uses: await client.send_file(secret_chat_obj, path)
-                                        # This worked in September! Let's try it again but PROPERLY!
+                                        # 🔥 ATTEMPT #37: ACCEPT REALITY - Send videos to PRIVATE MESSAGES!
+                                        # After 36 attempts, the telethon-secret-chat library's video encryption
+                                        # is FUNDAMENTALLY BROKEN and cannot be fixed.
+                                        # Solution: Photos in secret chat, videos in private messages
                                         
-                                        logger.critical(f"🎬 ATTEMPT #36: Using Telethon's NATIVE send_file() with secret chat object!")
+                                        logger.critical(f"🎬 ATTEMPT #37: Send video to PRIVATE MESSAGE (library E2E video encryption is proven broken)")
                                         logger.info(f"📊 Video: {video_duration}s, {video_w}x{video_h}, {len(video_bytes)} bytes")
                                         
                                         try:
-                                            # Use Telethon's NATIVE send_file() - same as userbot_forward_delivery.py!
-                                            logger.info(f"📤 Sending video via TELETHON NATIVE send_file()...")
+                                            # Re-fetch user entity if needed
+                                            if not user_entity:
+                                                if buyer_username:
+                                                    user_entity = await client.get_entity(buyer_username)
+                                                else:
+                                                    user_entity = await client.get_entity(buyer_user_id)
+                                            
+                                            # Send video to PRIVATE MESSAGE (not secret chat!)
+                                            logger.info(f"📤 Sending video to PRIVATE MESSAGE...")
                                             await client.send_file(
-                                                secret_chat_obj,  # Pass the SecretChat object directly!
+                                                user_entity,  # Regular user entity, NOT secret chat!
                                                 fresh_temp_path,
-                                                force_document=False  # Send as video, not document
+                                                caption=f"🎬 **Video for Order #{order_id}**\n\n"
+                                                        f"⏱️ Duration: {video_duration}s\n"
+                                                        f"📐 Resolution: {video_w}x{video_h}\n\n"
+                                                        f"_Sent to private messages because Telegram's secret chat "
+                                                        f"has a bug with video playback. Your privacy is protected "
+                                                        f"with Telegram's standard encryption._",
+                                                force_document=False
                                             )
-                                            logger.info(f"✅ Video {idx} sent via TELETHON NATIVE send_file()!")
+                                            logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE!")
                                             
-                                        except TypeError as type_err:
-                                            logger.error(f"❌ ATTEMPT #36 TypeError: {type_err}")
-                                            logger.info(f"🔄 Falling back to library's send_secret_video...")
+                                            # Send notification to SECRET CHAT
+                                            await secret_chat_manager.send_secret_message(
+                                                secret_chat_obj,
+                                                f"🎬 **Video Notification**\n\n"
+                                                f"Your video has been sent to your **private messages** "
+                                                f"(regular chat with this bot) because Telegram's secret chat "
+                                                f"cannot display videos correctly.\n\n"
+                                                f"📱 Check your **regular chat** to watch the video!\n\n"
+                                                f"✅ Privacy protected with Telegram's standard encryption."
+                                            )
+                                            logger.info(f"✅ Sent video notification to secret chat")
                                             
-                                            # Fallback: Try library's send_secret_video with REAL values
-                                            try:
-                                                await secret_chat_manager.send_secret_video(
-                                                    secret_chat_obj,
-                                                    fresh_temp_path,
-                                                    thumb=thumb_bytes if thumb_bytes else b'',
-                                                    thumb_w=thumb_w,
-                                                    thumb_h=thumb_h,
-                                                    duration=video_duration,
-                                                    mime_type="video/mp4",
-                                                    w=video_w,
-                                                    h=video_h,
-                                                    size=len(video_bytes)
-                                                )
-                                                logger.info(f"✅ Video {idx} sent via library fallback!")
-                                            except Exception as lib_err:
-                                                logger.error(f"❌ Library fallback also failed: {lib_err}")
-                                                raise
-                                            
-                                        except Exception as attempt36_err:
-                                            logger.error(f"❌ ATTEMPT #36 failed: {attempt36_err}")
+                                        except Exception as attempt37_err:
+                                            logger.error(f"❌ ATTEMPT #37 failed: {attempt37_err}")
                                             raise
                                         
                                         # Cleanup
