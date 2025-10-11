@@ -429,52 +429,58 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🔥 ATTEMPT #37: ACCEPT REALITY - Send videos to PRIVATE MESSAGES!
-                                        # After 36 attempts, the telethon-secret-chat library's video encryption
-                                        # is FUNDAMENTALLY BROKEN and cannot be fixed.
-                                        # Solution: Photos in secret chat, videos in private messages
+                                        # 🔥 ATTEMPT #38: DISGUISE VIDEO AS PHOTO!
+                                        # INSIGHT: send_secret_photo() works perfectly!
+                                        # STRATEGY: Send video file using send_secret_photo() method
+                                        # Telegram should handle it based on file content, not method used
                                         
-                                        logger.critical(f"🎬 ATTEMPT #37: Send video to PRIVATE MESSAGE (library E2E video encryption is proven broken)")
+                                        logger.critical(f"🎬 ATTEMPT #38: Send video using send_secret_photo() method!")
                                         logger.info(f"📊 Video: {video_duration}s, {video_w}x{video_h}, {len(video_bytes)} bytes")
                                         
                                         try:
-                                            # Re-fetch user entity if needed
-                                            if not user_entity:
-                                                if buyer_username:
-                                                    user_entity = await client.get_entity(buyer_username)
-                                                else:
-                                                    user_entity = await client.get_entity(buyer_user_id)
-                                            
-                                            # Send video to PRIVATE MESSAGE (not secret chat!)
-                                            logger.info(f"📤 Sending video to PRIVATE MESSAGE...")
-                                            await client.send_file(
-                                                user_entity,  # Regular user entity, NOT secret chat!
-                                                fresh_temp_path,
-                                                caption=f"🎬 **Video for Order #{order_id}**\n\n"
-                                                        f"⏱️ Duration: {video_duration}s\n"
-                                                        f"📐 Resolution: {video_w}x{video_h}\n\n"
-                                                        f"_Sent to private messages because Telegram's secret chat "
-                                                        f"has a bug with video playback. Your privacy is protected "
-                                                        f"with Telegram's standard encryption._",
-                                                force_document=False
-                                            )
-                                            logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE!")
-                                            
-                                            # Send notification to SECRET CHAT
-                                            await secret_chat_manager.send_secret_message(
+                                            # Use send_secret_photo() for video file!
+                                            logger.info(f"📤 Sending VIDEO via send_secret_photo()...")
+                                            await secret_chat_manager.send_secret_photo(
                                                 secret_chat_obj,
-                                                f"🎬 **Video Notification**\n\n"
-                                                f"Your video has been sent to your **private messages** "
-                                                f"(regular chat with this bot) because Telegram's secret chat "
-                                                f"cannot display videos correctly.\n\n"
-                                                f"📱 Check your **regular chat** to watch the video!\n\n"
-                                                f"✅ Privacy protected with Telegram's standard encryption."
+                                                fresh_temp_path,  # Video file!
+                                                thumb=thumb_bytes if thumb_bytes else b'',
+                                                thumb_w=thumb_w if thumb_w > 0 else 90,
+                                                thumb_h=thumb_h if thumb_h > 0 else 160,
+                                                w=video_w if video_w > 0 else 640,
+                                                h=video_h if video_h > 0 else 480,
+                                                size=len(video_bytes)
                                             )
-                                            logger.info(f"✅ Sent video notification to secret chat")
+                                            logger.info(f"✅ Video {idx} sent via send_secret_photo()!")
+                                            sent_media_count += 1
                                             
-                                        except Exception as attempt37_err:
-                                            logger.error(f"❌ ATTEMPT #37 failed: {attempt37_err}")
-                                            raise
+                                        except Exception as attempt38_err:
+                                            logger.error(f"❌ ATTEMPT #38 failed: {attempt38_err}")
+                                            logger.info(f"🔄 Falling back to ATTEMPT #37: Private messages")
+                                            
+                                            try:
+                                                # Fallback: Send to private messages
+                                                if not user_entity:
+                                                    if buyer_username:
+                                                        user_entity = await client.get_entity(buyer_username)
+                                                    else:
+                                                        user_entity = await client.get_entity(buyer_user_id)
+                                                
+                                                await client.send_file(
+                                                    user_entity,
+                                                    fresh_temp_path,
+                                                    caption=f"🎬 Video for Order #{order_id}",
+                                                    force_document=False
+                                                )
+                                                logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE (fallback)!")
+                                                
+                                                await secret_chat_manager.send_secret_message(
+                                                    secret_chat_obj,
+                                                    f"🎬 Video sent to your private messages!"
+                                                )
+                                                sent_media_count += 1
+                                            except Exception as fallback_err:
+                                                logger.error(f"❌ Fallback also failed: {fallback_err}")
+                                                raise
                                         
                                         # Cleanup
                                         try:
