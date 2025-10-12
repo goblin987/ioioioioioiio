@@ -14,3 +14,4 @@ Pillow>=9.0.0
 pyrogram>=2.0.0
 TgCrypto>=1.2.5
 pycryptodome>=3.18.0
+tg-secret>=0.1.0  # Secret chat support for Pyrogram

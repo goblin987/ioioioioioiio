@@ -1,6 +1,7 @@
 """
 Userbot Pool Manager
 Manages multiple Telethon userbots for secret chat delivery with load balancing
+Now includes Pyrogram support for testing tg-secret library
 """
 
 import logging
@@ -14,6 +15,17 @@ from telethon.sessions import StringSession
 from telethon.tl.types import DocumentAttributeVideo
 from telethon_secret_chat import SecretChatManager
 import io
+
+# Try to import Pyrogram support (ATTEMPT #39: Test tg-secret)
+PYROGRAM_AVAILABLE = False
+try:
+    from userbot_pool_pyrogram import pyrogram_pool
+    PYROGRAM_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info("✅ Pyrogram support available - will test tg-secret for videos!")
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Pyrogram support not available: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +105,15 @@ class UserbotPool:
                     self.clients[userbot_id] = client
                     self.secret_chat_managers[userbot_id] = secret_chat_manager
                     
+                    # 🔥 ATTEMPT #39: Also add to Pyrogram pool if available
+                    if PYROGRAM_AVAILABLE:
+                        try:
+                            logger.info(f"🔄 Adding userbot #{userbot_id} to Pyrogram pool...")
+                            await pyrogram_pool.add_userbot(userbot_id, api_id, api_hash, session_string)
+                            logger.info(f"✅ Userbot #{userbot_id} added to Pyrogram pool!")
+                        except Exception as pyro_err:
+                            logger.warning(f"⚠️ Could not add userbot #{userbot_id} to Pyrogram pool: {pyro_err}")
+                    
                     # Update database status
                     self._update_connection_status(userbot_id, True, f"Connected as @{username}")
                     
@@ -158,6 +179,35 @@ class UserbotPool:
         media_binary_items: List[Dict],
         order_id: str
     ) -> Tuple[bool, str]:
+        """
+        Deliver media via secret chat
+        ATTEMPT #39: Try Pyrogram (tg-secret) first, fallback to Telethon if unavailable
+        """
+        
+        # 🔥 ATTEMPT #39: Try Pyrogram's tg-secret library first!
+        if PYROGRAM_AVAILABLE:
+            logger.critical(f"🎬 ATTEMPT #39: Testing Pyrogram tg-secret library for secret chat delivery!")
+            try:
+                success, message = await pyrogram_pool.deliver_via_pyrogram_secret_chat(
+                    buyer_user_id,
+                    buyer_username,
+                    product_data,
+                    media_binary_items,
+                    order_id
+                )
+                
+                if success:
+                    logger.critical(f"✅ ATTEMPT #39 SUCCESS! Pyrogram tg-secret worked!")
+                    logger.critical(f"🎯 CRITICAL: Check if VIDEO is PLAYABLE (not corrupted)!")
+                    return success, message
+                else:
+                    logger.warning(f"⚠️ ATTEMPT #39 failed: {message}")
+                    logger.info(f"🔄 Falling back to Telethon implementation...")
+            except Exception as e:
+                logger.error(f"❌ ATTEMPT #39 error: {e}")
+                logger.info(f"🔄 Falling back to Telethon implementation...")
+        
+        # Fall back to Telethon implementation (current working solution)
         """Deliver product via secret chat using an available userbot from the pool"""
         
         # Get available userbot
