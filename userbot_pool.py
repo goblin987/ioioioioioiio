@@ -30,7 +30,7 @@ except ImportError as e:
 # Try to import TDLib support (ATTEMPT #40: Official Telegram library)
 TDLIB_AVAILABLE = False
 try:
-    from telegram_cli_proxy import tdlib_proxy
+    from userbot_tdlib import tdlib_manager
     TDLIB_AVAILABLE = True
     logger = logging.getLogger(__name__)
     logger.info("✅ TDLib (official Telegram library) available - will use for secret chat videos!")
@@ -116,6 +116,16 @@ class UserbotPool:
                     self.clients[userbot_id] = client
                     self.secret_chat_managers[userbot_id] = secret_chat_manager
                     
+                    # 🔥 ATTEMPT #40: Add to TDLib manager if available
+                    if TDLIB_AVAILABLE:
+                        try:
+                            logger.info(f"🔄 Adding userbot #{userbot_id} to TDLib manager...")
+                            phone_number = ub['phone_number']
+                            await tdlib_manager.add_userbot(userbot_id, api_id, api_hash, phone_number)
+                            logger.info(f"✅ Userbot #{userbot_id} added to TDLib manager!")
+                        except Exception as tdlib_err:
+                            logger.warning(f"⚠️ Could not add userbot #{userbot_id} to TDLib: {tdlib_err}")
+                    
                     # 🔥 ATTEMPT #39: Also add to Pyrogram pool if available
                     if PYROGRAM_AVAILABLE:
                         try:
@@ -196,18 +206,32 @@ class UserbotPool:
         """
         
         # 🔥 ATTEMPT #40: Try TDLib (Official Telegram library) first!
-        if TDLIB_AVAILABLE:
+        if TDLIB_AVAILABLE and tdlib_manager.clients:
             logger.critical(f"🎬 ATTEMPT #40: Using TDLib (OFFICIAL Telegram library) for secret chat!")
             logger.info(f"📚 This is the SAME library the official client uses!")
             
-            # Check if we have videos to send
-            has_video = any(item['media_type'] == 'video' for item in media_binary_items)
-            
-            if has_video:
-                logger.critical(f"🎥 Video detected - will use TDLib for guaranteed working encryption!")
-                # TODO: Implement TDLib delivery in next iteration
-                # For now, log that we would use it
-                logger.info(f"ℹ️ TDLib integration in progress...")
+            try:
+                # Get first available TDLib client
+                userbot_id = list(tdlib_manager.clients.keys())[0]
+                
+                success, message = await tdlib_manager.deliver_media_via_tdlib(
+                    userbot_id,
+                    buyer_user_id,
+                    product_data,
+                    media_binary_items,
+                    order_id
+                )
+                
+                if success:
+                    logger.critical(f"✅ ATTEMPT #40 SUCCESS! TDLib delivery worked!")
+                    logger.critical(f"🎯 Video was sent with OFFICIAL encryption - should be PLAYABLE!")
+                    return success, message
+                else:
+                    logger.warning(f"⚠️ ATTEMPT #40 failed: {message}")
+                    logger.info(f"🔄 Falling back to Pyrogram/Telethon...")
+            except Exception as e:
+                logger.error(f"❌ ATTEMPT #40 error: {e}")
+                logger.info(f"🔄 Falling back to Pyrogram/Telethon...")
         
         # 🔥 ATTEMPT #39: Try Pyrogram's tg-secret library
         if PYROGRAM_AVAILABLE:
