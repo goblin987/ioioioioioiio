@@ -1,7 +1,11 @@
 """
 Userbot Pool Manager
 Manages multiple Telethon userbots for secret chat delivery with load balancing
-Now includes Pyrogram support for testing tg-secret library
+
+ATTEMPT #42 (FINAL SOLUTION):
+- Photos → Secret Chat (E2E encrypted, working perfectly)
+- Videos → Private Messages (playable, Telegram server-encrypted)
+- Transparent notifications explain the approach to users
 """
 
 import logging
@@ -15,28 +19,6 @@ from telethon.sessions import StringSession
 from telethon.tl.types import DocumentAttributeVideo
 from telethon_secret_chat import SecretChatManager
 import io
-
-# Try to import Pyrogram support (ATTEMPT #39: Test tg-secret)
-PYROGRAM_AVAILABLE = False
-try:
-    from userbot_pool_pyrogram import pyrogram_pool
-    PYROGRAM_AVAILABLE = True
-    logger = logging.getLogger(__name__)
-    logger.info("✅ Pyrogram support available - will test tg-secret for videos!")
-except ImportError as e:
-    logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Pyrogram support not available: {e}")
-
-# Try to import TDLib support (ATTEMPT #40: Official Telegram library)
-TDLIB_AVAILABLE = False
-try:
-    from userbot_tdlib import tdlib_manager
-    TDLIB_AVAILABLE = True
-    logger = logging.getLogger(__name__)
-    logger.info("✅ TDLib (official Telegram library) available - will use for secret chat videos!")
-except ImportError as e:
-    logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ TDLib not available: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -116,25 +98,6 @@ class UserbotPool:
                     self.clients[userbot_id] = client
                     self.secret_chat_managers[userbot_id] = secret_chat_manager
                     
-                    # 🔥 ATTEMPT #40: Add to TDLib manager if available
-                    if TDLIB_AVAILABLE:
-                        try:
-                            logger.info(f"🔄 Adding userbot #{userbot_id} to TDLib manager...")
-                            phone_number = ub['phone_number']
-                            await tdlib_manager.add_userbot(userbot_id, api_id, api_hash, phone_number)
-                            logger.info(f"✅ Userbot #{userbot_id} added to TDLib manager!")
-                        except Exception as tdlib_err:
-                            logger.warning(f"⚠️ Could not add userbot #{userbot_id} to TDLib: {tdlib_err}")
-                    
-                    # 🔥 ATTEMPT #39: Also add to Pyrogram pool if available
-                    if PYROGRAM_AVAILABLE:
-                        try:
-                            logger.info(f"🔄 Adding userbot #{userbot_id} to Pyrogram pool...")
-                            await pyrogram_pool.add_userbot(userbot_id, api_id, api_hash, session_string)
-                            logger.info(f"✅ Userbot #{userbot_id} added to Pyrogram pool!")
-                        except Exception as pyro_err:
-                            logger.warning(f"⚠️ Could not add userbot #{userbot_id} to Pyrogram pool: {pyro_err}")
-                    
                     # Update database status
                     self._update_connection_status(userbot_id, True, f"Connected as @{username}")
                     
@@ -202,62 +165,12 @@ class UserbotPool:
     ) -> Tuple[bool, str]:
         """
         Deliver media via secret chat
-        ATTEMPT #39: Try Pyrogram (tg-secret) first, fallback to Telethon if unavailable
+        
+        ATTEMPT #42 (FINAL SOLUTION):
+        - Photos → Secret Chat (E2E encrypted, working)
+        - Videos → Private Messages (playable, server-encrypted)
+        - Elegant notifications explain the approach
         """
-        
-        # 🔥 ATTEMPT #40: Try TDLib (Official Telegram library) first!
-        if TDLIB_AVAILABLE and tdlib_manager.clients:
-            logger.critical(f"🎬 ATTEMPT #40: Using TDLib (OFFICIAL Telegram library) for secret chat!")
-            logger.info(f"📚 This is the SAME library the official client uses!")
-            
-            try:
-                # Get first available TDLib client
-                userbot_id = list(tdlib_manager.clients.keys())[0]
-                
-                success, message = await tdlib_manager.deliver_media_via_tdlib(
-                    userbot_id,
-                    buyer_user_id,
-                    product_data,
-                    media_binary_items,
-                    order_id
-                )
-                
-                if success:
-                    logger.critical(f"✅ ATTEMPT #40 SUCCESS! TDLib delivery worked!")
-                    logger.critical(f"🎯 Video was sent with OFFICIAL encryption - should be PLAYABLE!")
-                    return success, message
-                else:
-                    logger.warning(f"⚠️ ATTEMPT #40 failed: {message}")
-                    logger.info(f"🔄 Falling back to Pyrogram/Telethon...")
-            except Exception as e:
-                logger.error(f"❌ ATTEMPT #40 error: {e}")
-                logger.info(f"🔄 Falling back to Pyrogram/Telethon...")
-        
-        # 🔥 ATTEMPT #39: Try Pyrogram's tg-secret library
-        if PYROGRAM_AVAILABLE:
-            logger.critical(f"🎬 ATTEMPT #39: Testing Pyrogram tg-secret library for secret chat delivery!")
-            try:
-                success, message = await pyrogram_pool.deliver_via_pyrogram_secret_chat(
-                    buyer_user_id,
-                    buyer_username,
-                    product_data,
-                    media_binary_items,
-                    order_id
-                )
-                
-                if success:
-                    logger.critical(f"✅ ATTEMPT #39 SUCCESS! Pyrogram tg-secret worked!")
-                    logger.critical(f"🎯 CRITICAL: Check if VIDEO is PLAYABLE (not corrupted)!")
-                    return success, message
-                else:
-                    logger.warning(f"⚠️ ATTEMPT #39 failed: {message}")
-                    logger.info(f"🔄 Falling back to Telethon implementation...")
-            except Exception as e:
-                logger.error(f"❌ ATTEMPT #39 error: {e}")
-                logger.info(f"🔄 Falling back to Telethon implementation...")
-        
-        # Fall back to Telethon implementation (current working solution)
-        """Deliver product via secret chat using an available userbot from the pool"""
         
         # Get available userbot
         userbot_info = self.get_available_userbot()
@@ -393,18 +306,23 @@ class UserbotPool:
                     # Not a rate limit error, just fail
                     return False, f"Failed to start secret chat: {e}"
             
-            # 3. Send notification
-            notification_text = f"""🔐 ENCRYPTED DELIVERY
-📦 Order #{order_id}
-🏷️ {product_data.get('product_name', 'Product')}
-📏 {product_data.get('size', 'N/A')}
-📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
-💰 {product_data.get('price', 0):.2f} EUR
-⏬ Receiving secure media..."""
+            # 3. Send elegant notification
+            notification_text = (
+                f"🔐 **Encrypted Delivery**\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"**Order Details:**\n"
+                f"📦 Order ID: #{order_id}\n"
+                f"🏷️ Product: {product_data.get('product_name', 'Digital Content')}\n"
+                f"📏 Size: {product_data.get('size', 'N/A')}\n"
+                f"📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                f"💰 Price: {product_data.get('price', 0):.2f} EUR\n\n"
+                f"⏬ **Delivering your content securely...**\n\n"
+                f"🔒 _This is an end-to-end encrypted chat._"
+            )
             
             try:
                 await secret_chat_manager.send_secret_message(secret_chat_obj, notification_text)
-                logger.info(f"✅ Sent notification to secret chat")
+                logger.info(f"✅ Sent elegant notification to secret chat")
                 await asyncio.sleep(1)
             except Exception as e:
                 logger.error(f"❌ Failed to send notification: {e}")
@@ -506,28 +424,49 @@ class UserbotPool:
                                         await temp_msg.delete()
                                         logger.info(f"🗑️ Deleted temp message from Saved Messages")
                                         
-                                        # Send video to PRIVATE MESSAGE (not secret chat)
+                                        # Send video to PRIVATE MESSAGE with beautiful caption
                                         logger.info(f"📤 Sending video to PRIVATE MESSAGE...")
+                                        
+                                        video_caption = (
+                                            f"🎬 **Your Video Content**\n"
+                                            f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                                            f"📦 **Order:** #{order_id}\n"
+                                            f"🎞️ **Product:** {product_data.get('product_name', 'Digital Content')}\n\n"
+                                            f"📊 **Video Details:**\n"
+                                            f"   ⏱️ Duration: {video_duration} seconds\n"
+                                            f"   📐 Resolution: {video_w} × {video_h}px\n"
+                                            f"   💾 Size: {len(media_binary) / (1024*1024):.1f} MB\n\n"
+                                            f"✨ **Ready to watch!** Tap to play.\n\n"
+                                            f"🔒 _Protected with Telegram's secure encryption_"
+                                        )
+                                        
                                         await client.send_file(
                                             user_entity,
                                             temp_path,
-                                            caption=f"🎬 **Video for Order #{order_id}**\n\n"
-                                                    f"⏱️ Duration: {video_duration}s\n"
-                                                    f"📐 Resolution: {video_w}x{video_h}\n\n"
-                                                    f"_Video delivered via regular Telegram encryption (secure & playable)._",
-                                            force_document=False
+                                            caption=video_caption,
+                                            force_document=False,
+                                            supports_streaming=True
                                         )
                                         logger.critical(f"✅ Video {idx} sent to PRIVATE MESSAGE (PLAYABLE)!")
                                         
-                                        # Send notification to SECRET CHAT
+                                        # Send elegant notification to SECRET CHAT
+                                        secret_notification = (
+                                            f"🎬 **Video Delivered!**\n"
+                                            f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                                            f"Your video content for **Order #{order_id}** has been successfully delivered.\n\n"
+                                            f"📱 **Where to find it:**\n"
+                                            f"Check your regular chat messages above (scroll up) to watch your video.\n\n"
+                                            f"🔐 **Security Note:**\n"
+                                            f"Your video is protected with Telegram's standard encryption—the same security used by millions of users worldwide.\n\n"
+                                            f"💡 _Photos remain in this end-to-end encrypted chat for maximum privacy._\n\n"
+                                            f"✅ **Enjoy your content!**"
+                                        )
+                                        
                                         await secret_chat_manager.send_secret_message(
                                             secret_chat_obj,
-                                            f"🎬 **Video Notification**\n\n"
-                                            f"Your video has been delivered to your private messages.\n\n"
-                                            f"📱 Check the regular chat above to watch!\n\n"
-                                            f"✅ Protected with Telegram's encryption."
+                                            secret_notification
                                         )
-                                        logger.info(f"✅ Sent notification to secret chat")
+                                        logger.info(f"✅ Sent elegant notification to secret chat")
                                         sent_media_count += 1
                                         
                                     except Exception as final_err:
@@ -632,23 +571,30 @@ class UserbotPool:
             else:
                 logger.warning(f"⚠️ No media items to send for order {order_id} (Product ID: {product_data.get('product_id')}). Product has no media in database!")
             
-            # 5. Send product details
-            details_text = f"""📦 Product Details
-🏷️ {product_data.get('product_name', 'Product')}
-📏 {product_data.get('size', 'N/A')}
-📍 {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}
-💰 {product_data.get('price', 0):.2f} EUR
-📝 Pickup Instructions:
-{product_data.get('original_text', 'No additional details.')}
-✅ Order Completed
-Order ID: {order_id}
-Thank you! 🎉"""
+            # 5. Send completion message with product details
+            completion_text = (
+                f"✅ **Delivery Complete!**\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"**Your Order Summary:**\n"
+                f"🏷️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
+                f"📏 **Size:** {product_data.get('size', 'N/A')}\n"
+                f"📍 **Location:** {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                f"💰 **Paid:** {product_data.get('price', 0):.2f} EUR\n\n"
+                f"📋 **Additional Information:**\n"
+                f"{product_data.get('original_text', 'No additional details provided.')}\n\n"
+                f"📊 **Delivery Summary:**\n"
+                f"   📸 Photos: {sum(1 for item in media_binary_items if item['media_type'] == 'photo')} (in this chat)\n"
+                f"   🎬 Videos: {sum(1 for item in media_binary_items if item['media_type'] == 'video')} (in private messages)\n\n"
+                f"📦 **Order ID:** #{order_id}\n\n"
+                f"🎉 **Thank you for your purchase!**\n"
+                f"💬 _If you have any questions, feel free to ask._"
+            )
             
             try:
-                await secret_chat_manager.send_secret_message(secret_chat_obj, details_text)
-                logger.info(f"✅ Sent product details to secret chat")
+                await secret_chat_manager.send_secret_message(secret_chat_obj, completion_text)
+                logger.info(f"✅ Sent elegant completion message to secret chat")
             except Exception as e:
-                logger.error(f"❌ Failed to send product details: {e}")
+                logger.error(f"❌ Failed to send completion message: {e}")
             
             return True, f"Product delivered via SECRET CHAT (userbot #{userbot_id}) to user {buyer_user_id}"
             

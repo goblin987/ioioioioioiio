@@ -1,6 +1,6 @@
 python-telegram-bot[ext]>=22.0
 requests>=2.25.0
-Flask[async]>=2.0.0  # <--- MODIFIED LINE
+Flask[async]>=2.0.0
 nest-asyncio>=1.5.0
 pytz
 telethon==1.34.0
@@ -11,8 +11,3 @@ aiohttp==3.9.1
 psycopg2-binary>=2.9.0
 qrcode[pil]>=7.0.0
 Pillow>=9.0.0
-pyrogram>=2.0.0
-TgCrypto>=1.2.5
-pycryptodome>=3.18.0
-tg-secret>=0.1.0  # Secret chat support for Pyrogram
-python-telegram>=0.18.0  # TDLib - Official Telegram library (ATTEMPT #40)
