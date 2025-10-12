@@ -528,46 +528,53 @@ class UserbotPool:
                                         # The file needs DocumentAttributeVideo so Telegram recognizes it
                                         logger.info(f"🎯 ATTEMPT #23: Sending document WITH video attributes...")
                                         
-                                        # 🔥 FINAL SOLUTION (After 38 failed attempts)
-                                        # ALL Python Telegram libraries have broken video encryption for secret chats
-                                        # This is a known ecosystem-wide issue with no Python-level fix
-                                        # Solution: Photos in secret chat (E2E), Videos in private messages (playable)
+                                        # 🔥 ATTEMPT #40: TDLib wasn't loading, try DIRECT secret chat send!
+                                        # The issue: we were sending to user_entity (private) instead of secret_chat_obj
                                         
-                                        logger.critical(f"🎬 FINAL SOLUTION: Send video to PRIVATE MESSAGE")
+                                        logger.critical(f"🎬 ATTEMPT #41: Send video DIRECTLY to SECRET CHAT object!")
                                         logger.info(f"📊 Video: {video_duration}s, {video_w}x{video_h}, {len(video_bytes)} bytes")
-                                        logger.info(f"ℹ️ Secret chat video encryption is broken in all Python libraries")
                                         
                                         try:
-                                            # Send video to PRIVATE MESSAGE (not secret chat)
-                                            logger.info(f"📤 Sending video to PRIVATE MESSAGE...")
-                                            await client.send_file(
-                                                user_entity,
-                                                fresh_temp_path,
-                                                caption=f"🎬 **Video for Order #{order_id}**\n\n"
-                                                        f"⏱️ Duration: {video_duration}s\n"
-                                                        f"📐 Resolution: {video_w}x{video_h}\n\n"
-                                                        f"_Video sent here because Telegram's secret chat "
-                                                        f"video encryption has technical limitations. "
-                                                        f"Your privacy is protected with standard Telegram encryption._",
-                                                force_document=False
-                                            )
-                                            logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE!")
+                                            # Send video DIRECTLY to SECRET CHAT (using the library's method properly)
+                                            logger.info(f"📤 Sending video to SECRET CHAT...")
                                             
-                                            # Send notification to SECRET CHAT
-                                            await secret_chat_manager.send_secret_message(
+                                            # Use the library's send_secret_video with extracted attributes
+                                            await secret_chat_manager.send_secret_video(
                                                 secret_chat_obj,
-                                                f"🎬 **Video Notification**\n\n"
-                                                f"Your video has been sent to your **private messages** "
-                                                f"with this bot.\n\n"
-                                                f"📱 Check the regular chat above to watch it!\n\n"
-                                                f"✅ Your privacy is protected with Telegram's encryption."
+                                                fresh_temp_path,
+                                                thumb=thumb_bytes,
+                                                thumb_w=thumb_w,
+                                                thumb_h=thumb_h,
+                                                duration=video_duration,
+                                                mime_type="video/mp4",
+                                                w=video_w,
+                                                h=video_h,
+                                                size=len(video_bytes)
                                             )
-                                            logger.info(f"✅ Sent video notification to secret chat")
+                                            logger.critical(f"✅ Video {idx} sent to SECRET CHAT!")
+                                            logger.critical(f"🎯 CHECK IF VIDEO IS PLAYABLE (not white screen)!")
                                             sent_media_count += 1
                                             
                                         except Exception as final_err:
-                                            logger.error(f"❌ Video delivery failed: {final_err}")
-                                            raise
+                                            logger.error(f"❌ Video delivery to secret chat failed: {final_err}")
+                                            logger.warning(f"🔄 Falling back to private message...")
+                                            
+                                            # FALLBACK: Send to private message
+                                            try:
+                                                await client.send_file(
+                                                    user_entity,
+                                                    fresh_temp_path,
+                                                    caption=f"🎬 **Video for Order #{order_id}**\n\n"
+                                                            f"⏱️ Duration: {video_duration}s\n"
+                                                            f"📐 Resolution: {video_w}x{video_h}\n\n"
+                                                            f"_Video sent to private messages due to technical limitations._",
+                                                    force_document=False
+                                                )
+                                                logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE (fallback)!")
+                                                sent_media_count += 1
+                                            except Exception as fallback_err:
+                                                logger.error(f"❌ Fallback also failed: {fallback_err}")
+                                                raise
                                         
                                         # Cleanup
                                         try:
