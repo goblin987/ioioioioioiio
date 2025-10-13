@@ -382,7 +382,7 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
     
     await query.answer()
     
-    from database import get_db_connection
+    from utils import get_db_connection
     
     conn = get_db_connection()
     c = conn.cursor()
@@ -429,6 +429,103 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
         conn.close()
     
     keyboard = [
+        [InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_settings")]
+    ]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Admin interface to manage rewards pool"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    from utils import get_db_connection
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Get current products in rewards pool
+        c.execute('''
+            SELECT product_id, product_name, price, stock
+            FROM products
+            WHERE is_active = TRUE
+            ORDER BY price DESC
+            LIMIT 10
+        ''')
+        products = c.fetchall()
+        
+        msg = "🎁 **REWARDS POOL MANAGEMENT** 🎁\n\n"
+        msg += "**Available Products for Case Rewards:**\n\n"
+        
+        if products:
+            for p in products:
+                msg += f"🎯 **{p['product_name']}**\n"
+                msg += f"   💰 Price: €{p['price']:.2f}\n"
+                msg += f"   📦 Stock: {p['stock']}\n\n"
+        else:
+            msg += "⚠️ No active products available\n\n"
+        
+        msg += "💡 **Note:** Cases award random products from your active product catalog.\n"
+        msg += "To add/remove products, use the Product Management menu.\n"
+        
+    finally:
+        conn.close()
+    
+    keyboard = [
+        [InlineKeyboardButton("📦 Manage Products", callback_data="adm_products")],
+        [InlineKeyboardButton("🔄 Refresh", callback_data="admin_manage_rewards")],
+        [InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_settings")]
+    ]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+async def handle_admin_edit_cases(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Admin interface to edit case settings"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    msg = "⚙️ **CASE SETTINGS EDITOR** ⚙️\n\n"
+    msg += "**Current Case Configuration:**\n\n"
+    
+    for case_type, config in CASE_TYPES.items():
+        msg += f"{config['emoji']} **{config['name']}**\n"
+        msg += f"   💰 Cost: {config['cost']} points\n"
+        msg += f"   🎁 Win Product: {config['rewards']['win_product']}%\n"
+        msg += f"   💎 Win Points: {config['rewards']['win_points']}%\n"
+        msg += f"   ❌ Lose: {config['rewards']['lose']}%\n"
+        msg += f"   🎰 Animation: {config['animation_speed']}s\n\n"
+    
+    msg += "**Daily Streak Rewards:**\n"
+    for day, points in DAILY_REWARDS.items():
+        msg += f"   Day {day}: {points} points\n"
+    
+    msg += "\n💡 **Note:** To modify these values, edit the configuration in `daily_rewards_system.py`\n"
+    msg += "Restart the bot after making changes.\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("📊 View Statistics", callback_data="admin_case_stats")],
+        [InlineKeyboardButton("🔄 Refresh", callback_data="admin_edit_cases")],
         [InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_settings")]
     ]
     
