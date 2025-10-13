@@ -666,13 +666,50 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
+    from utils import is_daily_rewards_enabled
+    
+    daily_rewards_on = is_daily_rewards_enabled()
+    
     msg = "🎨 **Bot UI Management**\n\nManage bot interface, themes, and media:"
     keyboard = [
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
+        [InlineKeyboardButton(
+            f"{'✅' if daily_rewards_on else '❌'} Show Daily Rewards Button",
+            callback_data=f"toggle_daily_rewards_button|{'disable' if daily_rewards_on else 'enable'}"
+        )],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_toggle_daily_rewards_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle Daily Rewards button visibility in user start menu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    from utils import set_bot_setting
+    
+    # Parse action from params or callback_data
+    action = None
+    if params and isinstance(params, list) and len(params) > 0:
+        action = params[0]
+    elif '|' in query.data:
+        action = query.data.split('|', 1)[1]
+    
+    if action == 'enable':
+        set_bot_setting("show_daily_rewards_button", "true")
+        await query.answer("✅ Daily Rewards button enabled", show_alert=True)
+    elif action == 'disable':
+        set_bot_setting("show_daily_rewards_button", "false")
+        await query.answer("❌ Daily Rewards button disabled", show_alert=True)
+    else:
+        await query.answer("Invalid action", show_alert=True)
+        return
+    
+    # Refresh the Bot UI menu to show updated state
+    await handle_admin_bot_ui_menu(update, context)
 
 async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Shows system settings menu with security options."""

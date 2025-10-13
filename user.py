@@ -199,16 +199,27 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     price_list_button_text = lang_data.get("price_list_button", "Price List")
     language_button_text = lang_data.get("language_button", "Language")
     admin_button_text = lang_data.get("admin_button", "🔧 Admin Panel")
+    
+    # Check if Daily Rewards should be shown
+    from utils import is_daily_rewards_enabled
+    show_daily_rewards = is_daily_rewards_enabled()
+    
     # Default keyboard layout
     default_keyboard = [
         [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],
-        [InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")],
+    ]
+    
+    # Conditionally add Daily Rewards button
+    if show_daily_rewards:
+        default_keyboard.append([InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")])
+    
+    default_keyboard.extend([
         [InlineKeyboardButton(f"{EMOJI_PROFILE} {profile_button_text}", callback_data="profile"),
          InlineKeyboardButton(f"{EMOJI_REFILL} {top_up_button_text}", callback_data="refill")],
         [InlineKeyboardButton(f"{EMOJI_REVIEW} {reviews_button_text}", callback_data="reviews"),
          InlineKeyboardButton(f"{EMOJI_PRICELIST} {price_list_button_text}", callback_data="price_list"),
          InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")]
-    ]
+    ])
     
     # YOLO MODE: Only apply custom layout if NO preset theme is active
     custom_header_message = None
@@ -224,13 +235,19 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
             if active_theme.get('theme_name') == 'classic':
                 keyboard = [
                     [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
-                    [InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")],
+                ]
+                
+                # Conditionally add Daily Rewards button for classic theme
+                if show_daily_rewards:
+                    keyboard.append([InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")])
+                
+                keyboard.extend([
                     [InlineKeyboardButton("👤 Profile", callback_data="profile"), 
                      InlineKeyboardButton("💳 Top Up", callback_data="refill")],
                     [InlineKeyboardButton("📝 Reviews", callback_data="reviews"),
                      InlineKeyboardButton("📋 Price List", callback_data="price_list"),
                      InlineKeyboardButton("🌐 Language", callback_data="language")]
-                ]
+                ])
         else:
             # No preset theme - apply custom layout
             # Get user language from context or database

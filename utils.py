@@ -3860,3 +3860,49 @@ INTERFACE_TRANSLATIONS = {
 def get_translation(key, language='en'):
     """Get translation for a key in specified language"""
     return INTERFACE_TRANSLATIONS.get(language, INTERFACE_TRANSLATIONS['en']).get(key, key)
+
+# ============================================================================
+# BOT SETTINGS HELPERS (for feature toggles)
+# ============================================================================
+
+def get_bot_setting(key: str, default: str | None = None):
+    """Get a bot setting value from database"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM bot_settings WHERE setting_key = %s", (key,))
+        row = c.fetchone()
+        return row['setting_value'] if row else default
+    except Exception as e:
+        logger.error(f"Error reading bot setting {key}: {e}")
+        return default
+    finally:
+        if conn:
+            conn.close()
+
+def set_bot_setting(key: str, value: str):
+    """Set a bot setting value in database"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
+        """, (key, value))
+        conn.commit()
+        logger.info(f"Bot setting '{key}' set to '{value}'")
+    except Exception as e:
+        logger.error(f"Error writing bot setting {key}: {e}")
+        if conn and conn.status == 1:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+def is_daily_rewards_enabled() -> bool:
+    """Check if Daily Rewards button should be shown in start menu"""
+    val = get_bot_setting("show_daily_rewards_button", "true")
+    return str(val).lower() in ("1", "true", "yes", "on")

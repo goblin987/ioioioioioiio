@@ -136,6 +136,7 @@ from admin import (
     handle_adm_clear_reservations_confirm,
     handle_confirm_yes,
     handle_adm_bot_media_message,  # Import bot media handler
+    handle_toggle_daily_rewards_button,  # Daily Rewards toggle
     # Bulk product handlers
     handle_adm_bulk_city, handle_adm_bulk_dist, handle_adm_bulk_type, handle_adm_bulk_add,
     handle_adm_bulk_size, handle_adm_bulk_custom_size, handle_adm_bulk_custom_size_message,
@@ -752,6 +753,7 @@ def callback_query_router(func):
                 "admin_users_menu": admin.handle_admin_users_menu,
                 "admin_marketing_menu": admin.handle_admin_marketing_menu,
                 "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
+                "toggle_daily_rewards_button": handle_toggle_daily_rewards_button,
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "toggle_human_verification": admin.handle_toggle_human_verification,
                 "set_verification_attempts": admin.handle_set_verification_attempts,
