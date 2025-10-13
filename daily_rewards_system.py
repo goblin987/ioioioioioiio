@@ -43,12 +43,14 @@ def get_all_cases() -> Dict:
         ''')
         cases = {}
         for row in c.fetchall():
+            # rewards_config is already a dict (JSONB in PostgreSQL), no need to json.loads()
+            rewards = row['rewards_config'] if row['rewards_config'] else {}
             cases[row['case_type']] = {
                 'name': row['case_type'].title(),
                 'cost': row['cost'],
                 'emoji': '🎁',  # Default, can be customized
                 'enabled': row['enabled'],
-                'rewards': json.loads(row['rewards_config']) if row['rewards_config'] else {}
+                'rewards': rewards
             }
         return cases
     finally:
