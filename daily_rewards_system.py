@@ -50,7 +50,10 @@ def get_all_cases() -> Dict:
                 'cost': row['cost'],
                 'emoji': '🎁',  # Default, can be customized
                 'enabled': row['enabled'],
-                'rewards': rewards
+                'rewards': rewards,
+                'color': '#FFD700',  # Default gold color
+                'animation_speed': 'fast',  # Default animation speed
+                'description': f'Open {row["case_type"]} case'  # Default description
             }
         return cases
     finally:
