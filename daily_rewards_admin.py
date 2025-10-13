@@ -365,7 +365,7 @@ async def handle_admin_save_chance(update: Update, context: ContextTypes.DEFAULT
 # ============================================================================
 
 async def handle_admin_manage_cases(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Manage cases - list all cases"""
+    """Manage cases - list all cases from database"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -375,22 +375,27 @@ async def handle_admin_manage_cases(update: Update, context: ContextTypes.DEFAUL
     
     await query.answer()
     
+    # Get cases from database
+    cases = get_all_cases()
+    
     msg = "📦 CASE MANAGER\n\n"
-    msg += "Current Cases:\n\n"
     
-    for case_type, config in CASE_TYPES.items():
-        msg += f"{config['emoji']} {config['name']}\n"
-        msg += f"   💰 Cost: {config['cost']} points\n"
-        msg += f"   📝 {config['description']}\n\n"
+    if cases:
+        msg += "Current Cases:\n\n"
+        for case_type, config in cases.items():
+            msg += f"🎁 {case_type.title()}\n"
+            msg += f"   💰 Cost: {config['cost']} points\n\n"
+    else:
+        msg += "❌ No cases created yet.\n\n"
     
-    msg += "💡 Click a case to edit or create a new one"
+    msg += "💡 Create, edit, or delete cases"
     
     keyboard = []
     
     # Existing cases
-    for case_type, config in CASE_TYPES.items():
+    for case_type in cases.keys():
         keyboard.append([InlineKeyboardButton(
-            f"{config['emoji']} Edit {config['name']}",
+            f"✏️ Edit {case_type.title()}",
             callback_data=f"admin_edit_case|{case_type}"
         )])
     
@@ -403,7 +408,7 @@ async def handle_admin_manage_cases(update: Update, context: ContextTypes.DEFAUL
     )
 
 async def handle_admin_edit_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Edit specific case"""
+    """Edit specific case from database"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -416,38 +421,42 @@ async def handle_admin_edit_case(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     case_type = params[0]
-    config = CASE_TYPES.get(case_type)
     
-    if not config:
-        await query.answer("Case not found", show_alert=True)
-        return
-    
-    await query.answer()
-    
-    msg = f"{config['emoji']} EDIT CASE\n\n"
-    msg += f"Name: {config['name']}\n"
-    msg += f"Cost: {config['cost']} points\n"
-    msg += f"Description: {config['description']}\n"
-    msg += f"Animation: {config['animation_speed']}\n\n"
-    msg += "Reward Chances:\n"
-    for outcome, chance in config['rewards'].items():
-        # Replace underscores with spaces for display
-        outcome_display = outcome.replace('_', ' ').title()
-        msg += f"   • {outcome_display}: {chance}%\n"
-    
-    msg += "\nWhat would you like to edit?"
-    
-    keyboard = [
-        [InlineKeyboardButton("💰 Change Cost", callback_data=f"admin_case_cost|{case_type}")],
-        [InlineKeyboardButton("📝 Change Description", callback_data=f"admin_case_desc|{case_type}")],
-        [InlineKeyboardButton("🎰 Edit Rewards", callback_data=f"admin_case_rewards|{case_type}")],
-        [InlineKeyboardButton("⬅️ Back to Cases", callback_data="admin_manage_cases")]
-    ]
-    
-    await query.edit_message_text(
-        msg,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    # Get case from database
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT case_type, enabled, cost, rewards_config
+            FROM case_settings
+            WHERE case_type = %s
+        ''', (case_type,))
+        
+        case = c.fetchone()
+        
+        if not case:
+            await query.answer("Case not found", show_alert=True)
+            return
+        
+        await query.answer()
+        
+        msg = f"✏️ EDIT CASE: {case_type.upper()}\n\n"
+        msg += f"💰 Cost: {case['cost']} points\n"
+        msg += f"✅ Enabled: {'Yes' if case['enabled'] else 'No'}\n\n"
+        msg += "What would you like to do?"
+        
+        keyboard = [
+            [InlineKeyboardButton("💰 Change Cost", callback_data=f"admin_case_cost|{case_type}")],
+            [InlineKeyboardButton("🗑️ Delete Case", callback_data=f"admin_delete_case|{case_type}")],
+            [InlineKeyboardButton("⬅️ Back to Cases", callback_data="admin_manage_cases")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    finally:
+        conn.close()
 
 async def handle_admin_case_cost(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Change case cost"""
@@ -496,7 +505,7 @@ async def handle_admin_case_cost(update: Update, context: ContextTypes.DEFAULT_T
     )
 
 async def handle_admin_save_case_cost(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Save case cost (placeholder)"""
+    """Save case cost to database"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -511,14 +520,29 @@ async def handle_admin_save_case_cost(update: Update, context: ContextTypes.DEFA
     case_type = params[0]
     cost = int(params[1])
     
-    # TODO: Save to database
-    await query.answer(f"✅ Cost set to {cost} points! (Feature coming soon)", show_alert=True)
+    # Save to database
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            UPDATE case_settings
+            SET cost = %s
+            WHERE case_type = %s
+        ''', (cost, case_type))
+        conn.commit()
+        await query.answer(f"✅ Cost set to {cost} points!", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error saving case cost: {e}")
+        await query.answer("❌ Error saving cost", show_alert=True)
+        conn.rollback()
+    finally:
+        conn.close()
     
     # Return to case editor
     await handle_admin_edit_case(update, context, [case_type])
 
 async def handle_admin_create_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Create new case (placeholder)"""
+    """Create new case - Step 1: Enter name"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -526,11 +550,148 @@ async def handle_admin_create_case(update: Update, context: ContextTypes.DEFAULT
         await query.answer("Access denied", show_alert=True)
         return
     
-    await query.answer("Feature coming soon! Edit existing cases for now.", show_alert=True)
-    await handle_admin_manage_cases(update, context)
+    await query.answer()
+    
+    msg = "➕ CREATE NEW CASE\n\n"
+    msg += "Step 1: Choose a name for your case\n\n"
+    msg += "Examples:\n"
+    msg += "• starter\n"
+    msg += "• bronze\n"
+    msg += "• silver\n"
+    msg += "• gold\n"
+    msg += "• diamond\n\n"
+    msg += "💡 Use lowercase, no spaces"
+    
+    # Quick name suggestions
+    keyboard = [
+        [InlineKeyboardButton("🥉 Bronze", callback_data="admin_create_case_name|bronze")],
+        [InlineKeyboardButton("🥈 Silver", callback_data="admin_create_case_name|silver")],
+        [InlineKeyboardButton("🥇 Gold", callback_data="admin_create_case_name|gold")],
+        [InlineKeyboardButton("💎 Diamond", callback_data="admin_create_case_name|diamond")],
+        [InlineKeyboardButton("⬅️ Back", callback_data="admin_manage_cases")]
+    ]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
-async def handle_admin_case_desc(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Change case description (placeholder)"""
+async def handle_admin_create_case_name(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create case - Step 2: Set cost"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid name", show_alert=True)
+        return
+    
+    case_name = params[0]
+    
+    # Check if case already exists
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('SELECT case_type FROM case_settings WHERE case_type = %s', (case_name,))
+        if c.fetchone():
+            await query.answer(f"❌ Case '{case_name}' already exists!", show_alert=True)
+            await handle_admin_create_case(update, context)
+            return
+    finally:
+        conn.close()
+    
+    await query.answer()
+    
+    msg = f"➕ CREATE CASE: {case_name.upper()}\n\n"
+    msg += "Step 2: Set the cost in points\n\n"
+    msg += "💡 Recommended pricing:\n"
+    msg += "• Starter: 10-20 points\n"
+    msg += "• Mid-tier: 30-60 points\n"
+    msg += "• High-tier: 70-150 points"
+    
+    costs = [10, 20, 30, 50, 75, 100, 150, 200]
+    
+    keyboard = []
+    row = []
+    for i, cost in enumerate(costs):
+        row.append(InlineKeyboardButton(
+            f"{cost} pts",
+            callback_data=f"admin_save_new_case|{case_name}|{cost}"
+        ))
+        if (i + 1) % 4 == 0:
+            keyboard.append(row)
+            row = []
+    
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_create_case")])
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_save_new_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save new case to database"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    case_name = params[0]
+    cost = int(params[1])
+    
+    # Create case in database
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            INSERT INTO case_settings (case_type, enabled, cost, rewards_config)
+            VALUES (%s, TRUE, %s, %s)
+        ''', (case_name, cost, json.dumps({})))
+        conn.commit()
+        await query.answer(f"✅ Case '{case_name}' created!", show_alert=True)
+        
+        # Show success message
+        msg = f"✅ CASE CREATED!\n\n"
+        msg += f"Name: {case_name.title()}\n"
+        msg += f"Cost: {cost} points\n\n"
+        msg += "Next steps:\n"
+        msg += "1. Go to 'Product Pool Manager'\n"
+        msg += "2. Select your new case\n"
+        msg += "3. Add products with win chances\n"
+        msg += "4. Set lose emoji\n\n"
+        msg += "Your case is now ready for users!"
+        
+        keyboard = [
+            [InlineKeyboardButton("🎁 Add Products Now", callback_data="admin_product_pool")],
+            [InlineKeyboardButton("📦 Back to Cases", callback_data="admin_manage_cases")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    except Exception as e:
+        logger.error(f"Error creating case: {e}")
+        await query.answer("❌ Error creating case", show_alert=True)
+        conn.rollback()
+        await handle_admin_manage_cases(update, context)
+    finally:
+        conn.close()
+
+async def handle_admin_delete_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Delete case from database"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -543,7 +704,78 @@ async def handle_admin_case_desc(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     case_type = params[0]
-    await query.answer("Feature coming soon! Descriptions are in daily_rewards_system.py", show_alert=True)
+    await query.answer()
+    
+    msg = f"🗑️ DELETE CASE: {case_type.upper()}\n\n"
+    msg += "⚠️ Are you sure you want to delete this case?\n\n"
+    msg += "This will:\n"
+    msg += "• Remove the case from the database\n"
+    msg += "• Remove all product rewards\n"
+    msg += "• Users won't be able to open it\n\n"
+    msg += "This action cannot be undone!"
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Yes, Delete", callback_data=f"admin_confirm_delete_case|{case_type}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"admin_edit_case|{case_type}")]
+    ]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_confirm_delete_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm and delete case"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_type = params[0]
+    
+    # Delete from database
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        # Delete case rewards
+        c.execute('DELETE FROM case_reward_pools WHERE case_type = %s', (case_type,))
+        # Delete lose emoji
+        c.execute('DELETE FROM case_lose_emojis WHERE case_type = %s', (case_type,))
+        # Delete case
+        c.execute('DELETE FROM case_settings WHERE case_type = %s', (case_type,))
+        conn.commit()
+        await query.answer(f"✅ Case '{case_type}' deleted!", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error deleting case: {e}")
+        await query.answer("❌ Error deleting case", show_alert=True)
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    # Return to case manager
+    await handle_admin_manage_cases(update, context)
+
+async def handle_admin_case_desc(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Change case description (not used in new system)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_type = params[0]
+    await query.answer("Description not needed in new system", show_alert=True)
     await handle_admin_edit_case(update, context, [case_type])
 
 async def handle_admin_case_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
