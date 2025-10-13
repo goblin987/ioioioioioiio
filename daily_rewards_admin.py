@@ -1050,3 +1050,113 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+# ============================================================================
+# TEXT INPUT HANDLERS (for custom name/cost)
+# ============================================================================
+
+async def handle_case_name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle custom case name text input"""
+    user_id = update.effective_user.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    case_name = update.message.text.strip().lower()
+    
+    # Validate name
+    if not case_name or len(case_name) > 30:
+        await update.message.reply_text(
+            "❌ Invalid name. Please use 1-30 characters.\nTry again:"
+        )
+        return
+    
+    if ' ' in case_name:
+        await update.message.reply_text(
+            "❌ No spaces allowed. Use underscore instead.\nTry again:"
+        )
+        return
+    
+    # Clear state
+    context.user_data.pop('state', None)
+    
+    # Continue to cost selection
+    from telegram import Update as TgUpdate
+    from telegram import CallbackQuery
+    
+    # Simulate callback query to reuse existing handler
+    context.user_data['custom_case_name'] = case_name
+    
+    await update.message.reply_text(f"✅ Name set to: {case_name}\n\nNow setting cost...")
+    
+    # Redirect to cost selection by calling the handler directly
+    # We need to create a fake callback query
+    class FakeCallbackQuery:
+        def __init__(self, user_id, message):
+            self.from_user = type('obj', (object,), {'id': user_id})
+            self.message = message
+        
+        async def answer(self, *args, **kwargs):
+            pass
+        
+        async def edit_message_text(self, text, **kwargs):
+            await self.message.reply_text(text, reply_markup=kwargs.get('reply_markup'))
+    
+    fake_update = type('obj', (object,), {
+        'callback_query': FakeCallbackQuery(user_id, update.message),
+        'effective_user': update.effective_user
+    })()
+    
+    await handle_admin_create_case_name(fake_update, context, [case_name])
+
+async def handle_case_cost_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle custom case cost text input"""
+    user_id = update.effective_user.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    try:
+        cost = int(update.message.text.strip())
+        
+        if cost < 1 or cost > 10000:
+            await update.message.reply_text(
+                "❌ Cost must be between 1-10000 points.\nTry again:"
+            )
+            return
+        
+        # Get pending case name
+        case_name = context.user_data.get('pending_case_name')
+        if not case_name:
+            await update.message.reply_text("❌ Session expired. Please start over.")
+            context.user_data.pop('state', None)
+            return
+        
+        # Clear state
+        context.user_data.pop('state', None)
+        
+        await update.message.reply_text(f"✅ Cost set to: {cost} points\n\nShowing preview...")
+        
+        # Simulate callback query
+        class FakeCallbackQuery:
+            def __init__(self, user_id, message):
+                self.from_user = type('obj', (object,), {'id': user_id})
+                self.message = message
+            
+            async def answer(self, *args, **kwargs):
+                pass
+            
+            async def edit_message_text(self, text, **kwargs):
+                await self.message.reply_text(text, reply_markup=kwargs.get('reply_markup'))
+        
+        fake_update = type('obj', (object,), {
+            'callback_query': FakeCallbackQuery(user_id, update.message),
+            'effective_user': update.effective_user
+        })()
+        
+        await handle_admin_set_case_cost(fake_update, context, [case_name, str(cost)])
+        
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Please enter a valid number.\nTry again:"
+        )
+

@@ -1079,7 +1079,9 @@ def callback_query_router(func):
                     handle_admin_case_desc,
                     handle_admin_case_rewards,
                     handle_admin_give_test_points,
-                    handle_admin_case_stats
+                    handle_admin_case_stats,
+                    handle_case_name_input,
+                    handle_case_cost_input
                 )
                 # NEW CS:GO-Style Case System
                 from case_rewards_admin import (
@@ -1265,6 +1267,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_referral_bonus': handle_referral_bonus_message,
         'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
         'awaiting_referral_code_payment': handle_referral_code_payment_message,
+        
+        # Daily Rewards case creation handlers
+        'awaiting_case_name': handle_case_name_input,
+        'awaiting_case_cost': handle_case_cost_input,
         
         # Userbot setup message handlers (NEW multi-userbot system)
         'awaiting_new_userbot_name': handle_new_userbot_name_message if USERBOT_AVAILABLE else None,
