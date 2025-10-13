@@ -457,9 +457,9 @@ async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFA
     try:
         # Get current products in rewards pool
         c.execute('''
-            SELECT product_id, product_name, price, stock
+            SELECT id, name, price, available
             FROM products
-            WHERE is_active = TRUE
+            WHERE available > 0
             ORDER BY price DESC
             LIMIT 10
         ''')
@@ -470,11 +470,11 @@ async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFA
         
         if products:
             for p in products:
-                msg += f"🎯 **{p['product_name']}**\n"
+                msg += f"🎯 **{p['name']}**\n"
                 msg += f"   💰 Price: €{p['price']:.2f}\n"
-                msg += f"   📦 Stock: {p['stock']}\n\n"
+                msg += f"   📦 Stock: {p['available']}\n\n"
         else:
-            msg += "⚠️ No active products available\n\n"
+            msg += "⚠️ No products available\n\n"
         
         msg += "💡 **Note:** Cases award random products from your active product catalog.\n"
         msg += "To add/remove products, use the Product Management menu.\n"
