@@ -570,6 +570,12 @@ flask_app = Flask(__name__)
 telegram_app: Application | None = None
 main_loop = None
 
+# Global handlers for daily rewards (populated in main())
+DAILY_REWARDS_STATE_HANDLERS = {
+    'awaiting_case_name': None,
+    'awaiting_case_cost': None
+}
+
 # --- Callback Data Parsing Decorator ---
 def callback_query_router(func):
     @wraps(func)
@@ -1152,6 +1158,11 @@ def callback_query_router(func):
                     "admin_give_test_points": handle_admin_give_test_points,
                     "admin_case_stats": handle_admin_case_stats,
                 })
+                
+                # Update global state handlers
+                DAILY_REWARDS_STATE_HANDLERS['awaiting_case_name'] = handle_case_name_input
+                DAILY_REWARDS_STATE_HANDLERS['awaiting_case_cost'] = handle_case_cost_input
+                
                 logger.info("✅ Daily rewards handlers registered")
             except Exception as e:
                 logger.error(f"❌ Failed to register daily rewards handlers: {e}")
@@ -1268,9 +1279,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
         'awaiting_referral_code_payment': handle_referral_code_payment_message,
         
-        # Daily Rewards case creation handlers
-        'awaiting_case_name': handle_case_name_input,
-        'awaiting_case_cost': handle_case_cost_input,
+        # Daily Rewards case creation handlers (populated from global dict)
+        'awaiting_case_name': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_name'),
+        'awaiting_case_cost': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_cost'),
         
         # Userbot setup message handlers (NEW multi-userbot system)
         'awaiting_new_userbot_name': handle_new_userbot_name_message if USERBOT_AVAILABLE else None,
