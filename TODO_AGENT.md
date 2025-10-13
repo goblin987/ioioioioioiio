@@ -75,13 +75,13 @@
 
 ## Latest Fixes
 
-### Fix #1: Daily Rewards Button Missing (Commit c7171f9)
+### Fix #1: Daily Rewards Button Missing from UI Editor (Commit c7171f9)
 - ✅ **FOUND THE ISSUE**: Daily Rewards was NOT in the UI editor's available buttons list
 - ✅ Added to `AVAILABLE_BUTTONS['start_menu']` in marketing_promotions.py (line 4369)
 - ✅ Now appears in "EDITING: Start Menu" → "Available Buttons" section
 - ✅ Can be dragged and placed in custom layouts
 
-### Fix #2: Auto-Activate Custom Theme (Commit 66fadfa)
+### Fix #2: Auto-Activate Custom Theme After Saving (Commit 66fadfa)
 - ✅ **ISSUE**: After creating/editing custom UI, admin had to manually activate it
 - ✅ **FIX**: Added auto-activation after saving (lines 5289-5291):
   - Deactivates all preset themes: `UPDATE ui_themes SET is_active = FALSE`
@@ -89,6 +89,14 @@
 - ✅ Admin now sees their new theme immediately on `/start`
 - ✅ Notification changed from "saved successfully" to "saved and activated!"
 
+### Fix #3: Daily Rewards Button Callback "Unknown Action" (Commit ad4927f)
+- ✅ **ROOT CAUSE**: Button text "🎁 Daily Rewards" was not mapped to callback handler
+- ✅ **SYMPTOM**: Logs showed "No async handler function found or mapped for callback command: noop"
+- ✅ **FIX**: Added callback mapping in `map_button_text_to_callback()` (line 1861):
+  - `'🎁 Daily Rewards': 'daily_rewards_menu'`
+- ✅ Also added to translation map (line 1803) for multi-language support
+- ✅ Button now correctly triggers `handle_daily_rewards_menu` handler
+
 ---
-Last Updated: Auto-activation deployed - custom themes activate immediately after saving
+Last Updated: All 3 critical fixes deployed - Daily Rewards fully functional in custom UI editor
 
