@@ -318,11 +318,15 @@ def open_case(user_id: int, case_type: str) -> Dict:
     try:
         # Get cases from database
         all_cases = get_all_cases()
+        logger.info(f"📦 All cases: {list(all_cases.keys())}")
         
         if case_type not in all_cases:
+            logger.error(f"❌ Case type '{case_type}' not found in {list(all_cases.keys())}")
             return {'success': False, 'message': '❌ Invalid case type!'}
         
         case_config = all_cases[case_type]
+        logger.info(f"📦 Case config for '{case_type}': {case_config}")
+        
         cost = case_config['cost']
         user_points = get_user_points(user_id)
         
@@ -330,6 +334,15 @@ def open_case(user_id: int, case_type: str) -> Dict:
             return {
                 'success': False,
                 'message': f'❌ Not enough points! Need {cost}, you have {user_points}'
+            }
+        
+        # Check if case has rewards configured
+        rewards = case_config.get('rewards', {})
+        if not rewards:
+            logger.error(f"❌ Case '{case_type}' has no rewards configured!")
+            return {
+                'success': False,
+                'message': f'❌ Case not configured! Admin needs to set up rewards for this case.'
             }
         
         # Deduct points
@@ -342,7 +355,8 @@ def open_case(user_id: int, case_type: str) -> Dict:
         ''', (cost, user_id))
         
         # Determine outcome (weighted random)
-        outcome = determine_case_outcome(case_config['rewards'])
+        logger.info(f"🎲 Determining outcome with rewards: {rewards}")
+        outcome = determine_case_outcome(rewards)
         
         # Process outcome
         reward_data = process_case_outcome(user_id, case_type, outcome, cost, c)
@@ -384,9 +398,22 @@ def open_case(user_id: int, case_type: str) -> Dict:
 
 def determine_case_outcome(rewards: Dict[str, int]) -> str:
     """Weighted random outcome selection"""
+    if not rewards:
+        logger.error("Empty rewards dict passed to determine_case_outcome")
+        return 'lose_all'  # Default fallback
+    
     outcomes = list(rewards.keys())
     weights = list(rewards.values())
-    return random.choices(outcomes, weights=weights, k=1)[0]
+    
+    if not outcomes or not weights:
+        logger.error(f"Empty outcomes or weights: outcomes={outcomes}, weights={weights}")
+        return 'lose_all'  # Default fallback
+    
+    try:
+        return random.choices(outcomes, weights=weights, k=1)[0]
+    except (IndexError, ValueError) as e:
+        logger.error(f"Error in random.choices: {e}, outcomes={outcomes}, weights={weights}")
+        return 'lose_all'  # Default fallback
 
 def process_case_outcome(user_id: int, case_type: str, outcome: str, cost: int, cursor) -> Dict:
     """Process the outcome and update database"""
