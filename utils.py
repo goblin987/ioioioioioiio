@@ -1979,10 +1979,10 @@ def get_progress_bar(purchases):
         return get_progress_bar_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-    try:
-        p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
-        filled = min(sum(1 for t in thresholds if p_int >= t), 5)
-        return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
+        try:
+            p_int = int(purchases); thresholds = [0, 2, 5, 8, 10]
+            filled = min(sum(1 for t in thresholds if p_int >= t), 5)
+            return '[' + '🟩' * filled + '⬜️' * (5 - filled) + ']'
         except (ValueError, TypeError): 
             return '[⬜️⬜️⬜️⬜️⬜️]'
 
@@ -2381,11 +2381,11 @@ def get_user_status(purchases):
         return get_user_status_enhanced(purchases)
     except ImportError:
         # Fallback to hardcoded system
-    try:
-        p_int = int(purchases)
-        if p_int >= 10: return "VIP 👑"
-        elif p_int >= 5: return "Regular ⭐"
-        else: return "New 🌱"
+        try:
+            p_int = int(purchases)
+            if p_int >= 10: return "VIP 👑"
+            elif p_int >= 5: return "Regular ⭐"
+            else: return "New 🌱"
         except (ValueError, TypeError): 
             return "New 🌱"
 
@@ -3649,7 +3649,7 @@ def get_verification_attempt_limit():
         return 3  # Default fallback
     finally:
         if conn:
-        conn.close()
+            conn.close()
         
 def get_user_verification_attempts(user_id):
     """Get user's current verification attempt count"""
