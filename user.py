@@ -778,13 +778,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Check if file exists using asyncio.to_thread
         if await asyncio.to_thread(os.path.exists, media_path):
             try:
-                # Pass the file path directly to the send_* methods
+                # Pass the file path directly to the send_* methods with rate limiting
+                from utils import send_media_with_retry
                 if media_type == "photo":
-                    await context.bot.send_photo(chat_id=chat_id, photo=media_path)
+                    await send_media_with_retry(context.bot, chat_id, media_path, media_type='photo')
                 elif media_type == "video":
-                    await context.bot.send_video(chat_id=chat_id, video=media_path)
+                    await send_media_with_retry(context.bot, chat_id, media_path, media_type='video')
                 elif media_type == "gif":
-                    await context.bot.send_animation(chat_id=chat_id, animation=media_path)
+                    await send_media_with_retry(context.bot, chat_id, media_path, media_type='animation')
                 else:
                     logger.warning(f"Unsupported BOT_MEDIA type for sending: {media_type}")
 

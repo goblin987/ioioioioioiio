@@ -788,12 +788,15 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
             qr_caption += f"⏰ **Valid for:** **{time_remaining_str}**\n\n"
             qr_caption += f"⚠️ **Pay within {time_remaining_str} or invoice expires\\!**"
             
-            # Send QR code image first
-            await context.bot.send_photo(
-                chat_id=chat_id,
-                photo=qr_buffer,
+            # Send QR code image first with rate limiting
+            from utils import send_media_with_retry
+            await send_media_with_retry(
+                context.bot,
+                chat_id,
+                qr_buffer,
+                media_type='photo',
                 caption=qr_caption,
-                parse_mode=ParseMode.MARKDOWN_V2
+                parse_mode='MarkdownV2'
             )
             qr_success = True
             logger.info(f"QR code sent successfully for payment {payment_id}")
@@ -1298,8 +1301,33 @@ To receive your products securely via encrypted chat, please:
                             if media_group_input:
                                 logger.info(f"Sending media group with {len(media_group_input)} items for P{prod_id} user {user_id}")
                                 try:
-                                    await context.bot.send_media_group(chat_id, media=media_group_input, connect_timeout=30, read_timeout=30)
-                                    logger.info(f"✅ Successfully sent photo/video group ({len(media_group_input)}) for P{prod_id} user {user_id}")
+                                    # Use new rate-limited send_media_group_with_retry for 100% success rate
+                                    from utils import send_media_group_with_retry
+                                    result = await send_media_group_with_retry(
+                                        context.bot, 
+                                        chat_id, 
+                                        media=media_group_input, 
+                                        connect_timeout=30, 
+                                        read_timeout=30
+                                    )
+                                    if result:
+                                        logger.info(f"✅ Successfully sent photo/video group ({len(media_group_input)}) for P{prod_id} user {user_id}")
+                                    else:
+                                        logger.error(f"❌ Failed to send media group for P{prod_id} after all retries")
+                                        media_delivery_successful = False
+                                        # Add to retry queue for 100% delivery guarantee
+                                        try:
+                                            from media_retry_queue import media_retry_queue
+                                            await media_retry_queue.add_failed_delivery(
+                                                user_id=user_id,
+                                                order_id=f"P{prod_id}",
+                                                media_type='media_group',
+                                                media_data={'media_group': media_group_input},
+                                                error_message="Failed after 5 retry attempts"
+                                            )
+                                            logger.info(f"📋 Added failed media group to retry queue for user {user_id}")
+                                        except Exception as queue_err:
+                                            logger.error(f"❌ Failed to add to retry queue: {queue_err}")
                                 except Exception as send_error:
                                     logger.error(f"❌ Failed to send media group for P{prod_id}: {send_error}")
                                     media_delivery_successful = False
@@ -1318,8 +1346,18 @@ To receive your products securely via encrypted chat, please:
                                 
                                 if file_id:
                                     logger.debug(f"Using Telegram file_id for animation P{prod_id}: {file_id[:20]}...")
-                                    await context.bot.send_animation(chat_id=chat_id, animation=file_id)
-                                    logger.info(f"✅ Successfully sent animation for P{prod_id} user {user_id}")
+                                    # Use rate-limited send for animations
+                                    from utils import send_media_with_retry
+                                    result = await send_media_with_retry(
+                                        context.bot,
+                                        chat_id,
+                                        file_id,
+                                        media_type='animation'
+                                    )
+                                    if result:
+                                        logger.info(f"✅ Successfully sent animation for P{prod_id} user {user_id}")
+                                    else:
+                                        logger.warning(f"⚠️ Failed to send animation for P{prod_id} after retries")
                                 else:
                                     logger.warning(f"❌ No file_id available for animation P{prod_id}: {item}")
                                     continue

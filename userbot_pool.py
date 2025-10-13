@@ -564,7 +564,8 @@ class UserbotPool:
                             except:
                                 pass
                         
-                        await asyncio.sleep(1)
+                        # Add small delay between media sends to avoid overwhelming Telegram
+                        await asyncio.sleep(0.5)
                         
                     except Exception as e:
                         logger.error(f"❌ Failed to send SECRET CHAT media {idx}: {e}", exc_info=True)

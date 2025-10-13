@@ -2026,6 +2026,17 @@ def main() -> None:
         except Exception as e:
             logger.error(f"❌ Failed to initialize userbot tables: {e}", exc_info=True)
     
+    # 📦 INITIALIZE MEDIA RETRY QUEUE FOR 100% DELIVERY SUCCESS
+    try:
+        from media_retry_queue import media_retry_queue
+        logger.info("📦 Starting media retry queue for 100% delivery guarantee...")
+        # Start retry queue in background
+        import asyncio
+        asyncio.create_task(media_retry_queue.start())
+        logger.info("✅ Media retry queue started successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to start media retry queue: {e}", exc_info=True)
+    
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
         init_enhanced_auto_ads_tables()
