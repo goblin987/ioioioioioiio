@@ -313,10 +313,13 @@ def open_case(user_id: int, case_type: str) -> Dict:
     c = conn.cursor()
     
     try:
-        if case_type not in CASE_TYPES:
+        # Get cases from database
+        all_cases = get_all_cases()
+        
+        if case_type not in all_cases:
             return {'success': False, 'message': '❌ Invalid case type!'}
         
-        case_config = CASE_TYPES[case_type]
+        case_config = all_cases[case_type]
         cost = case_config['cost']
         user_points = get_user_points(user_id)
         
