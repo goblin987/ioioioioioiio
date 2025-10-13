@@ -1067,6 +1067,9 @@ def callback_query_router(func):
                     handle_admin_edit_case,
                     handle_admin_case_cost,
                     handle_admin_save_case_cost,
+                    handle_admin_create_case,
+                    handle_admin_case_desc,
+                    handle_admin_case_rewards,
                     handle_admin_give_test_points,
                     handle_admin_case_stats
                 )
@@ -1090,6 +1093,9 @@ def callback_query_router(func):
                     "admin_edit_case": handle_admin_edit_case,
                     "admin_case_cost": handle_admin_case_cost,
                     "admin_save_case_cost": handle_admin_save_case_cost,
+                    "admin_create_case": handle_admin_create_case,
+                    "admin_case_desc": handle_admin_case_desc,
+                    "admin_case_rewards": handle_admin_case_rewards,
                     "admin_give_test_points": handle_admin_give_test_points,
                     "admin_case_stats": handle_admin_case_stats,
                 })

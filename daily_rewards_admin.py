@@ -86,11 +86,11 @@ async def handle_admin_product_pool(update: Update, context: ContextTypes.DEFAUL
     c = conn.cursor()
     
     try:
-        # Get all products with stock
+        # Get all products with available stock
         c.execute('''
-            SELECT id, name, product_emoji, stock, price
+            SELECT id, name, product_emoji, available, price
             FROM products
-            WHERE stock > 0
+            WHERE available > 0
             ORDER BY price DESC
             LIMIT 20
         ''')
@@ -103,11 +103,11 @@ async def handle_admin_product_pool(update: Update, context: ContextTypes.DEFAUL
             msg += "Available Products:\n"
             for product in products:
                 emoji = product['product_emoji'] or '🎁'
-                msg += f"{emoji} {product['name']} - {product['price']}€ (Stock: {product['stock']})\n"
+                msg += f"{emoji} {product['name']} - {product['price']}€ (Stock: {product['available']})\n"
             msg += "\n💡 Click a product below to set its win chance and emoji"
         else:
             msg += "❌ No products available\n\n"
-            msg += "Add products with stock first!"
+            msg += "Add products with available stock first!"
         
         keyboard = []
         
@@ -161,7 +161,7 @@ async def handle_admin_edit_product_pool(update: Update, context: ContextTypes.D
     try:
         # Get product details
         c.execute('''
-            SELECT id, name, product_emoji, stock, price
+            SELECT id, name, product_emoji, available, price
             FROM products
             WHERE id = %s
         ''', (product_id,))
@@ -176,7 +176,7 @@ async def handle_admin_edit_product_pool(update: Update, context: ContextTypes.D
         msg = f"{emoji} CONFIGURE PRODUCT\n\n"
         msg += f"Product: {product['name']}\n"
         msg += f"Value: {product['price']}€\n"
-        msg += f"Stock: {product['stock']}\n"
+        msg += f"Stock: {product['available']}\n"
         msg += f"Current Emoji: {emoji}\n\n"
         msg += "What would you like to do?"
         
@@ -515,6 +515,52 @@ async def handle_admin_save_case_cost(update: Update, context: ContextTypes.DEFA
     await query.answer(f"✅ Cost set to {cost} points! (Feature coming soon)", show_alert=True)
     
     # Return to case editor
+    await handle_admin_edit_case(update, context, [case_type])
+
+async def handle_admin_create_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Create new case (placeholder)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer("Feature coming soon! Edit existing cases for now.", show_alert=True)
+    await handle_admin_manage_cases(update, context)
+
+async def handle_admin_case_desc(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Change case description (placeholder)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_type = params[0]
+    await query.answer("Feature coming soon! Descriptions are in daily_rewards_system.py", show_alert=True)
+    await handle_admin_edit_case(update, context, [case_type])
+
+async def handle_admin_case_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit case rewards (placeholder)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_type = params[0]
+    await query.answer("Feature coming soon! Rewards are in daily_rewards_system.py", show_alert=True)
     await handle_admin_edit_case(update, context, [case_type])
 
 # ============================================================================
