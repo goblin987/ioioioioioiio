@@ -42,15 +42,15 @@ async def handle_admin_daily_rewards_main(update: Update, context: ContextTypes.
         c.execute('SELECT COUNT(*) as count FROM case_openings')
         total_cases = c.fetchone()['count']
         
-        msg = "🎁 **DAILY REWARDS ADMIN**\n\n"
-        msg += f"👥 Active Users: **{total_users}**\n"
-        msg += f"💰 Points in Circulation: **{total_points}**\n"
-        msg += f"📦 Cases Opened: **{total_cases}**\n\n"
-        msg += "**What would you like to manage?**"
+        msg = "🎁 DAILY REWARDS ADMIN\n\n"
+        msg += f"👥 Active Users: {total_users}\n"
+        msg += f"💰 Points in Circulation: {total_points}\n"
+        msg += f"📦 Cases Opened: {total_cases}\n\n"
+        msg += "What would you like to manage?"
         
     except Exception as e:
         logger.error(f"Error loading admin stats: {e}")
-        msg = "🎁 **DAILY REWARDS ADMIN**\n\n❌ Error loading stats"
+        msg = "🎁 DAILY REWARDS ADMIN\n\n❌ Error loading stats"
     finally:
         conn.close()
     
@@ -65,7 +65,6 @@ async def handle_admin_daily_rewards_main(update: Update, context: ContextTypes.
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 # ============================================================================
@@ -97,11 +96,11 @@ async def handle_admin_product_pool(update: Update, context: ContextTypes.DEFAUL
         ''')
         products = c.fetchall()
         
-        msg = "🎁 **PRODUCT POOL MANAGER**\n\n"
-        msg += "**Step 1:** Select a product to configure\n\n"
+        msg = "🎁 PRODUCT POOL MANAGER\n\n"
+        msg += "Step 1: Select a product to configure\n\n"
         
         if products:
-            msg += "**Available Products:**\n"
+            msg += "Available Products:\n"
             for product in products:
                 emoji = product['product_emoji'] or '🎁'
                 msg += f"{emoji} {product['name']} - {product['price']}€ (Stock: {product['stock']})\n"
@@ -138,7 +137,6 @@ async def handle_admin_product_pool(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 async def handle_admin_edit_product_pool(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -175,12 +173,12 @@ async def handle_admin_edit_product_pool(update: Update, context: ContextTypes.D
         
         emoji = product['product_emoji'] or '🎁'
         
-        msg = f"{emoji} **CONFIGURE PRODUCT**\n\n"
-        msg += f"**Product:** {product['name']}\n"
-        msg += f"**Value:** {product['price']}€\n"
-        msg += f"**Stock:** {product['stock']}\n"
-        msg += f"**Current Emoji:** {emoji}\n\n"
-        msg += "**What would you like to do?**"
+        msg = f"{emoji} CONFIGURE PRODUCT\n\n"
+        msg += f"Product: {product['name']}\n"
+        msg += f"Value: {product['price']}€\n"
+        msg += f"Stock: {product['stock']}\n"
+        msg += f"Current Emoji: {emoji}\n\n"
+        msg += "What would you like to do?"
         
         keyboard = [
             [InlineKeyboardButton("🎨 Change Emoji", callback_data=f"admin_set_emoji|{product_id}")],
@@ -199,7 +197,6 @@ async def handle_admin_edit_product_pool(update: Update, context: ContextTypes.D
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 async def handle_admin_set_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -218,8 +215,8 @@ async def handle_admin_set_emoji(update: Update, context: ContextTypes.DEFAULT_T
     product_id = int(params[0])
     await query.answer()
     
-    msg = "🎨 **EMOJI PICKER**\n\n"
-    msg += "**Popular Emojis for Rewards:**\n\n"
+    msg = "🎨 EMOJI PICKER\n\n"
+    msg += "Popular Emojis for Rewards:\n\n"
     msg += "Click an emoji to set it for this product\n"
     
     # Emoji categories
@@ -233,7 +230,7 @@ async def handle_admin_set_emoji(update: Update, context: ContextTypes.DEFAULT_T
     keyboard = []
     
     for category, emoji_list in emojis.items():
-        msg += f"\n**{category}:**\n"
+        msg += f"\n{category}:\n"
         row = []
         for emoji in emoji_list:
             msg += f"{emoji} "
@@ -248,7 +245,6 @@ async def handle_admin_set_emoji(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 async def handle_admin_save_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -306,8 +302,8 @@ async def handle_admin_set_chance(update: Update, context: ContextTypes.DEFAULT_
     product_id = int(params[0])
     await query.answer()
     
-    msg = "📊 **SET WIN CHANCE**\n\n"
-    msg += "**How rare should this product be?**\n\n"
+    msg = "📊 SET WIN CHANCE\n\n"
+    msg += "How rare should this product be?\n\n"
     msg += "Select a win chance percentage:\n"
     msg += "• Lower % = More rare = More exciting!\n"
     msg += "• Higher % = More common = More wins!\n\n"
@@ -339,7 +335,6 @@ async def handle_admin_set_chance(update: Update, context: ContextTypes.DEFAULT_
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 async def handle_admin_save_chance(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -380,11 +375,11 @@ async def handle_admin_manage_cases(update: Update, context: ContextTypes.DEFAUL
     
     await query.answer()
     
-    msg = "📦 **CASE MANAGER**\n\n"
-    msg += "**Current Cases:**\n\n"
+    msg = "📦 CASE MANAGER\n\n"
+    msg += "Current Cases:\n\n"
     
     for case_type, config in CASE_TYPES.items():
-        msg += f"{config['emoji']} **{config['name']}**\n"
+        msg += f"{config['emoji']} {config['name']}\n"
         msg += f"   💰 Cost: {config['cost']} points\n"
         msg += f"   📝 {config['description']}\n\n"
     
@@ -405,7 +400,6 @@ async def handle_admin_manage_cases(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 async def handle_admin_edit_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -430,16 +424,18 @@ async def handle_admin_edit_case(update: Update, context: ContextTypes.DEFAULT_T
     
     await query.answer()
     
-    msg = f"{config['emoji']} **EDIT CASE**\n\n"
-    msg += f"**Name:** {config['name']}\n"
-    msg += f"**Cost:** {config['cost']} points\n"
-    msg += f"**Description:** {config['description']}\n"
-    msg += f"**Animation:** {config['animation_speed']}\n\n"
-    msg += "**Reward Chances:**\n"
+    msg = f"{config['emoji']} EDIT CASE\n\n"
+    msg += f"Name: {config['name']}\n"
+    msg += f"Cost: {config['cost']} points\n"
+    msg += f"Description: {config['description']}\n"
+    msg += f"Animation: {config['animation_speed']}\n\n"
+    msg += "Reward Chances:\n"
     for outcome, chance in config['rewards'].items():
-        msg += f"   • {outcome}: {chance}%\n"
+        # Replace underscores with spaces for display
+        outcome_display = outcome.replace('_', ' ').title()
+        msg += f"   • {outcome_display}: {chance}%\n"
     
-    msg += "\n**What would you like to edit?**"
+    msg += "\nWhat would you like to edit?"
     
     keyboard = [
         [InlineKeyboardButton("💰 Change Cost", callback_data=f"admin_case_cost|{case_type}")],
@@ -450,8 +446,7 @@ async def handle_admin_edit_case(update: Update, context: ContextTypes.DEFAULT_T
     
     await query.edit_message_text(
         msg,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 async def handle_admin_case_cost(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -470,7 +465,7 @@ async def handle_admin_case_cost(update: Update, context: ContextTypes.DEFAULT_T
     case_type = params[0]
     await query.answer()
     
-    msg = "💰 **SET CASE COST**\n\n"
+    msg = "💰 SET CASE COST\n\n"
     msg += "Select a new cost for this case:\n\n"
     msg += "💡 Recommended pricing:\n"
     msg += "• Basic: 10-30 points\n"
@@ -498,7 +493,6 @@ async def handle_admin_case_cost(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(
         msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
     )
 
 async def handle_admin_save_case_cost(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -578,7 +572,7 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
     c = conn.cursor()
     
     try:
-        msg = "📊 **STATISTICS**\n\n"
+        msg = "📊 STATISTICS\n\n"
         
         # Case opening breakdown
         c.execute('''
@@ -589,13 +583,15 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
         case_stats = c.fetchall()
         
         if case_stats:
-            msg += "**Cases Opened:**\n"
+            msg += "Cases Opened:\n"
             for stat in case_stats:
-                msg += f"   {stat['case_type']}: {stat['opens']} opens ({stat['spent']} pts)\n"
+                # Replace underscores for display
+                case_display = stat['case_type'].replace('_', ' ').title()
+                msg += f"   {case_display}: {stat['opens']} opens ({stat['spent']} pts)\n"
         else:
             msg += "No cases opened yet\n"
         
-        msg += "\n**Outcome Distribution:**\n"
+        msg += "\nOutcome Distribution:\n"
         c.execute('''
             SELECT outcome_type, COUNT(*) as count
             FROM case_openings
@@ -606,7 +602,9 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
         
         if outcomes:
             for outcome in outcomes:
-                msg += f"   {outcome['outcome_type']}: {outcome['count']}\n"
+                # Replace underscores for display
+                outcome_display = outcome['outcome_type'].replace('_', ' ').title()
+                msg += f"   {outcome_display}: {outcome['count']}\n"
         else:
             msg += "No outcomes yet\n"
         
@@ -620,7 +618,6 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
     
     await query.edit_message_text(
         msg,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
