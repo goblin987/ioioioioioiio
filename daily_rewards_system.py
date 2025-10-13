@@ -27,56 +27,32 @@ DAILY_REWARDS = {
     7: 150,     # Day 7: 150 points (jackpot)
 }
 
-# Case Types with different rarities and costs
-CASE_TYPES = {
-    'basic': {
-        'name': '📦 Basic Case',
-        'cost': 20,
-        'emoji': '📦',
-        'color': '🔵',
-        'description': 'Common rewards, low risk',
-        'animation_speed': 'normal',
-        'rewards': {
-            'win_product': 5,      # 5% chance to win product
-            'win_points_2x': 15,   # 15% chance to win 2x points back
-            'win_points_1x': 30,   # 30% chance to win points back
-            'lose_half': 30,       # 30% chance lose half points
-            'lose_all': 20,        # 20% lose all points
-        }
-    },
-    'premium': {
-        'name': '💎 Premium Case',
-        'cost': 50,
-        'emoji': '💎',
-        'color': '🟣',
-        'description': 'Better odds, higher rewards',
-        'animation_speed': 'fast',
-        'rewards': {
-            'win_product': 10,     # 10% chance to win product
-            'win_points_3x': 20,   # 20% chance to win 3x points
-            'win_points_2x': 25,   # 25% chance to win 2x points
-            'win_points_1x': 25,   # 25% chance to win points back
-            'lose_half': 15,       # 15% lose half
-            'lose_all': 5,         # 5% lose all
-        }
-    },
-    'legendary': {
-        'name': '🏆 Legendary Case',
-        'cost': 100,
-        'emoji': '🏆',
-        'color': '🟡',
-        'description': 'Best odds, legendary rewards',
-        'animation_speed': 'epic',
-        'rewards': {
-            'win_product': 25,     # 25% chance to win product
-            'win_points_5x': 15,   # 15% chance 5x points
-            'win_points_3x': 25,   # 25% chance 3x points
-            'win_points_2x': 20,   # 20% chance 2x points
-            'lose_half': 10,       # 10% lose half
-            'lose_all': 5,         # 5% lose all
-        }
-    }
-}
+# Case Types - loaded from database (admin creates them)
+CASE_TYPES = {}
+
+def get_all_cases() -> Dict:
+    """Get all cases from database"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT case_type, enabled, cost, rewards_config
+            FROM case_settings
+            WHERE enabled = TRUE
+            ORDER BY cost
+        ''')
+        cases = {}
+        for row in c.fetchall():
+            cases[row['case_type']] = {
+                'name': row['case_type'].title(),
+                'cost': row['cost'],
+                'emoji': '🎁',  # Default, can be customized
+                'enabled': row['enabled'],
+                'rewards': json.loads(row['rewards_config']) if row['rewards_config'] else {}
+            }
+        return cases
+    finally:
+        conn.close()
 
 # ============================================================================
 # DATABASE INITIALIZATION
@@ -471,10 +447,10 @@ def get_random_available_product() -> Optional[int]:
     c = conn.cursor()
     
     try:
-        # Get products with stock > 0
+        # Get products with available > 0
         c.execute('''
             SELECT id FROM products 
-            WHERE stock > 0 
+            WHERE available > 0 
             ORDER BY RANDOM() 
             LIMIT 1
         ''')

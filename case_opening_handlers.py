@@ -8,7 +8,7 @@ import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from utils import get_db_connection
-from daily_rewards_system import CASE_TYPES, get_user_points
+from daily_rewards_system import get_all_cases, get_user_points
 from case_rewards_system import (
     open_product_case,
     get_available_cities_for_product,
@@ -32,13 +32,23 @@ async def handle_case_opening_menu(update: Update, context: ContextTypes.DEFAULT
     # Get user points
     points = get_user_points(user_id)
     
+    # Get available cases from database
+    cases = get_all_cases()
+    
     msg = f"🎰 OPEN CASES\n\n"
     msg += f"💰 Your Points: {points}\n\n"
+    
+    if not cases:
+        msg += "❌ No cases available yet.\nAdmin needs to create cases first."
+        keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data="daily_rewards_menu")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+    
     msg += "Select a case to open:\n\n"
     
     keyboard = []
     
-    for case_type, config in CASE_TYPES.items():
+    for case_type, config in cases.items():
         can_afford = points >= config['cost']
         status = "✅" if can_afford else "🔒"
         
@@ -68,7 +78,8 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         return
     
     case_type = params[0]
-    config = CASE_TYPES.get(case_type)
+    cases = get_all_cases()
+    config = cases.get(case_type)
     
     if not config:
         await query.answer("Case not found", show_alert=True)

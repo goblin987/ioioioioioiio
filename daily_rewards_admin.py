@@ -8,7 +8,7 @@ import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from utils import get_db_connection, is_primary_admin
-from daily_rewards_system import CASE_TYPES, DAILY_REWARDS
+from daily_rewards_system import get_all_cases, DAILY_REWARDS
 
 logger = logging.getLogger(__name__)
 

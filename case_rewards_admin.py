@@ -7,7 +7,7 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from utils import get_db_connection, is_primary_admin
-from daily_rewards_system import CASE_TYPES
+from daily_rewards_system import get_all_cases
 from case_rewards_system import (
     get_all_product_types,
     get_case_reward_pool,
@@ -33,15 +33,26 @@ async def handle_admin_product_pool_v2(update: Update, context: ContextTypes.DEF
     
     await query.answer()
     
+    # Get cases from database
+    cases = get_all_cases()
+    
     msg = "🎁 PRODUCT POOL MANAGER\n\n"
     msg += "Step 1: Select a case to configure\n\n"
     msg += "Each case can have multiple product types with different win chances.\n"
     msg += "Users win PRODUCTS (not points) or NOTHING.\n\n"
+    
+    if not cases:
+        msg += "❌ No cases created yet.\n\n"
+        msg += "Go to 'Manage Cases' to create your first case!"
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_main")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+    
     msg += "Select a case:"
     
     keyboard = []
     
-    for case_type, config in CASE_TYPES.items():
+    for case_type, config in cases.items():
         keyboard.append([InlineKeyboardButton(
             f"{config['emoji']} {config['name']}",
             callback_data=f"admin_case_pool|{case_type}"
@@ -68,7 +79,8 @@ async def handle_admin_case_pool(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     case_type = params[0]
-    config = CASE_TYPES.get(case_type)
+    cases = get_all_cases()
+    config = cases.get(case_type)
     
     if not config:
         await query.answer("Case not found", show_alert=True)
