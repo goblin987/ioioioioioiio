@@ -635,6 +635,16 @@ def callback_query_router(func):
                 "select_basket_crypto": payment.handle_select_basket_crypto,
                 "cancel_crypto_payment": payment.handle_cancel_crypto_payment,
                 "select_refill_crypto": payment.handle_select_refill_crypto,
+                
+                # Daily Rewards & Case Opening Handlers (from daily_rewards_handlers.py)
+                "daily_rewards_menu": None,  # Will be set below
+                "claim_daily_reward": None,
+                "case_opening_menu": None,
+                "open_case": None,
+                "my_case_stats": None,
+                "case_leaderboard": None,
+                "admin_daily_rewards_settings": None,
+                "admin_case_stats": None,
 
                 # Primary Admin Handlers (from admin.py)
                 "admin_menu": admin.handle_admin_menu,
@@ -1029,6 +1039,32 @@ def callback_query_router(func):
                 "bot_reset_header": handle_bot_reset_header,
                 "bot_noop": handle_marketing_promotions_menu,  # Placeholder for separator buttons
             }
+            
+            # Add daily rewards handlers
+            try:
+                from daily_rewards_handlers import (
+                    handle_daily_rewards_menu,
+                    handle_claim_daily_reward,
+                    handle_case_opening_menu,
+                    handle_open_case,
+                    handle_my_case_stats,
+                    handle_case_leaderboard,
+                    handle_admin_daily_rewards_settings,
+                    handle_admin_case_stats
+                )
+                KNOWN_HANDLERS.update({
+                    "daily_rewards_menu": handle_daily_rewards_menu,
+                    "claim_daily_reward": handle_claim_daily_reward,
+                    "case_opening_menu": handle_case_opening_menu,
+                    "open_case": handle_open_case,
+                    "my_case_stats": handle_my_case_stats,
+                    "case_leaderboard": handle_case_leaderboard,
+                    "admin_daily_rewards_settings": handle_admin_daily_rewards_settings,
+                    "admin_case_stats": handle_admin_case_stats,
+                })
+                logger.info("✅ Daily rewards handlers registered")
+            except Exception as e:
+                logger.error(f"❌ Failed to register daily rewards handlers: {e}")
             
             # Add userbot handlers if available
             if USERBOT_AVAILABLE:
@@ -2036,6 +2072,15 @@ def main() -> None:
         logger.info("✅ Media retry queue started successfully")
     except Exception as e:
         logger.error(f"❌ Failed to start media retry queue: {e}", exc_info=True)
+    
+    # 🎁 INITIALIZE DAILY REWARDS & CASE OPENING SYSTEM
+    try:
+        from daily_rewards_system import init_daily_rewards_tables
+        logger.info("🎁 Initializing daily rewards & case opening system...")
+        init_daily_rewards_tables()
+        logger.info("✅ Daily rewards system initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize daily rewards system: {e}", exc_info=True)
     
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")

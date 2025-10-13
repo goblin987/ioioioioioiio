@@ -202,6 +202,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     # Default keyboard layout
     default_keyboard = [
         [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],
+        [InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")],
         [InlineKeyboardButton(f"{EMOJI_PROFILE} {profile_button_text}", callback_data="profile"),
          InlineKeyboardButton(f"{EMOJI_REFILL} {top_up_button_text}", callback_data="refill")],
         [InlineKeyboardButton(f"{EMOJI_REVIEW} {reviews_button_text}", callback_data="reviews"),
@@ -223,6 +224,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
             if active_theme.get('theme_name') == 'classic':
                 keyboard = [
                     [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
+                    [InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")],
                     [InlineKeyboardButton("👤 Profile", callback_data="profile"), 
                      InlineKeyboardButton("💳 Top Up", callback_data="refill")],
                     [InlineKeyboardButton("📝 Reviews", callback_data="reviews"),

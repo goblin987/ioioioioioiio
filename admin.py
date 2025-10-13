@@ -733,6 +733,7 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
         [InlineKeyboardButton(f"🌍 {'Disable' if language_selection_enabled else 'Enable'} Language Selection", 
                              callback_data=f"toggle_language_selection|{'disable' if language_selection_enabled else 'enable'}")],
         [InlineKeyboardButton("📍 Change Language Prompt Placement", callback_data="change_language_placement")],
+        [InlineKeyboardButton("🎁 Daily Rewards Settings", callback_data="admin_daily_rewards_settings")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
