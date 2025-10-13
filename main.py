@@ -1058,7 +1058,8 @@ def callback_query_router(func):
                     handle_admin_case_stats,
                     handle_admin_manage_rewards,
                     handle_admin_edit_cases,
-                    handle_admin_give_test_points
+                    handle_admin_give_test_points,
+                    handle_admin_product_emojis
                 )
                 KNOWN_HANDLERS.update({
                     "daily_rewards_menu": handle_daily_rewards_menu,
@@ -1072,6 +1073,7 @@ def callback_query_router(func):
                     "admin_manage_rewards": handle_admin_manage_rewards,
                     "admin_edit_cases": handle_admin_edit_cases,
                     "admin_give_test_points": handle_admin_give_test_points,
+                    "admin_product_emojis": handle_admin_product_emojis,
                 })
                 logger.info("✅ Daily rewards handlers registered")
             except Exception as e:

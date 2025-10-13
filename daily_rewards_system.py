@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Daily Streak Rewards (points awarded for consecutive days)
 DAILY_REWARDS = {
-    1: 10,      # Day 1: 10 points
+    1: 50,      # Day 1: 50 points (TEST MODE - normally 10)
     2: 15,      # Day 2: 15 points
     3: 25,      # Day 3: 25 points
     4: 40,      # Day 4: 40 points
@@ -149,6 +149,16 @@ def init_daily_rewards_tables():
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (case_type) DO NOTHING
             ''', (case_type, True, config['cost'], json.dumps(config['rewards'])))
+        
+        # Add product_emoji column to products table (for case opening display)
+        try:
+            c.execute('''
+                ALTER TABLE products 
+                ADD COLUMN IF NOT EXISTS product_emoji TEXT DEFAULT '🎁'
+            ''')
+            logger.info("✅ Added product_emoji column to products table")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not add product_emoji column: {e}")
         
         conn.commit()
         logger.info("✅ Daily rewards tables initialized successfully")

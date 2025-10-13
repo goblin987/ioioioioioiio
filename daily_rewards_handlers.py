@@ -1,32 +1,34 @@
 """
-Telegram Bot Handlers for Daily Rewards & Case Opening
-Premium gamification handlers with next-level animations
+Daily Rewards & Case Opening Handlers
+Telegram bot handlers for the gamification system
 """
 
+import logging
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-import asyncio
 from daily_rewards_system import (
+    DAILY_REWARDS,
+    CASE_TYPES,
     check_daily_login,
     claim_daily_reward,
     get_user_points,
     open_case,
     get_user_stats,
-    get_leaderboard,
-    CASE_TYPES,
-    DAILY_REWARDS
+    get_leaderboard
 )
-from utils import send_message_with_retry, is_primary_admin
+from utils import get_db_connection, is_primary_admin
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
-# DAILY REWARDS HANDLERS
+# USER HANDLERS
 # ============================================================================
 
 async def handle_daily_rewards_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Main daily rewards menu"""
     query = update.callback_query
     user_id = query.from_user.id
-    
     await query.answer()
     
     # Check daily login status
@@ -109,7 +111,7 @@ async def handle_claim_daily_reward(update: Update, context: ContextTypes.DEFAUL
             [InlineKeyboardButton("⬅️ Back", callback_data="daily_rewards_menu")]
         ]
         
-        await query.answer("Already claimed today!", show_alert=False)
+        await query.answer(result['message'], show_alert=True)
     
     await query.edit_message_text(
         msg,
@@ -117,38 +119,32 @@ async def handle_claim_daily_reward(update: Update, context: ContextTypes.DEFAUL
         parse_mode='Markdown'
     )
 
-# ============================================================================
-# CASE OPENING HANDLERS
-# ============================================================================
-
 async def handle_case_opening_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Case selection menu"""
+    """Case opening selection menu"""
     query = update.callback_query
     user_id = query.from_user.id
-    
     await query.answer()
     
     user_points = get_user_points(user_id)
     
     msg = "💎 **CASE OPENING** 💎\n\n"
     msg += f"💰 **Your Points:** {user_points}\n\n"
-    msg += "Choose a case to open:\n\n"
+    msg += "**Available Cases:**\n\n"
     
     keyboard = []
     
     for case_type, config in CASE_TYPES.items():
-        can_afford = user_points >= config['cost']
-        
         msg += f"{config['emoji']} **{config['name']}**\n"
         msg += f"   💰 Cost: {config['cost']} points\n"
-        msg += f"   📊 {config['description']}\n"
+        msg += f"   📝 {config['description']}\n"
+        msg += f"   🎁 Product Win: {config['rewards']['win_product']}%\n"
         
-        # Show odds
-        rewards = config['rewards']
-        msg += f"   🎁 Product: {rewards.get('win_product', 0)}%\n"
+        # Calculate win chances
+        win_chance = sum(v for k, v in config['rewards'].items() if 'win' in k)
+        msg += f"   📊 Win Chance: {win_chance}%\n\n"
         
-        if can_afford:
-            msg += f"   ✅ **Available**\n\n"
+        # Add button
+        if user_points >= config['cost']:
             keyboard.append([InlineKeyboardButton(
                 f"{config['emoji']} Open {config['name']} ({config['cost']} pts)",
                 callback_data=f"open_case|{case_type}"
@@ -165,17 +161,17 @@ async def handle_case_opening_menu(update: Update, context: ContextTypes.DEFAULT
     )
 
 async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Open a case with premium animation sequence"""
+    """Open a case with premium CS:GO-style animation"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not params:
-        await query.answer("Error: No case type specified", show_alert=True)
+        await query.answer("Invalid case selection", show_alert=True)
         return
     
     case_type = params[0]
     
-    # Open the case
+    # Process case opening
     result = open_case(user_id, case_type)
     
     if not result['success']:
@@ -201,30 +197,46 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     await query.edit_message_text(msg, parse_mode='Markdown')
     await asyncio.sleep(0.5)
     
-    # Step 2: Spinning animation (reel of items)
+    # Step 2: CS:GO-Style Horizontal Scrolling Reel
     reel_items = animation_data['reel_items']
     
-    for i in range(0, len(reel_items), 3):  # Show 3 items at a time
-        visible_items = reel_items[i:i+3]
+    # Show horizontal scrolling window (5 items visible, middle one is selected)
+    for i in range(len(reel_items) - 4):
+        visible_window = reel_items[i:i+5]
         
         msg = f"{case_emoji} **SPINNING...** {case_emoji}\n\n"
         msg += "```\n"
-        msg += "╔══════════════════╗\n"
+        msg += "╔════════════════════════════════╗\n"
+        msg += "║                                ║\n"
         
-        for item in visible_items:
-            msg += f"║      {item['emoji']}  {item['emoji']}  {item['emoji']}      ║\n"
+        # Build horizontal reel with center indicator
+        reel_line = "║   "
+        for idx, item in enumerate(visible_window):
+            if idx == 2:  # Center item (target)
+                reel_line += f"[{item['emoji']}]  "
+            else:
+                reel_line += f" {item['emoji']}   "
+        reel_line += "║"
+        msg += reel_line + "\n"
         
-        msg += "╚══════════════════╝\n"
+        msg += "║                                ║\n"
+        msg += "║            ▼ ▼ ▼              ║\n"
+        msg += "╚════════════════════════════════╝\n"
         msg += "```\n"
-        msg += "🎰 " + "▓" * (i // 3) + "░" * (10 - i // 3)
+        
+        # Progress bar
+        progress = int((i / (len(reel_items) - 4)) * 20)
+        msg += "🎰 " + "▓" * progress + "░" * (20 - progress)
         
         await query.edit_message_text(msg, parse_mode='Markdown')
         
-        # Speed up near the end
-        if i < 20:
-            await asyncio.sleep(0.1)
+        # Dynamic speed: start fast, slow down near end (CS:GO style)
+        if i < 15:
+            await asyncio.sleep(0.08)  # Fast
+        elif i < 23:
+            await asyncio.sleep(0.15)  # Medium
         else:
-            await asyncio.sleep(0.3)  # Slow down before reveal
+            await asyncio.sleep(0.35)  # Slow dramatic reveal
     
     # Step 3: Dramatic pause
     await asyncio.sleep(0.5)
@@ -261,29 +273,22 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         parse_mode='Markdown'
     )
 
-# ============================================================================
-# STATS & LEADERBOARD HANDLERS
-# ============================================================================
-
 async def handle_my_case_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show user's case opening statistics"""
     query = update.callback_query
     user_id = query.from_user.id
-    
     await query.answer()
     
     stats = get_user_stats(user_id)
     
-    msg = "📊 **YOUR STATS** 📊\n\n"
-    msg += f"💰 **Current Points:** {stats['points']}\n"
-    msg += f"💎 **Lifetime Points:** {stats['lifetime_points']}\n"
-    msg += f"🎰 **Cases Opened:** {stats['cases_opened']}\n"
-    msg += f"🎁 **Products Won:** {stats['products_won']}\n"
-    msg += f"📈 **Win Rate:** {stats['win_rate']}%\n\n"
-    
-    # Visual win rate bar
-    win_blocks = int(stats['win_rate'] / 10)
-    msg += f"🏆 {'🟩' * win_blocks}{'⬜' * (10 - win_blocks)} {stats['win_rate']}%"
+    msg = "📊 **YOUR STATISTICS** 📊\n\n"
+    msg += f"💰 **Current Points:** {stats['current_points']}\n"
+    msg += f"🎁 **Lifetime Points:** {stats['lifetime_points']}\n\n"
+    msg += f"📦 **Cases Opened:** {stats['total_cases_opened']}\n"
+    msg += f"🏆 **Products Won:** {stats['total_products_won']}\n\n"
+    msg += f"🔥 **Current Streak:** {stats['current_streak']} days\n"
+    msg += f"⭐ **Longest Streak:** {stats['longest_streak']} days\n\n"
+    msg += "Keep opening cases to climb the leaderboard!"
     
     keyboard = [
         [InlineKeyboardButton("🏆 Leaderboard", callback_data="case_leaderboard")],
@@ -297,25 +302,23 @@ async def handle_my_case_stats(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 async def handle_case_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Show top players leaderboard"""
+    """Show case opening leaderboard"""
     query = update.callback_query
-    
     await query.answer()
     
-    top_players = get_leaderboard(10)
+    leaderboard = get_leaderboard(limit=10)
     
     msg = "🏆 **LEADERBOARD** 🏆\n\n"
-    msg += "**Top 10 Players:**\n\n"
+    msg += "**Top Players by Cases Opened:**\n\n"
     
     medals = ['🥇', '🥈', '🥉']
     
-    for idx, player in enumerate(top_players, 1):
-        medal = medals[idx - 1] if idx <= 3 else f"{idx}."
-        
-        msg += f"{medal} "
-        msg += f"**{player['lifetime_points']}** pts"
-        msg += f" | {player['total_cases_opened']} cases"
-        msg += f" | {player['total_products_won']} 🎁\n"
+    for idx, player in enumerate(leaderboard, 1):
+        medal = medals[idx-1] if idx <= 3 else f"{idx}."
+        msg += f"{medal} **User {player['user_id']}**\n"
+        msg += f"   📦 Cases: {player['total_cases_opened']}\n"
+        msg += f"   🏆 Products: {player['total_products_won']}\n"
+        msg += f"   💰 Points: {player['points']}\n\n"
     
     keyboard = [
         [InlineKeyboardButton("📊 My Stats", callback_data="my_case_stats")],
@@ -329,11 +332,11 @@ async def handle_case_leaderboard(update: Update, context: ContextTypes.DEFAULT_
     )
 
 # ============================================================================
-# ADMIN CONFIGURATION HANDLERS
+# ADMIN HANDLERS
 # ============================================================================
 
 async def handle_admin_daily_rewards_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Admin menu for daily rewards & case opening configuration"""
+    """Admin panel for daily rewards system"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -343,25 +346,46 @@ async def handle_admin_daily_rewards_settings(update: Update, context: ContextTy
     
     await query.answer()
     
-    msg = "⚙️ **DAILY REWARDS & CASES SETTINGS** ⚙️\n\n"
-    msg += "Configure gamification system:\n\n"
+    msg = "⚙️ **DAILY REWARDS ADMIN** ⚙️\n\n"
+    msg += "**System Overview:**\n\n"
     
-    msg += "**Current Configuration:**\n\n"
+    # Get system stats
+    conn = get_db_connection()
+    c = conn.cursor()
     
-    for case_type, config in CASE_TYPES.items():
-        msg += f"{config['emoji']} **{config['name']}**\n"
-        msg += f"   Cost: {config['cost']} points\n"
-        msg += f"   Product chance: {config['rewards']['win_product']}%\n\n"
-    
-    msg += "**Daily Rewards:**\n"
-    for day, points in DAILY_REWARDS.items():
-        msg += f"Day {day}: {points} points\n"
+    try:
+        c.execute('SELECT COUNT(*) as count FROM user_points')
+        total_users = c.fetchone()['count']
+        
+        c.execute('SELECT SUM(points) as total FROM user_points')
+        result = c.fetchone()
+        total_points = result['total'] if result and result['total'] else 0
+        
+        c.execute('SELECT COUNT(*) as count FROM case_openings')
+        total_cases = c.fetchone()['count']
+        
+        msg += f"👥 **Active Users:** {total_users}\n"
+        msg += f"💰 **Total Points in Circulation:** {total_points}\n"
+        msg += f"📦 **Total Cases Opened:** {total_cases}\n\n"
+        
+        msg += "**Management Options:**\n"
+        msg += "• View detailed statistics\n"
+        msg += "• Manage rewards pool\n"
+        msg += "• Edit case settings\n"
+        msg += "• Give test points\n"
+        
+    except Exception as e:
+        logger.error(f"Error loading admin stats: {e}")
+        msg += f"❌ Error loading stats: {e}\n"
+    finally:
+        conn.close()
     
     keyboard = [
         [InlineKeyboardButton("📊 View Statistics", callback_data="admin_case_stats")],
         [InlineKeyboardButton("🎁 Manage Rewards Pool", callback_data="admin_manage_rewards")],
         [InlineKeyboardButton("⚙️ Edit Case Settings", callback_data="admin_edit_cases")],
         [InlineKeyboardButton("🎯 Give Me 200 Test Points", callback_data="admin_give_test_points")],
+        [InlineKeyboardButton("🎨 Product Emojis", callback_data="admin_product_emojis")],
         [InlineKeyboardButton("👥 Top Players", callback_data="case_leaderboard")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
@@ -373,7 +397,7 @@ async def handle_admin_daily_rewards_settings(update: Update, context: ContextTy
     )
 
 async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Show admin statistics for case openings"""
+    """Detailed statistics for admin"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -383,49 +407,39 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
     
     await query.answer()
     
-    from utils import get_db_connection
-    
     conn = get_db_connection()
     c = conn.cursor()
     
     try:
-        # Total stats
-        c.execute('SELECT COUNT(*) as total FROM case_openings')
-        total_openings = c.fetchone()['total']
+        msg = "📊 **DETAILED STATISTICS** 📊\n\n"
         
-        c.execute('SELECT SUM(points_spent) as total FROM case_openings')
-        total_spent = c.fetchone()['total'] or 0
+        # Case opening breakdown
+        c.execute('''
+            SELECT case_type, COUNT(*) as opens, SUM(points_spent) as spent
+            FROM case_openings
+            GROUP BY case_type
+        ''')
+        case_stats = c.fetchall()
         
-        c.execute('SELECT SUM(points_won) as total FROM case_openings')
-        total_won = c.fetchone()['total'] or 0
+        msg += "**Cases Opened by Type:**\n"
+        for stat in case_stats:
+            msg += f"   {stat['case_type']}: {stat['opens']} opens ({stat['spent']} pts spent)\n"
         
-        c.execute("SELECT COUNT(*) as total FROM case_openings WHERE outcome_type = 'win_product'")
-        products_won = c.fetchone()['total']
+        msg += "\n**Outcome Distribution:**\n"
+        c.execute('''
+            SELECT outcome_type, COUNT(*) as count
+            FROM case_openings
+            GROUP BY outcome_type
+            ORDER BY count DESC
+        ''')
+        outcomes = c.fetchall()
         
-        c.execute('SELECT COUNT(DISTINCT user_id) as total FROM case_openings')
-        unique_players = c.fetchone()['total']
+        for outcome in outcomes:
+            msg += f"   {outcome['outcome_type']}: {outcome['count']}\n"
         
-        msg = "📊 **CASE OPENING STATISTICS** 📊\n\n"
-        msg += f"🎰 **Total Cases Opened:** {total_openings}\n"
-        msg += f"👥 **Unique Players:** {unique_players}\n"
-        msg += f"💰 **Total Points Spent:** {total_spent}\n"
-        msg += f"💎 **Total Points Won:** {total_won}\n"
-        msg += f"🎁 **Products Awarded:** {products_won}\n"
-        msg += f"📈 **House Edge:** {((total_spent - total_won) / total_spent * 100) if total_spent > 0 else 0:.1f}%\n\n"
-        
-        # Per case stats
-        for case_type in CASE_TYPES.keys():
-            c.execute('''
-                SELECT COUNT(*) as count, SUM(points_spent) as spent
-                FROM case_openings
-                WHERE case_type = %s
-            ''', (case_type,))
-            
-            case_stats = c.fetchone()
-            msg += f"\n{CASE_TYPES[case_type]['emoji']} **{CASE_TYPES[case_type]['name']}:**\n"
-            msg += f"   Opened: {case_stats['count']} times\n"
-            msg += f"   Revenue: {case_stats['spent'] or 0} points\n"
-        
+    except Exception as e:
+        logger.error(f"Error loading stats: {e}")
+        msg = f"❌ Error: {e}"
     finally:
         conn.close()
     
@@ -440,7 +454,7 @@ async def handle_admin_case_stats(update: Update, context: ContextTypes.DEFAULT_
     )
 
 async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Admin interface to manage rewards pool"""
+    """Manage products in rewards pool"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -450,36 +464,39 @@ async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFA
     
     await query.answer()
     
-    from utils import get_db_connection
-    
     conn = get_db_connection()
     c = conn.cursor()
     
     try:
-        # Get current products in rewards pool
+        # Get products with stock
         c.execute('''
-            SELECT id, name, price, available
+            SELECT id, name, price, stock as available, product_emoji
             FROM products
-            WHERE available > 0
+            WHERE stock > 0
             ORDER BY price DESC
-            LIMIT 10
+            LIMIT 20
         ''')
         products = c.fetchall()
         
-        msg = "🎁 **REWARDS POOL MANAGEMENT** 🎁\n\n"
-        msg += "**Available Products for Case Rewards:**\n\n"
+        msg = "🎁 **REWARDS POOL MANAGER** 🎁\n\n"
+        msg += "Products available for case opening wins:\n\n"
         
         if products:
-            for p in products:
-                msg += f"🎯 **{p['name']}**\n"
-                msg += f"   💰 Price: €{p['price']:.2f}\n"
-                msg += f"   📦 Stock: {p['available']}\n\n"
+            for product in products:
+                emoji = product['product_emoji'] or '🎁'
+                msg += f"{emoji} **{product['name']}**\n"
+                msg += f"   💰 Value: {product['price']}€\n"
+                msg += f"   📦 Stock: {product['available']}\n\n"
         else:
-            msg += "⚠️ No products available\n\n"
+            msg += "❌ No products available\n"
+            msg += "Add products with stock to enable product wins!\n\n"
         
-        msg += "💡 **Note:** Cases award random products from your active product catalog.\n"
-        msg += "To add/remove products, use the Product Management menu.\n"
+        msg += "💡 Products are randomly selected when users win.\n"
+        msg += "Make sure to keep stock updated!\n"
         
+    except Exception as e:
+        logger.error(f"Error loading rewards pool: {e}")
+        msg = f"❌ Error: {e}"
     finally:
         conn.close()
     
@@ -496,7 +513,7 @@ async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFA
     )
 
 async def handle_admin_give_test_points(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Give admin 200 test points for testing"""
+    """Give admin 200 test points"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -504,13 +521,11 @@ async def handle_admin_give_test_points(update: Update, context: ContextTypes.DE
         await query.answer("Access denied", show_alert=True)
         return
     
-    from utils import get_db_connection
-    
     conn = get_db_connection()
     c = conn.cursor()
     
     try:
-        # Give 200 points to admin
+        # Add 200 points
         c.execute('''
             INSERT INTO user_points (user_id, points)
             VALUES (%s, 200)
@@ -583,3 +598,65 @@ async def handle_admin_edit_cases(update: Update, context: ContextTypes.DEFAULT_
         parse_mode='Markdown'
     )
 
+async def handle_admin_product_emojis(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Admin interface to set custom emojis for products in case opening"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    # Get all products with their current emojis
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        c.execute('''
+            SELECT id, name, product_emoji, stock
+            FROM products
+            WHERE stock > 0
+            ORDER BY name
+            LIMIT 20
+        ''')
+        products = c.fetchall()
+        
+        msg = "🎨 **PRODUCT EMOJI MANAGER** 🎨\n\n"
+        msg += "Set custom emojis for products that appear in case openings!\n\n"
+        msg += "**Current Products:**\n\n"
+        
+        if products:
+            for product in products:
+                emoji = product['product_emoji'] or '🎁'
+                msg += f"{emoji} **{product['name']}**\n"
+                msg += f"   📦 Stock: {product['stock']}\n"
+                msg += f"   🎨 Emoji: `{emoji}`\n\n"
+        else:
+            msg += "❌ No products with stock available\n\n"
+        
+        msg += "💡 **How to set emojis:**\n"
+        msg += "1. Go to **📦 Product Management**\n"
+        msg += "2. Edit a product\n"
+        msg += "3. Set the emoji field\n\n"
+        msg += "Popular emojis for cases:\n"
+        msg += "🎁 💎 🏆 ⭐ 💰 🔥 ✨ 🎉 🎊 🎈\n"
+        msg += "🎮 🕹️ 💻 📱 ⌚ 🎧 🎤 🎸 🎹 🎺\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("📦 Manage Products", callback_data="adm_products")],
+            [InlineKeyboardButton("🔄 Refresh", callback_data="admin_product_emojis")],
+            [InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_settings")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error in admin_product_emojis: {e}")
+        await query.answer(f"❌ Error: {e}", show_alert=True)
+    finally:
+        conn.close()
