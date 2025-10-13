@@ -26,16 +26,19 @@
 
 ## Testing Checklist (Ready for User Testing)
 - [x] py_compile: main.py, utils.py, admin.py, user.py, daily_rewards_handlers.py → ALL PASS
+- [ ] **USER TEST**: Check Render logs for "🎁 Daily Rewards enabled check" message
+- [ ] **USER TEST**: Check Render logs for "🎁 Daily Rewards visibility check: DB value" message
 - [ ] **USER TEST**: Toggle OFF in admin → verify Daily Rewards hidden in start menu
 - [ ] **USER TEST**: Toggle ON in admin → verify Daily Rewards visible in start menu
+- [ ] **USER TEST**: Use "🎯 Give Me 200 Test Points" button in admin Daily Rewards Settings
 - [ ] **USER TEST**: Claim daily reward works
 - [ ] **USER TEST**: Open case works with animation
 - [ ] **USER TEST**: Stats/leaderboard render correctly
-- [ ] **USER TEST**: No new exceptions in logs
+- [ ] **USER TEST**: Admin "Edit Case Settings" no longer crashes with KeyError
 
 ## Completed Implementation
 - ✅ Fixed database column names in admin_manage_rewards (id/name/available)
-- ✅ All 10 daily rewards handlers created and registered
+- ✅ All 11 daily rewards handlers created and registered
 - ✅ Added bot_settings helper functions (get/set/is_daily_rewards_enabled)
 - ✅ Created toggle handler (handle_toggle_daily_rewards_button)
 - ✅ Updated admin Bot UI menu with toggle button
@@ -43,7 +46,10 @@
 - ✅ All handlers imported and registered in main.py
 - ✅ All files compile without errors
 - ✅ No linter errors
-- ✅ Committed and pushed to production
+- ✅ **NEW**: Added debug logging to track visibility check
+- ✅ **NEW**: Fixed KeyError 'win_points' in admin_edit_cases handler
+- ✅ **NEW**: Added "Give Me 200 Test Points" button for admin testing
+- ✅ Committed and pushed to production (commit 3882f6e)
 
 ## How to Use (For User)
 1. **Admin Panel** → **🎨 Bot UI Management**

@@ -4366,6 +4366,7 @@ AVAILABLE_BUTTONS = {
         {'text': '🛍️ Shop', 'callback': 'shop', 'emoji': '🛍️'},
         {'text': '👤 Profile', 'callback': 'profile', 'emoji': '👤'},
         {'text': '💳 Top Up', 'callback': 'topup', 'emoji': '💳'},
+        {'text': '🎁 Daily Rewards', 'callback': 'daily_rewards_menu', 'emoji': '🎁'},
         {'text': '🔥 Hot Deals', 'callback': 'modern_deals', 'emoji': '🔥'},
         {'text': 'ℹ️ Info', 'callback': 'info', 'emoji': 'ℹ️'},
         {'text': '⭐ Reviews', 'callback': 'reviews', 'emoji': '⭐'},
