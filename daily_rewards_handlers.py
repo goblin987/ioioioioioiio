@@ -127,30 +127,60 @@ async def handle_case_opening_menu(update: Update, context: ContextTypes.DEFAULT
     
     user_points = get_user_points(user_id)
     
+    # Get cases from database
+    from daily_rewards_system import get_all_cases
+    CASE_TYPES = get_all_cases()
+    
     msg = "💎 **CASE OPENING** 💎\n\n"
     msg += f"💰 **Your Points:** {user_points}\n\n"
+    
+    if not CASE_TYPES:
+        msg += "❌ No cases available yet\n\n"
+        msg += "Admin needs to create cases first!"
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="daily_rewards_menu")]]
+        await query.edit_message_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        return
+    
     msg += "**Available Cases:**\n\n"
     
     keyboard = []
     
     for case_type, config in CASE_TYPES.items():
-        msg += f"{config['emoji']} **{config['name']}**\n"
-        msg += f"   💰 Cost: {config['cost']} points\n"
-        msg += f"   📝 {config['description']}\n"
-        msg += f"   🎁 Product Win: {config['rewards']['win_product']}%\n"
+        emoji = config.get('emoji', '🎁')
+        name = config.get('name', case_type.title())
+        cost = config.get('cost', 10)
+        rewards = config.get('rewards', {})
         
-        # Calculate win chances
-        win_chance = sum(v for k, v in config['rewards'].items() if 'win' in k)
-        msg += f"   📊 Win Chance: {win_chance}%\n\n"
+        msg += f"{emoji} **{name}**\n"
+        msg += f"   💰 Cost: {cost} points\n"
+        
+        # Calculate win chances if rewards exist
+        if rewards:
+            win_product = rewards.get('win_product', 0)
+            if win_product > 0:
+                msg += f"   🎁 Product Win: {win_product}%\n"
+            
+            win_chance = sum(v for k, v in rewards.items() if 'win' in k and isinstance(v, (int, float)))
+            if win_chance > 0:
+                msg += f"   📊 Win Chance: {win_chance}%\n"
+        
+        msg += "\n"
         
         # Add button
-        if user_points >= config['cost']:
+        if user_points >= cost:
             keyboard.append([InlineKeyboardButton(
-                f"{config['emoji']} Open {config['name']} ({config['cost']} pts)",
+                f"{emoji} Open {name} ({cost} pts)",
                 callback_data=f"open_case|{case_type}"
             )])
         else:
-            msg += f"   ❌ Need {config['cost'] - user_points} more points\n\n"
+            keyboard.append([InlineKeyboardButton(
+                f"{emoji} {name} - Need {cost - user_points} more pts",
+                callback_data="noop"
+            )])
     
     keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="daily_rewards_menu")])
     
