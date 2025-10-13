@@ -5286,9 +5286,13 @@ async def handle_bot_save_menu(update: Update, context: ContextTypes.DEFAULT_TYP
                     query.from_user.id
                 ))
         
+        # AUTO-ACTIVATE: Deactivate all preset themes and activate custom layout
+        c.execute("UPDATE ui_themes SET is_active = FALSE")
+        c.execute("UPDATE bot_menu_layouts SET is_active = TRUE WHERE menu_name = %s", (menu_type,))
+        
         conn.commit()
         
-        await query.answer(f"✅ {menu_display_name} saved successfully!", show_alert=True)
+        await query.answer(f"✅ {menu_display_name} saved and activated!", show_alert=True)
         
         # DON'T clear editing data - keep it for global save
         # The editing context will be cleared by global save or when user exits

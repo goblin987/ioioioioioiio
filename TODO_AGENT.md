@@ -73,6 +73,12 @@
 - ✅ No regressions to 100% delivery system
 - ✅ Rate limiter unaffected
 
+## Latest Fix (Commit c7171f9)
+- ✅ **FOUND THE ISSUE**: Daily Rewards was NOT in the UI editor's available buttons list
+- ✅ Added to `AVAILABLE_BUTTONS['start_menu']` in marketing_promotions.py (line 4369)
+- ✅ Now appears in "EDITING: Start Menu" → "Available Buttons" section
+- ✅ Can be dragged and placed in custom layouts
+
 ---
-Last Updated: Implementation complete, deployed to production, awaiting user testing
+Last Updated: UI editor fix deployed - Daily Rewards now available in button picker
 
