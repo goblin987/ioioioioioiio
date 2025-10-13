@@ -120,6 +120,23 @@ def init_daily_rewards_tables():
             )
         ''')
         
+        # DELETE OLD PRE-CREATED CASES (one-time cleanup)
+        try:
+            c.execute('SELECT COUNT(*) FROM case_settings')
+            result = c.fetchone()
+            existing_count = result[0] if result else 0
+            
+            if existing_count > 0:
+                logger.info(f"🗑️ Found {existing_count} old pre-created cases, deleting them...")
+                # Delete old cases and their data
+                c.execute('DELETE FROM case_reward_pools')
+                c.execute('DELETE FROM case_lose_emojis')
+                c.execute('DELETE FROM case_settings')
+                conn.commit()
+                logger.info("✅ Deleted all old pre-created cases. Database is clean!")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not delete old cases: {e}")
+        
         # No default cases - admin creates them all
         # Cases are created through admin interface only
         
