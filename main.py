@@ -1053,13 +1053,22 @@ def callback_query_router(func):
                     handle_case_opening_menu,
                     handle_open_case,
                     handle_my_case_stats,
-                    handle_case_leaderboard,
-                    handle_admin_daily_rewards_settings,
-                    handle_admin_case_stats,
-                    handle_admin_manage_rewards,
-                    handle_admin_edit_cases,
+                    handle_case_leaderboard
+                )
+                from daily_rewards_admin import (
+                    handle_admin_daily_rewards_main,
+                    handle_admin_product_pool,
+                    handle_admin_edit_product_pool,
+                    handle_admin_set_emoji,
+                    handle_admin_save_emoji,
+                    handle_admin_set_chance,
+                    handle_admin_save_chance,
+                    handle_admin_manage_cases,
+                    handle_admin_edit_case,
+                    handle_admin_case_cost,
+                    handle_admin_save_case_cost,
                     handle_admin_give_test_points,
-                    handle_admin_product_emojis
+                    handle_admin_case_stats
                 )
                 KNOWN_HANDLERS.update({
                     "daily_rewards_menu": handle_daily_rewards_menu,
@@ -1068,12 +1077,21 @@ def callback_query_router(func):
                     "open_case": handle_open_case,
                     "my_case_stats": handle_my_case_stats,
                     "case_leaderboard": handle_case_leaderboard,
-                    "admin_daily_rewards_settings": handle_admin_daily_rewards_settings,
-                    "admin_case_stats": handle_admin_case_stats,
-                    "admin_manage_rewards": handle_admin_manage_rewards,
-                    "admin_edit_cases": handle_admin_edit_cases,
+                    # New clean admin interface
+                    "admin_daily_rewards_main": handle_admin_daily_rewards_main,
+                    "admin_daily_rewards_settings": handle_admin_daily_rewards_main,  # Alias
+                    "admin_product_pool": handle_admin_product_pool,
+                    "admin_edit_product_pool": handle_admin_edit_product_pool,
+                    "admin_set_emoji": handle_admin_set_emoji,
+                    "admin_save_emoji": handle_admin_save_emoji,
+                    "admin_set_chance": handle_admin_set_chance,
+                    "admin_save_chance": handle_admin_save_chance,
+                    "admin_manage_cases": handle_admin_manage_cases,
+                    "admin_edit_case": handle_admin_edit_case,
+                    "admin_case_cost": handle_admin_case_cost,
+                    "admin_save_case_cost": handle_admin_save_case_cost,
                     "admin_give_test_points": handle_admin_give_test_points,
-                    "admin_product_emojis": handle_admin_product_emojis,
+                    "admin_case_stats": handle_admin_case_stats,
                 })
                 logger.info("✅ Daily rewards handlers registered")
             except Exception as e:

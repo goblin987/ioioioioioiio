@@ -186,13 +186,8 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     # Step 1: Case intro (0.5s)
     msg = f"{case_emoji} **OPENING CASE** {case_emoji}\n\n"
-    msg += "```\n"
-    msg += "╔══════════════════╗\n"
-    msg += "║                  ║\n"
-    msg += f"║   {case_emoji}  READY  {case_emoji}   ║\n"
-    msg += "║                  ║\n"
-    msg += "╚══════════════════╝\n"
-    msg += "```"
+    msg += f"**{case_emoji}  READY  {case_emoji}**\n\n"
+    msg += "🎰 Spinning the reel..."
     
     await query.edit_message_text(msg, parse_mode='Markdown')
     await asyncio.sleep(0.5)
@@ -205,24 +200,17 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         visible_window = reel_items[i:i+5]
         
         msg = f"{case_emoji} **SPINNING...** {case_emoji}\n\n"
-        msg += "```\n"
-        msg += "╔════════════════════════════════╗\n"
-        msg += "║                                ║\n"
         
-        # Build horizontal reel with center indicator
-        reel_line = "║   "
+        # Build horizontal reel with center indicator (clean, no boxes)
+        reel_line = ""
         for idx, item in enumerate(visible_window):
             if idx == 2:  # Center item (target)
-                reel_line += f"[{item['emoji']}]  "
+                reel_line += f"**[{item['emoji']}]**  "
             else:
                 reel_line += f" {item['emoji']}   "
-        reel_line += "║"
-        msg += reel_line + "\n"
         
-        msg += "║                                ║\n"
-        msg += "║            ▼ ▼ ▼              ║\n"
-        msg += "╚════════════════════════════════╝\n"
-        msg += "```\n"
+        msg += reel_line + "\n\n"
+        msg += "           ▼ ▼ ▼\n\n"
         
         # Progress bar
         progress = int((i / (len(reel_items) - 4)) * 20)
@@ -241,7 +229,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     # Step 3: Dramatic pause
     await asyncio.sleep(0.5)
     
-    # Step 4: REVEAL with particles
+    # Step 4: REVEAL with particles (clean, no boxes)
     outcome_emoji = animation_data['final_outcome']['emoji']
     outcome_msg = animation_data['final_outcome']['message']
     outcome_value = animation_data['final_outcome']['value']
@@ -250,13 +238,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     msg = f"{case_emoji} **CASE OPENED!** {case_emoji}\n\n"
     msg += f"{' '.join(particles)}\n\n"
-    msg += "```\n"
-    msg += "╔══════════════════╗\n"
-    msg += "║                  ║\n"
-    msg += f"║   {outcome_emoji}  {outcome_emoji}  {outcome_emoji}   ║\n"
-    msg += "║                  ║\n"
-    msg += "╚══════════════════╝\n"
-    msg += "```\n\n"
+    msg += f"**{outcome_emoji}  {outcome_emoji}  {outcome_emoji}**\n\n"
     msg += f"{glow} **{outcome_msg}** {glow}\n"
     msg += f"🎁 **{outcome_value}**\n\n"
     msg += f"💰 New Balance: **{result['new_balance']} points**"
