@@ -137,5 +137,72 @@
   - ⬅️ Back
 
 ---
-Last Updated: CS:GO-style animation + product emoji system deployed!
+
+## Case Creation & Opening Bug Fixes (Latest Session)
+
+### Issue: Cases Created but Not Appearing
+- ❌ **Problem**: Admin created case "sekmes" but it didn't show in case opening menu
+- ✅ **Fix**: `handle_case_opening_menu()` was using hardcoded empty `CASE_TYPES` dict
+- ✅ **Solution**: Modified to call `get_all_cases()` to fetch from database (line 131-132)
+- 📝 **Commit**: 9cbafd5
+
+### Issue: "Invalid Case Type" Error
+- ❌ **Problem**: Clicking "Open Case" showed "❌ Invalid case type!"
+- ✅ **Fix**: `open_case()` was also using hardcoded empty `CASE_TYPES` dict
+- ✅ **Solution**: Modified to call `get_all_cases()` to fetch from database (line 320)
+- 📝 **Commit**: a6ef0aa
+
+### Issue: "List Index Out of Range" Error #1
+- ❌ **Problem**: `generate_animation_data()` tried to access missing keys
+- ✅ **Fix**: Database cases lacked `color`, `animation_speed`, `description` properties
+- ✅ **Solution**: Added defaults in `get_all_cases()` (lines 54-56)
+- 📝 **Commit**: 7d1b21a
+
+### Issue: "List Index Out of Range" Error #2 (CURRENT)
+- ❌ **Problem**: `random.choices()` fails when rewards dict is empty
+- ✅ **Fix**: Case "sekmes" was created without configuring win chances
+- ✅ **Solution**:
+  - Added check for empty rewards before deducting points (lines 340-346)
+  - Added comprehensive error handling to `determine_case_outcome()` (lines 387-402)
+  - Added debug logging to trace case config and rewards (lines 321, 328, 358)
+  - Returns user-friendly error: "❌ Case not configured! Admin needs to set up rewards for this case."
+- 📝 **Commit**: bea32fd
+
+### Issue: Text Input Not Working for Case Name
+- ❌ **Problem**: Bot didn't respond when admin typed custom case name
+- ✅ **Fix**: Text input handlers existed but weren't registered in STATE_HANDLERS
+- ✅ **Solution**:
+  - Created global `DAILY_REWARDS_STATE_HANDLERS` dict (lines 573-577)
+  - Updated dict after imports in `main()` (lines 1163-1164)
+  - Referenced global dict in `handle_message()` STATE_HANDLERS (lines 1278-1279)
+- 📝 **Commit**: 516521b
+
+---
+
+## Next Steps for Complete Case System
+
+### Required Admin Flow
+1. ✅ Admin creates case with name and cost
+2. ❌ **MISSING**: Admin needs to configure reward pool (win chances)
+3. ❌ **MISSING**: Admin needs to set lose emoji
+4. ❌ **MISSING**: Admin needs to add products to case pool
+
+### Current State
+- ✅ Case creation UI works (custom name + cost)
+- ✅ Case is saved to database
+- ✅ Case appears in case opening menu
+- ❌ Opening fails because rewards not configured
+- 📋 **Solution**: Admin must use "🎁 Add Products" button after creating case
+
+### Testing Checklist (Updated)
+- [x] Case creation with custom name works
+- [x] Case creation with custom cost works
+- [x] Case appears in database
+- [x] Case appears in case opening menu
+- [ ] **BLOCKED**: Case opening works → Need to configure rewards first!
+- [ ] **TODO**: Add "Quick Setup" button to create case with default 50/50 lose/win chances
+- [ ] **TODO**: Update case creation flow to force reward configuration before saving
+
+---
+Last Updated: Comprehensive error handling added to case opening system! Admin must configure rewards before users can open cases.
 
