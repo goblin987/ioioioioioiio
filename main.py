@@ -648,6 +648,7 @@ def callback_query_router(func):
                 "admin_case_stats": None,
                 "admin_manage_rewards": None,
                 "admin_edit_cases": None,
+                "admin_give_test_points": None,
 
                 # Primary Admin Handlers (from admin.py)
                 "admin_menu": admin.handle_admin_menu,
@@ -1056,7 +1057,8 @@ def callback_query_router(func):
                     handle_admin_daily_rewards_settings,
                     handle_admin_case_stats,
                     handle_admin_manage_rewards,
-                    handle_admin_edit_cases
+                    handle_admin_edit_cases,
+                    handle_admin_give_test_points
                 )
                 KNOWN_HANDLERS.update({
                     "daily_rewards_menu": handle_daily_rewards_menu,
@@ -1069,6 +1071,7 @@ def callback_query_router(func):
                     "admin_case_stats": handle_admin_case_stats,
                     "admin_manage_rewards": handle_admin_manage_rewards,
                     "admin_edit_cases": handle_admin_edit_cases,
+                    "admin_give_test_points": handle_admin_give_test_points,
                 })
                 logger.info("✅ Daily rewards handlers registered")
             except Exception as e:

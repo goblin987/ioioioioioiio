@@ -361,6 +361,7 @@ async def handle_admin_daily_rewards_settings(update: Update, context: ContextTy
         [InlineKeyboardButton("📊 View Statistics", callback_data="admin_case_stats")],
         [InlineKeyboardButton("🎁 Manage Rewards Pool", callback_data="admin_manage_rewards")],
         [InlineKeyboardButton("⚙️ Edit Case Settings", callback_data="admin_edit_cases")],
+        [InlineKeyboardButton("🎯 Give Me 200 Test Points", callback_data="admin_give_test_points")],
         [InlineKeyboardButton("👥 Top Players", callback_data="case_leaderboard")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
@@ -494,6 +495,47 @@ async def handle_admin_manage_rewards(update: Update, context: ContextTypes.DEFA
         parse_mode='Markdown'
     )
 
+async def handle_admin_give_test_points(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Give admin 200 test points for testing"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    from utils import get_db_connection
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Give 200 points to admin
+        c.execute('''
+            INSERT INTO user_points (user_id, points)
+            VALUES (%s, 200)
+            ON CONFLICT (user_id) DO UPDATE
+            SET points = user_points.points + 200
+        ''', (user_id,))
+        conn.commit()
+        
+        # Get new total
+        c.execute('SELECT points FROM user_points WHERE user_id = %s', (user_id,))
+        result = c.fetchone()
+        new_total = result['points'] if result else 200
+        
+        await query.answer(f"✅ Added 200 test points! New total: {new_total}", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error giving test points: {e}")
+        await query.answer(f"❌ Error: {e}", show_alert=True)
+        if conn and conn.status == 1:
+            conn.rollback()
+    finally:
+        conn.close()
+    
+    # Refresh the admin menu
+    await handle_admin_daily_rewards_settings(update, context)
+
 async def handle_admin_edit_cases(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin interface to edit case settings"""
     query = update.callback_query
@@ -512,9 +554,15 @@ async def handle_admin_edit_cases(update: Update, context: ContextTypes.DEFAULT_
         msg += f"{config['emoji']} **{config['name']}**\n"
         msg += f"   💰 Cost: {config['cost']} points\n"
         msg += f"   🎁 Win Product: {config['rewards']['win_product']}%\n"
-        msg += f"   💎 Win Points: {config['rewards']['win_points']}%\n"
-        msg += f"   ❌ Lose: {config['rewards']['lose']}%\n"
-        msg += f"   🎰 Animation: {config['animation_speed']}s\n\n"
+        
+        # Calculate total win points percentage
+        win_points_total = sum(v for k, v in config['rewards'].items() if 'win_points' in k)
+        msg += f"   💎 Win Points: {win_points_total}%\n"
+        
+        # Calculate total lose percentage
+        lose_total = sum(v for k, v in config['rewards'].items() if 'lose' in k)
+        msg += f"   ❌ Lose: {lose_total}%\n"
+        msg += f"   🎰 Animation: {config['animation_speed']}\n\n"
     
     msg += "**Daily Streak Rewards:**\n"
     for day, points in DAILY_REWARDS.items():

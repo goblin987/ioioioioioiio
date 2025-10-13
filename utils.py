@@ -3905,4 +3905,6 @@ def set_bot_setting(key: str, value: str):
 def is_daily_rewards_enabled() -> bool:
     """Check if Daily Rewards button should be shown in start menu"""
     val = get_bot_setting("show_daily_rewards_button", "true")
-    return str(val).lower() in ("1", "true", "yes", "on")
+    result = str(val).lower() in ("1", "true", "yes", "on")
+    logger.info(f"🎁 Daily Rewards visibility check: DB value='{val}', result={result}")
+    return result

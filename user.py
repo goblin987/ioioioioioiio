@@ -203,6 +203,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     # Check if Daily Rewards should be shown
     from utils import is_daily_rewards_enabled
     show_daily_rewards = is_daily_rewards_enabled()
+    logger.info(f"🎁 Daily Rewards enabled check: {show_daily_rewards} for user {user_id}")
     
     # Default keyboard layout
     default_keyboard = [
@@ -211,6 +212,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     
     # Conditionally add Daily Rewards button
     if show_daily_rewards:
+        logger.info(f"🎁 Adding Daily Rewards button to default keyboard for user {user_id}")
         default_keyboard.append([InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")])
     
     default_keyboard.extend([
