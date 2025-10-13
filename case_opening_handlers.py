@@ -82,6 +82,22 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     await query.answer()
     
+    # Get reward pool to show actual emojis in animation
+    from case_rewards_system import get_case_reward_pool, get_db_connection
+    rewards = get_case_reward_pool(case_type)
+    
+    # Get lose emoji
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute('SELECT lose_emoji FROM case_lose_emojis WHERE case_type = %s', (case_type,))
+    lose_data = c.fetchone()
+    lose_emoji = lose_data['lose_emoji'] if lose_data else '💸'
+    conn.close()
+    
+    # Build emoji list for animation (rewards + lose emoji)
+    emoji_list = [r['reward_emoji'] for r in rewards] if rewards else ['🎁', '💎', '⭐']
+    emoji_list.append(lose_emoji)
+    
     # Show opening animation
     await query.edit_message_text(
         f"{config['emoji']} OPENING {config['name'].upper()}...\n\n"
@@ -91,15 +107,14 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     await asyncio.sleep(0.5)
     
-    # Animate spinning
-    frames = [
-        "🎰 [  💨  |  ❓  |  ❓  ]",
-        "🎰 [  ❓  |  💨  |  ❓  ]",
-        "🎰 [  ❓  |  ❓  |  💨  ]",
-        "🎰 [  🎁  |  💎  |  ⭐  ]",
-        "🎰 [  💎  |  ⭐  |  🎁  ]",
-        "🎰 [  ⭐  |  🎁  |  💎  ]",
-    ]
+    # Animate spinning with actual emojis from reward pool
+    import random
+    frames = []
+    for i in range(6):
+        left = random.choice(emoji_list)
+        center = random.choice(emoji_list)
+        right = random.choice(emoji_list)
+        frames.append(f"[  {left}  |  **[{center}]**  |  {right}  ]")
     
     for frame in frames:
         await query.edit_message_text(
@@ -122,10 +137,12 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         )
         return
     
-    # Show result
+    # Show result with final frame
     if result['outcome'] == 'lose':
-        # User lost
+        # User lost - show final frame
+        final_frame = f"[  {lose_emoji}  |  **[{lose_emoji}]**  |  {lose_emoji}  ]"
         msg = f"{config['emoji']} {config['name'].upper()}\n\n"
+        msg += f"{final_frame}\n\n"
         msg += f"{result['emoji']} {result['message']}\n\n"
         msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
         msg += f"💸 Lost {config['cost']} points\n"
@@ -139,8 +156,11 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
         
     else:
-        # User won a product!
+        # User won a product! Show final frame with winning emoji
+        win_emoji = result['emoji']
+        final_frame = f"[  {win_emoji}  |  **[{win_emoji}]**  |  {win_emoji}  ]"
         msg = f"🎉 WINNER! 🎉\n\n"
+        msg += f"{final_frame}\n\n"
         msg += f"{result['emoji']} You won:\n"
         msg += f"{result['product_type']} {result['product_size']}\n\n"
         msg += f"💰 Value: {result['estimated_value']:.2f}€\n\n"
