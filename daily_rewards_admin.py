@@ -553,23 +553,48 @@ async def handle_admin_create_case(update: Update, context: ContextTypes.DEFAULT
     await query.answer()
     
     msg = "➕ CREATE NEW CASE\n\n"
-    msg += "Step 1: Choose a name for your case\n\n"
-    msg += "Examples:\n"
-    msg += "• starter\n"
-    msg += "• bronze\n"
-    msg += "• silver\n"
-    msg += "• gold\n"
-    msg += "• diamond\n\n"
-    msg += "💡 Use lowercase, no spaces"
+    msg += "Step 1: Choose a name or type custom\n\n"
+    msg += "Quick suggestions:\n\n"
+    msg += "OR type your own case name (lowercase, no spaces)"
     
-    # Quick name suggestions
+    # Quick name suggestions + custom option
     keyboard = [
-        [InlineKeyboardButton("🥉 Bronze", callback_data="admin_create_case_name|bronze")],
-        [InlineKeyboardButton("🥈 Silver", callback_data="admin_create_case_name|silver")],
-        [InlineKeyboardButton("🥇 Gold", callback_data="admin_create_case_name|gold")],
-        [InlineKeyboardButton("💎 Diamond", callback_data="admin_create_case_name|diamond")],
+        [InlineKeyboardButton("🥉 bronze", callback_data="admin_create_case_name|bronze")],
+        [InlineKeyboardButton("🥈 silver", callback_data="admin_create_case_name|silver")],
+        [InlineKeyboardButton("🥇 gold", callback_data="admin_create_case_name|gold")],
+        [InlineKeyboardButton("💎 diamond", callback_data="admin_create_case_name|diamond")],
+        [InlineKeyboardButton("✏️ Type Custom Name", callback_data="admin_create_case_custom_name")],
         [InlineKeyboardButton("⬅️ Back", callback_data="admin_manage_cases")]
     ]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_create_case_custom_name(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Prompt admin to type custom case name"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    # Set state to wait for custom name
+    context.user_data['state'] = 'awaiting_case_name'
+    
+    msg = "✏️ TYPE CUSTOM CASE NAME\n\n"
+    msg += "Send me the name for your case\n\n"
+    msg += "Rules:\n"
+    msg += "• Use lowercase\n"
+    msg += "• No spaces (use underscore if needed)\n"
+    msg += "• Example: mystery_box\n\n"
+    msg += "Type the name now:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="admin_create_case")]]
     
     await query.edit_message_text(
         msg,
@@ -619,7 +644,7 @@ async def handle_admin_create_case_name(update: Update, context: ContextTypes.DE
     for i, cost in enumerate(costs):
         row.append(InlineKeyboardButton(
             f"{cost} pts",
-            callback_data=f"admin_save_new_case|{case_name}|{cost}"
+            callback_data=f"admin_set_case_cost|{case_name}|{cost}"
         ))
         if (i + 1) % 4 == 0:
             keyboard.append(row)
@@ -628,6 +653,7 @@ async def handle_admin_create_case_name(update: Update, context: ContextTypes.DE
     if row:
         keyboard.append(row)
     
+    keyboard.append([InlineKeyboardButton("✏️ Custom Cost", callback_data=f"admin_case_custom_cost|{case_name}")])
     keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_create_case")])
     
     await query.edit_message_text(
@@ -635,8 +661,133 @@ async def handle_admin_create_case_name(update: Update, context: ContextTypes.DE
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-async def handle_admin_save_new_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Save new case to database"""
+async def handle_admin_case_custom_cost(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Prompt admin to type custom cost"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_name = params[0]
+    await query.answer()
+    
+    # Set state to wait for custom cost
+    context.user_data['state'] = 'awaiting_case_cost'
+    context.user_data['pending_case_name'] = case_name
+    
+    msg = "💰 TYPE CUSTOM COST\n\n"
+    msg += "Send me the cost in points\n\n"
+    msg += "Example: 35\n\n"
+    msg += "Type the cost now:"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"admin_create_case_name|{case_name}")]]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_set_case_cost(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show case preview with options to add products or save"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    case_name = params[0]
+    cost = int(params[1])
+    
+    await query.answer()
+    
+    # Store in context for final save
+    context.user_data['pending_case'] = {
+        'name': case_name,
+        'cost': cost
+    }
+    
+    msg = f"📦 CASE PREVIEW\n\n"
+    msg += f"Name: {case_name.title()}\n"
+    msg += f"Cost: {cost} points\n"
+    msg += f"Products: 0 (not added yet)\n\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
+    msg += "What would you like to do?\n\n"
+    msg += "💡 Tip: Add products first, then save"
+    
+    keyboard = [
+        [InlineKeyboardButton("🎁 Add Products", callback_data=f"admin_add_products_to_new_case|{case_name}")],
+        [InlineKeyboardButton("💾 Save Case (No Products)", callback_data=f"admin_save_empty_case|{case_name}|{cost}")],
+        [InlineKeyboardButton("⬅️ Back", callback_data="admin_create_case")]
+    ]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_add_products_to_new_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save case and redirect to product pool manager"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_name = params[0]
+    
+    # Get pending case from context
+    pending_case = context.user_data.get('pending_case')
+    if not pending_case:
+        await query.answer("Session expired, please try again", show_alert=True)
+        await handle_admin_create_case(update, context)
+        return
+    
+    cost = pending_case['cost']
+    
+    # Create case in database
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            INSERT INTO case_settings (case_type, enabled, cost, rewards_config)
+            VALUES (%s, TRUE, %s, %s)
+        ''', (case_name, cost, json.dumps({})))
+        conn.commit()
+        
+        # Clear context
+        context.user_data.pop('pending_case', None)
+        
+        await query.answer(f"✅ Case '{case_name}' created! Now add products", show_alert=True)
+        
+        # Redirect to product pool manager to add products
+        from case_rewards_admin import handle_admin_case_pool
+        await handle_admin_case_pool(update, context, [case_name])
+        
+    except Exception as e:
+        logger.error(f"Error creating case: {e}")
+        await query.answer("❌ Error creating case", show_alert=True)
+        conn.rollback()
+    finally:
+        conn.close()
+
+async def handle_admin_save_empty_case(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save case without products (final save button)"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -660,18 +811,18 @@ async def handle_admin_save_new_case(update: Update, context: ContextTypes.DEFAU
             VALUES (%s, TRUE, %s, %s)
         ''', (case_name, cost, json.dumps({})))
         conn.commit()
-        await query.answer(f"✅ Case '{case_name}' created!", show_alert=True)
         
-        # Show success message
-        msg = f"✅ CASE CREATED!\n\n"
+        # Clear context
+        context.user_data.pop('pending_case', None)
+        
+        await query.answer(f"✅ Case '{case_name}' saved!", show_alert=True)
+        
+        msg = f"✅ CASE SAVED!\n\n"
         msg += f"Name: {case_name.title()}\n"
-        msg += f"Cost: {cost} points\n\n"
-        msg += "Next steps:\n"
-        msg += "1. Go to 'Product Pool Manager'\n"
-        msg += "2. Select your new case\n"
-        msg += "3. Add products with win chances\n"
-        msg += "4. Set lose emoji\n\n"
-        msg += "Your case is now ready for users!"
+        msg += f"Cost: {cost} points\n"
+        msg += f"Products: 0\n\n"
+        msg += "⚠️ Remember to add products later!\n\n"
+        msg += "Users can now see this case, but it has no rewards yet."
         
         keyboard = [
             [InlineKeyboardButton("🎁 Add Products Now", callback_data="admin_product_pool")],
@@ -683,8 +834,8 @@ async def handle_admin_save_new_case(update: Update, context: ContextTypes.DEFAU
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     except Exception as e:
-        logger.error(f"Error creating case: {e}")
-        await query.answer("❌ Error creating case", show_alert=True)
+        logger.error(f"Error saving case: {e}")
+        await query.answer("❌ Error saving case", show_alert=True)
         conn.rollback()
         await handle_admin_manage_cases(update, context)
     finally:

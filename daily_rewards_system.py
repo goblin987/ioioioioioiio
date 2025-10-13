@@ -120,13 +120,8 @@ def init_daily_rewards_tables():
             )
         ''')
         
-        # Insert default settings
-        for case_type, config in CASE_TYPES.items():
-            c.execute('''
-                INSERT INTO case_settings (case_type, enabled, cost, rewards_config)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (case_type) DO NOTHING
-            ''', (case_type, True, config['cost'], json.dumps(config['rewards'])))
+        # No default cases - admin creates them all
+        # Cases are created through admin interface only
         
         # Add product_emoji column to products table (for case opening display)
         try:
