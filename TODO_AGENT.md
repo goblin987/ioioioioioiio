@@ -73,12 +73,22 @@
 - ✅ No regressions to 100% delivery system
 - ✅ Rate limiter unaffected
 
-## Latest Fix (Commit c7171f9)
+## Latest Fixes
+
+### Fix #1: Daily Rewards Button Missing (Commit c7171f9)
 - ✅ **FOUND THE ISSUE**: Daily Rewards was NOT in the UI editor's available buttons list
 - ✅ Added to `AVAILABLE_BUTTONS['start_menu']` in marketing_promotions.py (line 4369)
 - ✅ Now appears in "EDITING: Start Menu" → "Available Buttons" section
 - ✅ Can be dragged and placed in custom layouts
 
+### Fix #2: Auto-Activate Custom Theme (Commit 66fadfa)
+- ✅ **ISSUE**: After creating/editing custom UI, admin had to manually activate it
+- ✅ **FIX**: Added auto-activation after saving (lines 5289-5291):
+  - Deactivates all preset themes: `UPDATE ui_themes SET is_active = FALSE`
+  - Activates the saved custom menu: `UPDATE bot_menu_layouts SET is_active = TRUE`
+- ✅ Admin now sees their new theme immediately on `/start`
+- ✅ Notification changed from "saved successfully" to "saved and activated!"
+
 ---
-Last Updated: UI editor fix deployed - Daily Rewards now available in button picker
+Last Updated: Auto-activation deployed - custom themes activate immediately after saving
 
