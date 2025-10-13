@@ -1073,6 +1073,25 @@ def callback_query_router(func):
                     handle_admin_give_test_points,
                     handle_admin_case_stats
                 )
+                # NEW CS:GO-Style Case System
+                from case_rewards_admin import (
+                    handle_admin_product_pool_v2,
+                    handle_admin_case_pool,
+                    handle_admin_add_product_to_case,
+                    handle_admin_select_product,
+                    handle_admin_set_product_chance,
+                    handle_admin_save_product_reward,
+                    handle_admin_remove_from_case,
+                    handle_admin_confirm_remove,
+                    handle_admin_set_lose_emoji,
+                    handle_admin_save_lose_emoji
+                )
+                from case_opening_handlers import (
+                    handle_select_city,
+                    handle_select_district,
+                    handle_select_product,
+                    handle_convert_to_balance
+                )
                 KNOWN_HANDLERS.update({
                     "daily_rewards_menu": handle_daily_rewards_menu,
                     "claim_daily_reward": handle_claim_daily_reward,
@@ -1083,7 +1102,23 @@ def callback_query_router(func):
                     # New clean admin interface
                     "admin_daily_rewards_main": handle_admin_daily_rewards_main,
                     "admin_daily_rewards_settings": handle_admin_daily_rewards_main,  # Alias
-                    "admin_product_pool": handle_admin_product_pool,
+                    "admin_product_pool": handle_admin_product_pool_v2,  # NEW VERSION
+                    "admin_product_pool_v2": handle_admin_product_pool_v2,
+                    "admin_case_pool": handle_admin_case_pool,
+                    "admin_add_product_to_case": handle_admin_add_product_to_case,
+                    "admin_select_product": handle_admin_select_product,
+                    "admin_set_product_chance": handle_admin_set_product_chance,
+                    "admin_save_product_reward": handle_admin_save_product_reward,
+                    "admin_remove_from_case": handle_admin_remove_from_case,
+                    "admin_confirm_remove": handle_admin_confirm_remove,
+                    "admin_set_lose_emoji": handle_admin_set_lose_emoji,
+                    "admin_save_lose_emoji": handle_admin_save_lose_emoji,
+                    # City selection handlers
+                    "select_city": handle_select_city,
+                    "select_district": handle_select_district,
+                    "select_product": handle_select_product,
+                    "convert_to_balance": handle_convert_to_balance,
+                    # OLD handlers (keep for compatibility)
                     "admin_edit_product_pool": handle_admin_edit_product_pool,
                     "admin_set_emoji": handle_admin_set_emoji,
                     "admin_save_emoji": handle_admin_save_emoji,
@@ -2117,6 +2152,15 @@ def main() -> None:
         logger.info("✅ Daily rewards system initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize daily rewards system: {e}", exc_info=True)
+    
+    # 🎰 INITIALIZE NEW CS:GO-STYLE CASE REWARDS SYSTEM
+    try:
+        from case_rewards_system import init_case_rewards_tables
+        logger.info("🎰 Initializing CS:GO-style case rewards system...")
+        init_case_rewards_tables()
+        logger.info("✅ Case rewards system initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize case rewards system: {e}", exc_info=True)
     
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
