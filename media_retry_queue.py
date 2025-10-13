@@ -8,7 +8,7 @@ import asyncio
 import json
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
-from database import get_db_connection
+from utils import get_db_connection
 
 logger = logging.getLogger(__name__)
 

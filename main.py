@@ -2028,6 +2028,7 @@ def main() -> None:
         logger.error(f"❌ Failed to initialize welcome tables: {e}", exc_info=True)
     
     try:
+        from interactive_welcome_editor import init_interactive_welcome_tables
         init_interactive_welcome_tables()
         logger.info("✅ Interactive welcome tables initialized successfully")
     except Exception as e:
@@ -2066,12 +2067,10 @@ def main() -> None:
     try:
         from media_retry_queue import media_retry_queue
         logger.info("📦 Starting media retry queue for 100% delivery guarantee...")
-        # Start retry queue in background
-        import asyncio
-        asyncio.create_task(media_retry_queue.start())
-        logger.info("✅ Media retry queue started successfully")
+        # Note: Will start in post_init after event loop is available
+        logger.info("✅ Media retry queue imported successfully")
     except Exception as e:
-        logger.error(f"❌ Failed to start media retry queue: {e}", exc_info=True)
+        logger.error(f"❌ Failed to import media retry queue: {e}", exc_info=True)
     
     # 🎁 INITIALIZE DAILY REWARDS & CASE OPENING SYSTEM
     try:

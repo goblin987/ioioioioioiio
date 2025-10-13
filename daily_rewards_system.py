@@ -8,8 +8,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Optional, List
 import random
 import json
-from database import get_db_connection
-from utils import is_primary_admin
+from utils import get_db_connection, is_primary_admin
 
 logger = logging.getLogger(__name__)
 
