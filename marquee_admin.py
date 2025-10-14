@@ -1,6 +1,6 @@
 """
-Marquee Text Admin Handlers
-Allows admins to configure running text animation
+Running Ads Admin Handlers
+Allows admins to configure animated running text for buttons
 """
 
 import logging
@@ -18,7 +18,7 @@ from marquee_text_system import (
 logger = logging.getLogger(__name__)
 
 async def handle_admin_marquee_settings(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Main marquee settings menu"""
+    """Main running ads settings menu"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -31,23 +31,21 @@ async def handle_admin_marquee_settings(update: Update, context: ContextTypes.DE
     settings = get_marquee_settings()
     
     if not settings:
-        msg = "❌ Marquee system not initialized"
-        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="admin_bot_ui_menu")]]
+        msg = "❌ Running Ads system not initialized"
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")]]
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
         return
     
-    # Show preview
+    # Show clean preview (no symbols)
     preview = get_current_marquee_frame(0)
     
-    msg = "📢 MARQUEE TEXT SETTINGS\n\n"
+    msg = "📢 RUNNING ADS MANAGEMENT\n\n"
     msg += f"Current Text: {settings['text']}\n\n"
     msg += f"Status: {'✅ ENABLED' if settings['enabled'] else '❌ DISABLED'}\n"
     msg += f"Speed: {settings['speed'].upper()}\n\n"
-    msg += f"Preview:\n"
-    msg += f"┌{'─' * 22}┐\n"
-    msg += f"│ {preview} │\n"
-    msg += f"└{'─' * 22}┘\n\n"
-    msg += "Configure your running text animation below"
+    msg += f"Preview:\n{preview}\n\n"
+    msg += "This text will scroll on the Running Ads button.\n"
+    msg += "Add the button via Bot UI Management → UI Theme Designer"
     
     keyboard = [
         [InlineKeyboardButton("✏️ Change Text", callback_data="admin_marquee_change_text")],
@@ -59,7 +57,7 @@ async def handle_admin_marquee_settings(update: Update, context: ContextTypes.DE
         ],
         [InlineKeyboardButton("⚡ Change Speed", callback_data="admin_marquee_speed")],
         [InlineKeyboardButton("👁️ Preview Animation", callback_data="admin_marquee_preview")],
-        [InlineKeyboardButton("⬅️ Back", callback_data="admin_bot_ui_menu")]
+        [InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -219,7 +217,7 @@ async def handle_admin_marquee_set_speed(update: Update, context: ContextTypes.D
     await handle_admin_marquee_speed(update, context)
 
 async def handle_admin_marquee_preview(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Show animated preview of marquee"""
+    """Show animated preview of running ads"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -232,20 +230,18 @@ async def handle_admin_marquee_preview(update: Update, context: ContextTypes.DEF
     settings = get_marquee_settings()
     
     if not settings:
-        await query.answer("❌ Marquee not initialized", show_alert=True)
+        await query.answer("❌ Running Ads not initialized", show_alert=True)
         return
     
-    msg = "👁️ MARQUEE PREVIEW\n\n"
-    msg += "Watch the animation below:\n\n"
+    msg = "👁️ RUNNING ADS PREVIEW\n\n"
+    msg += "Animation frames (how it scrolls):\n\n"
     
-    # Show 5 frames
+    # Show 5 frames - CLEAN, no symbols
     for i in range(5):
         frame = get_current_marquee_frame(i * 3)
-        msg += f"┌{'─' * 22}┐\n"
-        msg += f"│ {frame} │\n"
-        msg += f"└{'─' * 22}┘\n\n"
+        msg += f"Frame {i+1}: {frame}\n"
     
-    msg += "This is how it will look when animated!"
+    msg += "\nThis text will scroll smoothly on the button!"
     
     keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="admin_marquee_settings")]]
     

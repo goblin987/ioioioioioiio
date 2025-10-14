@@ -4376,7 +4376,7 @@ AVAILABLE_BUTTONS = {
         {'text': '🌐 Language', 'callback': 'language', 'emoji': '🌐'},
         {'text': '🎁 Promotions', 'callback': 'promotions', 'emoji': '🎁'},
         {'text': '📞 Support', 'callback': 'support', 'emoji': '📞'},
-        {'text': '📢 Marquee Text', 'callback': 'marquee_display', 'emoji': '📢'}
+        {'text': '📢 Running Ads', 'callback': 'running_ads_display', 'emoji': '📢'}
     ],
     'city_menu': [
         {'text': '🏙️ Vilnius', 'callback': 'city_vilnius', 'emoji': '🏙️'},
