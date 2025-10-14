@@ -1646,15 +1646,19 @@ async def auto_ads_execution_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
     """Wrapper for executing pending auto ads campaigns."""
     logger.debug("Running background job: auto_ads_execution")
     try:
-        from auto_ads_system import get_campaign_executor
-        executor = get_campaign_executor()
+        from auto_ads_system import get_or_create_executor
+        executor = get_or_create_executor()
         if executor:
             pending_campaigns = executor.get_pending_executions()
-            for campaign_id in pending_campaigns:
-                try:
-                    await executor.execute_campaign(campaign_id)
-                except Exception as e:
-                    logger.error(f"Error executing campaign {campaign_id}: {e}")
+            if pending_campaigns:
+                logger.info(f"Found {len(pending_campaigns)} pending campaigns")
+                for campaign_id in pending_campaigns:
+                    try:
+                        await executor.execute_campaign(campaign_id)
+                    except Exception as e:
+                        logger.error(f"Error executing campaign {campaign_id}: {e}")
+            else:
+                logger.debug("No pending campaigns to execute")
     except Exception as e:
         logger.error(f"Error in auto ads execution job: {e}", exc_info=True)
 
