@@ -120,54 +120,68 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     if not emoji_list:
         emoji_list = ['🎁', '💎', '⭐', '💸']
     
-    # Show opening animation
-    await query.edit_message_text(
-        f"{config['emoji']} OPENING {config['name'].upper()}...\n\n"
-        f"🎰 Rolling...\n\n"
-        f"          ▼\n"
-        f"     ━━━━━━━━━━━\n"
-        f"          ▼"
-    )
+    # STEP 1: Show emoji legend/preview (what each emoji means)
+    legend_msg = f"🎰 {config['emoji']} {config['name'].upper()}\n"
+    legend_msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
+    legend_msg += f"💰 Cost: {config['cost']} points\n\n"
+    legend_msg += f"🎁 **POSSIBLE OUTCOMES:**\n\n"
     
-    await asyncio.sleep(0.5)
+    if rewards:
+        for r in rewards:
+            if r['reward_emoji']:
+                legend_msg += f"{r['reward_emoji']} = {r['product_type_name']} {r['product_size']} ({r['win_chance_percent']}%)\n"
     
-    # Animate spinning with actual emojis from reward pool (2x longer = 16 frames)
+    if lose_emoji:
+        # Calculate lose chance
+        total_win = sum(r['win_chance_percent'] for r in rewards if r['reward_emoji']) if rewards else 0
+        lose_chance = 100 - total_win
+        legend_msg += f"{lose_emoji} = Lose Nothing ({lose_chance:.0f}%)\n"
+    
+    legend_msg += f"\n━━━━━━━━━━━━━━━━━━━━\n"
+    legend_msg += f"🎰 Opening in 3..."
+    
+    await query.edit_message_text(legend_msg)
+    await asyncio.sleep(1)
+    
+    await query.edit_message_text(legend_msg.replace("Opening in 3...", "Opening in 2..."))
+    await asyncio.sleep(1)
+    
+    await query.edit_message_text(legend_msg.replace("Opening in 3...", "Opening in 1..."))
+    await asyncio.sleep(1)
+    
+    # STEP 2: SMOOTH ULTRA-FAST animation (30 frames for silky smoothness!)
     import random
-    total_frames = 16  # Doubled from 8
-    frames = []
+    total_frames = 30  # More frames = smoother
     
     for i in range(total_frames):
         left = random.choice(emoji_list)
         center = random.choice(emoji_list)
         right = random.choice(emoji_list)
         
-        # Progress bar (20 segments)
-        progress = int((i / total_frames) * 20)
+        # Progress bar (30 segments for smoother progress)
+        progress = int((i / total_frames) * 30)
         bar_filled = "█" * progress
-        bar_empty = "░" * (20 - progress)
-        progress_bar = f"[{bar_filled}{bar_empty}]"
+        bar_empty = "░" * (30 - progress)
+        progress_bar = f"{bar_filled}{bar_empty}"
         
-        # Show brackets above and below the center (winning) slot
-        frames.append({
-            'slots': f"          ▼\n     [ {left}  {center}  {right} ]\n          ▼",
-            'progress': progress_bar,
-            'percent': int((i / total_frames) * 100)
-        })
-    
-    for i, frame in enumerate(frames):
-        # Slow down towards end for dramatic effect
-        if i < 8:
-            speed = 0.15  # Fast start
-        elif i < 12:
-            speed = 0.25  # Medium
+        # Dynamic speed: start fast, end slow
+        if i < 10:
+            speed = 0.08  # SUPER FAST start
+        elif i < 20:
+            speed = 0.12  # Fast
+        elif i < 25:
+            speed = 0.20  # Medium
         else:
-            speed = 0.45  # Slow dramatic finish
+            speed = 0.35  # Slow dramatic finish
         
-        await query.edit_message_text(
-            f"{config['emoji']} OPENING {config['name'].upper()}...\n\n"
-            f"{frame['slots']}\n\n"
-            f"{frame['progress']} {frame['percent']}%"
-        )
+        # Build frame
+        frame_msg = f"🎰 {config['emoji']} SPINNING...\n\n"
+        frame_msg += f"          ▼\n"
+        frame_msg += f"     [ {left}  {center}  {right} ]\n"
+        frame_msg += f"          ▼\n\n"
+        frame_msg += f"{progress_bar}"
+        
+        await query.edit_message_text(frame_msg)
         await asyncio.sleep(speed)
     
     # Open the case
@@ -237,11 +251,21 @@ async def handle_select_city(update: Update, context: ContextTypes.DEFAULT_TYPE,
     query = update.callback_query
     user_id = query.from_user.id
     
+    logger.info(f"🏙️ handle_select_city called: user={user_id}, params={params}")
+    
     if not params:
+        logger.error(f"❌ No params provided to handle_select_city")
         await query.answer("Invalid win", show_alert=True)
         return
     
-    win_id = int(params[0])
+    try:
+        win_id = int(params[0])
+        logger.info(f"✅ Parsed win_id: {win_id}")
+    except (ValueError, IndexError) as e:
+        logger.error(f"❌ Error parsing win_id from params {params}: {e}")
+        await query.answer("Invalid win ID", show_alert=True)
+        return
+    
     await query.answer()
     
     # Get win details
