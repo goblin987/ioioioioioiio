@@ -77,8 +77,43 @@ FIX #6: Animation too slow and laggy ✅ WORKING
 
 ===============================================================================
 
+ISSUE #2: Arrows not aligned above/below center emoji
+Date: 2025-10-14 01:25
+Status: ✅ FIXED
+
+Problem:
+- User screenshot shows arrows ▼ appearing to the LEFT side
+- Not positioned directly above and below the CENTER emoji
+- Layout looked like:  "    ▼\n    🍺  🌿  💸"
+
+Root Cause:
+- Using spaces for alignment doesn't work well with emoji widths
+- Telegram renders emojis with variable widths
+- Simple spacing doesn't center arrows over middle position
+
+Solution Applied:
+1. ✅ Changed layout to bracket format: [ emoji ▼ emoji ]
+2. ✅ Put arrows IN THE MIDDLE position (where center emoji should be)
+3. ✅ 3-row display: top row with ▼, middle row with center emoji, bottom row with ▲
+4. ✅ Arrows are now bold **▼** and **▲** to stand out
+
+New Layout:
+```
+  [ 🍺 **▼** 💸 ]
+  [ 🍺 🌿 💸 ]
+  [ 🍺 **▲** 💸 ]
+```
+
+Code Changes:
+- case_opening_handlers.py, lines 204-206: Changed to bracket layout with arrows in middle
+- case_opening_handlers.py, lines 225-227: Same fix for final result frame
+
+Result: Arrows now perfectly centered, pointing to middle emoji from above and below
+
+===============================================================================
+
 CURRENT KNOWN ISSUES:
-1. 🔧 Telegram duplicate message error (FIXING NOW)
+None - All working! ✅
 
 ===============================================================================
 
