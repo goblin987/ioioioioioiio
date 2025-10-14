@@ -167,13 +167,13 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     else:
         final_emoji = result['emoji']  # Winning product emoji
     
-    # STEP 3: SMOOTH animation that ENDS on the correct emoji
+    # STEP 3: OPTIMIZED animation - fewer frames, faster
     import random
-    total_frames = 30
+    total_frames = 20  # Reduced from 30 for speed
     
     for i in range(total_frames):
-        # Last 3 frames: show the FINAL emoji
-        if i >= 27:
+        # Last 2 frames: show the FINAL emoji
+        if i >= 18:
             center = final_emoji
             left = final_emoji
             right = final_emoji
@@ -183,41 +183,39 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
             center = random.choice(emoji_list)
             right = random.choice(emoji_list)
         
-        # Progress bar (15 segments - shorter for mobile)
-        progress = int((i / total_frames) * 15)
+        # Progress bar (10 segments - even shorter)
+        progress = int((i / total_frames) * 10)
         bar_filled = "█" * progress
-        bar_empty = "░" * (15 - progress)
+        bar_empty = "░" * (10 - progress)
         progress_bar = f"{bar_filled}{bar_empty}"
         
         # Dynamic speed: start fast, end slow
-        if i < 10:
-            speed = 0.08  # SUPER FAST start
-        elif i < 20:
-            speed = 0.12  # Fast
-        elif i < 25:
-            speed = 0.20  # Medium
+        if i < 8:
+            speed = 0.08  # Fast start
+        elif i < 15:
+            speed = 0.12  # Medium
         else:
-            speed = 0.40  # SLOW dramatic finish (show result longer)
+            speed = 0.35  # Slow finish
         
-        # Build frame with arrows ABOVE and BELOW center
+        # Build frame with ONLY 2 arrows (1 above, 1 below center emoji)
         frame_msg = f"🎰 {config['emoji']} SPINNING...\n\n"
-        frame_msg += f"       ▼ ▼ ▼\n"
+        frame_msg += f"         ▼\n"
         frame_msg += f"    {left}  {center}  {right}\n"
-        frame_msg += f"       ▼ ▼ ▼\n\n"
+        frame_msg += f"         ▼\n\n"
         frame_msg += f"{progress_bar}"
         
         await query.edit_message_text(frame_msg)
         await asyncio.sleep(speed)
     
-    # STEP 4: Hold final result for 1.5 seconds (show winning emoji longer)
+    # STEP 4: Hold final result for 1 second
     final_frame = f"🎰 {config['emoji']} RESULT!\n\n"
-    final_frame += f"       ▼ ▼ ▼\n"
+    final_frame += f"         ▼\n"
     final_frame += f"    {final_emoji}  **{final_emoji}**  {final_emoji}\n"
-    final_frame += f"       ▼ ▼ ▼\n\n"
-    final_frame += f"{'█' * 15}"
+    final_frame += f"         ▼\n\n"
+    final_frame += f"{'█' * 10}"
     
     await query.edit_message_text(final_frame)
-    await asyncio.sleep(1.5)  # Hold result longer
+    await asyncio.sleep(1.0)  # Hold result
     
     # STEP 5: Show detailed result
     if result['outcome'] == 'lose':
