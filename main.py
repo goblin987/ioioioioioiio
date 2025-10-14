@@ -1089,7 +1089,6 @@ def callback_query_router(func):
                     handle_admin_apply_fixed,
                     handle_admin_pattern_progressive,
                     handle_admin_apply_progressive,
-                    handle_admin_toggle_unlimited,
                     handle_admin_save_case_cost,
                     handle_admin_create_case,
                     handle_admin_create_case_custom_name,
@@ -1151,7 +1150,6 @@ def callback_query_router(func):
                     "admin_apply_fixed": handle_admin_apply_fixed,
                     "admin_pattern_progressive": handle_admin_pattern_progressive,
                     "admin_apply_progressive": handle_admin_apply_progressive,
-                    "admin_toggle_unlimited": handle_admin_toggle_unlimited,
                     "admin_product_pool": handle_admin_product_pool_v2,  # NEW VERSION
                     "admin_product_pool_v2": handle_admin_product_pool_v2,
                     "admin_case_pool": handle_admin_case_pool,

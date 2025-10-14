@@ -64,24 +64,20 @@ def update_reward_for_day(day_number: int, points: int, description: str = None)
         conn.close()
 
 def get_reward_for_day(day_number: int) -> int:
-    """Get reward points for a specific day (with infinite progression)"""
+    """Get reward points for a specific day (infinite days, no bonus)"""
     schedule = get_reward_schedule()
     
     # If day is in schedule, return it
     if day_number in schedule:
         return schedule[day_number]['points']
     
-    # For days beyond the schedule, calculate progressive reward
-    # Pattern: repeat the 7-day cycle with increasing multiplier
+    # For days beyond the schedule, repeat the pattern (NO BONUS)
     max_day = max(schedule.keys()) if schedule else 7
-    cycle_number = (day_number - 1) // max_day
     day_in_cycle = ((day_number - 1) % max_day) + 1
     
-    base_reward = schedule.get(day_in_cycle, {}).get('points', 10)
-    # Each cycle adds 50% more
-    multiplier = 1 + (cycle_number * 0.5)
+    base_reward = schedule.get(day_in_cycle, {}).get('points', 1)
     
-    return int(base_reward * multiplier)
+    return base_reward
 
 def get_rolling_calendar(user_id: int, current_streak: int) -> List[Dict]:
     """
@@ -823,11 +819,36 @@ def get_user_stats(user_id: int) -> Dict:
         total = stats['total_cases_opened']
         win_rate = (wins / total * 100) if total > 0 else 0
         
+        # Get streak info
+        c.execute('''
+            SELECT streak_count
+            FROM daily_logins
+            WHERE user_id = %s
+            ORDER BY login_date DESC
+            LIMIT 1
+        ''', (user_id,))
+        
+        streak_row = c.fetchone()
+        current_streak = streak_row['streak_count'] if streak_row else 0
+        
+        # Get longest streak (max streak_count)
+        c.execute('''
+            SELECT MAX(streak_count) as longest
+            FROM daily_logins
+            WHERE user_id = %s
+        ''', (user_id,))
+        
+        longest_row = c.fetchone()
+        longest_streak = longest_row['longest'] if longest_row and longest_row['longest'] else 0
+        
         return {
+            'current_points': stats['points'],
             'points': stats['points'],
             'lifetime_points': stats['lifetime_points'],
-            'cases_opened': total,
-            'products_won': stats['total_products_won'],
+            'total_cases_opened': stats['total_cases_opened'],
+            'total_products_won': stats['total_products_won'],
+            'current_streak': current_streak,
+            'longest_streak': longest_streak,
             'win_rate': round(win_rate, 1)
         }
     
@@ -835,7 +856,7 @@ def get_user_stats(user_id: int) -> Dict:
         conn.close()
 
 def get_leaderboard(limit: int = 10) -> List[Dict]:
-    """Get top players leaderboard"""
+    """Get top players leaderboard (top 10 only)"""
     conn = get_db_connection()
     c = conn.cursor()
     
@@ -845,9 +866,11 @@ def get_leaderboard(limit: int = 10) -> List[Dict]:
                 user_id,
                 total_cases_opened,
                 total_products_won,
+                points,
                 lifetime_points
             FROM user_points
-            ORDER BY lifetime_points DESC
+            WHERE total_cases_opened > 0
+            ORDER BY lifetime_points DESC, total_cases_opened DESC
             LIMIT %s
         ''', (limit,))
         
