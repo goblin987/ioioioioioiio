@@ -114,8 +114,13 @@ async def handle_admin_case_pool(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("➕ Add Product Type", callback_data=f"admin_add_product_to_case|{case_type}")],
         [InlineKeyboardButton("🗑️ Remove Product", callback_data=f"admin_remove_from_case|{case_type}")],
         [InlineKeyboardButton("💸 Set Lose Emoji", callback_data=f"admin_set_lose_emoji|{case_type}")],
-        [InlineKeyboardButton("⬅️ Back to Cases", callback_data="admin_product_pool_v2")]
     ]
+    
+    # Add Save button if there are rewards configured
+    if rewards:
+        keyboard.append([InlineKeyboardButton("💾 Save & Activate Case", callback_data=f"admin_save_case_config|{case_type}")])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to Cases", callback_data="admin_product_pool_v2")])
     
     await query.edit_message_text(
         msg,
@@ -448,4 +453,95 @@ async def handle_admin_save_lose_emoji(update: Update, context: ContextTypes.DEF
         await handle_admin_case_pool(update, context, [case_type])
     else:
         await query.answer("❌ Error saving emoji", show_alert=True)
+
+async def handle_admin_save_case_config(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Sync case_reward_pools to rewards_config in case_settings"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid case", show_alert=True)
+        return
+    
+    case_type = params[0]
+    await query.answer("Saving configuration...", show_alert=False)
+    
+    from utils import get_db_connection
+    import json
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Get reward pool from case_reward_pools table
+        c.execute('''
+            SELECT win_chance_percent, product_type_name, product_size
+            FROM case_reward_pools
+            WHERE case_type = %s AND is_active = TRUE
+        ''', (case_type,))
+        
+        rewards_data = c.fetchall()
+        
+        if not rewards_data:
+            await query.answer("❌ No rewards configured!", show_alert=True)
+            return
+        
+        # Build rewards_config dict (outcome_type: percentage)
+        rewards_config = {}
+        total_chance = 0
+        
+        for reward in rewards_data:
+            # Use product type + size as key for now
+            # In the actual opening, we'll map this to 'win_product'
+            key = f"win_product_{reward['product_type_name']}_{reward['product_size']}"
+            rewards_config[key] = float(reward['win_chance_percent'])
+            total_chance += float(reward['win_chance_percent'])
+        
+        # Add lose chance
+        lose_chance = 100 - total_chance
+        if lose_chance > 0:
+            rewards_config['lose_all'] = lose_chance
+        
+        # Update case_settings with rewards_config
+        c.execute('''
+            UPDATE case_settings
+            SET rewards_config = %s::jsonb
+            WHERE case_type = %s
+        ''', (json.dumps(rewards_config), case_type))
+        
+        conn.commit()
+        
+        await query.answer(f"✅ Case '{case_type}' saved and activated!", show_alert=True)
+        
+        # Show success message
+        msg = f"✅ CASE CONFIGURATION SAVED!\n\n"
+        msg += f"Case: {case_type.upper()}\n"
+        msg += f"Total Win Chance: {total_chance:.1f}%\n"
+        msg += f"Lose Chance: {lose_chance:.1f}%\n\n"
+        msg += f"The case is now ready for users to open!\n\n"
+        msg += f"🎮 Users can now:\n"
+        msg += f"• See '{case_type}' in case opening menu\n"
+        msg += f"• Open the case and win products\n"
+        msg += f"• View their stats and leaderboard"
+        
+        keyboard = [
+            [InlineKeyboardButton("⬅️ Back to Pool", callback_data=f"admin_case_pool|{case_type}")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="admin_daily_rewards_main")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error saving case config: {e}")
+        await query.answer(f"❌ Error: {e}", show_alert=True)
+        conn.rollback()
+    finally:
+        conn.close()
 

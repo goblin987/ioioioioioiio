@@ -1100,7 +1100,8 @@ def callback_query_router(func):
                     handle_admin_remove_from_case,
                     handle_admin_confirm_remove,
                     handle_admin_set_lose_emoji,
-                    handle_admin_save_lose_emoji
+                    handle_admin_save_lose_emoji,
+                    handle_admin_save_case_config
                 )
                 from case_opening_handlers import (
                     handle_select_city,
@@ -1129,6 +1130,7 @@ def callback_query_router(func):
                     "admin_confirm_remove": handle_admin_confirm_remove,
                     "admin_set_lose_emoji": handle_admin_set_lose_emoji,
                     "admin_save_lose_emoji": handle_admin_save_lose_emoji,
+                    "admin_save_case_config": handle_admin_save_case_config,
                     # City selection handlers
                     "select_city": handle_select_city,
                     "select_district": handle_select_district,
