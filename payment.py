@@ -1080,18 +1080,27 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 from userbot_manager import userbot_manager
                 from userbot_config import userbot_config
                 
-                # 🔥 YOLO DEBUG: Log everything!
-                logger.info(f"🔍 YOLO DEBUG: Checking userbot delivery conditions for user {user_id}")
-                logger.info(f"🔍 YOLO DEBUG: userbot_config.is_enabled() = {userbot_config.is_enabled()}")
-                # NEW: Check if userbot pool has available userbots
+                # Check system setting for secret chat delivery
+                from utils import get_bot_setting
+                secret_chat_enabled = get_bot_setting("secret_chat_delivery_enabled", "false").lower() == "true"
+                
+                logger.info(f"🔍 Checking delivery conditions for user {user_id}")
+                logger.info(f"🔍 Secret chat delivery setting: {secret_chat_enabled}")
+                logger.info(f"🔍 Userbot config enabled: {userbot_config.is_enabled()}")
+                
+                # NEW: Check if userbot pool has available userbots AND secret chat is enabled
                 use_userbot_delivery = False
-                try:
-                    from userbot_pool import userbot_pool
-                    use_userbot_delivery = (userbot_pool.is_initialized and len(userbot_pool.clients) > 0)
-                    logger.info(f"🔍 Userbot pool available: {use_userbot_delivery} ({len(userbot_pool.clients) if userbot_pool.is_initialized else 0} active userbots)")
-                except Exception as e:
-                    logger.warning(f"⚠️ Userbot pool check failed: {e}")
-                    use_userbot_delivery = False
+                
+                if secret_chat_enabled:
+                    try:
+                        from userbot_pool import userbot_pool
+                        use_userbot_delivery = (userbot_pool.is_initialized and len(userbot_pool.clients) > 0)
+                        logger.info(f"🔍 Userbot pool available: {use_userbot_delivery} ({len(userbot_pool.clients) if userbot_pool.is_initialized else 0} active userbots)")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Userbot pool check failed: {e}")
+                        use_userbot_delivery = False
+                else:
+                    logger.info(f"📱 Secret chat delivery DISABLED in system settings - using bot chat delivery")
                 
                 if use_userbot_delivery:
                     logger.info(f"🔐 Using userbot for secret chat delivery to user {user_id} (enabled={userbot_config.is_enabled()}, connected={userbot_manager.is_connected})")

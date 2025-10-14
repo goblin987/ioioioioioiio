@@ -34,6 +34,14 @@ async def deliver_product_via_userbot(
         Dictionary with delivery status
     """
     
+    # Check system setting for secret chat delivery
+    from utils import get_bot_setting
+    secret_chat_enabled = get_bot_setting("secret_chat_delivery_enabled", "false").lower() == "true"
+    
+    if not secret_chat_enabled:
+        logger.info("ℹ️ Secret chat delivery DISABLED in system settings, using bot chat fallback")
+        return {'success': False, 'error': 'Secret chat delivery disabled', 'fallback': True}
+    
     # Check if userbot is enabled and connected
     if not userbot_config.is_enabled():
         logger.info("ℹ️ Userbot delivery disabled, using fallback")
@@ -215,6 +223,14 @@ async def deliver_basket_via_userbot(
     Returns:
         Dictionary with delivery status
     """
+    
+    # Check system setting for secret chat delivery
+    from utils import get_bot_setting
+    secret_chat_enabled = get_bot_setting("secret_chat_delivery_enabled", "false").lower() == "true"
+    
+    if not secret_chat_enabled:
+        logger.info("ℹ️ Secret chat delivery DISABLED in system settings, using bot chat fallback")
+        return {'success': False, 'error': 'Secret chat delivery disabled', 'fallback': True}
     
     # Check if userbot is enabled and connected
     if not userbot_config.is_enabled():
