@@ -477,8 +477,18 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
     c = conn.cursor()
     
     try:
+        # Get district name
+        c.execute('SELECT name FROM districts WHERE id = %s', (district_id,))
+        district_row = c.fetchone()
+        district_name = district_row['name'] if district_row else None
+        
+        if not district_name:
+            await query.answer("District not found", show_alert=True)
+            return
+        
+        # Get win details
         c.execute('''
-            SELECT product_type_name, product_size, win_emoji
+            SELECT product_type_name, product_size, win_emoji, estimated_value
             FROM user_product_wins
             WHERE id = %s AND user_id = %s
         ''', (win_id, user_id))
@@ -488,6 +498,8 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
         if not win:
             await query.answer("Win not found", show_alert=True)
             return
+        
+        logger.info(f"🔍 Looking for products: district={district_name}, type={win['product_type_name']}, size={win['product_size']}")
         
         # Get products
         c.execute('''
@@ -503,13 +515,20 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
         
         products = c.fetchall()
         
+        logger.info(f"📦 Found {len(products) if products else 0} products")
+        
         if not products:
-            await query.edit_message_text(
-                "❌ No products available in this district",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("⬅️ Back", callback_data=f"select_district|{win_id}|{city_id}")
-                ]])
-            )
+            # No products available - offer to convert to balance
+            msg = f"❌ NO PRODUCTS AVAILABLE\n\n"
+            msg += f"Sorry, {win['win_emoji']} {win['product_type_name']} {win['product_size']} is not available in this district.\n\n"
+            msg += f"💰 Convert to balance: {win['estimated_value']:.2f}€"
+            
+            keyboard = [
+                [InlineKeyboardButton("💰 Convert to Balance", callback_data=f"convert_to_balance|{win_id}")],
+                [InlineKeyboardButton("⬅️ Try Another District", callback_data=f"select_city|{win_id}")]
+            ]
+            
+            await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
             return
         
         # Auto-select first product
