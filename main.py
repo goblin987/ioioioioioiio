@@ -420,7 +420,7 @@ try:
         handle_enhanced_channel_link,
         get_bot_instance as get_auto_ads_bot
     )
-    logger.info("✅ Auto ads system handlers loaded successfully (30+ handlers)")
+    logging.getLogger(__name__).info("✅ Auto ads system handlers loaded successfully (30+ handlers)")
     
     # Map old testforwarder names to new auto ads handlers
     handle_testforwarder_menu = handle_enhanced_auto_ads_menu
@@ -486,7 +486,7 @@ try:
         await bot.handle_message(update, context)
         
 except ImportError as e:
-    logger.warning(f"⚠️ Could not import auto ads handlers: {e}")
+    logging.getLogger(__name__).warning(f"⚠️ Could not import auto ads handlers: {e}")
     # Create fallback dummy handlers
     async def handle_testforwarder_menu(update, context, params=None):
         await update.callback_query.edit_message_text("🚧 Auto Ads System - Under Development")
