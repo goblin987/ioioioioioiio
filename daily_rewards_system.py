@@ -183,6 +183,7 @@ def init_daily_rewards_tables():
     c = conn.cursor()
     
     try:
+        logger.info("🔧 Creating daily_reward_schedule table...")
         # Daily reward schedule (customizable by admin)
         c.execute('''
             CREATE TABLE IF NOT EXISTS daily_reward_schedule (
@@ -193,7 +194,7 @@ def init_daily_rewards_tables():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        logger.info("✅ daily_reward_schedule table created")
+        logger.info("✅ daily_reward_schedule table created successfully")
         
         # Insert default schedule if empty
         c.execute('SELECT COUNT(*) FROM daily_reward_schedule')
@@ -298,14 +299,23 @@ def init_daily_rewards_tables():
         except Exception as e:
             logger.warning(f"⚠️ Could not add product_emoji column: {e}")
         
+        logger.info("🔧 Committing all daily rewards table changes...")
         conn.commit()
-        logger.info("✅ Daily rewards tables initialized successfully")
+        logger.info("✅✅✅ Daily rewards tables initialized and committed successfully ✅✅✅")
         
     except Exception as e:
-        logger.error(f"❌ Error initializing daily rewards tables: {e}")
-        conn.rollback()
+        logger.error(f"❌ CRITICAL ERROR initializing daily rewards tables: {e}", exc_info=True)
+        try:
+            conn.rollback()
+            logger.info("🔄 Rolled back failed transaction")
+        except Exception as rollback_error:
+            logger.error(f"❌ Error during rollback: {rollback_error}")
+        raise  # Re-raise to make the error visible
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except Exception as close_error:
+            logger.error(f"❌ Error closing connection: {close_error}")
 
 # ============================================================================
 # DAILY REWARDS LOGIC
