@@ -197,8 +197,9 @@ def init_daily_rewards_tables():
         logger.info("✅ daily_reward_schedule table created successfully")
         
         # Insert default schedule if empty
-        c.execute('SELECT COUNT(*) FROM daily_reward_schedule')
-        count = c.fetchone()[0]
+        c.execute('SELECT COUNT(*) as count FROM daily_reward_schedule')
+        result = c.fetchone()
+        count = result['count'] if result else 0
         if count == 0:
             default_schedule = [
                 (1, 50, 'Welcome bonus'),
@@ -309,16 +310,18 @@ def init_daily_rewards_tables():
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
                 WHERE table_name = 'daily_reward_schedule'
-            )
+            ) as exists
         """)
-        table_exists = c.fetchone()[0]
+        result = c.fetchone()
+        table_exists = result['exists'] if result else False
         logger.info(f"📊 Table 'daily_reward_schedule' exists: {table_exists}")
         
         if not table_exists:
             raise Exception("❌ CRITICAL: daily_reward_schedule table was not created!")
         
-        c.execute('SELECT COUNT(*) FROM daily_reward_schedule')
-        row_count = c.fetchone()[0]
+        c.execute('SELECT COUNT(*) as count FROM daily_reward_schedule')
+        result = c.fetchone()
+        row_count = result['count'] if result else 0
         logger.info(f"📊 Table has {row_count} rows")
         
         logger.info("✅✅✅ Daily rewards tables initialized and committed successfully ✅✅✅")
