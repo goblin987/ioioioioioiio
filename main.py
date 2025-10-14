@@ -389,75 +389,101 @@ except ImportError:
 try:
     from auto_ads_system import (
         handle_enhanced_auto_ads_menu,
+        handle_manage_accounts,
+        handle_add_account,
+        handle_my_configs,
+        handle_add_forwarding,
+        handle_settings,
+        handle_help,
+        handle_bump_service,
+        handle_upload_session,
+        handle_manual_setup,
+        handle_add_campaign,
+        handle_my_campaigns,
+        handle_campaign_stats,
+        handle_back_to_bump,
+        handle_config,
+        handle_delete_config,
+        handle_toggle_config,
+        handle_delete_account,
+        handle_delete_campaign,
+        handle_edit_campaign,
+        handle_edit_text_content,
+        handle_edit_media,
+        handle_edit_buttons,
+        handle_edit_settings,
+        handle_edit_schedule,
+        handle_edit_targets,
+        handle_admin_menu,
+        handle_enhanced_session_file_upload,
+        handle_enhanced_account_details,
+        handle_enhanced_channel_link,
         get_bot_instance as get_auto_ads_bot
     )
-    logger.info("✅ Auto ads system handlers loaded successfully")
+    logger.info("✅ Auto ads system handlers loaded successfully (30+ handlers)")
     
     # Map old testforwarder names to new auto ads handlers
     handle_testforwarder_menu = handle_enhanced_auto_ads_menu
+    handle_testforwarder_manage_accounts = handle_manage_accounts
+    handle_testforwarder_my_configs = handle_my_configs
+    handle_testforwarder_add_forwarding = handle_add_forwarding
+    handle_testforwarder_settings = handle_settings
+    handle_testforwarder_help = handle_help
+    handle_testforwarder_bump_service = handle_bump_service
+    handle_testforwarder_upload_session = handle_upload_session
+    handle_testforwarder_manual_setup = handle_manual_setup
+    handle_testforwarder_my_campaigns = handle_my_campaigns
+    handle_testforwarder_add_campaign = handle_add_campaign
+    handle_testforwarder_edit_account = handle_manage_accounts  # Uses same handler
+    handle_testforwarder_delete_account = handle_delete_account
+    handle_testforwarder_edit_config = handle_config
+    handle_testforwarder_delete_config = handle_delete_config
+    handle_testforwarder_edit_campaign = handle_edit_campaign
+    handle_testforwarder_delete_campaign = handle_delete_campaign
     get_testforwarder_bot = get_auto_ads_bot
     
-    # Stub handlers for features not yet fully implemented
-    async def handle_testforwarder_manual_setup(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Manual setup - Coming soon!")
+    # Message handlers (pass-through to bot instance)
     async def handle_testforwarder_message(update, context):
-        pass
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_login_code(update, context):
-        pass
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_2fa(update, context):
-        pass
-    async def handle_testforwarder_bump_service(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Bump service - Coming soon!")
-    async def handle_testforwarder_my_configs(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 My configs - Coming soon!")
-    async def handle_testforwarder_add_forwarding(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Add forwarding - Coming soon!")
-    async def handle_testforwarder_settings(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Settings - Coming soon!")
-    async def handle_testforwarder_help(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Help - Coming soon!")
-    async def handle_testforwarder_manage_accounts(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Manage accounts - Coming soon!")
-    async def handle_testforwarder_edit_account(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Edit account - Coming soon!")
-    async def handle_testforwarder_delete_account(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Delete account - Coming soon!")
-    async def handle_testforwarder_edit_config(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Edit config - Coming soon!")
-    async def handle_testforwarder_delete_config(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Delete config - Coming soon!")
-    async def handle_testforwarder_add_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Add campaign - Coming soon!")
-    async def handle_testforwarder_my_campaigns(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 My campaigns - Coming soon!")
-    async def handle_testforwarder_edit_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Edit campaign - Coming soon!")
-    async def handle_testforwarder_delete_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Delete campaign - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
+    
+    # Stub handlers for features that need specific implementation
     async def handle_testforwarder_select_account(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Select account - Coming soon!")
+        await update.callback_query.answer("Select account from the accounts menu")
     async def handle_testforwarder_run_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Run campaign - Coming soon!")
+        await update.callback_query.answer("Use 'My Campaigns' to run campaigns")
     async def handle_testforwarder_select_forwarding_account(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Select forwarding account - Coming soon!")
-    async def handle_testforwarder_upload_session(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Upload session - Coming soon!")
+        await update.callback_query.answer("Select account from forwarding menu")
     async def handle_testforwarder_add_buttons_yes(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Add buttons - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_add_buttons_no(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Add buttons - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_target_all_groups(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Target groups - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_target_specific_chats(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Target chats - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_schedule_daily(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Schedule daily - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_schedule_weekly(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Schedule weekly - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_schedule_hourly(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Schedule hourly - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
     async def handle_testforwarder_schedule_custom(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Schedule custom - Coming soon!")
+        bot = get_auto_ads_bot()
+        await bot.handle_message(update, context)
         
 except ImportError as e:
     logger.warning(f"⚠️ Could not import auto ads handlers: {e}")
