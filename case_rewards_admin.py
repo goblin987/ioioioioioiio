@@ -714,3 +714,72 @@ async def handle_custom_chance_input(update: Update, context: ContextTypes.DEFAU
             f"❌ Invalid number format! Please enter a valid number (e.g., 5 or 3.5):"
         )
 
+async def handle_admin_save_product_emoji(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save product with custom emoji after custom % input"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    case_type = params[0]
+    emoji = params[1]
+    
+    # Get stored data from context
+    product_type = context.user_data.get('product_type_name')
+    size = context.user_data.get('product_size')
+    chance = context.user_data.get('product_win_chance')
+    
+    if not all([product_type, size, chance]):
+        await query.answer("Session expired. Please start again.", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    # Save to database
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Add product to case reward pool
+        c.execute('''
+            INSERT INTO case_reward_pools 
+            (case_type, product_type_name, product_size, win_chance_percent, reward_emoji, is_active)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
+        ''', (case_type, product_type, size, chance, emoji))
+        
+        conn.commit()
+        
+        # Clear context
+        context.user_data.pop('product_type_name', None)
+        context.user_data.pop('product_size', None)
+        context.user_data.pop('product_win_chance', None)
+        context.user_data.pop('product_case_type', None)
+        
+        msg = f"✅ Product added successfully!\n\n"
+        msg += f"{emoji} {product_type} {size}\n"
+        msg += f"Win Chance: {chance}%\n\n"
+        msg += f"Don't forget to click 'Save & Activate Case' when you're done configuring!"
+        
+        keyboard = [
+            [InlineKeyboardButton("➕ Add Another Product", callback_data=f"admin_add_product_to_case|{case_type}")],
+            [InlineKeyboardButton("⬅️ Back to Pool", callback_data=f"admin_case_pool|{case_type}")]
+        ]
+        
+        await query.edit_message_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error saving product: {e}")
+        await query.answer(f"❌ Error: {e}", show_alert=True)
+        conn.rollback()
+    finally:
+        conn.close()
+

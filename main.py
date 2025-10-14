@@ -1108,6 +1108,7 @@ def callback_query_router(func):
                     handle_admin_toggle_show_percentages,
                     handle_admin_custom_chance,
                     handle_custom_chance_input,
+                    handle_admin_save_product_emoji,
                     handle_admin_save_case_config
                 )
                 from case_opening_handlers import (
@@ -1140,6 +1141,7 @@ def callback_query_router(func):
                     "admin_save_case_config": handle_admin_save_case_config,
                     "admin_toggle_show_percentages": handle_admin_toggle_show_percentages,
                     "admin_custom_chance": handle_admin_custom_chance,
+                    "admin_save_product_emoji": handle_admin_save_product_emoji,
                     # City selection handlers
                     "select_city": handle_select_city,
                     "select_district": handle_select_district,
