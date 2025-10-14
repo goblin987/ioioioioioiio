@@ -534,16 +534,19 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
         # Auto-select first product
         product = products[0]
         
-        # Confirm delivery
+        logger.info(f"📦 Selected product: {product['name']} (ID: {product['id']}, Price: {product['price']}€)")
+        
+        # Confirm delivery in database
         success = select_delivery_city(win_id, city_id, district_id, product['id'])
         
         if success:
+            # Show confirmation message
             msg = f"✅ DELIVERY CONFIRMED!\n\n"
             msg += f"{win['win_emoji']} {win['product_type_name']} {win['product_size']}\n\n"
             msg += f"📦 Product: {product['name']}\n"
             msg += f"💰 Value: {product['price']:.2f}€\n\n"
-            msg += "Your product will be delivered soon!\n"
-            msg += "Check your orders for delivery details."
+            msg += "🚀 Delivering your product now...\n"
+            msg += "Check your messages!"
             
             keyboard = [
                 [InlineKeyboardButton("🎰 Open Another Case", callback_data="case_opening_menu")],
@@ -551,6 +554,44 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
             ]
             
             await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+            
+            # 🚀 DELIVER THE PRODUCT NOW!
+            logger.info(f"🚀 Starting automatic product delivery for win_id={win_id}, user_id={user_id}")
+            
+            try:
+                # Import delivery function
+                from product_delivery import deliver_product_via_userbot
+                
+                # Prepare product data for delivery
+                product_data = {
+                    'id': product['id'],
+                    'name': product['name'],
+                    'product_type': win['product_type_name'],
+                    'size': win['product_size'],
+                    'price': float(product['price']),
+                    'emoji': win['win_emoji']
+                }
+                
+                # Generate order ID
+                order_id = f"CASE_WIN_{win_id}_{user_id}"
+                
+                logger.info(f"📦 Delivering product: {product_data}")
+                
+                # Trigger delivery (async, don't wait)
+                asyncio.create_task(
+                    deliver_product_via_userbot(
+                        user_id=user_id,
+                        product_data=product_data,
+                        order_id=order_id,
+                        context=context
+                    )
+                )
+                
+                logger.info(f"✅ Product delivery initiated for user {user_id}")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to initiate product delivery: {e}", exc_info=True)
+                # Don't fail the whole process if delivery fails
         else:
             await query.answer("❌ Error processing delivery", show_alert=True)
         
