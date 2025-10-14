@@ -170,6 +170,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     # STEP 3: OPTIMIZED animation - fewer frames, faster
     import random
     total_frames = 20  # Reduced from 30 for speed
+    last_message = ""  # Track last message to avoid duplicates
     
     for i in range(total_frames):
         # Last 2 frames: show the FINAL emoji
@@ -197,14 +198,25 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         else:
             speed = 0.35  # Slow finish
         
-        # Build frame with ONLY 2 arrows (1 above, 1 below center emoji)
-        frame_msg = f"🎰 {config['emoji']} SPINNING...\n\n"
+        # Build frame with ONLY 2 arrows + frame counter (ensures uniqueness)
+        frame_msg = f"🎰 {config['emoji']} SPINNING... [{i+1}/{total_frames}]\n\n"
         frame_msg += f"         ▼\n"
         frame_msg += f"    {left}  {center}  {right}\n"
         frame_msg += f"         ▼\n\n"
         frame_msg += f"{progress_bar}"
         
-        await query.edit_message_text(frame_msg)
+        # Skip if identical to last message (avoid Telegram error)
+        if frame_msg == last_message:
+            await asyncio.sleep(speed)
+            continue
+        
+        try:
+            await query.edit_message_text(frame_msg)
+            last_message = frame_msg
+        except Exception as e:
+            logger.warning(f"⚠️ Frame {i} edit failed (likely duplicate): {e}")
+            # Continue anyway
+        
         await asyncio.sleep(speed)
     
     # STEP 4: Hold final result for 1 second
