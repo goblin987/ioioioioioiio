@@ -363,14 +363,14 @@ def get_available_cities_for_product(product_type: str, size: str) -> List[Dict]
     c = conn.cursor()
     
     try:
+        # products table uses TEXT columns (city, district), not foreign keys
         c.execute('''
             SELECT DISTINCT 
                 c.id as city_id,
                 c.name as city_name,
                 COUNT(p.id) as product_count
             FROM cities c
-            JOIN districts d ON d.city_id = c.id
-            JOIN products p ON p.district_id = d.id
+            JOIN products p ON p.city = c.name
             WHERE p.product_type = %s 
                 AND p.size = %s 
                 AND p.available > 0

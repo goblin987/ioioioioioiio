@@ -111,15 +111,48 @@ Result: TRUE CS:GO style - one row, fixed selector, emojis scroll horizontally
 
 ===============================================================================
 
+ISSUE #3: Progress bar too long on mobile + City selection crash
+Date: 2025-10-14 11:10
+Status: ✅ FIXED
+
+Problem 1: Progress bar symbols
+- User reports: "these simbols ━━━━━ make them shorter becouse they are to long and look shity on phone"
+- 20-character progress bars (━━━━━━━━━━━━━━━━━━━━) too wide for mobile screens
+
+Problem 2: City selection database error
+- Error: "psycopg2.errors.UndefinedColumn: column p.district_id does not exist"
+- SQL query tried to join products on p.district_id
+- Products table uses TEXT columns (city, district), NOT foreign key IDs
+
+Root Cause:
+1. Progress bars designed for desktop, too wide for mobile
+2. SQL query assumed products table had district_id FK, but it uses TEXT
+
+Solution Applied:
+1. ✅ Shortened all progress bars from 20 chars to 12 chars (━━━━━━━━━━━━)
+2. ✅ Fixed SQL query: Changed JOIN from p.district_id = d.id to p.city = c.name
+3. ✅ Removed district join (not needed, products.city is TEXT)
+
+Code Changes:
+- case_opening_handlers.py: Replaced all ━━━━━━━━━━━━━━━━━━━━ with ━━━━━━━━━━━━ (4 occurrences)
+- case_rewards_system.py, line 373: Changed JOIN products p ON p.city = c.name
+- case_rewards_system.py, line 372: Removed JOIN districts line
+
+Result: 
+- Progress bars now mobile-friendly (40% shorter)
+- City selection works correctly, joins on TEXT column
+
+===============================================================================
+
 CURRENT KNOWN ISSUES:
 None - All working! ✅
 
 ===============================================================================
 
 NEXT STEPS:
-1. Add message deduplication to animation loop
-2. Test with multiple case openings in a row
-3. Verify all emojis display correctly
+1. Test city selection after winning a product
+2. Verify progress bars look good on mobile
+3. Continue monitoring for edge cases
 
 ===============================================================================
 

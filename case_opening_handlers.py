@@ -122,7 +122,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     # STEP 1: Show emoji legend/preview (what each emoji means)
     legend_msg = f"🎰 {config['emoji']} {config['name'].upper()}\n"
-    legend_msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
+    legend_msg += f"━━━━━━━━━━━━\n\n"
     legend_msg += f"💰 Cost: {config['cost']} points\n\n"
     legend_msg += f"🎁 **POSSIBLE OUTCOMES:**\n\n"
     
@@ -137,7 +137,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         lose_chance = 100 - total_win
         legend_msg += f"{lose_emoji} = Lose Nothing ({lose_chance:.0f}%)\n"
     
-    legend_msg += f"\n━━━━━━━━━━━━━━━━━━━━\n"
+    legend_msg += f"\n━━━━━━━━━━━━\n"
     legend_msg += f"🎰 Opening in 3..."
     
     await query.edit_message_text(legend_msg)
@@ -238,7 +238,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         msg = f"💸 {config['emoji']} {config['name'].upper()}\n\n"
         msg += f"{final_frame}\n\n"
         msg += f"{result['emoji']} {result['message']}\n\n"
-        msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += f"━━━━━━━━━━━━\n\n"
         msg += f"💸 Lost {config['cost']} points\n"
         msg += f"💰 Remaining: {points - config['cost']} points"
         
@@ -262,7 +262,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         msg += f"{result['emoji']} You won:\n"
         msg += f"**{result['product_type']} {result['product_size']}**\n\n"
         msg += f"💰 Value: ~{result['estimated_value']:.2f}€\n\n"
-        msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += f"━━━━━━━━━━━━\n\n"
         msg += "📍 Next step: Select delivery city"
         
         keyboard = [
