@@ -301,6 +301,26 @@ def init_daily_rewards_tables():
         
         logger.info("🔧 Committing all daily rewards table changes...")
         conn.commit()
+        logger.info("✅ Commit successful")
+        
+        # VERIFY TABLE WAS CREATED
+        logger.info("🔍 Verifying daily_reward_schedule table exists...")
+        c.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'daily_reward_schedule'
+            )
+        """)
+        table_exists = c.fetchone()[0]
+        logger.info(f"📊 Table 'daily_reward_schedule' exists: {table_exists}")
+        
+        if not table_exists:
+            raise Exception("❌ CRITICAL: daily_reward_schedule table was not created!")
+        
+        c.execute('SELECT COUNT(*) FROM daily_reward_schedule')
+        row_count = c.fetchone()[0]
+        logger.info(f"📊 Table has {row_count} rows")
+        
         logger.info("✅✅✅ Daily rewards tables initialized and committed successfully ✅✅✅")
         
     except Exception as e:
