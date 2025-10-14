@@ -385,33 +385,21 @@ except ImportError:
         await update.callback_query.edit_message_text("Referral system not available")
     async def process_referral_purchase(user_id, amount): return False
 
+# Import auto ads system handlers (replaces old testforwarder)
 try:
-    import testforwarder_integration
-    from testforwarder_integration import (
-        handle_testforwarder_menu, handle_testforwarder_manual_setup,
-        handle_testforwarder_message, handle_testforwarder_login_code, handle_testforwarder_2fa,
-        handle_testforwarder_bump_service, handle_testforwarder_my_configs,
-        handle_testforwarder_add_forwarding, handle_testforwarder_settings, handle_testforwarder_help,
-        handle_testforwarder_manage_accounts, handle_testforwarder_edit_account, handle_testforwarder_delete_account,
-        handle_testforwarder_edit_config, handle_testforwarder_delete_config,
-        handle_testforwarder_add_campaign, handle_testforwarder_my_campaigns,
-        handle_testforwarder_edit_campaign, handle_testforwarder_delete_campaign,
-        handle_testforwarder_select_account, handle_testforwarder_run_campaign,
-        handle_testforwarder_select_forwarding_account, handle_testforwarder_upload_session,
-        handle_testforwarder_add_buttons_yes, handle_testforwarder_add_buttons_no,
-        handle_testforwarder_target_all_groups, handle_testforwarder_target_specific_chats,
-        handle_testforwarder_schedule_daily, handle_testforwarder_schedule_weekly,
-        handle_testforwarder_schedule_hourly, handle_testforwarder_schedule_custom,
-        get_testforwarder_bot
+    from auto_ads_system import (
+        handle_enhanced_auto_ads_menu,
+        get_bot_instance as get_auto_ads_bot
     )
-except ImportError:
-    import logging
-    logging.getLogger(__name__).error("Could not import testforwarder_integration module")
-    # Create dummy handlers for testforwarder integration
-    async def handle_testforwarder_menu(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+    logger.info("✅ Auto ads system handlers loaded successfully")
+    
+    # Map old testforwarder names to new auto ads handlers
+    handle_testforwarder_menu = handle_enhanced_auto_ads_menu
+    get_testforwarder_bot = get_auto_ads_bot
+    
+    # Stub handlers for features not yet fully implemented
     async def handle_testforwarder_manual_setup(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Manual setup - Coming soon!")
     async def handle_testforwarder_message(update, context):
         pass
     async def handle_testforwarder_login_code(update, context):
@@ -419,57 +407,96 @@ except ImportError:
     async def handle_testforwarder_2fa(update, context):
         pass
     async def handle_testforwarder_bump_service(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Bump service - Coming soon!")
     async def handle_testforwarder_my_configs(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 My configs - Coming soon!")
     async def handle_testforwarder_add_forwarding(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Add forwarding - Coming soon!")
     async def handle_testforwarder_settings(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Settings - Coming soon!")
     async def handle_testforwarder_help(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Help - Coming soon!")
     async def handle_testforwarder_manage_accounts(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Manage accounts - Coming soon!")
     async def handle_testforwarder_edit_account(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Edit account - Coming soon!")
     async def handle_testforwarder_delete_account(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Delete account - Coming soon!")
     async def handle_testforwarder_edit_config(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Edit config - Coming soon!")
     async def handle_testforwarder_delete_config(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Delete config - Coming soon!")
     async def handle_testforwarder_add_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Add campaign - Coming soon!")
     async def handle_testforwarder_my_campaigns(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 My campaigns - Coming soon!")
     async def handle_testforwarder_edit_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Edit campaign - Coming soon!")
     async def handle_testforwarder_delete_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Delete campaign - Coming soon!")
     async def handle_testforwarder_select_account(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Select account - Coming soon!")
     async def handle_testforwarder_run_campaign(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Run campaign - Coming soon!")
     async def handle_testforwarder_select_forwarding_account(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Select forwarding account - Coming soon!")
     async def handle_testforwarder_upload_session(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Upload session - Coming soon!")
     async def handle_testforwarder_add_buttons_yes(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Add buttons - Coming soon!")
     async def handle_testforwarder_add_buttons_no(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Add buttons - Coming soon!")
     async def handle_testforwarder_target_all_groups(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Target groups - Coming soon!")
     async def handle_testforwarder_target_specific_chats(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Target chats - Coming soon!")
     async def handle_testforwarder_schedule_daily(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Schedule daily - Coming soon!")
     async def handle_testforwarder_schedule_weekly(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Schedule weekly - Coming soon!")
     async def handle_testforwarder_schedule_hourly(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Schedule hourly - Coming soon!")
     async def handle_testforwarder_schedule_custom(update, context, params=None):
-        await update.callback_query.edit_message_text("Testforwarder integration not available")
+        await update.callback_query.edit_message_text("🚧 Schedule custom - Coming soon!")
+        
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import auto ads handlers: {e}")
+    # Create fallback dummy handlers
+    async def handle_testforwarder_menu(update, context, params=None):
+        await update.callback_query.edit_message_text("🚧 Auto Ads System - Under Development")
+    handle_testforwarder_manage_accounts = handle_testforwarder_menu
+    handle_testforwarder_my_configs = handle_testforwarder_menu
+    handle_testforwarder_my_campaigns = handle_testforwarder_menu
+    handle_testforwarder_bump_service = handle_testforwarder_menu
+    handle_testforwarder_settings = handle_testforwarder_menu
+    handle_testforwarder_help = handle_testforwarder_menu
+    handle_testforwarder_manual_setup = handle_testforwarder_menu
+    handle_testforwarder_add_forwarding = handle_testforwarder_menu
+    handle_testforwarder_edit_account = handle_testforwarder_menu
+    handle_testforwarder_delete_account = handle_testforwarder_menu
+    handle_testforwarder_edit_config = handle_testforwarder_menu
+    handle_testforwarder_delete_config = handle_testforwarder_menu
+    handle_testforwarder_add_campaign = handle_testforwarder_menu
+    handle_testforwarder_edit_campaign = handle_testforwarder_menu
+    handle_testforwarder_delete_campaign = handle_testforwarder_menu
+    handle_testforwarder_select_account = handle_testforwarder_menu
+    handle_testforwarder_run_campaign = handle_testforwarder_menu
+    handle_testforwarder_select_forwarding_account = handle_testforwarder_menu
+    handle_testforwarder_upload_session = handle_testforwarder_menu
+    handle_testforwarder_add_buttons_yes = handle_testforwarder_menu
+    handle_testforwarder_add_buttons_no = handle_testforwarder_menu
+    handle_testforwarder_target_all_groups = handle_testforwarder_menu
+    handle_testforwarder_target_specific_chats = handle_testforwarder_menu
+    handle_testforwarder_schedule_daily = handle_testforwarder_menu
+    handle_testforwarder_schedule_weekly = handle_testforwarder_menu
+    handle_testforwarder_schedule_hourly = handle_testforwarder_menu
+    handle_testforwarder_schedule_custom = handle_testforwarder_menu
+    async def handle_testforwarder_message(update, context):
+        pass
+    async def handle_testforwarder_login_code(update, context):
+        pass
+    async def handle_testforwarder_2fa(update, context):
+        pass
     def get_testforwarder_bot():
         return None
 
