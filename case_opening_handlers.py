@@ -491,15 +491,15 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
         
         # Get products
         c.execute('''
-            SELECT id, product_name, price
+            SELECT id, name, price
             FROM products
-            WHERE district_id = %s
+            WHERE district = %s
                 AND product_type = %s
                 AND size = %s
                 AND available > 0
             ORDER BY price
             LIMIT 10
-        ''', (district_id, win['product_type_name'], win['product_size']))
+        ''', (district_name, win['product_type_name'], win['product_size']))
         
         products = c.fetchall()
         
@@ -521,7 +521,7 @@ async def handle_select_product(update: Update, context: ContextTypes.DEFAULT_TY
         if success:
             msg = f"✅ DELIVERY CONFIRMED!\n\n"
             msg += f"{win['win_emoji']} {win['product_type_name']} {win['product_size']}\n\n"
-            msg += f"📦 Product: {product['product_name']}\n"
+            msg += f"📦 Product: {product['name']}\n"
             msg += f"💰 Value: {product['price']:.2f}€\n\n"
             msg += "Your product will be delivered soon!\n"
             msg += "Check your orders for delivery details."
