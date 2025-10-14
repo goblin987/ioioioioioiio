@@ -678,6 +678,7 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
             f"{'✅' if daily_rewards_on else '❌'} Show Daily Rewards Button",
             callback_data=f"toggle_daily_rewards_button|{'disable' if daily_rewards_on else 'enable'}"
         )],
+        [InlineKeyboardButton("📢 Marquee Text Settings", callback_data="admin_marquee_settings")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')

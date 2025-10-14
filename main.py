@@ -575,7 +575,8 @@ DAILY_REWARDS_STATE_HANDLERS = {
     'awaiting_case_name': None,
     'awaiting_case_cost': None,
     'awaiting_custom_win_chance': None,
-    'awaiting_custom_reward_amount': None
+    'awaiting_custom_reward_amount': None,
+    'awaiting_marquee_text': None
 }
 
 # --- Callback Data Parsing Decorator ---
@@ -1106,6 +1107,16 @@ def callback_query_router(func):
                     handle_case_name_input,
                     handle_case_cost_input
                 )
+                # Marquee Text System
+                from marquee_admin import (
+                    handle_admin_marquee_settings,
+                    handle_admin_marquee_change_text,
+                    handle_marquee_text_input,
+                    handle_admin_marquee_toggle,
+                    handle_admin_marquee_speed,
+                    handle_admin_marquee_set_speed,
+                    handle_admin_marquee_preview
+                )
                 # NEW CS:GO-Style Case System
                 from case_rewards_admin import (
                     handle_admin_product_pool_v2,
@@ -1141,6 +1152,13 @@ def callback_query_router(func):
                     "admin_daily_rewards_main": handle_admin_daily_rewards_main,
                     "admin_daily_rewards_settings": handle_admin_daily_rewards_main,  # Alias
                     "admin_reward_schedule": handle_admin_reward_schedule,
+                    # Marquee Text System
+                    "admin_marquee_settings": handle_admin_marquee_settings,
+                    "admin_marquee_change_text": handle_admin_marquee_change_text,
+                    "admin_marquee_toggle": handle_admin_marquee_toggle,
+                    "admin_marquee_speed": handle_admin_marquee_speed,
+                    "admin_marquee_set_speed": handle_admin_marquee_set_speed,
+                    "admin_marquee_preview": handle_admin_marquee_preview,
                     "admin_edit_reward_day": handle_admin_edit_reward_day,
                     "admin_save_reward_day": handle_admin_save_reward_day,
                     "admin_custom_reward_day": handle_admin_custom_reward_day,
@@ -1200,8 +1218,10 @@ def callback_query_router(func):
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_case_cost'] = handle_case_cost_input
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_custom_win_chance'] = handle_custom_chance_input
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_custom_reward_amount'] = handle_custom_reward_amount_input
+                DAILY_REWARDS_STATE_HANDLERS['awaiting_marquee_text'] = handle_marquee_text_input
                 
                 logger.info("✅ Daily rewards handlers registered")
+                logger.info("✅ Marquee handlers registered")
             except Exception as e:
                 logger.error(f"❌ Failed to register daily rewards handlers: {e}")
             
@@ -1322,6 +1342,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_case_cost': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_cost'),
         'awaiting_custom_win_chance': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_custom_win_chance'),
         'awaiting_custom_reward_amount': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_custom_reward_amount'),
+        'awaiting_marquee_text': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_marquee_text'),
         
         # Userbot setup message handlers (NEW multi-userbot system)
         'awaiting_new_userbot_name': handle_new_userbot_name_message if USERBOT_AVAILABLE else None,
@@ -2243,6 +2264,15 @@ def main() -> None:
         logger.info("✅ Case rewards system initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize case rewards system: {e}", exc_info=True)
+    
+    # 📢 INITIALIZE MARQUEE TEXT SYSTEM
+    try:
+        from marquee_text_system import init_marquee_tables
+        logger.info("📢 Initializing marquee text system...")
+        init_marquee_tables()
+        logger.info("✅ Marquee text system initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize marquee system: {e}", exc_info=True)
     
     try:
         logger.info("🔧 About to call init_enhanced_auto_ads_tables()...")
