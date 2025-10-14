@@ -756,12 +756,20 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     language_status = "✅ ENABLED" if language_selection_enabled else "❌ DISABLED"
     placement_text = "BEFORE verification" if language_prompt_placement == 'before' else "AFTER verification"
     
+    # Get secret chat delivery setting
+    c.execute('SELECT setting_value FROM bot_settings WHERE setting_key = %s', ('secret_chat_delivery_enabled',))
+    result = c.fetchone()
+    secret_chat_enabled = result['setting_value'] == 'true' if result else True
+    secret_chat_status = "✅ ENABLED" if secret_chat_enabled else "❌ DISABLED"
+    
     msg = f"⚙️ **System Settings**\n\nConfigure bot security and language settings:\n\n"
     msg += f"🤖 **Human Verification:** {verification_status}\n"
     msg += f"🔢 **Max Attempts:** {attempt_limit} tries\n"
     msg += f"⚠️ **Auto-Block:** After {attempt_limit} failed attempts\n\n"
     msg += f"🌍 **Language Selection:** {language_status}\n"
-    msg += f"📍 **Language Prompt:** {placement_text}"
+    msg += f"📍 **Language Prompt:** {placement_text}\n\n"
+    msg += f"🔐 **Secret Chat Delivery:** {secret_chat_status}\n"
+    msg += f"📦 **Userbot:** Product delivery via Telegram secret chat"
     
     keyboard = [
         [InlineKeyboardButton(f"🤖 {'Disable' if human_verification_enabled else 'Enable'} Human Verification", 
@@ -770,10 +778,53 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
         [InlineKeyboardButton(f"🌍 {'Disable' if language_selection_enabled else 'Enable'} Language Selection", 
                              callback_data=f"toggle_language_selection|{'disable' if language_selection_enabled else 'enable'}")],
         [InlineKeyboardButton("📍 Change Language Prompt Placement", callback_data="change_language_placement")],
+        [InlineKeyboardButton(f"🔐 {'Disable' if secret_chat_enabled else 'Enable'} Secret Chat Delivery", 
+                             callback_data=f"toggle_secret_chat_delivery|{'disable' if secret_chat_enabled else 'enable'}")],
         [InlineKeyboardButton("🎁 Daily Rewards Settings", callback_data="admin_daily_rewards_settings")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_toggle_secret_chat_delivery(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle secret chat delivery on/off."""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): 
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid action", show_alert=True)
+        return
+    
+    action = params[0]  # 'enable' or 'disable'
+    new_value = 'true' if action == 'enable' else 'false'
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Update or insert the setting
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key) 
+            DO UPDATE SET setting_value = EXCLUDED.setting_value
+        """, ("secret_chat_delivery_enabled", new_value))
+        
+        conn.commit()
+        
+        status = "ENABLED" if action == 'enable' else "DISABLED"
+        await query.answer(f"✅ Secret Chat Delivery {status}", show_alert=True)
+        
+        # Refresh system settings menu
+        await handle_admin_system_settings(update, context)
+        
+    except Exception as e:
+        logger.error(f"Error toggling secret chat delivery: {e}")
+        await query.answer(f"❌ Error: {e}", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_toggle_human_verification(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle human verification on/off."""

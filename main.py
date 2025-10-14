@@ -768,6 +768,7 @@ def callback_query_router(func):
                 "toggle_language_selection": admin.handle_toggle_language_selection,
                 "change_language_placement": admin.handle_change_language_placement,
                 "set_language_placement": admin.handle_set_language_placement,
+                "toggle_secret_chat_delivery": admin.handle_toggle_secret_chat_delivery,
                 "admin_maintenance_menu": admin.handle_admin_maintenance_menu,
                 "admin_system_health": admin.handle_admin_system_health,
                 "admin_user_stats": admin.handle_admin_user_stats,
