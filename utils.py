@@ -3784,6 +3784,7 @@ INTERFACE_TRANSLATIONS = {
         'referral_code': '🎁 Referral Code',
         'pay_now': '💳 Pay Now',
         'discount_code': '🎫 Discount Code',
+        'daily_rewards_menu': '🎁 Daily Rewards',
         
         # Status messages
         'status_new': 'Status: New',
@@ -3812,6 +3813,7 @@ INTERFACE_TRANSLATIONS = {
         'referral_code': '🎁 Referalų Kodas',
         'pay_now': '💳 Mokėti Dabar',
         'discount_code': '🎫 Nuolaidos Kodas',
+        'daily_rewards_menu': '🎁 Kasdienės Dovanos',
         
         # Status messages
         'status_new': 'Statusas: Naujas',
@@ -3840,6 +3842,7 @@ INTERFACE_TRANSLATIONS = {
         'referral_code': '🎁 Реферальный Код',
         'pay_now': '💳 Заплатить Сейчас',
         'discount_code': '🎫 Код Скидки',
+        'daily_rewards_menu': '🎁 Ежедневные Награды',
         
         # Status messages
         'status_new': 'Статус: Новый',

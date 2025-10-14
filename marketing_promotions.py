@@ -1800,7 +1800,7 @@ def translate_button_text(button_text, user_language='en'):
         '🛍️ Shop': 'shop',
         '👤 Profile': 'profile', 
         '💳 Top Up': 'top_up',
-        '🎁 Daily Rewards': 'daily_rewards',  # Daily Rewards & Case Opening
+        '🎁 Daily Rewards': 'daily_rewards_menu',  # Daily Rewards & Case Opening
         '📝 Reviews': 'reviews',
         '💎 Price List': 'price_list',
         '🌍 Language': 'language',

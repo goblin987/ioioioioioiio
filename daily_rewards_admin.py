@@ -60,6 +60,7 @@ async def handle_admin_daily_rewards_main(update: Update, context: ContextTypes.
         conn.close()
     
     keyboard = [
+        [InlineKeyboardButton("📅 Manage Reward Schedule", callback_data="admin_reward_schedule")],
         [InlineKeyboardButton("🎁 Manage Product Pool", callback_data="admin_product_pool")],
         [InlineKeyboardButton("📦 Manage Cases", callback_data="admin_manage_cases")],
         [InlineKeyboardButton("📊 View Statistics", callback_data="admin_case_stats")],
