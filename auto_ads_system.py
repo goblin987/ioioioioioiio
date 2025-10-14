@@ -31,6 +31,58 @@ from utils import get_db_connection
 # Use existing logger from main.py (don't reconfigure)
 logger = logging.getLogger(__name__)
 
+# ==================== CONFIG STUB ====================
+class Config:
+    """Configuration stub for auto ads system"""
+    BOT_TOKEN = None
+    OWNER_USER_ID = None
+    STORAGE_CHANNEL_ID = None
+    
+    @classmethod
+    def validate(cls):
+        """Validate configuration (stub)"""
+        pass
+
+# ==================== BUMP SERVICE STUB ====================
+class BumpService:
+    """Bump service stub for campaign management"""
+    
+    def __init__(self, bot_instance=None):
+        self.bot = bot_instance
+        self.db = None
+    
+    def get_user_campaigns(self, user_id):
+        """Get user campaigns (stub - returns empty list)"""
+        return []
+    
+    def get_campaign(self, campaign_id):
+        """Get campaign by ID (stub - returns None)"""
+        return None
+    
+    def delete_campaign(self, campaign_id):
+        """Delete campaign (stub)"""
+        pass
+    
+    def get_campaign_performance(self, campaign_id):
+        """Get campaign performance (stub - returns empty dict)"""
+        return {}
+    
+    def add_campaign(self, *args, **kwargs):
+        """Add campaign (stub - returns None)"""
+        return None
+    
+    async def test_campaign(self, *args, **kwargs):
+        """Test campaign (stub - returns False)"""
+        return False
+    
+    def cleanup_all_resources(self):
+        """Cleanup resources (stub)"""
+        pass
+    
+    def start_scheduler(self):
+        """Start scheduler (stub)"""
+        pass
+
 # ==================== DATABASE CLASS ====================
 class Database:
     """Database wrapper for auto ads system"""
