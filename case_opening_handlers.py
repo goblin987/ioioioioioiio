@@ -105,15 +105,28 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     lose_emoji = lose_data['lose_emoji'] if lose_data else '💸'
     conn.close()
     
-    # Build emoji list for animation (rewards + lose emoji)
-    emoji_list = [r['reward_emoji'] for r in rewards] if rewards else ['🎁', '💎', '⭐']
-    emoji_list.append(lose_emoji)
+    # Build emoji list for animation (ONLY rewards + lose emoji)
+    emoji_list = []
+    if rewards:
+        for r in rewards:
+            if r['reward_emoji']:  # Only add non-null emojis
+                emoji_list.append(r['reward_emoji'])
+    
+    # Add lose emoji
+    if lose_emoji:
+        emoji_list.append(lose_emoji)
+    
+    # Fallback if no emojis configured
+    if not emoji_list:
+        emoji_list = ['🎁', '💎', '⭐', '💸']
     
     # Show opening animation
     await query.edit_message_text(
         f"{config['emoji']} OPENING {config['name'].upper()}...\n\n"
         f"🎰 Rolling...\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━"
+        f"          ▼\n"
+        f"     ━━━━━━━━━━━\n"
+        f"          ▼"
     )
     
     await asyncio.sleep(0.5)
@@ -121,19 +134,24 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     # Animate spinning with actual emojis from reward pool
     import random
     frames = []
-    for i in range(6):
+    for i in range(8):
         left = random.choice(emoji_list)
         center = random.choice(emoji_list)
         right = random.choice(emoji_list)
-        frames.append(f"[  {left}  |  **[{center}]**  |  {right}  ]")
+        # Show brackets above and below the center (winning) slot
+        frames.append(
+            f"          ▼\n"
+            f"     [ {left}  {center}  {right} ]\n"
+            f"          ▼"
+        )
     
-    for frame in frames:
+    for i, frame in enumerate(frames):
+        speed = 0.2 if i < 4 else 0.4  # Slow down towards end
         await query.edit_message_text(
             f"{config['emoji']} OPENING {config['name'].upper()}...\n\n"
-            f"{frame}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━"
+            f"{frame}"
         )
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(speed)
     
     # Open the case
     result = open_product_case(user_id, case_type, config['cost'])
@@ -150,9 +168,13 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     # Show result with final frame
     if result['outcome'] == 'lose':
-        # User lost - show final frame
-        final_frame = f"[  {lose_emoji}  |  **[{lose_emoji}]**  |  {lose_emoji}  ]"
-        msg = f"{config['emoji']} {config['name'].upper()}\n\n"
+        # User lost - show final frame with arrows pointing to center
+        final_frame = (
+            f"          ▼\n"
+            f"     [ {lose_emoji}  **{lose_emoji}**  {lose_emoji} ]\n"
+            f"          ▼"
+        )
+        msg = f"💸 {config['emoji']} {config['name'].upper()}\n\n"
         msg += f"{final_frame}\n\n"
         msg += f"{result['emoji']} {result['message']}\n\n"
         msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -167,14 +189,18 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
         
     else:
-        # User won a product! Show final frame with winning emoji
+        # User won a product! Show final frame with winning emoji and arrows
         win_emoji = result['emoji']
-        final_frame = f"[  {win_emoji}  |  **[{win_emoji}]**  |  {win_emoji}  ]"
+        final_frame = (
+            f"          ▼\n"
+            f"     [ {win_emoji}  **{win_emoji}**  {win_emoji} ]\n"
+            f"          ▼"
+        )
         msg = f"🎉 WINNER! 🎉\n\n"
         msg += f"{final_frame}\n\n"
         msg += f"{result['emoji']} You won:\n"
-        msg += f"{result['product_type']} {result['product_size']}\n\n"
-        msg += f"💰 Value: {result['estimated_value']:.2f}€\n\n"
+        msg += f"**{result['product_type']} {result['product_size']}**\n\n"
+        msg += f"💰 Value: ~{result['estimated_value']:.2f}€\n\n"
         msg += f"━━━━━━━━━━━━━━━━━━━━\n\n"
         msg += "📍 Next step: Select delivery city"
         
