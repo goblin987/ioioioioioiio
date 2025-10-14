@@ -573,7 +573,8 @@ main_loop = None
 # Global handlers for daily rewards (populated in main())
 DAILY_REWARDS_STATE_HANDLERS = {
     'awaiting_case_name': None,
-    'awaiting_case_cost': None
+    'awaiting_case_cost': None,
+    'awaiting_custom_win_chance': None
 }
 
 # --- Callback Data Parsing Decorator ---
@@ -1104,6 +1105,9 @@ def callback_query_router(func):
                     handle_admin_confirm_remove,
                     handle_admin_set_lose_emoji,
                     handle_admin_save_lose_emoji,
+                    handle_admin_toggle_show_percentages,
+                    handle_admin_custom_chance,
+                    handle_custom_chance_input,
                     handle_admin_save_case_config
                 )
                 from case_opening_handlers import (
@@ -1134,6 +1138,8 @@ def callback_query_router(func):
                     "admin_set_lose_emoji": handle_admin_set_lose_emoji,
                     "admin_save_lose_emoji": handle_admin_save_lose_emoji,
                     "admin_save_case_config": handle_admin_save_case_config,
+                    "admin_toggle_show_percentages": handle_admin_toggle_show_percentages,
+                    "admin_custom_chance": handle_admin_custom_chance,
                     # City selection handlers
                     "select_city": handle_select_city,
                     "select_district": handle_select_district,
@@ -1167,6 +1173,7 @@ def callback_query_router(func):
                 # Update global state handlers
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_case_name'] = handle_case_name_input
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_case_cost'] = handle_case_cost_input
+                DAILY_REWARDS_STATE_HANDLERS['awaiting_custom_win_chance'] = handle_custom_chance_input
                 
                 logger.info("✅ Daily rewards handlers registered")
             except Exception as e:
@@ -1287,6 +1294,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Daily Rewards case creation handlers (populated from global dict)
         'awaiting_case_name': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_name'),
         'awaiting_case_cost': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_cost'),
+        'awaiting_custom_win_chance': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_custom_win_chance'),
         
         # Userbot setup message handlers (NEW multi-userbot system)
         'awaiting_new_userbot_name': handle_new_userbot_name_message if USERBOT_AVAILABLE else None,

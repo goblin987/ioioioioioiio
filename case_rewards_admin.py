@@ -91,8 +91,17 @@ async def handle_admin_case_pool(update: Update, context: ContextTypes.DEFAULT_T
     # Get current reward pool
     rewards = get_case_reward_pool(case_type)
     
+    # Get show_percentages setting from database
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute('SELECT setting_value FROM bot_settings WHERE setting_key = %s', ('show_case_win_percentages',))
+    result = c.fetchone()
+    show_percentages = result['setting_value'] == 'true' if result else True
+    conn.close()
+    
     msg = f"{config['emoji']} {config['name'].upper()} - REWARD POOL\n\n"
     msg += f"Cost: {config['cost']} points\n\n"
+    msg += f"{'👁️ Percentages Visible to Users' if show_percentages else '🙈 Percentages Hidden from Users'}\n\n"
     
     if rewards:
         msg += "Current Rewards:\n"
@@ -110,7 +119,11 @@ async def handle_admin_case_pool(update: Update, context: ContextTypes.DEFAULT_T
     
     msg += "What would you like to do?"
     
+    # Toggle button for showing percentages
+    toggle_text = "🙈 Hide Percentages" if show_percentages else "👁️ Show Percentages"
+    
     keyboard = [
+        [InlineKeyboardButton(toggle_text, callback_data=f"admin_toggle_show_percentages|{case_type}")],
         [InlineKeyboardButton("➕ Add Product Type", callback_data=f"admin_add_product_to_case|{case_type}")],
         [InlineKeyboardButton("🗑️ Remove Product", callback_data=f"admin_remove_from_case|{case_type}")],
         [InlineKeyboardButton("💸 Set Lose Emoji", callback_data=f"admin_set_lose_emoji|{case_type}")],
@@ -221,6 +234,8 @@ async def handle_admin_select_product(update: Update, context: ContextTypes.DEFA
     if row:
         keyboard.append(row)
     
+    # Add custom % input button
+    keyboard.append([InlineKeyboardButton("✏️ Enter Custom %", callback_data=f"admin_custom_chance|{case_type}|{product_type}|{size}")])
     keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data=f"admin_add_product_to_case|{case_type}")])
     
     await query.edit_message_text(
@@ -537,11 +552,165 @@ async def handle_admin_save_case_config(update: Update, context: ContextTypes.DE
             msg,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        
-    except Exception as e:
-        logger.error(f"Error saving case config: {e}")
-        await query.answer(f"❌ Error: {e}", show_alert=True)
-        conn.rollback()
     finally:
         conn.close()
+
+# ============================================================================
+# NEW HANDLERS: TOGGLE PERCENTAGES & CUSTOM %
+# ============================================================================
+
+async def handle_admin_toggle_show_percentages(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle showing win percentages to users"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    case_type = params[0]
+    
+    # Toggle the setting
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Get current value
+        c.execute('SELECT setting_value FROM bot_settings WHERE setting_key = %s', ('show_case_win_percentages',))
+        result = c.fetchone()
+        current = result['setting_value'] == 'true' if result else True
+        
+        # Toggle it
+        new_value = 'false' if current else 'true'
+        
+        # Update or insert
+        c.execute('''
+            INSERT INTO bot_settings (setting_key, setting_value)
+            VALUES (%s, %s)
+            ON CONFLICT (setting_key)
+            DO UPDATE SET setting_value = EXCLUDED.setting_value
+        ''', ('show_case_win_percentages', new_value))
+        
+        conn.commit()
+        
+        status = "visible" if new_value == 'true' else "hidden"
+        await query.answer(f"✅ Win percentages now {status} to users!", show_alert=True)
+        
+        # Refresh the pool view
+        await handle_admin_case_pool(update, context, [case_type])
+    finally:
+        conn.close()
+
+async def handle_admin_custom_chance(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Prompt admin to enter custom win chance %"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params or len(params) < 3:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    case_type = params[0]
+    product_type = params[1]
+    size = params[2]
+    
+    await query.answer()
+    
+    # Store in context for text input handler
+    context.user_data['state'] = 'awaiting_custom_win_chance'
+    context.user_data['custom_chance_case'] = case_type
+    context.user_data['custom_chance_product'] = product_type
+    context.user_data['custom_chance_size'] = size
+    
+    msg = f"✏️ CUSTOM WIN CHANCE\n\n"
+    msg += f"Product: {product_type} {size}\n\n"
+    msg += f"Please enter the win chance percentage as a number.\n\n"
+    msg += f"Examples:\n"
+    msg += f"• 0.1 = 0.1%\n"
+    msg += f"• 3.5 = 3.5%\n"
+    msg += f"• 12 = 12%\n"
+    msg += f"• 50 = 50%\n\n"
+    msg += f"💡 Make sure total doesn't exceed 100%!"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"admin_select_product_chance|{case_type}|{product_type}|{size}")]]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_custom_chance_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text input for custom win chance"""
+    user_id = update.effective_user.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get('state') != 'awaiting_custom_win_chance':
+        return
+    
+    text = update.message.text.strip()
+    
+    try:
+        chance = float(text)
+        
+        if chance <= 0 or chance > 100:
+            await update.message.reply_text(
+                f"❌ Invalid percentage! Must be between 0 and 100.\n\nPlease try again:"
+            )
+            return
+        
+        # Get stored data
+        case_type = context.user_data.get('custom_chance_case')
+        product_type = context.user_data.get('custom_chance_product')
+        size = context.user_data.get('custom_chance_size')
+        
+        # Clear state
+        context.user_data['state'] = None
+        
+        # Store chance in context for next step (emoji selection)
+        context.user_data['product_win_chance'] = chance
+        context.user_data['product_case_type'] = case_type
+        context.user_data['product_type_name'] = product_type
+        context.user_data['product_size'] = size
+        
+        # Show emoji selection
+        msg = f"✅ Win chance set to {chance}%\n\n"
+        msg += f"Now select an emoji for {product_type} {size}:"
+        
+        emojis = ['🍺', '🌿', '💊', '💉', '🧪', '💎', '⭐', '🎁', '💸', '🏆', '🔥', '⚡']
+        
+        keyboard = []
+        row = []
+        for i, emoji in enumerate(emojis):
+            row.append(InlineKeyboardButton(
+                emoji,
+                callback_data=f"admin_save_product_emoji|{case_type}|{emoji}"
+            ))
+            if (i + 1) % 4 == 0:
+                keyboard.append(row)
+                row = []
+        
+        if row:
+            keyboard.append(row)
+        
+        keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data=f"admin_select_product_chance|{case_type}|{product_type}|{size}")])
+        
+        await update.message.reply_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        
+    except ValueError:
+        await update.message.reply_text(
+            f"❌ Invalid number format! Please enter a valid number (e.g., 5 or 3.5):"
+        )
 

@@ -97,12 +97,18 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     from case_rewards_system import get_case_reward_pool, get_db_connection
     rewards = get_case_reward_pool(case_type)
     
-    # Get lose emoji
+    # Get lose emoji and show_percentages setting
     conn = get_db_connection()
     c = conn.cursor()
     c.execute('SELECT lose_emoji FROM case_lose_emojis WHERE case_type = %s', (case_type,))
     lose_data = c.fetchone()
     lose_emoji = lose_data['lose_emoji'] if lose_data else '💸'
+    
+    # Get show_percentages setting
+    c.execute('SELECT setting_value FROM bot_settings WHERE setting_key = %s', ('show_case_win_percentages',))
+    result = c.fetchone()
+    show_percentages = result['setting_value'] == 'true' if result else True
+    
     conn.close()
     
     # Build emoji list for animation (ONLY rewards + lose emoji)
@@ -129,13 +135,21 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     if rewards:
         for r in rewards:
             if r['reward_emoji']:
-                legend_msg += f"{r['reward_emoji']} = {r['product_type_name']} {r['product_size']} ({r['win_chance_percent']}%)\n"
+                # Show percentage only if admin enabled it
+                if show_percentages:
+                    legend_msg += f"{r['reward_emoji']} = {r['product_type_name']} {r['product_size']} ({r['win_chance_percent']}%)\n"
+                else:
+                    legend_msg += f"{r['reward_emoji']} = {r['product_type_name']} {r['product_size']}\n"
     
     if lose_emoji:
         # Calculate lose chance
         total_win = sum(r['win_chance_percent'] for r in rewards if r['reward_emoji']) if rewards else 0
         lose_chance = 100 - total_win
-        legend_msg += f"{lose_emoji} = Lose Nothing ({lose_chance:.0f}%)\n"
+        # Show percentage only if admin enabled it
+        if show_percentages:
+            legend_msg += f"{lose_emoji} = Lose Nothing ({lose_chance:.0f}%)\n"
+        else:
+            legend_msg += f"{lose_emoji} = Lose Nothing\n"
     
     legend_msg += f"\n━━━━━━━━━━━━\n"
     legend_msg += f"🎰 Opening in 3..."
