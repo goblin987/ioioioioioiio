@@ -386,14 +386,16 @@ async def handle_select_district(update: Update, context: ContextTypes.DEFAULT_T
             return
         
         # Get districts with available products
+        # products table uses TEXT columns (city, district), not foreign keys
         c.execute('''
             SELECT DISTINCT 
                 d.id as district_id,
                 d.name as district_name,
                 COUNT(p.id) as product_count
             FROM districts d
-            JOIN products p ON p.district_id = d.id
-            WHERE d.city_id = %s
+            JOIN products p ON p.district = d.name
+            JOIN cities c ON d.city_id = c.id
+            WHERE c.id = %s
                 AND p.product_type = %s
                 AND p.size = %s
                 AND p.available > 0
