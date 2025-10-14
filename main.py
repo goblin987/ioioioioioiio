@@ -2210,13 +2210,22 @@ def main() -> None:
         logger.error(f"❌ Failed to import media retry queue: {e}", exc_info=True)
     
     # 🎁 INITIALIZE DAILY REWARDS & CASE OPENING SYSTEM
+    logger.info("=" * 80)
+    logger.info("🎁 STARTING DAILY REWARDS INITIALIZATION")
+    logger.info("=" * 80)
     try:
+        logger.info("📦 Importing init_daily_rewards_tables...")
         from daily_rewards_system import init_daily_rewards_tables
-        logger.info("🎁 Initializing daily rewards & case opening system...")
+        logger.info("✅ Import successful")
+        logger.info("🎁 Calling init_daily_rewards_tables()...")
         init_daily_rewards_tables()
+        logger.info("✅ init_daily_rewards_tables() completed")
         logger.info("✅ Daily rewards system initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize daily rewards system: {e}", exc_info=True)
+        logger.error(f"❌ CRITICAL FAILURE in daily rewards initialization: {e}", exc_info=True)
+        logger.error("=" * 80)
+        logger.error("🚨 DAILY REWARDS WILL NOT WORK!")
+        logger.error("=" * 80)
     
     # 🎰 INITIALIZE NEW CS:GO-STYLE CASE REWARDS SYSTEM
     try:
