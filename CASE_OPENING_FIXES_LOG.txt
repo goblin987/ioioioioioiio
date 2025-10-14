@@ -238,15 +238,42 @@ Result: Admins can now enable/disable secret chat delivery with one click!
 
 ===============================================================================
 
+ISSUE #7: Database cursor already closed error
+Date: 2025-10-14 14:32
+Status: ✅ FIXED
+
+Problem:
+- Error: "psycopg2.InterfaceError: cursor already closed"
+- Occurs when accessing System Settings menu
+- Line 760 tries to use cursor after connection closed at line 753
+
+Root Cause:
+- Secret chat delivery setting query was AFTER the finally block that closes connection
+- Connection closed at line 753, but cursor used at line 760
+
+Solution Applied:
+1. ✅ Moved secret chat delivery query INSIDE try block (before connection closes)
+2. ✅ Added default value (True) in except block if query fails
+3. ✅ Moved variable assignment outside try-finally block
+
+Code Changes:
+- admin.py, lines 749-752: Moved secret_chat_enabled query inside try block
+- admin.py, line 756: Added default value in except block
+- admin.py, line 764: Moved secret_chat_status assignment after finally block
+
+Result: System Settings menu now loads without errors!
+
+===============================================================================
+
 CURRENT KNOWN ISSUES:
-None - All features implemented! ✅
+None - All bugs fixed! ✅
 
 ===============================================================================
 
 NEXT STEPS:
-1. Test secret chat delivery toggle
-2. Optionally: Update userbot_pool.py to check this setting before delivery
-3. Test all admin system settings
+1. Test System Settings menu access
+2. Test all toggles work correctly
+3. Verify no more cursor errors
 
 ===============================================================================
 

@@ -746,8 +746,14 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
         placement_result = c.fetchone()
         language_prompt_placement = placement_result['setting_value'] if placement_result else 'before'
         
+        # Get secret chat delivery setting (BEFORE closing connection)
+        c.execute('SELECT setting_value FROM bot_settings WHERE setting_key = %s', ('secret_chat_delivery_enabled',))
+        secret_result = c.fetchone()
+        secret_chat_enabled = secret_result['setting_value'] == 'true' if secret_result else True
+        
     except Exception as e:
         logger.error(f"Error checking system settings: {e}")
+        secret_chat_enabled = True  # Default to enabled if error
     finally:
         if conn:
             conn.close()
@@ -755,11 +761,6 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     verification_status = "✅ ENABLED" if human_verification_enabled else "❌ DISABLED"
     language_status = "✅ ENABLED" if language_selection_enabled else "❌ DISABLED"
     placement_text = "BEFORE verification" if language_prompt_placement == 'before' else "AFTER verification"
-    
-    # Get secret chat delivery setting
-    c.execute('SELECT setting_value FROM bot_settings WHERE setting_key = %s', ('secret_chat_delivery_enabled',))
-    result = c.fetchone()
-    secret_chat_enabled = result['setting_value'] == 'true' if result else True
     secret_chat_status = "✅ ENABLED" if secret_chat_enabled else "❌ DISABLED"
     
     msg = f"⚙️ **System Settings**\n\nConfigure bot security and language settings:\n\n"
