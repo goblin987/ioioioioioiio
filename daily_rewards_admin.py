@@ -1212,6 +1212,14 @@ async def handle_admin_reward_schedule(update: Update, context: ContextTypes.DEF
     if row:
         keyboard.append(row)
     
+    # Reward Pattern Buttons
+    keyboard.append([InlineKeyboardButton("🔧 REWARD PATTERNS", callback_data="noop")])
+    keyboard.append([
+        InlineKeyboardButton("📊 Fixed (1pt/day)", callback_data="admin_pattern_fixed"),
+        InlineKeyboardButton("📈 Progressive (+1/day)", callback_data="admin_pattern_progressive")
+    ])
+    keyboard.append([InlineKeyboardButton("♾️ Unlimited Days", callback_data="admin_toggle_unlimited")])
+    
     keyboard.append([InlineKeyboardButton("➕ Add More Days", callback_data="admin_add_reward_days")])
     keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_main")])
     
@@ -1440,4 +1448,181 @@ async def handle_admin_confirm_add_days(update: Update, context: ContextTypes.DE
     
     # Refresh schedule view
     await handle_admin_reward_schedule(update, context)
+
+# ============================================================================
+# REWARD PATTERN HANDLERS
+# ============================================================================
+
+async def handle_admin_pattern_fixed(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply fixed reward pattern (same points every day)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    msg = "📊 FIXED REWARD PATTERN\n\n"
+    msg += "Every day users get the SAME amount of points.\n\n"
+    msg += "Example:\n"
+    msg += "• Day 1: 1 point\n"
+    msg += "• Day 2: 1 point\n"
+    msg += "• Day 3: 1 point\n"
+    msg += "• Day 4: 1 point\n"
+    msg += "• ...\n\n"
+    msg += "Enter the fixed amount (points per day):"
+    
+    # Preset amounts
+    presets = [1, 2, 5, 10, 15, 20, 25, 50, 100]
+    
+    keyboard = []
+    row = []
+    for i, points in enumerate(presets):
+        row.append(InlineKeyboardButton(
+            f"{points} pts",
+            callback_data=f"admin_apply_fixed|{points}"
+        ))
+        if (i + 1) % 3 == 0:
+            keyboard.append(row)
+            row = []
+    
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_reward_schedule")])
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_apply_fixed(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply fixed reward pattern to all days"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid amount", show_alert=True)
+        return
+    
+    fixed_amount = int(params[0])
+    
+    # Get current schedule
+    schedule = get_reward_schedule()
+    max_day = max(schedule.keys()) if schedule else 7
+    
+    # Apply fixed pattern to all days
+    for day in range(1, max_day + 1):
+        update_reward_for_day(day, fixed_amount, f'Fixed reward')
+    
+    await query.answer(f"✅ Applied fixed pattern: {fixed_amount} pts/day for {max_day} days!", show_alert=True)
+    
+    # Refresh schedule view
+    await handle_admin_reward_schedule(update, context)
+
+async def handle_admin_pattern_progressive(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply progressive reward pattern (+1 more each day)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    msg = "📈 PROGRESSIVE REWARD PATTERN\n\n"
+    msg += "Every day users get +1 MORE point than the previous day.\n\n"
+    msg += "Example:\n"
+    msg += "• Day 1: 1 point\n"
+    msg += "• Day 2: 2 points (+1)\n"
+    msg += "• Day 3: 3 points (+1)\n"
+    msg += "• Day 4: 4 points (+1)\n"
+    msg += "• Day 5: 5 points (+1)\n"
+    msg += "• ...\n\n"
+    msg += "Select starting amount:"
+    
+    # Starting amounts
+    starts = [1, 2, 5, 10]
+    
+    keyboard = []
+    for start in starts:
+        keyboard.append([InlineKeyboardButton(
+            f"Start at {start} pts (Day 1={start}, Day 2={start+1}, Day 3={start+2}...)",
+            callback_data=f"admin_apply_progressive|{start}"
+        )])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_reward_schedule")])
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_apply_progressive(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply progressive reward pattern to all days"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid amount", show_alert=True)
+        return
+    
+    start_amount = int(params[0])
+    
+    # Get current schedule
+    schedule = get_reward_schedule()
+    max_day = max(schedule.keys()) if schedule else 7
+    
+    # Apply progressive pattern to all days
+    for day in range(1, max_day + 1):
+        points = start_amount + (day - 1)  # Day 1 = start, Day 2 = start+1, etc.
+        update_reward_for_day(day, points, f'Progressive reward')
+    
+    await query.answer(f"✅ Applied progressive pattern starting at {start_amount} pts!", show_alert=True)
+    
+    # Refresh schedule view
+    await handle_admin_reward_schedule(update, context)
+
+async def handle_admin_toggle_unlimited(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle unlimited days (already enabled by default)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    msg = "♾️ UNLIMITED DAYS\n\n"
+    msg += "✅ Unlimited days is ALREADY ENABLED!\n\n"
+    msg += "Users can claim rewards forever. The system automatically:\n\n"
+    msg += "📊 For days beyond your schedule:\n"
+    msg += "• Repeats the 7-day cycle\n"
+    msg += "• Adds 50% bonus per cycle\n\n"
+    msg += "Example (if Day 1 = 10 pts):\n"
+    msg += "• Day 1-7: Your schedule\n"
+    msg += "• Day 8: 15 pts (Day 1 × 1.5)\n"
+    msg += "• Day 15: 20 pts (Day 1 × 2.0)\n"
+    msg += "• Day 22: 25 pts (Day 1 × 2.5)\n"
+    msg += "• And so on forever!\n\n"
+    msg += "💡 Tip: Use 'Add More Days' to manually set rewards for specific days."
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="admin_reward_schedule")]]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 

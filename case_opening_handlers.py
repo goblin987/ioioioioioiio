@@ -317,6 +317,7 @@ async def handle_select_city(update: Update, context: ContextTypes.DEFAULT_TYPE,
     c = conn.cursor()
     
     try:
+        logger.info(f"🔍 Fetching win details for win_id={win_id}, user_id={user_id}")
         c.execute('''
             SELECT product_type_name, product_size, win_emoji, estimated_value
             FROM user_product_wins
@@ -324,8 +325,10 @@ async def handle_select_city(update: Update, context: ContextTypes.DEFAULT_TYPE,
         ''', (win_id, user_id))
         
         win = c.fetchone()
+        logger.info(f"📊 Win query result: {win}")
         
         if not win:
+            logger.warning(f"⚠️ No win found for win_id={win_id}, user_id={user_id}")
             await query.edit_message_text(
                 "❌ Win not found or already processed",
                 reply_markup=InlineKeyboardMarkup([[
@@ -335,7 +338,9 @@ async def handle_select_city(update: Update, context: ContextTypes.DEFAULT_TYPE,
             return
         
         # Get available cities
+        logger.info(f"🏙️ Getting available cities for product: {win['product_type_name']}, size: {win['product_size']}")
         cities = get_available_cities_for_product(win['product_type_name'], win['product_size'])
+        logger.info(f"📊 Found {len(cities) if cities else 0} cities")
         
         msg = f"{win['win_emoji']} {win['product_type_name']} {win['product_size']}\n\n"
         msg += "📍 SELECT DELIVERY CITY\n\n"
@@ -365,6 +370,17 @@ async def handle_select_city(update: Update, context: ContextTypes.DEFAULT_TYPE,
         
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
         
+    except Exception as e:
+        logger.error(f"❌ Error in handle_select_city: {e}", exc_info=True)
+        try:
+            await query.edit_message_text(
+                "❌ An error occurred while loading cities.\n\nPlease try again or contact support.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("⬅️ Back", callback_data="daily_rewards_menu")
+                ]])
+            )
+        except:
+            pass
     finally:
         conn.close()
 
