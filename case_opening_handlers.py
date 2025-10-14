@@ -198,12 +198,10 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         else:
             speed = 0.35  # Slow finish
         
-        # Build frame with ONLY 2 arrows + frame counter (ensures uniqueness)
-        # Arrows centered ABOVE and BELOW the middle emoji
+        # Build frame - CS:GO style: ONE row with fixed selector
         frame_msg = f"🎰 {config['emoji']} SPINNING... [{i+1}/{total_frames}]\n\n"
-        frame_msg += f"  [ {left} **▼** {right} ]\n"
-        frame_msg += f"  [ {left} {center} {right} ]\n"
-        frame_msg += f"  [ {left} **▲** {right} ]\n\n"
+        frame_msg += f"         ▼\n"
+        frame_msg += f"  {left} | {center} | {right}\n\n"
         frame_msg += f"{progress_bar}"
         
         # Skip if identical to last message (avoid Telegram error)
@@ -220,11 +218,10 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         
         await asyncio.sleep(speed)
     
-    # STEP 4: Hold final result for 1 second
+    # STEP 4: Hold final result for 1 second - CS:GO style
     final_frame = f"🎰 {config['emoji']} RESULT!\n\n"
-    final_frame += f"  [ {final_emoji} **▼** {final_emoji} ]\n"
-    final_frame += f"  [ {final_emoji} **{final_emoji}** {final_emoji} ]\n"
-    final_frame += f"  [ {final_emoji} **▲** {final_emoji} ]\n\n"
+    final_frame += f"         ▼\n"
+    final_frame += f"  {final_emoji} | **{final_emoji}** | {final_emoji}\n\n"
     final_frame += f"{'█' * 10}"
     
     await query.edit_message_text(final_frame)

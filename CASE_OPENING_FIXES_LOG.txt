@@ -77,38 +77,37 @@ FIX #6: Animation too slow and laggy ✅ WORKING
 
 ===============================================================================
 
-ISSUE #2: Arrows not aligned above/below center emoji
+ISSUE #2: CS:GO style - ONE horizontal row with selector
 Date: 2025-10-14 01:25
-Status: ✅ FIXED
+Status: ✅ FIXED (v2 - CS:GO style)
 
 Problem:
-- User screenshot shows arrows ▼ appearing to the LEFT side
-- Not positioned directly above and below the CENTER emoji
-- Layout looked like:  "    ▼\n    🍺  🌿  💸"
+- User wants CS:GO case opening style animation
+- CS:GO uses ONE horizontal row of items with a fixed selector
+- Previous 3-row layout was WRONG - not CS:GO style
 
 Root Cause:
-- Using spaces for alignment doesn't work well with emoji widths
-- Telegram renders emojis with variable widths
-- Simple spacing doesn't center arrows over middle position
+- Misunderstood the requirement
+- CS:GO case opening = horizontal scrolling items, fixed selector above
+- NOT vertical stacking
 
 Solution Applied:
-1. ✅ Changed layout to bracket format: [ emoji ▼ emoji ]
-2. ✅ Put arrows IN THE MIDDLE position (where center emoji should be)
-3. ✅ 3-row display: top row with ▼, middle row with center emoji, bottom row with ▲
-4. ✅ Arrows are now bold **▼** and **▲** to stand out
+1. ✅ Changed to SINGLE horizontal row of emojis
+2. ✅ Fixed arrow selector (▼) ABOVE the middle emoji
+3. ✅ Emojis separated by | pipes: "🍺 | 🌿 | 💸"
+4. ✅ Arrow stays fixed, emojis "scroll" underneath
 
-New Layout:
+CS:GO Style Layout:
 ```
-  [ 🍺 **▼** 💸 ]
-  [ 🍺 🌿 💸 ]
-  [ 🍺 **▲** 💸 ]
+         ▼
+  🍺 | 🌿 | 💸
 ```
 
 Code Changes:
-- case_opening_handlers.py, lines 204-206: Changed to bracket layout with arrows in middle
-- case_opening_handlers.py, lines 225-227: Same fix for final result frame
+- case_opening_handlers.py, lines 203-205: Single row with | separators
+- case_opening_handlers.py, lines 223-224: Same for final result
 
-Result: Arrows now perfectly centered, pointing to middle emoji from above and below
+Result: TRUE CS:GO style - one row, fixed selector, emojis scroll horizontally
 
 ===============================================================================
 
