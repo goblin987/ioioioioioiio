@@ -574,7 +574,8 @@ main_loop = None
 DAILY_REWARDS_STATE_HANDLERS = {
     'awaiting_case_name': None,
     'awaiting_case_cost': None,
-    'awaiting_custom_win_chance': None
+    'awaiting_custom_win_chance': None,
+    'awaiting_custom_reward_amount': None
 }
 
 # --- Callback Data Parsing Decorator ---
@@ -1077,6 +1078,13 @@ def callback_query_router(func):
                     handle_admin_manage_cases,
                     handle_admin_edit_case,
                     handle_admin_case_cost,
+                    handle_admin_reward_schedule,
+                    handle_admin_edit_reward_day,
+                    handle_admin_save_reward_day,
+                    handle_admin_custom_reward_day,
+                    handle_custom_reward_amount_input,
+                    handle_admin_add_reward_days,
+                    handle_admin_confirm_add_days,
                     handle_admin_save_case_cost,
                     handle_admin_create_case,
                     handle_admin_create_case_custom_name,
@@ -1128,6 +1136,12 @@ def callback_query_router(func):
                     # New clean admin interface
                     "admin_daily_rewards_main": handle_admin_daily_rewards_main,
                     "admin_daily_rewards_settings": handle_admin_daily_rewards_main,  # Alias
+                    "admin_reward_schedule": handle_admin_reward_schedule,
+                    "admin_edit_reward_day": handle_admin_edit_reward_day,
+                    "admin_save_reward_day": handle_admin_save_reward_day,
+                    "admin_custom_reward_day": handle_admin_custom_reward_day,
+                    "admin_add_reward_days": handle_admin_add_reward_days,
+                    "admin_confirm_add_days": handle_admin_confirm_add_days,
                     "admin_product_pool": handle_admin_product_pool_v2,  # NEW VERSION
                     "admin_product_pool_v2": handle_admin_product_pool_v2,
                     "admin_case_pool": handle_admin_case_pool,
@@ -1177,6 +1191,7 @@ def callback_query_router(func):
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_case_name'] = handle_case_name_input
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_case_cost'] = handle_case_cost_input
                 DAILY_REWARDS_STATE_HANDLERS['awaiting_custom_win_chance'] = handle_custom_chance_input
+                DAILY_REWARDS_STATE_HANDLERS['awaiting_custom_reward_amount'] = handle_custom_reward_amount_input
                 
                 logger.info("✅ Daily rewards handlers registered")
             except Exception as e:
@@ -1298,6 +1313,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_case_name': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_name'),
         'awaiting_case_cost': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_case_cost'),
         'awaiting_custom_win_chance': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_custom_win_chance'),
+        'awaiting_custom_reward_amount': DAILY_REWARDS_STATE_HANDLERS.get('awaiting_custom_reward_amount'),
         
         # Userbot setup message handlers (NEW multi-userbot system)
         'awaiting_new_userbot_name': handle_new_userbot_name_message if USERBOT_AVAILABLE else None,

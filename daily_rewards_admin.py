@@ -8,7 +8,12 @@ import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from utils import get_db_connection, is_primary_admin
-from daily_rewards_system import get_all_cases, DAILY_REWARDS
+from daily_rewards_system import (
+    get_all_cases, 
+    get_reward_schedule, 
+    update_reward_for_day,
+    get_reward_for_day
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1159,4 +1164,279 @@ async def handle_case_cost_input(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(
             "❌ Please enter a valid number.\nTry again:"
         )
+
+# ============================================================================
+# REWARD SCHEDULE MANAGER (NEW!)
+# ============================================================================
+
+async def handle_admin_reward_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Manage daily reward schedule - seller can customize everything!"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    # Get current schedule
+    schedule = get_reward_schedule()
+    
+    msg = "📅 DAILY REWARD SCHEDULE\n\n"
+    msg += "Customize how many points users get each day!\n\n"
+    msg += "Current Schedule:\n"
+    
+    for day in sorted(schedule.keys()):
+        points = schedule[day]['points']
+        desc = schedule[day].get('description', '')
+        msg += f"Day {day}: {points} pts"
+        if desc:
+            msg += f" - {desc}"
+        msg += "\n"
+    
+    msg += "\n💡 Click a day to edit its reward amount"
+    
+    keyboard = []
+    row = []
+    for day in sorted(schedule.keys()):
+        row.append(InlineKeyboardButton(
+            f"Day {day}",
+            callback_data=f"admin_edit_reward_day|{day}"
+        ))
+        if len(row) == 3:
+            keyboard.append(row)
+            row = []
+    
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton("➕ Add More Days", callback_data="admin_add_reward_days")])
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_daily_rewards_main")])
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_edit_reward_day(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Edit reward for a specific day"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid day", show_alert=True)
+        return
+    
+    day_number = int(params[0])
+    current_points = get_reward_for_day(day_number)
+    
+    await query.answer()
+    
+    msg = f"✏️ EDIT DAY {day_number} REWARD\n\n"
+    msg += f"Current: {current_points} points\n\n"
+    msg += "Select new reward amount:"
+    
+    # Preset amounts
+    presets = [10, 15, 20, 25, 30, 40, 50, 60, 75, 90, 100, 150, 200, 250, 300, 500]
+    
+    keyboard = []
+    row = []
+    for i, points in enumerate(presets):
+        row.append(InlineKeyboardButton(
+            f"{points} pts",
+            callback_data=f"admin_save_reward_day|{day_number}|{points}"
+        ))
+        if (i + 1) % 4 == 0:
+            keyboard.append(row)
+            row = []
+    
+    if row:
+        keyboard.append(row)
+    
+    keyboard.append([InlineKeyboardButton("✏️ Enter Custom Amount", callback_data=f"admin_custom_reward_day|{day_number}")])
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_reward_schedule")])
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_save_reward_day(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save new reward amount for a day"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    day_number = int(params[0])
+    points = int(params[1])
+    
+    # Update in database
+    success = update_reward_for_day(day_number, points)
+    
+    if success:
+        await query.answer(f"✅ Day {day_number} now awards {points} points!", show_alert=True)
+    else:
+        await query.answer("❌ Error updating reward", show_alert=True)
+    
+    # Refresh schedule view
+    await handle_admin_reward_schedule(update, context)
+
+async def handle_admin_custom_reward_day(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Prompt for custom reward amount"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid day", show_alert=True)
+        return
+    
+    day_number = int(params[0])
+    
+    await query.answer()
+    
+    # Store in context
+    context.user_data['state'] = 'awaiting_custom_reward_amount'
+    context.user_data['reward_day_number'] = day_number
+    
+    msg = f"✏️ CUSTOM REWARD FOR DAY {day_number}\n\n"
+    msg += "Enter the reward amount (points):\n\n"
+    msg += "Examples:\n"
+    msg += "• 10\n"
+    msg += "• 50\n"
+    msg += "• 100\n"
+    msg += "• 500\n\n"
+    msg += "Just type a number and send it!"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"admin_edit_reward_day|{day_number}")]]
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_custom_reward_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text input for custom reward amount"""
+    user_id = update.effective_user.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get('state') != 'awaiting_custom_reward_amount':
+        return
+    
+    text = update.message.text.strip()
+    
+    try:
+        points = int(text)
+        
+        if points <= 0:
+            await update.message.reply_text(
+                "❌ Points must be greater than 0.\nTry again:"
+            )
+            return
+        
+        day_number = context.user_data.get('reward_day_number')
+        
+        # Clear state
+        context.user_data['state'] = None
+        
+        # Update reward
+        success = update_reward_for_day(day_number, points)
+        
+        if success:
+            await update.message.reply_text(
+                f"✅ Day {day_number} now awards {points} points!\n\nReturning to schedule..."
+            )
+        else:
+            await update.message.reply_text(
+                "❌ Error updating reward. Please try again."
+            )
+        
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Please enter a valid number.\nTry again:"
+        )
+
+async def handle_admin_add_reward_days(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Add more days to the reward schedule"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer()
+    
+    schedule = get_reward_schedule()
+    max_day = max(schedule.keys()) if schedule else 7
+    
+    msg = f"➕ ADD MORE REWARD DAYS\n\n"
+    msg += f"Current schedule goes up to Day {max_day}\n\n"
+    msg += "How many more days would you like to add?"
+    
+    keyboard = []
+    for days_to_add in [7, 14, 30]:
+        keyboard.append([InlineKeyboardButton(
+            f"Add {days_to_add} more days",
+            callback_data=f"admin_confirm_add_days|{days_to_add}"
+        )])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_reward_schedule")])
+    
+    await query.edit_message_text(
+        msg,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_admin_confirm_add_days(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm and add more days to schedule"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params:
+        await query.answer("Invalid data", show_alert=True)
+        return
+    
+    days_to_add = int(params[0])
+    
+    schedule = get_reward_schedule()
+    max_day = max(schedule.keys()) if schedule else 7
+    
+    # Add new days with progressive rewards
+    for i in range(1, days_to_add + 1):
+        new_day = max_day + i
+        # Calculate progressive reward (50% more than previous cycle)
+        base_day = ((new_day - 1) % 7) + 1
+        base_reward = schedule.get(base_day, {}).get('points', 10)
+        cycle_number = (new_day - 1) // 7
+        multiplier = 1 + (cycle_number * 0.5)
+        new_reward = int(base_reward * multiplier)
+        
+        update_reward_for_day(new_day, new_reward, f'Day {new_day} reward')
+    
+    await query.answer(f"✅ Added {days_to_add} more days!", show_alert=True)
+    
+    # Refresh schedule view
+    await handle_admin_reward_schedule(update, context)
 

@@ -16,16 +16,130 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # ============================================================================
 
-# Daily Streak Rewards (points awarded for consecutive days)
-DAILY_REWARDS = {
-    1: 50,      # Day 1: 50 points (TEST MODE - normally 10)
-    2: 15,      # Day 2: 15 points
-    3: 25,      # Day 3: 25 points
-    4: 40,      # Day 4: 40 points
-    5: 60,      # Day 5: 60 points
-    6: 90,      # Day 6: 90 points
-    7: 150,     # Day 7: 150 points (jackpot)
-}
+# Daily Streak Rewards - NOW LOADED FROM DATABASE (customizable by admin)
+DAILY_REWARDS = {}  # Will be populated from daily_reward_schedule table
+
+def get_reward_schedule() -> Dict[int, Dict]:
+    """Get the current reward schedule from database"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            SELECT day_number, points, description
+            FROM daily_reward_schedule
+            ORDER BY day_number
+        ''')
+        schedule = {}
+        for row in c.fetchall():
+            schedule[row['day_number']] = {
+                'points': row['points'],
+                'description': row['description'] or f'Day {row["day_number"]} reward'
+            }
+        return schedule
+    finally:
+        conn.close()
+
+def update_reward_for_day(day_number: int, points: int, description: str = None) -> bool:
+    """Update reward amount for a specific day"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('''
+            INSERT INTO daily_reward_schedule (day_number, points, description, updated_at)
+            VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (day_number)
+            DO UPDATE SET 
+                points = EXCLUDED.points,
+                description = EXCLUDED.description,
+                updated_at = CURRENT_TIMESTAMP
+        ''', (day_number, points, description))
+        conn.commit()
+        logger.info(f"✅ Updated Day {day_number} reward to {points} points")
+        return True
+    except Exception as e:
+        logger.error(f"Error updating reward schedule: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def get_reward_for_day(day_number: int) -> int:
+    """Get reward points for a specific day (with infinite progression)"""
+    schedule = get_reward_schedule()
+    
+    # If day is in schedule, return it
+    if day_number in schedule:
+        return schedule[day_number]['points']
+    
+    # For days beyond the schedule, calculate progressive reward
+    # Pattern: repeat the 7-day cycle with increasing multiplier
+    max_day = max(schedule.keys()) if schedule else 7
+    cycle_number = (day_number - 1) // max_day
+    day_in_cycle = ((day_number - 1) % max_day) + 1
+    
+    base_reward = schedule.get(day_in_cycle, {}).get('points', 10)
+    # Each cycle adds 50% more
+    multiplier = 1 + (cycle_number * 0.5)
+    
+    return int(base_reward * multiplier)
+
+def get_rolling_calendar(user_id: int, current_streak: int) -> List[Dict]:
+    """
+    Get rolling 7-day calendar view
+    Shows last 6 claimed days + next unclaimed day
+    After Day 7, calendar rolls forward (Day 7 becomes position 1, Day 8 at position 7)
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Get user's claim history
+        c.execute('''
+            SELECT login_date, streak_count, points_awarded, claimed
+            FROM daily_logins
+            WHERE user_id = %s
+            ORDER BY login_date DESC
+            LIMIT 7
+        ''', (user_id,))
+        
+        history = c.fetchall()
+        
+        # Build rolling calendar
+        calendar = []
+        
+        # Determine the range to show
+        if current_streak <= 7:
+            # First week: show Day 1-7
+            start_day = 1
+            end_day = 7
+        else:
+            # After first week: show last 6 days + next day
+            start_day = current_streak - 6
+            end_day = current_streak
+        
+        # Build calendar entries
+        for day_num in range(start_day, end_day + 1):
+            points = get_reward_for_day(day_num)
+            
+            # Check if this day was claimed
+            claimed = False
+            for record in history:
+                if record['streak_count'] == day_num and record['claimed']:
+                    claimed = True
+                    points = record['points_awarded']  # Use actual awarded points
+                    break
+            
+            calendar.append({
+                'day_number': day_num,
+                'points': points,
+                'claimed': claimed,
+                'is_next': day_num == current_streak and not claimed
+            })
+        
+        return calendar
+        
+    finally:
+        conn.close()
 
 # Case Types - loaded from database (admin creates them)
 CASE_TYPES = {}
@@ -69,6 +183,37 @@ def init_daily_rewards_tables():
     c = conn.cursor()
     
     try:
+        # Daily reward schedule (customizable by admin)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS daily_reward_schedule (
+                day_number INTEGER PRIMARY KEY,
+                points INTEGER NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        logger.info("✅ daily_reward_schedule table created")
+        
+        # Insert default schedule if empty
+        c.execute('SELECT COUNT(*) FROM daily_reward_schedule')
+        count = c.fetchone()[0]
+        if count == 0:
+            default_schedule = [
+                (1, 50, 'Welcome bonus'),
+                (2, 15, 'Day 2 reward'),
+                (3, 25, 'Day 3 reward'),
+                (4, 40, 'Day 4 reward'),
+                (5, 60, 'Day 5 reward'),
+                (6, 90, 'Day 6 reward'),
+                (7, 150, 'Week complete!'),
+            ]
+            c.executemany('''
+                INSERT INTO daily_reward_schedule (day_number, points, description)
+                VALUES (%s, %s, %s)
+            ''', default_schedule)
+            logger.info("✅ Inserted default 7-day reward schedule")
+        
         # Daily login tracking
         c.execute('''
             CREATE TABLE IF NOT EXISTS daily_logins (
@@ -191,8 +336,8 @@ def check_daily_login(user_id: int) -> Dict:
             return {
                 'can_claim': True,
                 'streak': 1,
-                'points_to_award': DAILY_REWARDS[1],
-                'next_reward': DAILY_REWARDS.get(2, 0),
+                'points_to_award': get_reward_for_day(1),
+                'next_reward': get_reward_for_day(2),
                 'last_login': None,
                 'is_first_time': True
             }
@@ -206,20 +351,20 @@ def check_daily_login(user_id: int) -> Dict:
             return {
                 'can_claim': not last_claimed,
                 'streak': last_streak,
-                'points_to_award': DAILY_REWARDS.get(last_streak, DAILY_REWARDS[7]),
-                'next_reward': DAILY_REWARDS.get(last_streak + 1, DAILY_REWARDS[7]),
+                'points_to_award': get_reward_for_day(last_streak),
+                'next_reward': get_reward_for_day(last_streak + 1),
                 'last_login': last_date,
                 'is_first_time': False
             }
         
         elif last_date == yesterday:
-            # Streak continues
-            new_streak = min(last_streak + 1, 7)  # Max 7 days
+            # Streak continues (NO MAX LIMIT - infinite progression!)
+            new_streak = last_streak + 1
             return {
                 'can_claim': True,
                 'streak': new_streak,
-                'points_to_award': DAILY_REWARDS.get(new_streak, DAILY_REWARDS[7]),
-                'next_reward': DAILY_REWARDS.get(new_streak + 1, DAILY_REWARDS[7]),
+                'points_to_award': get_reward_for_day(new_streak),
+                'next_reward': get_reward_for_day(new_streak + 1),
                 'last_login': last_date,
                 'is_first_time': False
             }
@@ -229,8 +374,8 @@ def check_daily_login(user_id: int) -> Dict:
             return {
                 'can_claim': True,
                 'streak': 1,
-                'points_to_award': DAILY_REWARDS[1],
-                'next_reward': DAILY_REWARDS[2],
+                'points_to_award': get_reward_for_day(1),
+                'next_reward': get_reward_for_day(2),
                 'last_login': last_date,
                 'is_first_time': False,
                 'streak_broken': True

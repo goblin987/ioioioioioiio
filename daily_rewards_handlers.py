@@ -8,14 +8,14 @@ import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from daily_rewards_system import (
-    DAILY_REWARDS,
-    CASE_TYPES,
     check_daily_login,
     claim_daily_reward,
     get_user_points,
     open_case,
     get_user_stats,
-    get_leaderboard
+    get_leaderboard,
+    get_rolling_calendar,
+    get_reward_for_day
 )
 from utils import get_db_connection, is_primary_admin
 
@@ -46,18 +46,31 @@ async def handle_daily_rewards_menu(update: Update, context: ContextTypes.DEFAUL
     msg += f"🔥 **Current Streak:** {login_info['streak']} day(s)\n"
     msg += f"💰 **Your Points:** {user_points}\n\n"
     
-    # Show streak progress
-    msg += "📅 **7-Day Streak Calendar:**\n"
-    for day in range(1, 8):
-        if day < login_info['streak']:
-            msg += f"✅ Day {day}: {DAILY_REWARDS[day]} pts\n"
-        elif day == login_info['streak']:
-            if login_info['can_claim']:
-                msg += f"🎯 **Day {day}: {DAILY_REWARDS[day]} pts** ⬅️ Claim Now!\n"
-            else:
-                msg += f"✅ Day {day}: {DAILY_REWARDS[day]} pts (claimed)\n"
+    # Show rolling calendar (last 6 days + next day)
+    calendar = get_rolling_calendar(user_id, login_info['streak'])
+    
+    if login_info['streak'] <= 7:
+        msg += "📅 **7-Day Streak Calendar:**\n"
+    else:
+        # Show which days are visible in rolling view
+        first_day = calendar[0]['day_number']
+        last_day = calendar[-1]['day_number']
+        msg += f"📅 **Streak Calendar (Days {first_day}-{last_day}):**\n"
+    
+    for day_info in calendar:
+        day_num = day_info['day_number']
+        points = day_info['points']
+        claimed = day_info['claimed']
+        is_next = day_info['is_next']
+        
+        if claimed:
+            msg += f"✅ Day {day_num}: {points} pts\n"
+        elif is_next and login_info['can_claim']:
+            msg += f"🎯 **Day {day_num}: {points} pts** ⬅️ Claim Now!\n"
+        elif is_next:
+            msg += f"✅ Day {day_num}: {points} pts (claimed)\n"
         else:
-            msg += f"⬜ Day {day}: {DAILY_REWARDS[day]} pts\n"
+            msg += f"⬜ Day {day_num}: {points} pts\n"
     
     msg += f"\n🎁 **Next Reward:** {login_info.get('next_reward', '—')} points"
     
