@@ -149,19 +149,44 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     await query.edit_message_text(legend_msg.replace("Opening in 3...", "Opening in 1..."))
     await asyncio.sleep(1)
     
-    # STEP 2: SMOOTH ULTRA-FAST animation (30 frames for silky smoothness!)
+    # STEP 2: Open the case FIRST (to know the result)
+    result = open_product_case(user_id, case_type, config['cost'])
+    
+    if not result['success']:
+        await query.edit_message_text(
+            f"❌ Error: {result.get('message', 'Unknown error')}",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Back", callback_data="case_opening_menu")
+            ]])
+        )
+        return
+    
+    # Determine the FINAL emoji (what we'll land on)
+    if result['outcome'] == 'lose':
+        final_emoji = lose_emoji
+    else:
+        final_emoji = result['emoji']  # Winning product emoji
+    
+    # STEP 3: SMOOTH animation that ENDS on the correct emoji
     import random
-    total_frames = 30  # More frames = smoother
+    total_frames = 30
     
     for i in range(total_frames):
-        left = random.choice(emoji_list)
-        center = random.choice(emoji_list)
-        right = random.choice(emoji_list)
+        # Last 3 frames: show the FINAL emoji
+        if i >= 27:
+            center = final_emoji
+            left = final_emoji
+            right = final_emoji
+        else:
+            # Random spinning
+            left = random.choice(emoji_list)
+            center = random.choice(emoji_list)
+            right = random.choice(emoji_list)
         
-        # Progress bar (30 segments for smoother progress)
-        progress = int((i / total_frames) * 30)
+        # Progress bar (15 segments - shorter for mobile)
+        progress = int((i / total_frames) * 15)
         bar_filled = "█" * progress
-        bar_empty = "░" * (30 - progress)
+        bar_empty = "░" * (15 - progress)
         progress_bar = f"{bar_filled}{bar_empty}"
         
         # Dynamic speed: start fast, end slow
@@ -172,32 +197,29 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         elif i < 25:
             speed = 0.20  # Medium
         else:
-            speed = 0.35  # Slow dramatic finish
+            speed = 0.40  # SLOW dramatic finish (show result longer)
         
-        # Build frame
+        # Build frame with arrows ABOVE and BELOW center
         frame_msg = f"🎰 {config['emoji']} SPINNING...\n\n"
-        frame_msg += f"          ▼\n"
-        frame_msg += f"     [ {left}  {center}  {right} ]\n"
-        frame_msg += f"          ▼\n\n"
+        frame_msg += f"       ▼ ▼ ▼\n"
+        frame_msg += f"    {left}  {center}  {right}\n"
+        frame_msg += f"       ▼ ▼ ▼\n\n"
         frame_msg += f"{progress_bar}"
         
         await query.edit_message_text(frame_msg)
         await asyncio.sleep(speed)
     
-    # Open the case
-    result = open_product_case(user_id, case_type, config['cost'])
+    # STEP 4: Hold final result for 1.5 seconds (show winning emoji longer)
+    final_frame = f"🎰 {config['emoji']} RESULT!\n\n"
+    final_frame += f"       ▼ ▼ ▼\n"
+    final_frame += f"    {final_emoji}  **{final_emoji}**  {final_emoji}\n"
+    final_frame += f"       ▼ ▼ ▼\n\n"
+    final_frame += f"{'█' * 15}"
     
-    if not result['success']:
-        await query.edit_message_text(
-            f"❌ Error opening case:\n{result.get('message', 'Unknown error')}\n\n"
-            f"Your points were not deducted.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("⬅️ Back", callback_data="case_opening_menu")
-            ]])
-        )
-        return
+    await query.edit_message_text(final_frame)
+    await asyncio.sleep(1.5)  # Hold result longer
     
-    # Show result with final frame
+    # STEP 5: Show detailed result
     if result['outcome'] == 'lose':
         # User lost - show final frame with arrows pointing to center
         final_frame = (
