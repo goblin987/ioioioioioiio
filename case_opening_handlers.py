@@ -131,25 +131,42 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     await asyncio.sleep(0.5)
     
-    # Animate spinning with actual emojis from reward pool
+    # Animate spinning with actual emojis from reward pool (2x longer = 16 frames)
     import random
+    total_frames = 16  # Doubled from 8
     frames = []
-    for i in range(8):
+    
+    for i in range(total_frames):
         left = random.choice(emoji_list)
         center = random.choice(emoji_list)
         right = random.choice(emoji_list)
+        
+        # Progress bar (20 segments)
+        progress = int((i / total_frames) * 20)
+        bar_filled = "█" * progress
+        bar_empty = "░" * (20 - progress)
+        progress_bar = f"[{bar_filled}{bar_empty}]"
+        
         # Show brackets above and below the center (winning) slot
-        frames.append(
-            f"          ▼\n"
-            f"     [ {left}  {center}  {right} ]\n"
-            f"          ▼"
-        )
+        frames.append({
+            'slots': f"          ▼\n     [ {left}  {center}  {right} ]\n          ▼",
+            'progress': progress_bar,
+            'percent': int((i / total_frames) * 100)
+        })
     
     for i, frame in enumerate(frames):
-        speed = 0.2 if i < 4 else 0.4  # Slow down towards end
+        # Slow down towards end for dramatic effect
+        if i < 8:
+            speed = 0.15  # Fast start
+        elif i < 12:
+            speed = 0.25  # Medium
+        else:
+            speed = 0.45  # Slow dramatic finish
+        
         await query.edit_message_text(
             f"{config['emoji']} OPENING {config['name'].upper()}...\n\n"
-            f"{frame}"
+            f"{frame['slots']}\n\n"
+            f"{frame['progress']} {frame['percent']}%"
         )
         await asyncio.sleep(speed)
     
