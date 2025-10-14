@@ -1056,10 +1056,13 @@ def callback_query_router(func):
                 from daily_rewards_handlers import (
                     handle_daily_rewards_menu,
                     handle_claim_daily_reward,
-                    handle_case_opening_menu,
-                    handle_open_case,
                     handle_my_case_stats,
                     handle_case_leaderboard
+                )
+                # Use NEW CS:GO-style case opening from case_opening_handlers
+                from case_opening_handlers import (
+                    handle_case_opening_menu,
+                    handle_open_case
                 )
                 from daily_rewards_admin import (
                     handle_admin_daily_rewards_main,
