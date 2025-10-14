@@ -1646,8 +1646,8 @@ async def auto_ads_execution_job_wrapper(context: ContextTypes.DEFAULT_TYPE):
     """Wrapper for executing pending auto ads campaigns."""
     logger.debug("Running background job: auto_ads_execution")
     try:
-        from auto_ads_system import get_or_create_executor
-        executor = get_or_create_executor()
+        from auto_ads_system import get_campaign_executor
+        executor = get_campaign_executor()
         if executor:
             pending_campaigns = executor.get_pending_executions()
             if pending_campaigns:
