@@ -36,34 +36,29 @@ async def handle_admin_marquee_settings(update: Update, context: ContextTypes.DE
         await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
         return
     
-    # Show clean preview (no symbols)
-    preview = get_current_marquee_frame(0)
-    
     msg = "📢 RUNNING ADS MANAGEMENT\n\n"
-    msg += f"Current Text: {settings['text']}\n\n"
-    msg += f"Status: {'✅ ENABLED' if settings['enabled'] else '❌ DISABLED'}\n"
-    msg += f"Speed: {settings['speed'].upper()}\n\n"
-    msg += f"Preview:\n{preview}\n\n"
-    msg += "This text will scroll on the Running Ads button.\n"
-    msg += "Add the button via Bot UI Management → UI Theme Designer"
+    msg += f"Current Button Text:\n{settings['text']}\n\n"
+    msg += f"Status: {'✅ ENABLED' if settings['enabled'] else '❌ DISABLED'}\n\n"
+    msg += "This text will appear on the Running Ads button.\n"
+    msg += "The button is static (no animation, no action when clicked).\n\n"
+    msg += "Add the button via:\n"
+    msg += "Bot UI Management → UI Theme Designer → Edit Bot Look"
     
     keyboard = [
-        [InlineKeyboardButton("✏️ Change Text", callback_data="admin_marquee_change_text")],
+        [InlineKeyboardButton("✏️ Change Button Text", callback_data="admin_marquee_change_text")],
         [
             InlineKeyboardButton(
-                "✅ Disable" if settings['enabled'] else "▶️ Enable",
+                "✅ Disable Button" if settings['enabled'] else "▶️ Enable Button",
                 callback_data="admin_marquee_toggle"
             )
         ],
-        [InlineKeyboardButton("⚡ Change Speed", callback_data="admin_marquee_speed")],
-        [InlineKeyboardButton("👁️ Preview Animation", callback_data="admin_marquee_preview")],
         [InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_admin_marquee_change_text(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Prompt admin to enter new marquee text"""
+    """Prompt admin to enter new button text"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -73,13 +68,16 @@ async def handle_admin_marquee_change_text(update: Update, context: ContextTypes
     
     await query.answer()
     
-    msg = "✏️ CHANGE MARQUEE TEXT\n\n"
-    msg += "Send me the new text you want to display.\n\n"
+    msg = "✏️ CHANGE BUTTON TEXT\n\n"
+    msg += "Send me the text you want to display on the Running Ads button.\n\n"
     msg += "Tips:\n"
     msg += "• Use emojis for visual appeal 🎉\n"
-    msg += "• Keep it short and catchy\n"
-    msg += "• Text will scroll automatically\n\n"
-    msg += "Example: 🔥 HOT DEALS TODAY! 🔥"
+    msg += "• Keep it catchy and promotional\n"
+    msg += "• This will be static text (no animation)\n\n"
+    msg += "Examples:\n"
+    msg += "🔥 HOT DEALS - 50% OFF!\n"
+    msg += "💎 NEW PRODUCTS AVAILABLE!\n"
+    msg += "⚡ LIMITED TIME OFFER!"
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="admin_marquee_settings")]]
     
@@ -89,7 +87,7 @@ async def handle_admin_marquee_change_text(update: Update, context: ContextTypes
     context.user_data['awaiting_marquee_text'] = True
 
 async def handle_marquee_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Process new marquee text input"""
+    """Process new button text input"""
     user_id = update.message.from_user.id
     
     if not is_primary_admin(user_id):
@@ -112,14 +110,10 @@ async def handle_marquee_text_input(update: Update, context: ContextTypes.DEFAUL
     success = update_marquee_text(new_text)
     
     if success:
-        preview = get_current_marquee_frame(0)
-        
-        msg = f"✅ MARQUEE TEXT UPDATED!\n\n"
-        msg += f"New text: {new_text}\n\n"
-        msg += f"Preview:\n"
-        msg += f"┌{'─' * 22}┐\n"
-        msg += f"│ {preview} │\n"
-        msg += f"└{'─' * 22}┘"
+        msg = f"✅ BUTTON TEXT UPDATED!\n\n"
+        msg += f"New button text:\n{new_text}\n\n"
+        msg += "The Running Ads button will now display this text.\n"
+        msg += "Users can see it in any menu where you've added the button!"
         
         keyboard = [[InlineKeyboardButton("⬅️ Back to Settings", callback_data="admin_marquee_settings")]]
         
@@ -131,7 +125,7 @@ async def handle_marquee_text_input(update: Update, context: ContextTypes.DEFAUL
     context.user_data['awaiting_marquee_text'] = False
 
 async def handle_admin_marquee_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Toggle marquee animation on/off"""
+    """Toggle running ads button on/off"""
     query = update.callback_query
     user_id = query.from_user.id
     
@@ -142,7 +136,7 @@ async def handle_admin_marquee_toggle(update: Update, context: ContextTypes.DEFA
     settings = get_marquee_settings()
     
     if not settings:
-        await query.answer("❌ Marquee not initialized", show_alert=True)
+        await query.answer("❌ Running Ads not initialized", show_alert=True)
         return
     
     # Toggle
@@ -151,7 +145,7 @@ async def handle_admin_marquee_toggle(update: Update, context: ContextTypes.DEFA
     
     if success:
         await query.answer(
-            f"✅ Marquee {'enabled' if new_state else 'disabled'}!",
+            f"✅ Running Ads button {'enabled' if new_state else 'disabled'}!",
             show_alert=True
         )
     else:
