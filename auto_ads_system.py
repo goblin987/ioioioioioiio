@@ -164,7 +164,7 @@ class BumpService:
                     values.append(value)
             
             if not updates:
-        return False
+                return False
     
             values.append(campaign_id)
             query = f"UPDATE auto_ads_campaigns SET {', '.join(updates)} WHERE id = %s"
