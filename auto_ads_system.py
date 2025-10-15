@@ -3059,22 +3059,30 @@ Buttons will appear as an inline keyboard below your ad message.
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle incoming messages for configuration setup"""
         user_id = update.effective_user.id
+        message_text = update.message.text
         
         # Debug logging
-        logger.info(f"🔍 MESSAGE HANDLER: User {user_id} sent message: '{update.message.text}'")
+        logger.info(f"🔍 MESSAGE HANDLER: User {user_id} sent message: '{message_text}'")
         logger.info(f"🔍 SESSION CHECK: User {user_id} in sessions: {user_id in self.user_sessions}")
-        logger.info(f"🔍 ACTIVE SESSIONS: {list(self.user_sessions.keys())}")
         
-        # TEMPORARY FIX: Process any text message as account name for testing
-        message_text = update.message.text
-        if message_text:
-            logger.info(f"🔍 TEMP FIX: Processing message '{message_text}' as account name for user {user_id}")
+        # Check if user has an active session
+        if user_id not in self.user_sessions:
+            logger.warning(f"⚠️ User {user_id} sent message but has no active session")
+            return
+        
+        session = self.user_sessions[user_id]
+        logger.info(f"🔍 Current step: {session.get('step')}")
+        
+        # Handle account_name step (only if explicitly in this step)
+        if session.get('step') == 'account_name':
+            if not message_text:
+                await update.message.reply_text(
+                    "❌ **Please send a text message with the account name.**",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
             
-            # Create session if it doesn't exist
-            if user_id not in self.user_sessions:
-                self.user_sessions[user_id] = {"step": "account_name", "account_data": {}}
-            
-            session = self.user_sessions[user_id]
+            logger.info(f"✅ Setting account name: {message_text}")
             session['account_data']['account_name'] = message_text
             session['step'] = 'phone_number'
             
@@ -3083,12 +3091,6 @@ Buttons will appear as an inline keyboard below your ad message.
                 parse_mode=ParseMode.MARKDOWN
             )
             return
-        
-        # Original logic continues here for other steps
-        if user_id not in self.user_sessions:
-            return
-        
-        session = self.user_sessions[user_id]
         
         if 'account_data' in session:
             if session['step'] == 'phone_number':
