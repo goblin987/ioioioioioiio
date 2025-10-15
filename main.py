@@ -876,6 +876,7 @@ def callback_query_router(func):
     "tf_help": handle_testforwarder_help,
     # Original testforwarder callback data
     "manage_accounts": handle_testforwarder_manage_accounts,
+    "add_account": handle_add_account,  # ADDED - missing handler
     "bump_service": handle_testforwarder_bump_service,
     "my_configs": handle_testforwarder_my_configs,
     "add_forwarding": handle_testforwarder_add_forwarding,
@@ -885,12 +886,22 @@ def callback_query_router(func):
     "edit_account": handle_testforwarder_edit_account,
     "delete_account": handle_testforwarder_delete_account,
     "main_menu": handle_testforwarder_menu,
+    "config": handle_config,  # ADDED - missing handler
     "edit_config": handle_testforwarder_edit_config,
     "delete_config": handle_testforwarder_delete_config,
+    "toggle_config": handle_toggle_config,  # ADDED - missing handler
     "add_campaign": handle_testforwarder_add_campaign,
     "my_campaigns": handle_testforwarder_my_campaigns,
+    "campaign_stats": handle_campaign_stats,  # ADDED - missing handler
+    "back_to_bump": handle_back_to_bump,  # ADDED - missing handler
     "edit_campaign": handle_testforwarder_edit_campaign,
     "delete_campaign": handle_testforwarder_delete_campaign,
+    "edit_text_content": handle_edit_text_content,  # ADDED - missing handler
+    "edit_media": handle_edit_media,  # ADDED - missing handler
+    "edit_buttons": handle_edit_buttons,  # ADDED - missing handler
+    "edit_settings": handle_edit_settings,  # ADDED - missing handler
+    "edit_schedule": handle_edit_schedule,  # ADDED - missing handler
+    "edit_targets": handle_edit_targets,  # ADDED - missing handler
     "select_account": handle_testforwarder_select_account,
     "select_account_1": handle_testforwarder_select_account,
     "select_account_2": handle_testforwarder_select_account,
