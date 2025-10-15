@@ -3160,6 +3160,7 @@ Buttons will appear as an inline keyboard below your ad message.
                 
                 # Create session for this account
                 from telethon import TelegramClient
+                from telethon.sessions import StringSession
                 import asyncio
                 
                 try:
@@ -3167,23 +3168,27 @@ Buttons will appear as an inline keyboard below your ad message.
                     api_hash = session['account_data']['api_hash']
                     phone = session['account_data']['phone_number']
                     
-                    # Create a unique session name
-                    session_name = f"account_{user_id}_{int(asyncio.get_event_loop().time())}"
-                    client = TelegramClient(session_name, api_id, api_hash)
+                    logger.info(f"🔐 Creating Telethon client for {phone}")
+                    
+                    # Use StringSession (no file on disk)
+                    client = TelegramClient(StringSession(), api_id, api_hash)
                     
                     await client.connect()
+                    logger.info(f"✅ Telethon client connected")
                     
                     # Request code
-                    await client.send_code_request(phone)
+                    sent_code = await client.send_code_request(phone)
+                    logger.info(f"📱 Verification code sent to {phone}, phone_code_hash: {sent_code.phone_code_hash}")
                     
                     session['client'] = client
-                    session['session_name'] = session_name
+                    session['phone_code_hash'] = sent_code.phone_code_hash
                     session['step'] = 'verification_code'
                     
                     await update.message.reply_text(
                         "📱 **Verification Code Sent!**\n\n"
                         f"A verification code has been sent to **{phone}**\n\n"
-                        "Please enter the verification code you received:",
+                        "**Step 5/5: Verification Code**\n\n"
+                        "Please enter the verification code you received (5-digit code):",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     
@@ -3200,8 +3205,9 @@ Buttons will appear as an inline keyboard below your ad message.
             
             elif session['step'] == 'verification_code':
                 # Handle verification code
-                code = message_text.strip()
+                code = message_text.strip().replace(' ', '').replace('-', '')
                 client = session.get('client')
+                phone_code_hash = session.get('phone_code_hash')
                 
                 if not client:
                     await update.message.reply_text("❌ Session expired. Please start over.")
@@ -3210,42 +3216,45 @@ Buttons will appear as an inline keyboard below your ad message.
                     return
                 
                 try:
-                    # Sign in with the code
-                    await client.sign_in(session['account_data']['phone_number'], code)
+                    logger.info(f"🔐 Attempting to sign in with code: {code}")
                     
-                    # Get session string - save the actual session file content
-                    import base64
-                    session_file_path = f"{session['session_name']}.session"
+                    # Sign in with the code and phone_code_hash
+                    phone = session['account_data']['phone_number']
+                    try:
+                        await client.sign_in(phone, code, phone_code_hash=phone_code_hash)
+                        logger.info(f"✅ Successfully signed in")
+                    except Exception as signin_error:
+                        # Check if 2FA password is needed
+                        if 'password' in str(signin_error).lower():
+                            session['step'] = '2fa_password'
+                            await update.message.reply_text(
+                                "🔐 **Two-Factor Authentication Required**\n\n"
+                                "Your account has 2FA enabled.\n\n"
+                                "Please enter your 2FA password:",
+                                parse_mode=ParseMode.MARKDOWN
+                            )
+                            return
+                        else:
+                            raise signin_error
                     
-                    # Save the session to ensure it's written to disk
-                    await client.disconnect()
-                    await client.connect()
+                    # Get session string from StringSession
+                    session_string = client.session.save()
+                    logger.info(f"✅ Session string obtained: {len(session_string)} characters")
                     
-                    # Read the session file and encode it
-                    with open(session_file_path, 'rb') as f:
-                        session_data = f.read()
-                    session_string = base64.b64encode(session_data).decode('utf-8')
-                    
-                    # Save account with session string
+                    # Save account with session string to database
                     account_id = self.db.add_telegram_account(
                         user_id,
                         session['account_data']['account_name'],
                         session['account_data']['phone_number'],
+                        session_string,
                         session['account_data']['api_id'],
-                        session['account_data']['api_hash'],
-                        session_string
+                        session['account_data']['api_hash']
                     )
+                    
+                    logger.info(f"✅ Account saved to database with ID: {account_id}")
                     
                     # Disconnect client
                     await client.disconnect()
-                    
-                    # Clean up session file
-                    import os
-                    try:
-                        if os.path.exists(f"{session['session_name']}.session"):
-                            os.remove(f"{session['session_name']}.session")
-                    except:
-                        pass
                     
                     # Clear session
                     del self.user_sessions[user_id]
@@ -3297,42 +3306,30 @@ Buttons will appear as an inline keyboard below your ad message.
                     return
                 
                 try:
+                    logger.info(f"🔐 Attempting to sign in with 2FA password")
+                    
                     # Sign in with password
                     await client.sign_in(password=password)
+                    logger.info(f"✅ Successfully signed in with 2FA password")
                     
-                    # Get session string - save the actual session file content
-                    import base64
-                    session_file_path = f"{session['session_name']}.session"
+                    # Get session string from StringSession
+                    session_string = client.session.save()
+                    logger.info(f"✅ Session string obtained: {len(session_string)} characters")
                     
-                    # Save the session to ensure it's written to disk
-                    await client.disconnect()
-                    await client.connect()
-                    
-                    # Read the session file and encode it
-                    with open(session_file_path, 'rb') as f:
-                        session_data = f.read()
-                    session_string = base64.b64encode(session_data).decode('utf-8')
-                    
-                    # Save account with session string
+                    # Save account with session string to database
                     account_id = self.db.add_telegram_account(
                         user_id,
                         session['account_data']['account_name'],
                         session['account_data']['phone_number'],
+                        session_string,
                         session['account_data']['api_id'],
-                        session['account_data']['api_hash'],
-                        session_string
+                        session['account_data']['api_hash']
                     )
+                    
+                    logger.info(f"✅ Account saved to database with ID: {account_id}")
                     
                     # Disconnect client
                     await client.disconnect()
-                    
-                    # Clean up session file
-                    import os
-                    try:
-                        if os.path.exists(f"{session['session_name']}.session"):
-                            os.remove(f"{session['session_name']}.session")
-                    except:
-                        pass
                     
                     # Clear session
                     del self.user_sessions[user_id]
