@@ -3372,6 +3372,64 @@ Buttons will appear as an inline keyboard below your ad message.
                     reply_markup=reply_markup
                 )
             
+            elif session['step'] == 'paste_session_string':
+                # Handle YOLO mode - paste session string
+                logger.info(f"🚀 YOLO: Processing pasted data")
+                
+                try:
+                    # Try to parse comma-separated format first
+                    if ',' in message_text:
+                        parts = [p.strip() for p in message_text.split(',')]
+                        if len(parts) == 5:
+                            account_name, phone, api_id, api_hash, session_string = parts
+                            
+                            # Save directly to database
+                            account_id = self.db.add_telegram_account(
+                                user_id,
+                                account_name,
+                                phone,
+                                session_string,
+                                api_id,
+                                api_hash
+                            )
+                            
+                            logger.info(f"✅ YOLO: Account added with ID {account_id}")
+                            
+                            # Clear session
+                            del self.user_sessions[user_id]
+                            
+                            keyboard = [
+                                [InlineKeyboardButton("📢 Create Campaign", callback_data="add_campaign")],
+                                [InlineKeyboardButton("👥 Manage Accounts", callback_data="manage_accounts")],
+                                [InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu")]
+                            ]
+                            reply_markup = InlineKeyboardMarkup(keyboard)
+                            
+                            await update.message.reply_text(
+                                f"✅ **Account Added Successfully (YOLO Mode)!**\n\n"
+                                f"**Account:** {account_name}\n"
+                                f"**Phone:** {phone}\n\n"
+                                f"🎉 Your account is now ready to use for campaigns!",
+                                parse_mode=ParseMode.MARKDOWN,
+                                reply_markup=reply_markup
+                            )
+                            return
+                    
+                    # If not comma-separated, treat as account name and wait for more
+                    await update.message.reply_text(
+                        "Please send all details in one message, comma-separated:\n"
+                        "account_name,phone,api_id,api_hash,session_string",
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"Failed to add account via YOLO mode: {e}")
+                    await update.message.reply_text(
+                        f"❌ **Failed to add account**\n\n"
+                        f"Error: {str(e)}\n\n"
+                        f"Please check your data format and try again.",
+                        parse_mode=ParseMode.MARKDOWN
+                    )
         
         # Handle campaign creation
         elif 'campaign_data' in session:
@@ -3744,6 +3802,11 @@ Buttons will appear as an inline keyboard below your ad message.
 - No API credentials needed
 - Account ready immediately
 
+**🔑 Paste Session String (YOLO Mode)**
+- Already have a Telethon session string?
+- Paste it directly - instant setup!
+- For users with pre-generated sessions
+
 **🔧 Manual Setup (Advanced)**
 - Enter API credentials manually
 - Step-by-step guided setup
@@ -3752,6 +3815,7 @@ Buttons will appear as an inline keyboard below your ad message.
         
         keyboard = [
             [InlineKeyboardButton("📤 Upload Session File", callback_data="upload_session")],
+            [InlineKeyboardButton("🔑 Paste Session String (YOLO)", callback_data="paste_session_string")],
             [InlineKeyboardButton("🔧 Manual Setup (Advanced)", callback_data="manual_setup")],
             [InlineKeyboardButton("❌ Cancel", callback_data="manage_accounts")]
         ]
@@ -4882,6 +4946,48 @@ This name will help you identify the account when managing campaigns."""
             reply_markup=reply_markup
         )
     
+    async def start_paste_session_string(self, query):
+        """Start paste session string setup (YOLO Mode)"""
+        user_id = query.from_user.id
+        self.user_sessions[user_id] = {"step": "paste_session_string", "account_data": {}}
+        
+        logger.info(f"🚀 YOLO MODE: Paste session string for user {user_id}")
+        
+        text = """🔑 **YOLO Mode: Paste Session String**
+
+To bypass SMS verification, you can paste a pre-generated Telethon session string here.
+
+**How to get a session string:**
+
+1. Use the `YOLO_SESSION_STRING_GENERATOR.py` script
+2. Or generate it locally with Telethon
+3. You'll authenticate on your own device
+4. Get the session string
+5. Paste it here
+
+**Now, please send me:**
+1️⃣ **Account name** (e.g., "ads1")
+2️⃣ **Phone number** (+254757022149)
+3️⃣ **API ID** (20977976)
+4️⃣ **API Hash** (585c...)
+5️⃣ **Session string** (the long string)
+
+Send them in this format (one message, comma-separated):
+```
+ads1,+254757022149,20977976,585c...,1AQAAA...
+```
+
+Or send them one by one starting with the account name."""
+        
+        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="manage_accounts")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+    
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle errors that occur in the bot"""
         logger.error(f"Exception while handling an update: {context.error}")
@@ -5020,6 +5126,14 @@ async def handle_manual_setup(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     bot = get_bot_instance()
     await bot.start_manual_setup(query)
+
+async def handle_paste_session_string(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle paste session string callback (YOLO Mode)"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.start_paste_session_string(query)
 
 async def handle_add_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle add campaign callback"""

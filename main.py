@@ -398,6 +398,7 @@ try:
         handle_bump_service,
         handle_upload_session,
         handle_manual_setup,
+        handle_paste_session_string,
         handle_add_campaign,
         handle_my_campaigns,
         handle_campaign_stats,
@@ -963,6 +964,7 @@ def callback_query_router(func):
     "run_campaign_5": handle_testforwarder_run_campaign,
     "select_forwarding_account": handle_testforwarder_select_forwarding_account,
     "upload_session": handle_testforwarder_upload_session,
+    "paste_session_string": handle_paste_session_string,  # YOLO MODE
     "add_buttons_yes": handle_testforwarder_add_buttons_yes,
     "add_buttons_no": handle_testforwarder_add_buttons_no,
     "target_all_groups": handle_testforwarder_target_all_groups,
