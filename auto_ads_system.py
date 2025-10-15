@@ -466,7 +466,7 @@ class Database:
             
             result = c.fetchone()
             if result:
-                account_id = result[0]
+                account_id = result['id']
                 conn.commit()
                 logger.info(f"✅ Account added successfully with ID: {account_id}")
             else:
@@ -495,7 +495,7 @@ class Database:
             
             result = c.fetchone()
             if result:
-                db_channel_id = result[0]
+                db_channel_id = result['id']
                 conn.commit()
                 logger.info(f"✅ Channel added successfully with ID: {db_channel_id}")
             else:
