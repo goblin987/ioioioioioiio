@@ -3188,7 +3188,13 @@ Buttons will appear as an inline keyboard below your ad message.
                         "📱 **Verification Code Sent!**\n\n"
                         f"A verification code has been sent to **{phone}**\n\n"
                         "**Step 5/5: Verification Code**\n\n"
-                        "Please enter the verification code you received (5-digit code):",
+                        "⚠️ **IMPORTANT:** The code might arrive in different places:\n\n"
+                        "1️⃣ **SMS** - Check your phone messages\n"
+                        "2️⃣ **Telegram App** - If you're logged in on another device, code goes there!\n"
+                        "3️⃣ **Telegram Desktop/Web** - Check all your Telegram apps\n"
+                        "4️⃣ **Phone Call** - Wait 2-3 minutes, Telegram will call you with the code\n\n"
+                        "💡 **Most common:** Code appears in Telegram app, NOT SMS!\n\n"
+                        "Please enter the 5-digit code when you receive it:",
                         parse_mode=ParseMode.MARKDOWN
                     )
                     
@@ -3278,6 +3284,10 @@ Buttons will appear as an inline keyboard below your ad message.
                 except Exception as e:
                     logger.error(f"Failed to verify code: {e}")
                     
+                    # Track retry attempts
+                    retry_count = session.get('retry_count', 0) + 1
+                    session['retry_count'] = retry_count
+                    
                     # Check if 2FA is needed
                     if "Two-steps verification" in str(e) or "password" in str(e).lower() or "2FA" in str(e):
                         session['step'] = '2fa_password'
@@ -3287,10 +3297,35 @@ Buttons will appear as an inline keyboard below your ad message.
                             parse_mode=ParseMode.MARKDOWN
                         )
                     else:
+                        error_msg = f"❌ **Verification Failed** (Attempt {retry_count}/5)\n\n"
+                        
+                        # Provide specific error guidance
+                        if "PHONE_CODE_INVALID" in str(e):
+                            error_msg += "❌ **Invalid verification code**\n\n"
+                            error_msg += "🔍 **Common issues:**\n"
+                            error_msg += "• Code was typed incorrectly\n"
+                            error_msg += "• Code has expired (they expire after a few minutes)\n"
+                            error_msg += "• You need to check your **Telegram app** (not SMS)\n\n"
+                        elif "PHONE_CODE_EXPIRED" in str(e):
+                            error_msg += "⏰ **Verification code expired**\n\n"
+                            error_msg += "Please restart the setup process to get a new code.\n\n"
+                        else:
+                            error_msg += f"Error: {str(e)}\n\n"
+                        
+                        if retry_count < 5:
+                            error_msg += "📱 **Where to find your code:**\n"
+                            error_msg += "1️⃣ Open **Telegram app** on your phone/desktop\n"
+                            error_msg += "2️⃣ Look for message from Telegram (NOT in SMS!)\n"
+                            error_msg += "3️⃣ If no code yet, wait 2-3 minutes for a call\n\n"
+                            error_msg += "💡 Please enter the code again (5 digits):"
+                        else:
+                            error_msg += "\n⚠️ **Too many failed attempts.**\n"
+                            error_msg += "Please restart the account setup process."
+                            if user_id in self.user_sessions:
+                                del self.user_sessions[user_id]
+                        
                         await update.message.reply_text(
-                            f"❌ **Verification Failed**\n\n"
-                            f"Error: {str(e)}\n\n"
-                            f"Please check the verification code and try again.",
+                            error_msg,
                             parse_mode=ParseMode.MARKDOWN
                         )
             
@@ -3372,65 +3407,6 @@ Buttons will appear as an inline keyboard below your ad message.
                     reply_markup=reply_markup
                 )
             
-            elif session['step'] == 'paste_session_string':
-                # Handle YOLO mode - paste session string
-                logger.info(f"🚀 YOLO: Processing pasted data")
-                
-                try:
-                    # Try to parse comma-separated format first
-                    if ',' in message_text:
-                        parts = [p.strip() for p in message_text.split(',')]
-                        if len(parts) == 5:
-                            account_name, phone, api_id, api_hash, session_string = parts
-                            
-                            # Save directly to database
-                            account_id = self.db.add_telegram_account(
-                                user_id,
-                                account_name,
-                                phone,
-                                session_string,
-                                api_id,
-                                api_hash
-                            )
-                            
-                            logger.info(f"✅ YOLO: Account added with ID {account_id}")
-                            
-                            # Clear session
-                            del self.user_sessions[user_id]
-                            
-                            keyboard = [
-                                [InlineKeyboardButton("📢 Create Campaign", callback_data="add_campaign")],
-                                [InlineKeyboardButton("👥 Manage Accounts", callback_data="manage_accounts")],
-                                [InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu")]
-                            ]
-                            reply_markup = InlineKeyboardMarkup(keyboard)
-                            
-                            await update.message.reply_text(
-                                f"✅ **Account Added Successfully (YOLO Mode)!**\n\n"
-                                f"**Account:** {account_name}\n"
-                                f"**Phone:** {phone}\n\n"
-                                f"🎉 Your account is now ready to use for campaigns!",
-                                parse_mode=ParseMode.MARKDOWN,
-                                reply_markup=reply_markup
-                            )
-                            return
-                    
-                    # If not comma-separated, treat as account name and wait for more
-                    await update.message.reply_text(
-                        "Please send all details in one message, comma-separated:\n"
-                        "account_name,phone,api_id,api_hash,session_string",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                    
-                except Exception as e:
-                    logger.error(f"Failed to add account via YOLO mode: {e}")
-                    await update.message.reply_text(
-                        f"❌ **Failed to add account**\n\n"
-                        f"Error: {str(e)}\n\n"
-                        f"Please check your data format and try again.",
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-        
         # Handle campaign creation
         elif 'campaign_data' in session:
             if session['step'] == 'campaign_name':
@@ -3802,21 +3778,15 @@ Buttons will appear as an inline keyboard below your ad message.
 - No API credentials needed
 - Account ready immediately
 
-**🔑 Paste Session String (YOLO Mode)**
-- Already have a Telethon session string?
-- Paste it directly - instant setup!
-- For users with pre-generated sessions
-
-**🔧 Manual Setup (Advanced)**
+**🔧 Manual Setup (Step-by-Step)**
 - Enter API credentials manually
-- Step-by-step guided setup
-- For advanced users
+- Receive verification code on YOUR devices
+- Guided 5-step setup process
         """
         
         keyboard = [
             [InlineKeyboardButton("📤 Upload Session File", callback_data="upload_session")],
-            [InlineKeyboardButton("🔑 Paste Session String (YOLO)", callback_data="paste_session_string")],
-            [InlineKeyboardButton("🔧 Manual Setup (Advanced)", callback_data="manual_setup")],
+            [InlineKeyboardButton("🔧 Manual Setup", callback_data="manual_setup")],
             [InlineKeyboardButton("❌ Cancel", callback_data="manage_accounts")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -4936,48 +4906,6 @@ Send the session file now, or click Cancel to go back.
 Please send me a name for this work account (e.g., "Marketing Account", "Sales Account", "Support Account").
 
 This name will help you identify the account when managing campaigns."""
-        
-        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="manage_accounts")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=reply_markup
-        )
-    
-    async def start_paste_session_string(self, query):
-        """Start paste session string setup (YOLO Mode)"""
-        user_id = query.from_user.id
-        self.user_sessions[user_id] = {"step": "paste_session_string", "account_data": {}}
-        
-        logger.info(f"🚀 YOLO MODE: Paste session string for user {user_id}")
-        
-        text = """🔑 **YOLO Mode: Paste Session String**
-
-To bypass SMS verification, you can paste a pre-generated Telethon session string here.
-
-**How to get a session string:**
-
-1. Use the `YOLO_SESSION_STRING_GENERATOR.py` script
-2. Or generate it locally with Telethon
-3. You'll authenticate on your own device
-4. Get the session string
-5. Paste it here
-
-**Now, please send me:**
-1️⃣ **Account name** (e.g., "ads1")
-2️⃣ **Phone number** (+254757022149)
-3️⃣ **API ID** (20977976)
-4️⃣ **API Hash** (585c...)
-5️⃣ **Session string** (the long string)
-
-Send them in this format (one message, comma-separated):
-```
-ads1,+254757022149,20977976,585c...,1AQAAA...
-```
-
-Or send them one by one starting with the account name."""
         
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="manage_accounts")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
