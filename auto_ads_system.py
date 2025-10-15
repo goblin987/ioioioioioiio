@@ -467,7 +467,7 @@ class Database:
             result = c.fetchone()
             if result:
                 account_id = result[0]
-            conn.commit()
+                conn.commit()
                 logger.info(f"✅ Account added successfully with ID: {account_id}")
             else:
                 logger.error("❌ No ID returned from INSERT")
