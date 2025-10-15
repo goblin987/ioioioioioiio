@@ -484,6 +484,53 @@ try:
     async def handle_testforwarder_schedule_custom(update, context, params=None):
         bot = get_auto_ads_bot()
         await bot.handle_message(update, context)
+    
+    # Additional stub handlers for missing callbacks
+    async def handle_testforwarder_back_to_ad_content(update, context, params=None):
+        bot = get_auto_ads_bot()
+        await bot.show_main_menu(update.callback_query)
+    async def handle_testforwarder_back_to_configs(update, context, params=None):
+        await handle_my_configs(update, context, params)
+    async def handle_testforwarder_advanced_settings(update, context, params=None):
+        bot = get_auto_ads_bot()
+        await bot.show_advanced_settings(update.callback_query)
+    async def handle_testforwarder_configure_plugins(update, context, params=None):
+        await update.callback_query.answer("Plugin configuration - Coming soon!")
+    async def handle_testforwarder_performance_settings(update, context, params=None):
+        await update.callback_query.answer("Performance settings - Coming soon!")
+    async def handle_testforwarder_security_settings(update, context, params=None):
+        await update.callback_query.answer("Security settings - Coming soon!")
+    async def handle_testforwarder_filter_settings(update, context, params=None):
+        await update.callback_query.answer("Filter settings - Coming soon!")
+    async def handle_testforwarder_format_settings(update, context, params=None):
+        await update.callback_query.answer("Format settings - Coming soon!")
+    async def handle_testforwarder_replace_settings(update, context, params=None):
+        await update.callback_query.answer("Replace settings - Coming soon!")
+    async def handle_testforwarder_caption_settings(update, context, params=None):
+        await update.callback_query.answer("Caption settings - Coming soon!")
+    async def handle_testforwarder_view_metrics(update, context, params=None):
+        await update.callback_query.answer("Metrics - Coming soon!")
+    async def handle_testforwarder_adjust_limits(update, context, params=None):
+        await update.callback_query.answer("Adjust limits - Coming soon!")
+    async def handle_testforwarder_access_control(update, context, params=None):
+        await update.callback_query.answer("Access control - Coming soon!")
+    async def handle_testforwarder_data_protection(update, context, params=None):
+        await update.callback_query.answer("Data protection - Coming soon!")
+    async def handle_testforwarder_security_logs(update, context, params=None):
+        await update.callback_query.answer("Security logs - Coming soon!")
+    async def handle_testforwarder_add_more_messages(update, context, params=None):
+        await update.callback_query.answer("Add more messages - Coming soon!")
+    async def handle_testforwarder_cancel_campaign(update, context, params=None):
+        bot = get_auto_ads_bot()
+        if update.effective_user.id in bot.user_sessions:
+            del bot.user_sessions[update.effective_user.id]
+        await bot.show_main_menu(update.callback_query)
+    async def handle_testforwarder_back_to_target_selection(update, context, params=None):
+        await update.callback_query.answer("Going back...")
+    async def handle_testforwarder_back_to_button_choice(update, context, params=None):
+        await update.callback_query.answer("Going back...")
+    async def handle_testforwarder_back_to_accounts(update, context, params=None):
+        await handle_manage_accounts(update, context, params)
         
 except ImportError as e:
     logging.getLogger(__name__).warning(f"⚠️ Could not import auto ads handlers: {e}")
@@ -924,6 +971,27 @@ def callback_query_router(func):
     "schedule_weekly": handle_testforwarder_schedule_weekly,
     "schedule_hourly": handle_testforwarder_schedule_hourly,
     "schedule_custom": handle_testforwarder_schedule_custom,
+    # Additional auto ads handlers (ADDED - all missing callbacks)
+    "back_to_ad_content": handle_testforwarder_back_to_ad_content,
+    "back_to_configs": handle_testforwarder_back_to_configs,
+    "advanced_settings": handle_testforwarder_advanced_settings,
+    "configure_plugins": handle_testforwarder_configure_plugins,
+    "performance_settings": handle_testforwarder_performance_settings,
+    "security_settings": handle_testforwarder_security_settings,
+    "filter_settings": handle_testforwarder_filter_settings,
+    "format_settings": handle_testforwarder_format_settings,
+    "replace_settings": handle_testforwarder_replace_settings,
+    "caption_settings": handle_testforwarder_caption_settings,
+    "view_metrics": handle_testforwarder_view_metrics,
+    "adjust_limits": handle_testforwarder_adjust_limits,
+    "access_control": handle_testforwarder_access_control,
+    "data_protection": handle_testforwarder_data_protection,
+    "security_logs": handle_testforwarder_security_logs,
+    "add_more_messages": handle_testforwarder_add_more_messages,
+    "cancel_campaign": handle_testforwarder_cancel_campaign,
+    "back_to_target_selection": handle_testforwarder_back_to_target_selection,
+    "back_to_button_choice": handle_testforwarder_back_to_button_choice,
+    "back_to_accounts": handle_testforwarder_back_to_accounts,
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
