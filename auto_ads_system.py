@@ -484,17 +484,28 @@ class Database:
         try:
             conn = self._get_conn()
             c = conn.cursor()
+            
+            logger.info(f"💾 Attempting to add channel: user_id={user_id}, link={channel_link}")
+            
             c.execute("""
                 INSERT INTO auto_ads_channels (user_id, channel_link, channel_name, channel_id)
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
             """, (user_id, channel_link, channel_name, channel_id))
-            channel_id = c.fetchone()[0]
-            conn.commit()
+            
+            result = c.fetchone()
+            if result:
+                db_channel_id = result[0]
+                conn.commit()
+                logger.info(f"✅ Channel added successfully with ID: {db_channel_id}")
+            else:
+                logger.error("❌ No ID returned from INSERT")
+                db_channel_id = None
+            
             conn.close()
-            return channel_id
+            return db_channel_id
         except Exception as e:
-            logger.error(f"Error adding channel: {e}")
+            logger.error(f"❌ Error adding channel: {e}", exc_info=True)
             return None
     
     def get_user_channels(self, user_id):
