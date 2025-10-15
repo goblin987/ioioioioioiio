@@ -406,6 +406,9 @@ try:
         handle_delete_config,
         handle_toggle_config,
         handle_delete_account,
+        handle_manage_channels,
+        handle_add_channel,
+        handle_delete_channel,
         handle_delete_campaign,
         handle_edit_campaign,
         handle_edit_text_content,
@@ -924,6 +927,9 @@ def callback_query_router(func):
     # Original testforwarder callback data
     "manage_accounts": handle_testforwarder_manage_accounts,
     "add_account": handle_add_account,  # ADDED - missing handler
+    "manage_channels": handle_manage_channels,  # Channel management
+    "add_channel": handle_add_channel,
+    "delete_channel": handle_delete_channel,
     "bump_service": handle_testforwarder_bump_service,
     "my_configs": handle_testforwarder_my_configs,
     "add_forwarding": handle_testforwarder_add_forwarding,

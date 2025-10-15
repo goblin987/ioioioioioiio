@@ -72,7 +72,7 @@ class BumpService:
             return campaigns
         except Exception as e:
             logger.error(f"Error getting user campaigns: {e}")
-            return []
+        return []
     
     def get_campaign(self, campaign_id):
         """Get campaign by ID"""
@@ -91,7 +91,7 @@ class BumpService:
             return campaign
         except Exception as e:
             logger.error(f"Error getting campaign: {e}")
-            return None
+        return None
     
     def delete_campaign(self, campaign_id):
         """Delete a campaign"""
@@ -112,8 +112,8 @@ class BumpService:
         try:
             campaign = self.get_campaign(campaign_id)
             if not campaign:
-                return {}
-            
+        return {}
+    
             return {
                 'sent_count': campaign.get('sent_count', 0),
                 'last_sent': campaign.get('last_sent'),
@@ -146,7 +146,7 @@ class BumpService:
             return campaign_id
         except Exception as e:
             logger.error(f"Error adding campaign: {e}")
-            return None
+        return None
     
     def update_campaign(self, campaign_id, **kwargs):
         """Update campaign fields"""
@@ -164,8 +164,8 @@ class BumpService:
                     values.append(value)
             
             if not updates:
-                return False
-            
+        return False
+    
             values.append(campaign_id)
             query = f"UPDATE auto_ads_campaigns SET {', '.join(updates)} WHERE id = %s"
             c.execute(query, values)
@@ -455,18 +455,78 @@ class Database:
         try:
             conn = self._get_conn()
             c = conn.cursor()
+            
+            logger.info(f"💾 Attempting to add account: user_id={user_id}, name={account_name}, phone={phone_number}, api_id={api_id}")
+            
             c.execute("""
                 INSERT INTO auto_ads_accounts (user_id, account_name, phone_number, session_string, api_id, api_hash)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (user_id, account_name, phone_number, session_string, api_id, api_hash))
-            account_id = c.fetchone()[0]
+            
+            result = c.fetchone()
+            if result:
+                account_id = result[0]
             conn.commit()
+                logger.info(f"✅ Account added successfully with ID: {account_id}")
+            else:
+                logger.error("❌ No ID returned from INSERT")
+                account_id = None
+                
             conn.close()
             return account_id
         except Exception as e:
-            logger.error(f"Error adding account: {e}")
+            logger.error(f"❌ Error adding account: {e}", exc_info=True)
             return None
+    
+    def add_channel(self, user_id, channel_link, channel_name=None, channel_id=None):
+        """Add a channel to the list"""
+        try:
+            conn = self._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO auto_ads_channels (user_id, channel_link, channel_name, channel_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+            """, (user_id, channel_link, channel_name, channel_id))
+            channel_id = c.fetchone()[0]
+            conn.commit()
+            conn.close()
+            return channel_id
+        except Exception as e:
+            logger.error(f"Error adding channel: {e}")
+            return None
+    
+    def get_user_channels(self, user_id):
+        """Get all channels for a user"""
+        try:
+            conn = self._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                SELECT id, channel_link, channel_name, channel_id, is_active
+                FROM auto_ads_channels
+                WHERE user_id = %s AND is_active = TRUE
+                ORDER BY added_at DESC
+            """, (user_id,))
+            channels = c.fetchall()
+            conn.close()
+            return channels
+        except Exception as e:
+            logger.error(f"Error getting channels: {e}")
+            return []
+    
+    def delete_channel(self, channel_id):
+        """Delete a channel"""
+        try:
+            conn = self._get_conn()
+            c = conn.cursor()
+            c.execute("UPDATE auto_ads_channels SET is_active = FALSE WHERE id = %s", (channel_id,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting channel: {e}")
+            return False
     
     def update_account(self, account_id, **kwargs):
         """Update account fields"""
@@ -566,7 +626,7 @@ class TelethonManager:
             if not await client.is_user_authorized():
                 logger.warning(f"Client {account_id} not authorized, needs login")
                 await client.disconnect()
-                return None
+            return None
             
             # Store client
             self.clients[account_id] = client
@@ -681,6 +741,64 @@ class TelethonManager:
             logger.error(f"Error copying message: {e}", exc_info=True)
             return False
     
+    async def join_channel(self, account_id, channel_link):
+        """Join a channel/group using userbot"""
+        try:
+            client = await self.get_client(account_id)
+            if not client:
+                logger.error(f"No client found for account {account_id}")
+                return False, "Client not found"
+            
+            # Extract channel username/link
+            channel = channel_link.strip()
+            if 'joinchat/' in channel or 't.me/+' in channel:
+                # This is an invite link
+                if 'joinchat/' in channel:
+                    hash_part = channel.split('joinchat/')[-1]
+                elif 't.me/+' in channel:
+                    hash_part = channel.split('t.me/+')[-1]
+                
+                from telethon.tl.functions.messages import ImportChatInviteRequest
+                result = await client(ImportChatInviteRequest(hash_part))
+                logger.info(f"✅ Joined channel via invite link: {channel_link}")
+                return True, result
+            else:
+                # This is a public channel username
+                if 't.me/' in channel:
+                    channel = channel.split('t.me/')[-1]
+                if channel.startswith('@'):
+                    channel = channel[1:]
+                
+                from telethon.tl.functions.channels import JoinChannelRequest
+                result = await client(JoinChannelRequest(channel))
+                logger.info(f"✅ Joined channel: {channel}")
+                return True, result
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Error joining channel {channel_link}: {error_msg}", exc_info=True)
+            return False, error_msg
+    
+    async def join_all_registered_channels(self, account_id, db, user_id):
+        """Join all channels registered by the user"""
+        try:
+            channels = db.get_user_channels(user_id)
+            results = []
+            
+            for channel_row in channels:
+                channel_id, channel_link, channel_name, _, _ = channel_row
+                success, result = await self.join_channel(account_id, channel_link)
+                results.append({
+                    'channel': channel_link,
+                    'success': success,
+                    'result': result
+                })
+            
+            return results
+        except Exception as e:
+            logger.error(f"Error joining channels: {e}", exc_info=True)
+            return []
+    
     async def send_code_request(self, api_id, api_hash, phone_number):
         """Send login code to phone number"""
         try:
@@ -715,7 +833,7 @@ class TelethonManager:
             session_data = self.active_sessions.get(phone_number)
             if not session_data:
                 logger.error(f"No active session for {phone_number}")
-                return None
+        return None
             
             client = session_data['client']
             phone_code_hash = session_data['phone_code_hash']
@@ -1261,6 +1379,7 @@ class TgcfBot:
             [InlineKeyboardButton("👥 Manage Accounts", callback_data="manage_accounts")],
             [InlineKeyboardButton("📢 Bump Service", callback_data="bump_service")],
             [InlineKeyboardButton("📋 My Configurations", callback_data="my_configs")],
+            [InlineKeyboardButton("📡 Manage Channels", callback_data="manage_channels")],
             [InlineKeyboardButton("➕ Add New Forwarding", callback_data="add_forwarding")],
             [InlineKeyboardButton("❓ Help", callback_data="help")],
             [InlineKeyboardButton("⬅️ Back to Main Bot", callback_data="admin_menu")]
@@ -3066,11 +3185,11 @@ Buttons will appear as an inline keyboard below your ad message.
         logger.info(f"🔍 SESSION CHECK: User {user_id} in sessions: {user_id in self.user_sessions}")
         
         # Check if user has an active session
-        if user_id not in self.user_sessions:
+            if user_id not in self.user_sessions:
             logger.warning(f"⚠️ User {user_id} sent message but has no active session")
             return
-        
-        session = self.user_sessions[user_id]
+            
+            session = self.user_sessions[user_id]
         logger.info(f"🔍 Current step: {session.get('step')}")
         
         # Handle account_name step (only if explicitly in this step)
@@ -3259,6 +3378,20 @@ Buttons will appear as an inline keyboard below your ad message.
                     
                     logger.info(f"✅ Account saved to database with ID: {account_id}")
                     
+                    # Auto-join registered channels
+                    join_results = []
+                    if account_id:
+                        # Store client in telethon manager temporarily
+                        self.telethon_manager.clients[account_id] = client
+                        
+                        join_results = await self.telethon_manager.join_all_registered_channels(
+                            account_id, self.db, user_id
+                        )
+                        
+                        if join_results:
+                            success_count = sum(1 for r in join_results if r['success'])
+                            logger.info(f"🎯 Joined {success_count}/{len(join_results)} channels")
+                    
                     # Disconnect client
                     await client.disconnect()
                     
@@ -3272,11 +3405,18 @@ Buttons will appear as an inline keyboard below your ad message.
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
+                    success_msg = f"✅ **Account Added Successfully!**\n\n"
+                    success_msg += f"**Account:** {session['account_data']['account_name']}\n"
+                    success_msg += f"**Phone:** {session['account_data']['phone_number']}\n\n"
+                    
+                    if join_results:
+                        success_count = sum(1 for r in join_results if r['success'])
+                        success_msg += f"📢 **Auto-joined {success_count}/{len(join_results)} registered channels**\n\n"
+                    
+                    success_msg += "🎉 Your account is now authenticated and ready to use for campaigns!"
+                    
                     await update.message.reply_text(
-                        f"✅ **Account Added Successfully!**\n\n"
-                        f"**Account:** {session['account_data']['account_name']}\n"
-                        f"**Phone:** {session['account_data']['phone_number']}\n\n"
-                        f"🎉 Your account is now authenticated and ready to use for campaigns!",
+                        success_msg,
                         parse_mode=ParseMode.MARKDOWN,
                         reply_markup=reply_markup
                     )
@@ -3363,6 +3503,20 @@ Buttons will appear as an inline keyboard below your ad message.
                     
                     logger.info(f"✅ Account saved to database with ID: {account_id}")
                     
+                    # Auto-join registered channels
+                    join_results = []
+                    if account_id:
+                        # Store client in telethon manager temporarily
+                        self.telethon_manager.clients[account_id] = client
+                        
+                        join_results = await self.telethon_manager.join_all_registered_channels(
+                            account_id, self.db, user_id
+                        )
+                        
+                        if join_results:
+                            success_count = sum(1 for r in join_results if r['success'])
+                            logger.info(f"🎯 Joined {success_count}/{len(join_results)} channels")
+                    
                     # Disconnect client
                     await client.disconnect()
                     
@@ -3376,11 +3530,18 @@ Buttons will appear as an inline keyboard below your ad message.
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
+                    success_msg = f"✅ **Account Added Successfully!**\n\n"
+                    success_msg += f"**Account:** {session['account_data']['account_name']}\n"
+                    success_msg += f"**Phone:** {session['account_data']['phone_number']}\n\n"
+                    
+                    if join_results:
+                        success_count = sum(1 for r in join_results if r['success'])
+                        success_msg += f"📢 **Auto-joined {success_count}/{len(join_results)} registered channels**\n\n"
+                    
+                    success_msg += "🎉 Your account is now authenticated and ready to use for campaigns!"
+                    
                     await update.message.reply_text(
-                        f"✅ **Account Added Successfully!**\n\n"
-                        f"**Account:** {session['account_data']['account_name']}\n"
-                        f"**Phone:** {session['account_data']['phone_number']}\n\n"
-                        f"🎉 Your account is now authenticated and ready to use for campaigns!",
+                        success_msg,
                         parse_mode=ParseMode.MARKDOWN,
                         reply_markup=reply_markup
                     )
@@ -3407,6 +3568,48 @@ Buttons will appear as an inline keyboard below your ad message.
                     reply_markup=reply_markup
                 )
             
+        # Handle channel addition
+        if session.get('step') == 'add_channel':
+            channel_link = message_text.strip()
+            
+            try:
+                # Add channel to database
+                channel_id = self.db.add_channel(user_id, channel_link)
+                
+                if channel_id:
+                    logger.info(f"✅ Channel added: {channel_link}")
+                    
+                    # Clear session
+                    del self.user_sessions[user_id]
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("➕ Add Another Channel", callback_data="add_channel")],
+                        [InlineKeyboardButton("📡 View All Channels", callback_data="manage_channels")],
+                        [InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await update.message.reply_text(
+                        f"✅ **Channel Added Successfully!**\n\n"
+                        f"**Channel Link:** `{channel_link}`\n\n"
+                        f"📢 **All future userbot accounts will automatically join this channel!**\n"
+                        f"🔄 **Existing accounts:** Use 'Manage Accounts' to manually join them.",
+                        parse_mode=ParseMode.MARKDOWN,
+                        reply_markup=reply_markup
+                    )
+                else:
+                    await update.message.reply_text(
+                        "❌ **Failed to add channel.**\n\n"
+                        "Please check the link format and try again.",
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+            except Exception as e:
+                logger.error(f"Error adding channel: {e}")
+                await update.message.reply_text(
+                    f"❌ **Error adding channel:**\n\n{str(e)}",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+        
         # Handle campaign creation
         elif 'campaign_data' in session:
             if session['step'] == 'campaign_name':
@@ -3762,6 +3965,74 @@ Buttons will appear as an inline keyboard below your ad message.
             text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=reply_markup
+        )
+    
+    async def show_manage_channels(self, query):
+        """Show channel management interface"""
+        user_id = query.from_user.id
+        channels = self.db.get_user_channels(user_id)
+        
+        if not channels:
+            keyboard = [
+                [InlineKeyboardButton("➕ Add New Channel", callback_data="add_channel")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                "📡 **Manage Channels**\n\n"
+                "No channels registered yet.\n\n"
+                "➕ **Add channels where your userbots should automatically join:**\n"
+                "• Public channels (@channelname or t.me/channelname)\n"
+                "• Private channels (invite links)\n\n"
+                "When you add a new userbot account, it will automatically join all registered channels!",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=reply_markup
+            )
+            return
+        
+        text = "📡 **Manage Channels**\n\n"
+        text += f"✅ **Registered Channels ({len(channels)}):**\n\n"
+        
+        keyboard = []
+        
+        for channel_row in channels:
+            channel_id, channel_link, channel_name, _, _ = channel_row
+            display_name = channel_name if channel_name else channel_link[:30]
+            
+            text += f"📢 {display_name}\n"
+            text += f"Link: `{channel_link}`\n\n"
+            
+            keyboard.append([
+                InlineKeyboardButton(f"🗑️ Remove {display_name[:20]}", callback_data=f"delete_channel_{channel_id}")
+            ])
+        
+        keyboard.append([InlineKeyboardButton("➕ Add New Channel", callback_data="add_channel")])
+        keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="main_menu")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+    
+    async def start_add_channel(self, query):
+        """Start adding a new channel"""
+        user_id = query.from_user.id
+        self.user_sessions[user_id] = {"step": "add_channel", "data": {}}
+        
+        await query.edit_message_text(
+            "📡 **Add New Channel**\n\n"
+            "Please send the channel link where your userbots should join.\n\n"
+            "**Supported formats:**\n"
+            "• Public channel: `@channelname`\n"
+            "• Public channel: `t.me/channelname`\n"
+            "• Private channel: `t.me/+invite_hash`\n"
+            "• Private channel: `t.me/joinchat/invite_hash`\n\n"
+            "**Example:** `t.me/botshop_official`",
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def start_add_account(self, query):
@@ -5132,6 +5403,38 @@ async def handle_delete_account(update: Update, context: ContextTypes.DEFAULT_TY
     account_id = query.data.split('_')[2]
     await bot.delete_account(query, account_id)
 
+# Channel handlers
+async def handle_manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle manage channels callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.show_manage_channels(query)
+
+async def handle_add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle add channel callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    await bot.start_add_channel(query)
+
+async def handle_delete_channel(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle delete channel callback"""
+    query = update.callback_query
+    if not query:
+        return
+    bot = get_bot_instance()
+    channel_id = query.data.split('_')[2]
+    
+    # Delete from database
+    bot.db.delete_channel(channel_id)
+    
+    # Show updated channels list
+    await bot.show_manage_channels(query)
+    await query.answer("✅ Channel removed!", show_alert=False)
+
 # Campaign handlers
 async def handle_delete_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle delete campaign callback"""
@@ -5333,6 +5636,20 @@ def init_enhanced_auto_ads_tables():
                 c.execute(migration)
             except Exception as e:
                 logger.debug(f"API migration already applied or failed: {e}")
+        
+        # Create auto_ads_channels table for managing channels where userbots should join
+        logger.info("Creating auto_ads_channels table...")
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS auto_ads_channels (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                channel_link TEXT NOT NULL,
+                channel_name TEXT,
+                channel_id BIGINT,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        """)
         
         conn.commit()
         conn.close()
