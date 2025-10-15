@@ -833,7 +833,7 @@ class TelethonManager:
             session_data = self.active_sessions.get(phone_number)
             if not session_data:
                 logger.error(f"No active session for {phone_number}")
-        return None
+                return None
             
             client = session_data['client']
             phone_code_hash = session_data['phone_code_hash']
@@ -3185,11 +3185,11 @@ Buttons will appear as an inline keyboard below your ad message.
         logger.info(f"🔍 SESSION CHECK: User {user_id} in sessions: {user_id in self.user_sessions}")
         
         # Check if user has an active session
-            if user_id not in self.user_sessions:
+        if user_id not in self.user_sessions:
             logger.warning(f"⚠️ User {user_id} sent message but has no active session")
             return
             
-            session = self.user_sessions[user_id]
+        session = self.user_sessions[user_id]
         logger.info(f"🔍 Current step: {session.get('step')}")
         
         # Handle account_name step (only if explicitly in this step)
