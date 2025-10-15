@@ -4011,8 +4011,11 @@ Buttons will appear as an inline keyboard below your ad message.
             channel_id, channel_link, channel_name, _, _ = channel_row
             display_name = channel_name if channel_name else channel_link[:30]
             
+            # Escape markdown special characters in channel link
+            safe_link = channel_link.replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace('`', '\\`')
+            
             text += f"📢 {display_name}\n"
-            text += f"Link: `{channel_link}`\n\n"
+            text += f"Link: {safe_link}\n\n"
             
             keyboard.append([
                 InlineKeyboardButton(f"🗑️ Remove {display_name[:20]}", callback_data=f"delete_channel_{channel_id}")
