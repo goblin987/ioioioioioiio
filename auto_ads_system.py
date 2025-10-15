@@ -43,45 +43,344 @@ class Config:
         """Validate configuration (stub)"""
         pass
 
-# ==================== BUMP SERVICE STUB ====================
+# ==================== BUMP SERVICE ====================
 class BumpService:
-    """Bump service stub for campaign management"""
+    """Bump service for campaign management and scheduling"""
     
-    def __init__(self, bot_instance=None):
+    def __init__(self, bot_instance=None, telethon_manager=None):
         self.bot = bot_instance
-        self.db = None
+        self.db = Database()
+        self.telethon_manager = telethon_manager
+        self.scheduler_task = None
+        self.is_running = False
     
     def get_user_campaigns(self, user_id):
-        """Get user campaigns (stub - returns empty list)"""
-        return []
+        """Get all campaigns for a user"""
+        try:
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                SELECT c.*, a.account_name, cfg.config_name
+                FROM auto_ads_campaigns c
+                LEFT JOIN auto_ads_configs cfg ON c.config_id = cfg.id
+                LEFT JOIN auto_ads_accounts a ON cfg.account_id = a.id
+                WHERE c.user_id = %s
+                ORDER BY c.created_at DESC
+            """, (user_id,))
+            campaigns = c.fetchall()
+            conn.close()
+            return campaigns
+        except Exception as e:
+            logger.error(f"Error getting user campaigns: {e}")
+            return []
     
     def get_campaign(self, campaign_id):
-        """Get campaign by ID (stub - returns None)"""
-        return None
+        """Get campaign by ID"""
+        try:
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                SELECT c.*, a.account_name, cfg.config_name, cfg.source_chat, cfg.target_chat
+                FROM auto_ads_campaigns c
+                LEFT JOIN auto_ads_configs cfg ON c.config_id = cfg.id
+                LEFT JOIN auto_ads_accounts a ON cfg.account_id = a.id
+                WHERE c.id = %s
+            """, (campaign_id,))
+            campaign = c.fetchone()
+            conn.close()
+            return campaign
+        except Exception as e:
+            logger.error(f"Error getting campaign: {e}")
+            return None
     
     def delete_campaign(self, campaign_id):
-        """Delete campaign (stub)"""
-        pass
+        """Delete a campaign"""
+        try:
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            c.execute("DELETE FROM auto_ads_campaigns WHERE id = %s", (campaign_id,))
+            conn.commit()
+            conn.close()
+            logger.info(f"✅ Deleted campaign {campaign_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting campaign: {e}")
+            return False
     
     def get_campaign_performance(self, campaign_id):
-        """Get campaign performance (stub - returns empty dict)"""
-        return {}
+        """Get campaign performance metrics"""
+        try:
+            campaign = self.get_campaign(campaign_id)
+            if not campaign:
+                return {}
+            
+            return {
+                'sent_count': campaign.get('sent_count', 0),
+                'last_sent': campaign.get('last_sent'),
+                'status': 'active' if campaign.get('is_active') else 'inactive',
+                'created_at': campaign.get('created_at')
+            }
+        except Exception as e:
+            logger.error(f"Error getting campaign performance: {e}")
+            return {}
     
-    def add_campaign(self, *args, **kwargs):
-        """Add campaign (stub - returns None)"""
-        return None
+    def add_campaign(self, user_id, name, config_id, message_text=None, 
+                    schedule_time=None, interval_minutes=None, bump_count=None,
+                    forwarding_mode='forward', source_message_id=None):
+        """Add a new campaign"""
+        try:
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO auto_ads_campaigns 
+                (user_id, name, config_id, message_text, schedule_time, 
+                 interval_minutes, bump_count, forwarding_mode, source_message_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (user_id, name, config_id, message_text, schedule_time, 
+                  interval_minutes, bump_count, forwarding_mode, source_message_id))
+            campaign_id = c.fetchone()[0]
+            conn.commit()
+            conn.close()
+            logger.info(f"✅ Added campaign {campaign_id}: {name}")
+            return campaign_id
+        except Exception as e:
+            logger.error(f"Error adding campaign: {e}")
+            return None
     
-    async def test_campaign(self, *args, **kwargs):
-        """Test campaign (stub - returns False)"""
-        return False
+    def update_campaign(self, campaign_id, **kwargs):
+        """Update campaign fields"""
+        try:
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            
+            # Build update query dynamically
+            updates = []
+            values = []
+            for key, value in kwargs.items():
+                if key in ['name', 'message_text', 'schedule_time', 'interval_minutes', 
+                          'bump_count', 'is_active', 'forwarding_mode']:
+                    updates.append(f"{key} = %s")
+                    values.append(value)
+            
+            if not updates:
+                return False
+            
+            values.append(campaign_id)
+            query = f"UPDATE auto_ads_campaigns SET {', '.join(updates)} WHERE id = %s"
+            c.execute(query, values)
+            conn.commit()
+            conn.close()
+            logger.info(f"✅ Updated campaign {campaign_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating campaign: {e}")
+            return False
     
-    def cleanup_all_resources(self):
-        """Cleanup resources (stub)"""
-        pass
+    def update_campaign_stats(self, campaign_id):
+        """Update campaign statistics after execution"""
+        try:
+            from datetime import datetime, timezone
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                UPDATE auto_ads_campaigns 
+                SET sent_count = sent_count + 1,
+                    last_sent = %s
+                WHERE id = %s
+            """, (datetime.now(timezone.utc), campaign_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating campaign stats: {e}")
+            return False
+    
+    async def test_campaign(self, campaign_id, test_chat):
+        """Test a campaign by sending to a test chat"""
+        try:
+            if not self.telethon_manager:
+                logger.error("TelethonManager not initialized")
+                return False
+            
+            campaign = self.get_campaign(campaign_id)
+            if not campaign:
+                logger.error(f"Campaign {campaign_id} not found")
+                return False
+            
+            # Get account from config
+            config_id = campaign.get('config_id')
+            if not config_id:
+                logger.error("Campaign has no config")
+                return False
+            
+            config = self.db.get_user_configs(campaign['user_id'])
+            account_id = None
+            for cfg in config:
+                if cfg['id'] == config_id:
+                    account_id = cfg['account_id']
+                    break
+            
+            if not account_id:
+                logger.error("No account found for campaign")
+                return False
+            
+            # Execute test
+            if campaign.get('forwarding_mode') == 'forward' and campaign.get('source_message_id'):
+                success = await self.telethon_manager.forward_message(
+                    account_id,
+                    campaign['source_chat'],
+                    test_chat,
+                    campaign['source_message_id']
+                )
+            else:
+                success = await self.telethon_manager.send_message(
+                    account_id,
+                    test_chat,
+                    text=campaign.get('message_text')
+                )
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error testing campaign: {e}", exc_info=True)
+            return False
+    
+    async def execute_campaign(self, campaign_id):
+        """Execute a campaign (send messages)"""
+        try:
+            if not self.telethon_manager:
+                logger.error("TelethonManager not initialized")
+                return False
+            
+            campaign = self.get_campaign(campaign_id)
+            if not campaign:
+                logger.error(f"Campaign {campaign_id} not found")
+                return False
+            
+            if not campaign.get('is_active'):
+                logger.info(f"Campaign {campaign_id} is not active, skipping")
+                return False
+            
+            # Get config and account
+            config_id = campaign.get('config_id')
+            if not config_id:
+                logger.error(f"Campaign {campaign_id} has no config")
+                return False
+            
+            # Get account_id from config
+            conn = self.db._get_conn()
+            c = conn.cursor()
+            c.execute("SELECT account_id, source_chat, target_chat FROM auto_ads_configs WHERE id = %s", (config_id,))
+            config = c.fetchone()
+            conn.close()
+            
+            if not config:
+                logger.error(f"Config {config_id} not found")
+                return False
+            
+            account_id = config['account_id']
+            source_chat = config['source_chat']
+            target_chat = config['target_chat']
+            
+            # Execute based on forwarding mode
+            forwarding_mode = campaign.get('forwarding_mode', 'forward')
+            source_message_id = campaign.get('source_message_id')
+            
+            if forwarding_mode == 'forward' and source_message_id:
+                # Forward existing message
+                success = await self.telethon_manager.forward_message(
+                    account_id, source_chat, target_chat, source_message_id
+                )
+            elif forwarding_mode == 'copy' and source_message_id:
+                # Copy message (send as new)
+                success = await self.telethon_manager.copy_message(
+                    account_id, source_chat, target_chat, source_message_id
+                )
+            else:
+                # Send custom message
+                success = await self.telethon_manager.send_message(
+                    account_id, target_chat, text=campaign.get('message_text')
+                )
+            
+            if success:
+                self.update_campaign_stats(campaign_id)
+                logger.info(f"✅ Executed campaign {campaign_id}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error executing campaign: {e}", exc_info=True)
+            return False
+    
+    async def scheduler_loop(self):
+        """Background scheduler loop"""
+        from datetime import datetime, timezone, timedelta
+        
+        logger.info("🚀 BumpService scheduler started")
+        self.is_running = True
+        
+        while self.is_running:
+            try:
+                # Get campaigns due for execution
+                conn = self.db._get_conn()
+                c = conn.cursor()
+                
+                now = datetime.now(timezone.utc)
+                
+                # Find campaigns that should run now
+                c.execute("""
+                    SELECT id FROM auto_ads_campaigns
+                    WHERE is_active = TRUE
+                    AND (
+                        (schedule_time IS NOT NULL AND schedule_time <= %s AND last_sent IS NULL)
+                        OR (interval_minutes IS NOT NULL AND (
+                            last_sent IS NULL 
+                            OR last_sent + INTERVAL '1 minute' * interval_minutes <= %s
+                        ))
+                    )
+                """, (now, now))
+                
+                due_campaigns = c.fetchall()
+                conn.close()
+                
+                # Execute due campaigns
+                for campaign in due_campaigns:
+                    campaign_id = campaign['id']
+                    logger.info(f"⏰ Executing scheduled campaign {campaign_id}")
+                    await self.execute_campaign(campaign_id)
+                    
+                    # Small delay between campaigns to avoid rate limits
+                    await asyncio.sleep(2)
+                
+                # Sleep for 60 seconds before next check
+                await asyncio.sleep(60)
+                
+            except Exception as e:
+                logger.error(f"Error in scheduler loop: {e}", exc_info=True)
+                await asyncio.sleep(60)
+        
+        logger.info("🛑 BumpService scheduler stopped")
     
     def start_scheduler(self):
-        """Start scheduler (stub)"""
-        pass
+        """Start the background scheduler"""
+        if self.scheduler_task and not self.scheduler_task.done():
+            logger.warning("Scheduler already running")
+            return
+        
+        try:
+            loop = asyncio.get_event_loop()
+            self.scheduler_task = loop.create_task(self.scheduler_loop())
+            logger.info("✅ BumpService scheduler task created")
+        except Exception as e:
+            logger.error(f"Error starting scheduler: {e}", exc_info=True)
+    
+    def cleanup_all_resources(self):
+        """Cleanup resources"""
+        self.is_running = False
+        if self.scheduler_task:
+            self.scheduler_task.cancel()
+        logger.info("🧹 BumpService cleaned up")
 
 # ==================== DATABASE CLASS ====================
 class Database:
@@ -151,16 +450,16 @@ class Database:
             logger.error(f"Error getting account: {e}")
             return None
     
-    def add_telegram_account(self, user_id, account_name, phone_number, session_string):
+    def add_telegram_account(self, user_id, account_name, phone_number, session_string, api_id=None, api_hash=None):
         """Add a Telegram account"""
         try:
             conn = self._get_conn()
             c = conn.cursor()
             c.execute("""
-                INSERT INTO auto_ads_accounts (user_id, account_name, phone_number, session_string)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO auto_ads_accounts (user_id, account_name, phone_number, session_string, api_id, api_hash)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, (user_id, account_name, phone_number, session_string))
+            """, (user_id, account_name, phone_number, session_string, api_id, api_hash))
             account_id = c.fetchone()[0]
             conn.commit()
             conn.close()
@@ -168,6 +467,32 @@ class Database:
         except Exception as e:
             logger.error(f"Error adding account: {e}")
             return None
+    
+    def update_account(self, account_id, **kwargs):
+        """Update account fields"""
+        try:
+            conn = self._get_conn()
+            c = conn.cursor()
+            
+            updates = []
+            values = []
+            for key, value in kwargs.items():
+                if key in ['account_name', 'phone_number', 'session_string', 'api_id', 'api_hash', 'is_active']:
+                    updates.append(f"{key} = %s")
+                    values.append(value)
+            
+            if not updates:
+                return False
+            
+            values.append(account_id)
+            query = f"UPDATE auto_ads_accounts SET {', '.join(updates)} WHERE id = %s"
+            c.execute(query, values)
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating account: {e}")
+            return False
     
     def add_forwarding_config(self, user_id, account_id, source_chat, target_chat, config_name):
         """Add a forwarding configuration"""
@@ -212,30 +537,258 @@ class Database:
 
 # ==================== TELETHON MANAGER CLASS ====================
 class TelethonManager:
-    """Telethon manager for auto ads system"""
+    """Telethon manager for auto ads system with real Telethon integration"""
     
     def __init__(self):
-        self.clients = {}
+        self.clients = {}  # account_id -> TelegramClient
+        self.active_sessions = {}  # phone_number -> session_data (for login flows)
     
-    async def create_client(self, api_id, api_hash, phone_number, session_string=None):
-        """Create a Telethon client"""
+    async def create_client(self, account_id, api_id, api_hash, phone_number, session_string=None):
+        """Create and connect a Telethon client from session string"""
         try:
-            # Placeholder - actual implementation would use Telethon
-            logger.info(f"Creating client for {phone_number}")
-            return None
+            from telethon import TelegramClient
+            from telethon.sessions import StringSession
+            
+            logger.info(f"Creating Telethon client for account {account_id} ({phone_number})")
+            
+            # Create client with session string if available
+            if session_string:
+                session = StringSession(session_string)
+            else:
+                session = StringSession()
+            
+            client = TelegramClient(session, int(api_id), api_hash)
+            
+            # Connect the client
+            await client.connect()
+            
+            # Check if authorized
+            if not await client.is_user_authorized():
+                logger.warning(f"Client {account_id} not authorized, needs login")
+                await client.disconnect()
+                return None
+            
+            # Store client
+            self.clients[account_id] = client
+            logger.info(f"✅ Telethon client {account_id} created and connected")
+            
+            return client
+            
         except Exception as e:
-            logger.error(f"Error creating client: {e}")
+            logger.error(f"Error creating Telethon client: {e}", exc_info=True)
             return None
     
-    async def send_code_request(self, phone_number):
-        """Send login code"""
-        logger.info(f"Sending code to {phone_number}")
-        return None
+    async def get_client(self, account_id):
+        """Get existing client or return None"""
+        return self.clients.get(account_id)
+    
+    async def disconnect_client(self, account_id):
+        """Disconnect a client"""
+        try:
+            if account_id in self.clients:
+                await self.clients[account_id].disconnect()
+                del self.clients[account_id]
+                logger.info(f"Disconnected client {account_id}")
+        except Exception as e:
+            logger.error(f"Error disconnecting client {account_id}: {e}")
+    
+    async def forward_message(self, account_id, source_chat, target_chat, message_id):
+        """Forward a message from source to target chat"""
+        try:
+            client = await self.get_client(account_id)
+            if not client:
+                logger.error(f"No client found for account {account_id}")
+                return False
+            
+            # Forward the message
+            await client.forward_messages(
+                entity=target_chat,
+                messages=message_id,
+                from_peer=source_chat
+            )
+            
+            logger.info(f"✅ Forwarded message {message_id} from {source_chat} to {target_chat}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error forwarding message: {e}", exc_info=True)
+            return False
+    
+    async def send_message(self, account_id, chat_id, text=None, file=None, buttons=None):
+        """Send a message to a chat"""
+        try:
+            client = await self.get_client(account_id)
+            if not client:
+                logger.error(f"No client found for account {account_id}")
+                return False
+            
+            # Send message
+            await client.send_message(
+                entity=chat_id,
+                message=text,
+                file=file,
+                buttons=buttons
+            )
+            
+            logger.info(f"✅ Sent message to {chat_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error sending message: {e}", exc_info=True)
+            return False
+    
+    async def get_messages(self, account_id, chat_id, limit=10):
+        """Get messages from a chat"""
+        try:
+            client = await self.get_client(account_id)
+            if not client:
+                logger.error(f"No client found for account {account_id}")
+                return []
+            
+            messages = await client.get_messages(chat_id, limit=limit)
+            return messages
+            
+        except Exception as e:
+            logger.error(f"Error getting messages: {e}", exc_info=True)
+            return []
+    
+    async def copy_message(self, account_id, source_chat, target_chat, message_id):
+        """Copy a message (not as forwarded) from source to target"""
+        try:
+            client = await self.get_client(account_id)
+            if not client:
+                logger.error(f"No client found for account {account_id}")
+                return False
+            
+            # Get the original message
+            message = await client.get_messages(source_chat, ids=message_id)
+            if not message:
+                logger.error(f"Message {message_id} not found in {source_chat}")
+                return False
+            
+            # Send as new message (copy)
+            await client.send_message(
+                entity=target_chat,
+                message=message.text or message.caption,
+                file=message.media if message.media else None,
+                buttons=message.buttons if message.buttons else None
+            )
+            
+            logger.info(f"✅ Copied message {message_id} from {source_chat} to {target_chat}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error copying message: {e}", exc_info=True)
+            return False
+    
+    async def send_code_request(self, api_id, api_hash, phone_number):
+        """Send login code to phone number"""
+        try:
+            from telethon import TelegramClient
+            from telethon.sessions import StringSession
+            
+            logger.info(f"Sending code request to {phone_number}")
+            
+            # Create temporary client for login
+            client = TelegramClient(StringSession(), int(api_id), api_hash)
+            await client.connect()
+            
+            # Send code
+            sent_code = await client.send_code_request(phone_number)
+            
+            # Store session data for later use
+            self.active_sessions[phone_number] = {
+                'client': client,
+                'phone_code_hash': sent_code.phone_code_hash
+            }
+            
+            logger.info(f"✅ Code sent to {phone_number}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error sending code: {e}", exc_info=True)
+            return False
     
     async def sign_in(self, phone_number, code, password=None):
-        """Sign in with code"""
-        logger.info(f"Signing in {phone_number}")
-        return None
+        """Sign in with code and return session string"""
+        try:
+            session_data = self.active_sessions.get(phone_number)
+            if not session_data:
+                logger.error(f"No active session for {phone_number}")
+                return None
+            
+            client = session_data['client']
+            phone_code_hash = session_data['phone_code_hash']
+            
+            # Sign in with code
+            try:
+                await client.sign_in(phone_number, code, phone_code_hash=phone_code_hash)
+            except Exception as e:
+                # Check if 2FA password is needed
+                if password:
+                    await client.sign_in(password=password)
+                else:
+                    raise e
+            
+            # Get session string
+            session_string = client.session.save()
+            
+            # Disconnect temporary client
+            await client.disconnect()
+            
+            # Clean up
+            del self.active_sessions[phone_number]
+            
+            logger.info(f"✅ Signed in {phone_number}, session string obtained")
+            return session_string
+            
+        except Exception as e:
+            logger.error(f"Error signing in: {e}", exc_info=True)
+            return None
+    
+    async def disconnect_all(self):
+        """Disconnect all clients"""
+        for account_id in list(self.clients.keys()):
+            await self.disconnect_client(account_id)
+    
+    async def load_all_accounts(self, db):
+        """Load and connect all active accounts from database"""
+        try:
+            conn = db._get_conn()
+            c = conn.cursor()
+            c.execute("""
+                SELECT id, api_id, api_hash, phone_number, session_string 
+                FROM auto_ads_accounts 
+                WHERE is_active = TRUE AND session_string IS NOT NULL
+                AND api_id IS NOT NULL AND api_hash IS NOT NULL
+            """)
+            accounts = c.fetchall()
+            conn.close()
+            
+            logger.info(f"Loading {len(accounts)} accounts from database...")
+            
+            for account in accounts:
+                account_id = account['id']
+                api_id = account['api_id']
+                api_hash = account['api_hash']
+                phone_number = account['phone_number']
+                session_string = account['session_string']
+                
+                try:
+                    client = await self.create_client(
+                        account_id, api_id, api_hash, phone_number, session_string
+                    )
+                    if client:
+                        logger.info(f"✅ Loaded account {account_id} ({phone_number})")
+                    else:
+                        logger.warning(f"⚠️ Failed to load account {account_id} ({phone_number})")
+                except Exception as e:
+                    logger.error(f"Error loading account {account_id}: {e}")
+            
+            logger.info(f"✅ Loaded {len(self.clients)} out of {len(accounts)} accounts")
+            
+        except Exception as e:
+            logger.error(f"Error loading accounts: {e}", exc_info=True)
 
 class TgcfBot:
     def escape_markdown(self, text):
@@ -268,7 +821,7 @@ class TgcfBot:
     def __init__(self):
         self.db = Database()
         self.telethon_manager = TelethonManager()
-        self.bump_service = None  # Will be initialized after bot is created
+        self.bump_service = BumpService(telethon_manager=self.telethon_manager)
         self.user_sessions = {}  # Store user session data
     
     def validate_input(self, text: str, max_length: int = 1000, allowed_chars: str = None) -> tuple[bool, str]:
@@ -4236,8 +4789,8 @@ Targets: {len(enhanced_campaign_data['target_chats'])} chat(s)
         # Create application first
         application = Application.builder().token(Config.BOT_TOKEN).build()
         
-        # Initialize bump service with bot instance
-        self.bump_service = BumpService(bot_instance=application.bot)
+        # Initialize bump service with bot instance and telethon manager
+        self.bump_service = BumpService(bot_instance=application.bot, telethon_manager=self.telethon_manager)
         
         # Start bump service scheduler
         self.bump_service.start_scheduler()
@@ -4353,8 +4906,8 @@ This name will help you identify the account when managing campaigns."""
         # Create application first
         application = Application.builder().token(Config.BOT_TOKEN).build()
         
-        # Initialize bump service with bot instance
-        self.bump_service = BumpService(bot_instance=application.bot)
+        # Initialize bump service with bot instance and telethon manager
+        self.bump_service = BumpService(bot_instance=application.bot, telethon_manager=self.telethon_manager)
         
         # Start bump service scheduler
         self.bump_service.start_scheduler()
@@ -4386,6 +4939,14 @@ async def handle_enhanced_auto_ads_menu(update: Update, context: ContextTypes.DE
     
     # Use global bot instance to maintain user sessions
     bot = get_bot_instance()
+    
+    # Load accounts if not already loaded
+    if not bot.telethon_manager.clients:
+        try:
+            await bot.telethon_manager.load_all_accounts(bot.db)
+        except Exception as e:
+            logger.error(f"Error loading accounts: {e}")
+    
     await bot.show_main_menu(query)
 
 # All callback handlers from testforwarder
@@ -4618,6 +5179,13 @@ def get_bot_instance():
     global _global_bot
     if _global_bot is None:
         _global_bot = TgcfBot()
+        # Set up campaign executor with services
+        set_campaign_executor_services(_global_bot.bump_service, _global_bot.telethon_manager)
+        logger.info("✅ Campaign executor services configured")
+        
+        # Load all accounts from database (async operation, will be done later)
+        # This will be triggered when the async context is available
+        logger.info("ℹ️ Telethon accounts will be loaded when first accessed")
     return _global_bot
 
 # Message handlers
@@ -4678,16 +5246,52 @@ def init_enhanced_auto_ads_tables():
         c.execute("""
             CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
                 id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
                 name TEXT NOT NULL,
+                config_id INTEGER REFERENCES auto_ads_configs(id) ON DELETE CASCADE,
                 message_text TEXT,
+                source_message_id INTEGER,
                 target_users TEXT,
                 schedule_time TIMESTAMP,
+                interval_minutes INTEGER,
+                bump_count INTEGER DEFAULT 0,
+                forwarding_mode TEXT DEFAULT 'forward',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_active BOOLEAN DEFAULT TRUE,
                 sent_count INTEGER DEFAULT 0,
                 last_sent TIMESTAMP
             )
         """)
+        
+        # Add columns if they don't exist (migration support)
+        logger.info("Adding missing columns to auto_ads_campaigns if needed...")
+        migrations = [
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS user_id BIGINT",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS config_id INTEGER REFERENCES auto_ads_configs(id) ON DELETE CASCADE",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS source_message_id INTEGER",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS interval_minutes INTEGER",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS bump_count INTEGER DEFAULT 0",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS forwarding_mode TEXT DEFAULT 'forward'"
+        ]
+        
+        for migration in migrations:
+            try:
+                c.execute(migration)
+            except Exception as e:
+                logger.debug(f"Migration already applied or failed: {e}")
+        
+        # Add api_id and api_hash columns to auto_ads_accounts for Telethon
+        logger.info("Adding API credentials columns to auto_ads_accounts...")
+        api_migrations = [
+            "ALTER TABLE auto_ads_accounts ADD COLUMN IF NOT EXISTS api_id TEXT",
+            "ALTER TABLE auto_ads_accounts ADD COLUMN IF NOT EXISTS api_hash TEXT"
+        ]
+        
+        for migration in api_migrations:
+            try:
+                c.execute(migration)
+            except Exception as e:
+                logger.debug(f"API migration already applied or failed: {e}")
         
         conn.commit()
         conn.close()
@@ -4702,57 +5306,67 @@ enhanced_telethon_manager = None
 
 # Campaign executor for scheduled campaigns
 class CampaignExecutor:
-    """Handles execution of scheduled auto ads campaigns"""
+    """Handles execution of scheduled auto ads campaigns using BumpService"""
     
-    def __init__(self):
-        self.pending_campaigns = []
+    def __init__(self, bump_service=None, telethon_manager=None):
+        self.bump_service = bump_service
+        self.telethon_manager = telethon_manager
+    
+    def set_services(self, bump_service, telethon_manager):
+        """Set BumpService and TelethonManager after initialization"""
+        self.bump_service = bump_service
+        self.telethon_manager = telethon_manager
     
     def get_pending_executions(self):
         """Get list of pending campaign IDs"""
         try:
+            from datetime import datetime, timezone
             conn = get_db_connection()
             c = conn.cursor()
+            
+            now = datetime.now(timezone.utc)
+            
+            # Get campaigns that are due for execution
             c.execute("""
                 SELECT id FROM auto_ads_campaigns 
                 WHERE is_active = TRUE 
-                AND schedule_time <= CURRENT_TIMESTAMP
-                AND (last_sent IS NULL OR last_sent < schedule_time)
-            """)
-            campaigns = [row[0] for row in c.fetchall()]
+                AND (
+                    (schedule_time IS NOT NULL AND schedule_time <= %s AND last_sent IS NULL)
+                    OR (interval_minutes IS NOT NULL AND (
+                        last_sent IS NULL 
+                        OR last_sent + INTERVAL '1 minute' * interval_minutes <= %s
+                    ))
+                )
+            """, (now, now))
+            campaigns = [row['id'] for row in c.fetchall()]
             conn.close()
             return campaigns
         except Exception as e:
-            logger.error(f"Error getting pending campaigns: {e}")
+            logger.error(f"Error getting pending campaigns: {e}", exc_info=True)
             return []
     
     async def execute_campaign(self, campaign_id: int):
-        """Execute a specific campaign"""
+        """Execute a specific campaign using BumpService"""
         try:
-            logger.info(f"Executing campaign {campaign_id}")
-            conn = get_db_connection()
-            c = conn.cursor()
+            logger.info(f"⏰ Executing campaign {campaign_id} via CampaignExecutor")
             
-            # Get campaign details
-            c.execute("SELECT * FROM auto_ads_campaigns WHERE id = %s", (campaign_id,))
-            campaign = c.fetchone()
+            if not self.bump_service:
+                logger.error("BumpService not initialized in CampaignExecutor")
+                return False
             
-            if not campaign:
-                logger.error(f"Campaign {campaign_id} not found")
-                return
+            # Use BumpService to execute the campaign
+            success = await self.bump_service.execute_campaign(campaign_id)
             
-            # Update last_sent timestamp
-            c.execute("""
-                UPDATE auto_ads_campaigns 
-                SET last_sent = CURRENT_TIMESTAMP, sent_count = sent_count + 1
-                WHERE id = %s
-            """, (campaign_id,))
+            if success:
+                logger.info(f"✅ Campaign {campaign_id} executed successfully via CampaignExecutor")
+            else:
+                logger.error(f"❌ Campaign {campaign_id} execution failed")
             
-            conn.commit()
-            conn.close()
-            logger.info(f"✅ Campaign {campaign_id} executed successfully")
+            return success
             
         except Exception as e:
-            logger.error(f"Error executing campaign {campaign_id}: {e}")
+            logger.error(f"Error executing campaign {campaign_id}: {e}", exc_info=True)
+            return False
 
 # Global campaign executor instance
 _campaign_executor = None
@@ -4763,6 +5377,11 @@ def get_campaign_executor():
     if _campaign_executor is None:
         _campaign_executor = CampaignExecutor()
     return _campaign_executor
+
+def set_campaign_executor_services(bump_service, telethon_manager):
+    """Set services for global campaign executor"""
+    executor = get_campaign_executor()
+    executor.set_services(bump_service, telethon_manager)
 
 if __name__ == "__main__":
     bot = get_bot_instance()
