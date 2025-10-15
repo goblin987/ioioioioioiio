@@ -112,7 +112,7 @@ class BumpService:
         try:
             campaign = self.get_campaign(campaign_id)
             if not campaign:
-        return {}
+                return {}
     
             return {
                 'sent_count': campaign.get('sent_count', 0),
