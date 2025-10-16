@@ -465,28 +465,40 @@ try:
         await update.callback_query.answer("Select account from forwarding menu")
     async def handle_testforwarder_add_buttons_yes(update, context, params=None):
         bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await bot.handle_add_buttons_yes(query)
     async def handle_testforwarder_add_buttons_no(update, context, params=None):
         bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await bot.handle_add_buttons_no(query)
     async def handle_testforwarder_target_all_groups(update, context, params=None):
         bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await bot.handle_target_all_groups(query)
     async def handle_testforwarder_target_specific_chats(update, context, params=None):
         bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await bot.handle_target_specific_chats(query)
     async def handle_testforwarder_schedule_daily(update, context, params=None):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await query.answer("Schedule functionality coming soon!", show_alert=True)
     async def handle_testforwarder_schedule_weekly(update, context, params=None):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await query.answer("Schedule functionality coming soon!", show_alert=True)
     async def handle_testforwarder_schedule_hourly(update, context, params=None):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await query.answer("Schedule functionality coming soon!", show_alert=True)
     async def handle_testforwarder_schedule_custom(update, context, params=None):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
+        query = update.callback_query
+        if query:
+            await query.answer("Schedule functionality coming soon!", show_alert=True)
     
     # Additional stub handlers for missing callbacks
     async def handle_testforwarder_back_to_ad_content(update, context, params=None):
