@@ -484,21 +484,25 @@ try:
         if query:
             await bot.handle_target_specific_chats(query)
     async def handle_testforwarder_schedule_daily(update, context, params=None):
+        bot = get_auto_ads_bot()
         query = update.callback_query
         if query:
-            await query.answer("Schedule functionality coming soon!", show_alert=True)
+            await bot.handle_schedule_selection(query, 'daily')
     async def handle_testforwarder_schedule_weekly(update, context, params=None):
+        bot = get_auto_ads_bot()
         query = update.callback_query
         if query:
-            await query.answer("Schedule functionality coming soon!", show_alert=True)
+            await bot.handle_schedule_selection(query, 'weekly')
     async def handle_testforwarder_schedule_hourly(update, context, params=None):
+        bot = get_auto_ads_bot()
         query = update.callback_query
         if query:
-            await query.answer("Schedule functionality coming soon!", show_alert=True)
+            await bot.handle_schedule_selection(query, 'hourly')
     async def handle_testforwarder_schedule_custom(update, context, params=None):
+        bot = get_auto_ads_bot()
         query = update.callback_query
         if query:
-            await query.answer("Schedule functionality coming soon!", show_alert=True)
+            await bot.handle_schedule_selection(query, 'custom')
     
     # Additional stub handlers for missing callbacks
     async def handle_testforwarder_back_to_ad_content(update, context, params=None):
