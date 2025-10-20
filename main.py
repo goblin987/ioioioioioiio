@@ -458,7 +458,16 @@ try:
     
     # Stub handlers for features that need specific implementation
     async def handle_testforwarder_select_account(update, context, params=None):
-        await update.callback_query.answer("Select account from the accounts menu")
+        bot = get_auto_ads_bot()
+        query = update.callback_query
+        if query and query.data:
+            # Extract account_id from callback data like "select_account_123"
+            try:
+                account_id = int(query.data.split("_")[2])
+                await bot.handle_account_selection(query, account_id)
+            except (IndexError, ValueError) as e:
+                logger.error(f"Error parsing account_id from {query.data}: {e}")
+                await query.answer("Invalid account selection", show_alert=True)
     async def handle_testforwarder_run_campaign(update, context, params=None):
         await update.callback_query.answer("Use 'My Campaigns' to run campaigns")
     async def handle_testforwarder_select_forwarding_account(update, context, params=None):
