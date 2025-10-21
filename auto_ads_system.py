@@ -762,33 +762,63 @@ class TelethonManager:
             
             # Extract channel username/link
             channel = channel_link.strip()
+            logger.info(f"🔍 Processing channel link: {channel}")
+            
+            # Check if it's a private invite link
             if 'joinchat/' in channel or 't.me/+' in channel:
                 # This is an invite link
                 if 'joinchat/' in channel:
-                    hash_part = channel.split('joinchat/')[-1]
+                    hash_part = channel.split('joinchat/')[-1].split('?')[0].strip()
                 elif 't.me/+' in channel:
-                    hash_part = channel.split('t.me/+')[-1]
+                    hash_part = channel.split('t.me/+')[-1].split('?')[0].strip()
                 
+                logger.info(f"🔗 Using invite hash: {hash_part}")
                 from telethon.tl.functions.messages import ImportChatInviteRequest
                 result = await client(ImportChatInviteRequest(hash_part))
                 logger.info(f"✅ Joined channel via invite link: {channel_link}")
-                return True, result
+                return True, "Joined via invite link"
             else:
-                # This is a public channel username
-                if 't.me/' in channel:
-                    channel = channel.split('t.me/')[-1]
-                if channel.startswith('@'):
-                    channel = channel[1:]
+                # This is a public channel username or link
+                username = channel
+                if 't.me/' in username:
+                    username = username.split('t.me/')[-1].split('?')[0].strip()
+                if username.startswith('@'):
+                    username = username[1:]
                 
+                # Remove any trailing slashes or query parameters
+                username = username.rstrip('/').split('?')[0]
+                
+                logger.info(f"📱 Attempting to join public channel: @{username}")
+                
+                # First, try to get the entity to verify it exists
+                try:
+                    entity = await client.get_entity(username)
+                    logger.info(f"✅ Found entity: {entity.title if hasattr(entity, 'title') else username}")
+                except Exception as entity_error:
+                    logger.error(f"❌ Channel not found: @{username} - {entity_error}")
+                    return False, f"Channel not found: @{username}. Make sure the channel exists and is public."
+                
+                # Now join the channel
                 from telethon.tl.functions.channels import JoinChannelRequest
-                result = await client(JoinChannelRequest(channel))
-                logger.info(f"✅ Joined channel: {channel}")
-                return True, result
+                result = await client(JoinChannelRequest(entity))
+                logger.info(f"✅ Joined channel: @{username}")
+                return True, f"Joined @{username}"
             
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Error joining channel {channel_link}: {error_msg}", exc_info=True)
-            return False, error_msg
+            logger.error(f"❌ Error joining channel {channel_link}: {error_msg}", exc_info=True)
+            
+            # Provide more user-friendly error messages
+            if "USERNAME_INVALID" in error_msg or "UsernameInvalidError" in str(type(e)):
+                return False, f"Invalid channel username. Check that the channel exists and is spelled correctly."
+            elif "INVITE_HASH_INVALID" in error_msg:
+                return False, f"Invalid or expired invite link. Please get a new invite link."
+            elif "USER_ALREADY_PARTICIPANT" in error_msg:
+                return True, "Already a member of this channel"
+            elif "CHANNELS_TOO_MUCH" in error_msg:
+                return False, "Account has joined too many channels. Please leave some channels first."
+            else:
+                return False, f"Error: {error_msg}"
     
     async def join_all_registered_channels(self, account_id, db, user_id):
         """Join all channels registered by the user"""
@@ -3422,7 +3452,19 @@ Buttons will appear as an inline keyboard below your ad message.
                     
                     if join_results:
                         success_count = sum(1 for r in join_results if r['success'])
-                        success_msg += f"📢 **Auto-joined {success_count}/{len(join_results)} registered channels**\n\n"
+                        success_msg += f"📢 **Channel Join Results: {success_count}/{len(join_results)} successful**\n\n"
+                        
+                        # Show details for each channel
+                        for result in join_results:
+                            channel_display = result['channel'][:30] + '...' if len(result['channel']) > 30 else result['channel']
+                            if result['success']:
+                                success_msg += f"  ✅ {channel_display}\n"
+                            else:
+                                success_msg += f"  ❌ {channel_display}\n"
+                                # Show error reason
+                                error_reason = str(result.get('result', 'Unknown error'))[:50]
+                                success_msg += f"     ↳ {error_reason}\n"
+                        success_msg += "\n"
                     
                     success_msg += "🎉 Your account is now authenticated and ready to use for campaigns!"
                     
@@ -3547,7 +3589,19 @@ Buttons will appear as an inline keyboard below your ad message.
                     
                     if join_results:
                         success_count = sum(1 for r in join_results if r['success'])
-                        success_msg += f"📢 **Auto-joined {success_count}/{len(join_results)} registered channels**\n\n"
+                        success_msg += f"📢 **Channel Join Results: {success_count}/{len(join_results)} successful**\n\n"
+                        
+                        # Show details for each channel
+                        for result in join_results:
+                            channel_display = result['channel'][:30] + '...' if len(result['channel']) > 30 else result['channel']
+                            if result['success']:
+                                success_msg += f"  ✅ {channel_display}\n"
+                            else:
+                                success_msg += f"  ❌ {channel_display}\n"
+                                # Show error reason
+                                error_reason = str(result.get('result', 'Unknown error'))[:50]
+                                success_msg += f"     ↳ {error_reason}\n"
+                        success_msg += "\n"
                     
                     success_msg += "🎉 Your account is now authenticated and ready to use for campaigns!"
                     
