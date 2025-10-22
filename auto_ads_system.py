@@ -60,10 +60,9 @@ class BumpService:
             conn = self.db._get_conn()
             c = conn.cursor()
             c.execute("""
-                SELECT c.*, a.account_name, cfg.config_name
+                SELECT c.*, a.account_name, a.phone_number
                 FROM auto_ads_campaigns c
-                LEFT JOIN auto_ads_configs cfg ON c.config_id = cfg.id
-                LEFT JOIN auto_ads_accounts a ON cfg.account_id = a.id
+                LEFT JOIN auto_ads_accounts a ON c.account_id = a.id
                 WHERE c.user_id = %s
                 ORDER BY c.created_at DESC
             """, (user_id,))
@@ -80,10 +79,9 @@ class BumpService:
             conn = self.db._get_conn()
             c = conn.cursor()
             c.execute("""
-                SELECT c.*, a.account_name, cfg.config_name, cfg.source_chat, cfg.target_chat
+                SELECT c.*, a.account_name, a.phone_number
                 FROM auto_ads_campaigns c
-                LEFT JOIN auto_ads_configs cfg ON c.config_id = cfg.id
-                LEFT JOIN auto_ads_accounts a ON cfg.account_id = a.id
+                LEFT JOIN auto_ads_accounts a ON c.account_id = a.id
                 WHERE c.id = %s
             """, (campaign_id,))
             campaign = c.fetchone()
@@ -124,21 +122,27 @@ class BumpService:
             logger.error(f"Error getting campaign performance: {e}")
             return {}
     
-    def add_campaign(self, user_id, name, config_id, message_text=None, 
-                    schedule_time=None, interval_minutes=None, bump_count=None,
-                    forwarding_mode='forward', source_message_id=None):
+    def add_campaign(self, user_id, account_id, name, ad_content, target_chats, 
+                    schedule_type, schedule_time, buttons=None, target_mode='all',
+                    immediate_start=False):
         """Add a new campaign"""
         try:
             conn = self.db._get_conn()
             c = conn.cursor()
+            
+            # Convert buttons to JSON string if provided
+            import json
+            buttons_json = json.dumps(buttons) if buttons else None
+            target_chats_json = json.dumps(target_chats) if isinstance(target_chats, list) else target_chats
+            
             c.execute("""
                 INSERT INTO auto_ads_campaigns 
-                (user_id, name, config_id, message_text, schedule_time, 
-                 interval_minutes, bump_count, forwarding_mode, source_message_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (user_id, account_id, name, message_text, target_chats, 
+                 schedule_type, schedule_time, buttons, target_mode, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, (user_id, name, config_id, message_text, schedule_time, 
-                  interval_minutes, bump_count, forwarding_mode, source_message_id))
+            """, (user_id, account_id, name, ad_content, target_chats_json, 
+                  schedule_type, schedule_time, buttons_json, target_mode, immediate_start))
             campaign_id = c.fetchone()[0]
             conn.commit()
             conn.close()
@@ -5718,7 +5722,12 @@ def init_enhanced_auto_ads_tables():
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS source_message_id INTEGER",
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS interval_minutes INTEGER",
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS bump_count INTEGER DEFAULT 0",
-            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS forwarding_mode TEXT DEFAULT 'forward'"
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS forwarding_mode TEXT DEFAULT 'forward'",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES auto_ads_accounts(id) ON DELETE CASCADE",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS target_chats TEXT",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS schedule_type TEXT",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS buttons TEXT",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS target_mode TEXT DEFAULT 'all'"
         ]
         
         for migration in migrations:
