@@ -110,7 +110,7 @@ class BumpService:
         try:
             campaign = self.get_campaign(campaign_id)
             if not campaign:
-                return {}
+        return {}
     
             return {
                 'sent_count': campaign.get('sent_count', 0),
@@ -133,7 +133,8 @@ class BumpService:
             # Convert buttons to JSON string if provided
             import json
             buttons_json = json.dumps(buttons) if buttons else None
-            target_chats_json = json.dumps(target_chats) if isinstance(target_chats, list) else target_chats
+            # Convert target_chats to JSON regardless of type (list or dict)
+            target_chats_json = json.dumps(target_chats) if target_chats else None
             
             c.execute("""
                 INSERT INTO auto_ads_campaigns 
@@ -143,14 +144,20 @@ class BumpService:
                 RETURNING id
             """, (user_id, account_id, name, ad_content, target_chats_json, 
                   schedule_type, schedule_time, buttons_json, target_mode, immediate_start))
-            campaign_id = c.fetchone()[0]
-            conn.commit()
-            conn.close()
-            logger.info(f"✅ Added campaign {campaign_id}: {name}")
-            return campaign_id
+            result = c.fetchone()
+            if result:
+                campaign_id = result[0]
+                conn.commit()
+                conn.close()
+                logger.info(f"✅ Added campaign {campaign_id}: {name}")
+                return campaign_id
+            else:
+                conn.close()
+                logger.error("No campaign ID returned from INSERT")
+                return None
         except Exception as e:
-            logger.error(f"Error adding campaign: {e}")
-        return None
+            logger.error(f"Error adding campaign: {e}", exc_info=True)
+            return None
     
     def update_campaign(self, campaign_id, **kwargs):
         """Update campaign fields"""
@@ -168,7 +175,7 @@ class BumpService:
                     values.append(value)
             
             if not updates:
-                return False
+        return False
     
             values.append(campaign_id)
             query = f"UPDATE auto_ads_campaigns SET {', '.join(updates)} WHERE id = %s"
@@ -471,7 +478,7 @@ class Database:
             result = c.fetchone()
             if result:
                 account_id = result['id']
-                conn.commit()
+            conn.commit()
                 logger.info(f"✅ Account added successfully with ID: {account_id}")
             else:
                 logger.error("❌ No ID returned from INSERT")
@@ -878,7 +885,7 @@ class TelethonManager:
             session_data = self.active_sessions.get(phone_number)
             if not session_data:
                 logger.error(f"No active session for {phone_number}")
-                return None
+        return None
             
             client = session_data['client']
             phone_code_hash = session_data['phone_code_hash']
@@ -2157,7 +2164,7 @@ Buttons will appear as an inline keyboard below your ad message."""
     async def _update_storage_message_with_buttons(self, campaign_data: dict):
         """Update storage message with ReplyKeyboardMarkup buttons"""
         try:
-            from config import Config
+            import os
             from telegram import ReplyKeyboardMarkup, KeyboardButton
             
             # Handle both old format (dict) and new format (list) for ad_content
@@ -2175,7 +2182,7 @@ Buttons will appear as an inline keyboard below your ad message."""
             
             # Use default storage channel if not specified
             if not storage_chat_id:
-                storage_chat_id = Config.STORAGE_CHANNEL_ID
+                storage_chat_id = os.getenv('STORAGE_CHANNEL_ID')
                 if not storage_chat_id:
                     logger.warning("No storage channel ID configured")
                     return
@@ -2806,7 +2813,6 @@ Buttons will appear as an inline keyboard below your ad message."""
             logger.info(f"Retrieved campaign data: {list(campaign.keys())}")
             logger.info(f"Campaign buttons: {campaign.get('buttons', 'NOT_FOUND')}")
             logger.info(f"Campaign target_mode: {campaign.get('target_mode', 'NOT_FOUND')}")
-            logger.info(f"Full campaign data: {campaign}")
             
             # Get account details
             account = self.db.get_account(campaign['account_id'])
@@ -2814,37 +2820,43 @@ Buttons will appear as an inline keyboard below your ad message."""
                 await query.answer("Account not found!", show_alert=True)
                 return
             
-            # Prepare campaign data for execution
-            enhanced_campaign_data = {
-                'campaign_name': campaign['campaign_name'],
-                'ad_content': campaign['ad_content'],
-                'target_chats': campaign['target_chats'],
-                'schedule_type': campaign['schedule_type'],
-                'schedule_time': campaign['schedule_time'],
-                'buttons': campaign.get('buttons', []),  # Get buttons from database
-                'target_mode': campaign.get('target_mode', 'all_groups' if campaign['target_chats'] == ['ALL_WORKER_GROUPS'] else 'specific'),
-                'immediate_start': False  # Disabled - user must click Start Campaign
-            }
+            # Activate the campaign in the database
+            self.bump_service.update_campaign(campaign_id, is_active=True)
+            logger.info(f"✅ Campaign {campaign_id} activated")
             
-            logger.info(f"Executing campaign with {len(enhanced_campaign_data['buttons'])} buttons")
+            # Execute the campaign immediately
+            logger.info(f"🚀 Executing campaign {campaign_id} immediately...")
+            success = await self.bump_service.execute_campaign(campaign_id)
             
-            # The bump service scheduler already handles campaign execution with inline buttons
-            # No need for duplicate execution here - just confirm the campaign is active
-            success_text = f"""🎉 Campaign Already Running!
+            if success:
+                success_text = f"""🎉 Campaign Started Successfully!
 
-Campaign: {campaign['campaign_name']}
+Campaign: {campaign.get('name', 'Unknown')}
 Account: {account['account_name']}
-Status: ✅ Active and scheduled!
-Schedule: Next message in {campaign['schedule_time']}
+Status: ✅ Active
+Schedule: {campaign.get('schedule_time', 'Not set')}
 
-✅ Messages are being sent with INLINE BUTTONS automatically!
-📊 Check the logs to see execution status."""
-            
-            await query.edit_message_text(success_text, reply_markup=self.get_main_menu_keyboard())
-            await query.answer("✅ Campaign is active!", show_alert=False)
+✅ First message sent!
+📊 The campaign will continue running on schedule."""
+                
+                await query.edit_message_text(success_text, reply_markup=self.get_main_menu_keyboard())
+                await query.answer("✅ Campaign started!", show_alert=False)
+            else:
+                error_text = f"""❌ Campaign Activation Failed
+
+Campaign: {campaign.get('name', 'Unknown')}
+Status: ⏸️ Paused
+
+Please check:
+• Account is authenticated
+• Target channels are accessible
+• Message content is valid"""
+                
+                await query.edit_message_text(error_text, reply_markup=self.get_main_menu_keyboard())
+                await query.answer("❌ Failed to send message", show_alert=True)
             
         except Exception as e:
-            logger.error(f"Manual campaign start failed: {e}")
+            logger.error(f"Manual campaign start failed: {e}", exc_info=True)
             await query.answer(f"❌ Failed to start campaign: {str(e)[:50]}", show_alert=True)
     
     async def execute_campaign_with_better_discovery(self, account_id: int, campaign_data: dict) -> bool:
@@ -3267,11 +3279,11 @@ Buttons will appear as an inline keyboard below your ad message.
         logger.info(f"🔍 SESSION CHECK: User {user_id} in sessions: {user_id in self.user_sessions}")
         
         # Check if user has an active session
-        if user_id not in self.user_sessions:
+            if user_id not in self.user_sessions:
             logger.warning(f"⚠️ User {user_id} sent message but has no active session")
             return
             
-        session = self.user_sessions[user_id]
+            session = self.user_sessions[user_id]
         logger.info(f"🔍 Current step: {session.get('step')}")
         
         # Handle account_name step (only if explicitly in this step)
