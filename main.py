@@ -456,6 +456,51 @@ try:
         bot = get_auto_ads_bot()
         await bot.handle_message(update, context)
     
+    # Campaign management handlers
+    async def handle_toggle_campaign(update, context, params=None):
+        bot = get_auto_ads_bot()
+        query = update.callback_query
+        if query and query.data:
+            try:
+                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
+                await bot.toggle_campaign(query, campaign_id)
+            except (IndexError, ValueError) as e:
+                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
+                await query.answer("Invalid campaign selection", show_alert=True)
+    
+    async def handle_start_campaign(update, context, params=None):
+        bot = get_auto_ads_bot()
+        query = update.callback_query
+        if query and query.data:
+            try:
+                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
+                await bot.start_campaign_manually(query, campaign_id)
+            except (IndexError, ValueError) as e:
+                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
+                await query.answer("Invalid campaign selection", show_alert=True)
+    
+    async def handle_test_campaign(update, context, params=None):
+        bot = get_auto_ads_bot()
+        query = update.callback_query
+        if query and query.data:
+            try:
+                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
+                await bot.test_campaign(query, campaign_id)
+            except (IndexError, ValueError) as e:
+                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
+                await query.answer("Invalid campaign selection", show_alert=True)
+    
+    async def handle_view_campaign(update, context, params=None):
+        bot = get_auto_ads_bot()
+        query = update.callback_query
+        if query and query.data:
+            try:
+                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
+                await bot.show_campaign_details(query, campaign_id)
+            except (IndexError, ValueError) as e:
+                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
+                await query.answer("Invalid campaign selection", show_alert=True)
+    
     # Stub handlers for features that need specific implementation
     async def handle_testforwarder_select_account(update, context, params=None):
         bot = get_auto_ads_bot()
