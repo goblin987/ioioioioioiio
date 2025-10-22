@@ -132,9 +132,22 @@ class BumpService:
             
             # Convert buttons to JSON string if provided
             import json
+            
+            # Debug logging
+            logger.info(f"🔧 add_campaign called with: user_id={user_id}, account_id={account_id}, name={name}")
+            logger.info(f"🔧 ad_content type: {type(ad_content)}, value: {ad_content}")
+            logger.info(f"🔧 target_chats type: {type(target_chats)}, value: {target_chats}")
+            logger.info(f"🔧 buttons type: {type(buttons)}, value: {buttons}")
+            
+            # Convert all complex types to JSON
             buttons_json = json.dumps(buttons) if buttons else None
-            # Convert target_chats to JSON regardless of type (list or dict)
             target_chats_json = json.dumps(target_chats) if target_chats else None
+            ad_content_json = json.dumps(ad_content) if isinstance(ad_content, (dict, list)) else ad_content
+            
+            logger.info(f"🔧 After JSON conversion:")
+            logger.info(f"   - buttons_json: {buttons_json}")
+            logger.info(f"   - target_chats_json: {target_chats_json}")
+            logger.info(f"   - ad_content_json type: {type(ad_content_json)}")
             
             c.execute("""
                 INSERT INTO auto_ads_campaigns 
@@ -142,7 +155,7 @@ class BumpService:
                  schedule_type, schedule_time, buttons, target_mode, is_active)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
-            """, (user_id, account_id, name, ad_content, target_chats_json, 
+            """, (user_id, account_id, name, ad_content_json, target_chats_json, 
                   schedule_type, schedule_time, buttons_json, target_mode, immediate_start))
             result = c.fetchone()
             if result:
