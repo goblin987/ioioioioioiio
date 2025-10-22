@@ -1215,7 +1215,7 @@ class TgcfBot:
 
 **Professional Features:**
 • 🏢 Multi-Account Management - Unlimited work accounts
-• 📢 Smart Bump Service - Advanced campaign automation  
+• 📢 Smart Auto Ads - Advanced campaign automation  
 • ⚡ Real-time Forwarding - Lightning-fast message processing
 • 📊 Business Analytics - Comprehensive performance tracking
 • 🛡️ Enterprise Security - Professional-grade protection
@@ -1225,10 +1225,8 @@ class TgcfBot:
         
         keyboard = [
             [InlineKeyboardButton("👥 Manage Accounts", callback_data="manage_accounts")],
-            [InlineKeyboardButton("📢 Bump Service", callback_data="bump_service")],
-            [InlineKeyboardButton("📋 My Configurations", callback_data="my_configs")],
-            [InlineKeyboardButton("➕ Add New Forwarding", callback_data="add_forwarding")],
-            [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
+            [InlineKeyboardButton("📢 Create Auto Ads", callback_data="bump_service")],
+            [InlineKeyboardButton("📡 Manage Channels", callback_data="manage_channels")],
             [InlineKeyboardButton("❓ Help", callback_data="help")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1418,10 +1416,8 @@ class TgcfBot:
         """Get main menu keyboard markup"""
         keyboard = [
             [InlineKeyboardButton("👥 Manage Accounts", callback_data="manage_accounts")],
-            [InlineKeyboardButton("📢 Bump Service", callback_data="bump_service")],
-            [InlineKeyboardButton("📋 My Configurations", callback_data="my_configs")],
+            [InlineKeyboardButton("📢 Create Auto Ads", callback_data="bump_service")],
             [InlineKeyboardButton("📡 Manage Channels", callback_data="manage_channels")],
-            [InlineKeyboardButton("➕ Add New Forwarding", callback_data="add_forwarding")],
             [InlineKeyboardButton("❓ Help", callback_data="help")],
             [InlineKeyboardButton("⬅️ Back to Main Bot", callback_data="admin_menu")]
         ]
@@ -2561,7 +2557,7 @@ Buttons will appear as an inline keyboard below your ad message."""
             del self.user_sessions[user_id]
         
         await query.edit_message_text(
-            "❌ **Campaign creation canceled.**\n\nYou can start a new campaign anytime from the Bump Service menu.",
+            "❌ **Campaign creation canceled.**\n\nYou can start a new campaign anytime from the Create Auto Ads menu.",
             parse_mode=ParseMode.MARKDOWN
         )
         
@@ -3187,22 +3183,63 @@ Buttons will appear as an inline keyboard below your ad message.
     async def show_help(self, query):
         """Show help information"""
         help_text = """
-❓ **Help & Support**
+❓ **How to Use Auto Ads System**
 
-**Quick Start:**
-1. Click "Add New Forwarding"
-2. Enter source and destination chat IDs
-3. Configure your settings
-4. Start forwarding!
+**ENGLISH:**
 
-**Common Issues:**
-• **Chat ID not found:** Make sure the bot is added to the source chat
-• **Permission denied:** Check bot permissions in the chat
-• **Messages not forwarding:** Verify chat IDs and bot status
+**Setup Steps:**
+1️⃣ **Add Bot to Channel/Group**
+   • Add this bot to your target channel/group
+   • Make the bot an ADMIN with post messages permission
 
-**Need more help?**
-• Check the web interface for detailed guides
-• Join our support group: @tgcf_support
+2️⃣ **Add Userbot Account**
+   • Go to "Manage Accounts" → "Add Account"
+   • Enter your Telegram API credentials
+   • Verify with code from Telegram
+
+3️⃣ **Add Userbot to Channel**
+   • Add your userbot account to the same channel/group
+   • Make the userbot an ADMIN with post messages permission
+
+4️⃣ **Create Campaign**
+   • Go to "Create Auto Ads"
+   • Create your advertising campaign
+   • Set schedule (daily/weekly/hourly)
+   • Select which account to use
+
+**Important:**
+• Both bot AND userbot must be ADMINS in the target channel
+• Both need permission to post messages
+• Userbot sends the ads, bot manages them
+
+━━━━━━━━━━━━━━━━━━━━
+
+**LIETUVIŠKAI:**
+
+**Nustatymo Žingsniai:**
+1️⃣ **Pridėkite Botą į Kanalą/Grupę**
+   • Pridėkite šį botą į savo tikslinį kanalą/grupę
+   • Padarykite botą ADMINU su pranešimų siuntimo teise
+
+2️⃣ **Pridėkite Userbot Paskyrą**
+   • Eikite į "Manage Accounts" → "Add Account"
+   • Įveskite Telegram API duomenis
+   • Patvirtinkite kodu iš Telegram
+
+3️⃣ **Pridėkite Userbot į Kanalą**
+   • Pridėkite savo userbot paskyrą į tą patį kanalą/grupę
+   • Padarykite userbot ADMINU su pranešimų siuntimo teise
+
+4️⃣ **Sukurkite Kampaniją**
+   • Eikite į "Create Auto Ads"
+   • Sukurkite savo reklamos kampaniją
+   • Nustatykite tvarkaraštį (kasdien/kas savaitę/kas valandą)
+   • Pasirinkite kurią paskyrą naudoti
+
+**Svarbu:**
+• IR botas IR userbot turi būti ADMINAI tiksliniam kanale
+• Abu turi turėti teisę siųsti pranešimus
+• Userbot siunčia reklamas, botas jas valdo
         """
         
         keyboard = [
@@ -4039,18 +4076,16 @@ Buttons will appear as an inline keyboard below your ad message.
         
         if not channels:
             keyboard = [
-                [InlineKeyboardButton("➕ Add New Channel", callback_data="add_channel")],
+                [InlineKeyboardButton("❓ How to Use", callback_data="help")],
                 [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="main_menu")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await query.edit_message_text(
                 "📡 **Manage Channels**\n\n"
-                "No channels registered yet.\n\n"
-                "➕ **Add channels where your userbots should automatically join:**\n"
-                "• Public channels (@channelname or t.me/channelname)\n"
-                "• Private channels (invite links)\n\n"
-                "When you add a new userbot account, it will automatically join all registered channels!",
+                "No channels added yet.\n\n"
+                "ℹ️ To use Auto Ads, you need to manually add your bot and userbot accounts to the target channels/groups as admins.\n\n"
+                "Click '❓ How to Use' for detailed instructions in English and Lithuanian.",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=reply_markup
             )
@@ -4075,7 +4110,7 @@ Buttons will appear as an inline keyboard below your ad message.
                 InlineKeyboardButton(f"🗑️ Remove {display_name[:20]}", callback_data=f"delete_channel_{channel_id}")
             ])
         
-        keyboard.append([InlineKeyboardButton("➕ Add New Channel", callback_data="add_channel")])
+        keyboard.append([InlineKeyboardButton("❓ How to Use", callback_data="help")])
         keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="main_menu")])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -4188,7 +4223,7 @@ Buttons will appear as an inline keyboard below your ad message.
         campaigns = self.bump_service.get_user_campaigns(user_id)
         
         text = """
-📢 **Bump Service - Auto Ads Manager**
+📢 **Create Auto Ads - Campaign Manager**
 
 Automatically post your advertisements to multiple chats at scheduled times!
 
@@ -4231,7 +4266,7 @@ Automatically post your advertisements to multiple chats at scheduled times!
         if not campaigns:
             keyboard = [
                 [InlineKeyboardButton("➕ Create New Campaign", callback_data="add_campaign")],
-                [InlineKeyboardButton("🔙 Back to Bump Service", callback_data="back_to_bump")]
+                [InlineKeyboardButton("🔙 Back to Campaigns", callback_data="back_to_bump")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -4772,7 +4807,7 @@ Automatically post your advertisements to multiple chats at scheduled times!
         if not accounts:
             keyboard = [
                 [InlineKeyboardButton("➕ Add New Account", callback_data="add_account")],
-                [InlineKeyboardButton("🔙 Back to Bump Service", callback_data="back_to_bump")]
+                [InlineKeyboardButton("🔙 Back to Campaigns", callback_data="back_to_bump")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             

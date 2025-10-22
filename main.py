@@ -963,6 +963,11 @@ def callback_query_router(func):
     "manual_setup": handle_testforwarder_manual_setup,
     "edit_account": handle_testforwarder_edit_account,
     "delete_account": handle_testforwarder_delete_account,
+    "delete_account_1": handle_testforwarder_delete_account,
+    "delete_account_2": handle_testforwarder_delete_account,
+    "delete_account_3": handle_testforwarder_delete_account,
+    "delete_account_4": handle_testforwarder_delete_account,
+    "delete_account_5": handle_testforwarder_delete_account,
     "main_menu": handle_testforwarder_menu,
     "config": handle_config,  # ADDED - missing handler
     "edit_config": handle_testforwarder_edit_config,
