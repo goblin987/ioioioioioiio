@@ -159,7 +159,7 @@ class BumpService:
                   schedule_type, schedule_time, buttons_json, target_mode, immediate_start))
             result = c.fetchone()
             if result:
-                campaign_id = result[0]
+                campaign_id = result['id']
                 conn.commit()
                 conn.close()
                 logger.info(f"✅ Added campaign {campaign_id}: {name}")
