@@ -5751,6 +5751,7 @@ def init_enhanced_auto_ads_tables():
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES auto_ads_accounts(id) ON DELETE CASCADE",
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS target_chats TEXT",
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS schedule_type TEXT",
+            "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS schedule_time TEXT",
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS buttons TEXT",
             "ALTER TABLE auto_ads_campaigns ADD COLUMN IF NOT EXISTS target_mode TEXT DEFAULT 'all'"
         ]
