@@ -538,6 +538,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         # === PRODUCT MANAGEMENT ===
         [InlineKeyboardButton("🛍️ Product Management", callback_data="admin_products_menu")],
         [InlineKeyboardButton("🗺️ Location Management", callback_data="admin_locations_menu")],
+        [InlineKeyboardButton("💰 Edit Product Prices", callback_data="product_price_editor_menu")],
         
         # === USER & CUSTOMER MANAGEMENT ===
         [InlineKeyboardButton("👥 User Management", callback_data="admin_users_menu")],

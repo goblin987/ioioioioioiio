@@ -222,12 +222,16 @@ async def handle_product_price_editor_menu(update: Update, context: ContextTypes
         msg += f"• Cities: {stats['cities']} | Categories: {stats['categories']}\n\n"
     
     msg += f"📈 **Recent Changes:** {recent_changes} price updates in last 7 days\n\n"
-    msg += "**Choose your price editing method:**"
+    msg += "**Choose your price editing method:**\n\n"
+    msg += "💡 **Note:** Each location can have different prices for the same product.\n"
+    msg += "Use comparison tools to identify pricing inconsistencies."
     
     keyboard = [
         [InlineKeyboardButton("🌐 Bulk Price Update (All Locations)", callback_data="price_bulk_all_locations")],
+        [InlineKeyboardButton("📊 Adjust All Prices by %", callback_data="price_bulk_percentage")],
         [InlineKeyboardButton("🏙️ Edit by City", callback_data="price_edit_by_city")],
         [InlineKeyboardButton("🏘️ Edit by City & District", callback_data="price_edit_by_city_district")],
+        [InlineKeyboardButton("🔍 Price Comparison by Product", callback_data="price_comparison_view")],
         [InlineKeyboardButton("📋 Price Change History", callback_data="price_change_history")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
@@ -1901,6 +1905,813 @@ async def handle_price_district_apply(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("🏘️ Update Another District Product", callback_data=f"price_district_select|{city_name}|{district_name}")],
         [InlineKeyboardButton("🏙️ Back to City Districts", callback_data=f"price_city_district_select|{city_name}")],
         [InlineKeyboardButton("🏠 Back to Price Editor", callback_data="product_price_editor_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# --- Percentage-Based Bulk Update Handlers ---
+
+async def handle_price_bulk_percentage(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Menu for percentage-based bulk price updates"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get current statistics
+        c.execute("""
+            SELECT 
+                COUNT(*) as total_products,
+                AVG(price) as avg_price,
+                MIN(price) as min_price,
+                MAX(price) as max_price
+            FROM products
+        """)
+        stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error loading percentage menu stats: {e}")
+        stats = None
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = "📊 **Adjust Prices by Percentage**\n\n"
+    msg += "**Bulk price adjustments for all products or specific locations.**\n\n"
+    
+    if stats:
+        msg += f"📈 **Current Overview:**\n"
+        msg += f"• Total Products: {stats['total_products']:,}\n"
+        msg += f"• Average Price: ${stats['avg_price']:.2f}\n"
+        msg += f"• Price Range: ${stats['min_price']:.2f} - ${stats['max_price']:.2f}\n\n"
+    
+    msg += "**Adjustment Options:**\n"
+    msg += "• Increase or decrease all prices by a percentage\n"
+    msg += "• Apply to all locations or specific cities/districts\n"
+    msg += "• Perfect for sales, inflation adjustments, or market changes\n\n"
+    msg += "⚠️ **Warning:** Changes apply immediately and affect live prices!"
+    
+    keyboard = [
+        [InlineKeyboardButton("📈 Increase All Prices", callback_data="price_percentage_increase_all")],
+        [InlineKeyboardButton("📉 Decrease All Prices", callback_data="price_percentage_decrease_all")],
+        [InlineKeyboardButton("🏙️ Adjust City Prices by %", callback_data="price_percentage_by_city")],
+        [InlineKeyboardButton("🏘️ Adjust District Prices by %", callback_data="price_percentage_by_district")],
+        [InlineKeyboardButton("⬅️ Back to Price Editor", callback_data="product_price_editor_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_percentage_increase_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Increase all prices by percentage"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📈 **Increase All Prices by Percentage**\n\n"
+    msg += "Select the percentage increase to apply to ALL products:\n\n"
+    msg += "**Common Use Cases:**\n"
+    msg += "• +5%: Minor inflation adjustment\n"
+    msg += "• +10%: Standard price increase\n"
+    msg += "• +15%: Significant market adjustment\n"
+    msg += "• +20%: Major price restructuring\n\n"
+    msg += "⚠️ **This will affect ALL products in ALL locations!**"
+    
+    keyboard = [
+        [InlineKeyboardButton("📈 +5%", callback_data="price_apply_percentage_all|increase|5")],
+        [InlineKeyboardButton("📈 +10%", callback_data="price_apply_percentage_all|increase|10")],
+        [InlineKeyboardButton("📈 +15%", callback_data="price_apply_percentage_all|increase|15")],
+        [InlineKeyboardButton("📈 +20%", callback_data="price_apply_percentage_all|increase|20")],
+        [InlineKeyboardButton("📈 +25%", callback_data="price_apply_percentage_all|increase|25")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="price_bulk_percentage")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_percentage_decrease_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Decrease all prices by percentage"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    msg = "📉 **Decrease All Prices by Percentage**\n\n"
+    msg += "Select the percentage decrease to apply to ALL products:\n\n"
+    msg += "**Common Use Cases:**\n"
+    msg += "• -5%: Small sale or promotion\n"
+    msg += "• -10%: Standard sale event\n"
+    msg += "• -15%: Major sale\n"
+    msg += "• -20%: Clearance pricing\n\n"
+    msg += "⚠️ **This will affect ALL products in ALL locations!**"
+    
+    keyboard = [
+        [InlineKeyboardButton("📉 -5%", callback_data="price_apply_percentage_all|decrease|5")],
+        [InlineKeyboardButton("📉 -10%", callback_data="price_apply_percentage_all|decrease|10")],
+        [InlineKeyboardButton("📉 -15%", callback_data="price_apply_percentage_all|decrease|15")],
+        [InlineKeyboardButton("📉 -20%", callback_data="price_apply_percentage_all|decrease|20")],
+        [InlineKeyboardButton("📉 -25%", callback_data="price_apply_percentage_all|decrease|25")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="price_bulk_percentage")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_apply_percentage_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply percentage change to all products"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    action = params[0]  # 'increase' or 'decrease'
+    percentage = float(params[1])
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all products before update
+        c.execute("SELECT id, price FROM products")
+        products = c.fetchall()
+        
+        if not products:
+            await query.answer("No products found", show_alert=True)
+            return
+        
+        # Calculate multiplier
+        if action == 'increase':
+            multiplier = 1 + (percentage / 100)
+        else:  # decrease
+            multiplier = 1 - (percentage / 100)
+        
+        # Update all prices
+        updated_count = 0
+        for product in products:
+            old_price = product['price']
+            new_price = round(old_price * multiplier, 2)
+            
+            c.execute("""
+                UPDATE products 
+                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (new_price, product['id']))
+            
+            # Log the change
+            c.execute("""
+                INSERT INTO price_change_log 
+                (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            """, (
+                product['id'],
+                old_price,
+                new_price,
+                query.from_user.id,
+                f"Bulk {action} {percentage}%"
+            ))
+            
+            updated_count += 1
+        
+        conn.commit()
+        
+        action_text = "increased" if action == 'increase' else "decreased"
+        symbol = "📈" if action == 'increase' else "📉"
+        
+        msg = f"✅ **Bulk Price Update Complete!** {symbol}\n\n"
+        msg += f"**Action:** {action_text.title()} by {percentage}%\n"
+        msg += f"**Products Updated:** {updated_count:,}\n"
+        msg += f"**Multiplier:** {multiplier:.4f}\n\n"
+        msg += f"All product prices have been {action_text} successfully across all locations!"
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 View Price Changes", callback_data="price_change_history")],
+            [InlineKeyboardButton("📈 More Adjustments", callback_data="price_bulk_percentage")],
+            [InlineKeyboardButton("🏠 Back to Price Editor", callback_data="product_price_editor_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await query.answer(f"{updated_count} prices {action_text}!", show_alert=False)
+        
+    except Exception as e:
+        logger.error(f"Error applying percentage update: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
+        await query.answer("Update failed", show_alert=True)
+        
+        msg = "❌ **Error updating prices.**\n\nPlease check logs and try again."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="price_bulk_percentage")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_price_percentage_by_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select city for percentage-based price adjustment"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get cities with product counts
+        c.execute("""
+            SELECT 
+                city,
+                COUNT(*) as product_count,
+                AVG(price) as avg_price,
+                MIN(price) as min_price,
+                MAX(price) as max_price
+            FROM products 
+            GROUP BY city
+            ORDER BY city
+        """)
+        cities = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading cities for percentage adjustment: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not cities:
+        msg = "❌ **No Cities Found**\n\nNo cities available for price adjustment."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="price_bulk_percentage")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = "🏙️ **Adjust City Prices by Percentage**\n\n"
+    msg += "Select a city to adjust all its product prices by percentage:\n\n"
+    
+    keyboard = []
+    for city in cities:
+        city_name = city['city']
+        count = city['product_count']
+        avg = city['avg_price']
+        
+        button_text = f"🏙️ {city_name} ({count} items, avg ${avg:.2f})"
+        callback_data = f"price_city_percentage_select|{city_name}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="price_bulk_percentage")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_city_percentage_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show percentage options for selected city"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid city", show_alert=True)
+        return
+    
+    city_name = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get city statistics
+        c.execute("""
+            SELECT 
+                COUNT(*) as product_count,
+                AVG(price) as avg_price,
+                MIN(price) as min_price,
+                MAX(price) as max_price,
+                COUNT(DISTINCT product_type) as product_types,
+                COUNT(DISTINCT district) as districts
+            FROM products 
+            WHERE city = %s
+        """, (city_name,))
+        stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error loading city stats: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = f"🏙️ **Adjust Prices in {city_name}**\n\n"
+    msg += f"**City Statistics:**\n"
+    msg += f"• Products: {stats['product_count']}\n"
+    msg += f"• Districts: {stats['districts']}\n"
+    msg += f"• Product Types: {stats['product_types']}\n"
+    msg += f"• Average Price: ${stats['avg_price']:.2f}\n"
+    msg += f"• Price Range: ${stats['min_price']:.2f} - ${stats['max_price']:.2f}\n\n"
+    msg += "**Select adjustment percentage:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("📈 +10%", callback_data=f"price_city_percentage_apply|{city_name}|increase|10")],
+        [InlineKeyboardButton("📈 +15%", callback_data=f"price_city_percentage_apply|{city_name}|increase|15")],
+        [InlineKeyboardButton("📉 -10%", callback_data=f"price_city_percentage_apply|{city_name}|decrease|10")],
+        [InlineKeyboardButton("📉 -15%", callback_data=f"price_city_percentage_apply|{city_name}|decrease|15")],
+        [InlineKeyboardButton("⬅️ Back to Cities", callback_data="price_percentage_by_city")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_city_percentage_apply(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply percentage change to city products"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 3:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    city_name = params[0]
+    action = params[1]  # 'increase' or 'decrease'
+    percentage = float(params[2])
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all products in this city
+        c.execute("SELECT id, price FROM products WHERE city = %s", (city_name,))
+        products = c.fetchall()
+        
+        if not products:
+            await query.answer("No products found in this city", show_alert=True)
+            return
+        
+        # Calculate multiplier
+        if action == 'increase':
+            multiplier = 1 + (percentage / 100)
+        else:  # decrease
+            multiplier = 1 - (percentage / 100)
+        
+        # Update prices
+        updated_count = 0
+        for product in products:
+            old_price = product['price']
+            new_price = round(old_price * multiplier, 2)
+            
+            c.execute("""
+                UPDATE products 
+                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (new_price, product['id']))
+            
+            # Log the change
+            c.execute("""
+                INSERT INTO price_change_log 
+                (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            """, (
+                product['id'],
+                old_price,
+                new_price,
+                query.from_user.id,
+                f"City {action} {percentage}% - {city_name}"
+            ))
+            
+            updated_count += 1
+        
+        conn.commit()
+        
+        action_text = "increased" if action == 'increase' else "decreased"
+        symbol = "📈" if action == 'increase' else "📉"
+        
+        msg = f"✅ **City Price Update Complete!** {symbol}\n\n"
+        msg += f"**City:** {city_name}\n"
+        msg += f"**Action:** {action_text.title()} by {percentage}%\n"
+        msg += f"**Products Updated:** {updated_count}\n\n"
+        msg += f"All prices in {city_name} have been {action_text} successfully!"
+        
+        keyboard = [
+            [InlineKeyboardButton("🏙️ Update Another City", callback_data="price_percentage_by_city")],
+            [InlineKeyboardButton("🏠 Back to Price Editor", callback_data="product_price_editor_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error applying city percentage update: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
+        await query.answer("Update failed", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+async def handle_price_percentage_by_district(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select city first, then district for percentage-based adjustment"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get cities with district counts
+        c.execute("""
+            SELECT 
+                city,
+                COUNT(DISTINCT district) as district_count,
+                COUNT(*) as product_count
+            FROM products 
+            GROUP BY city
+            ORDER BY city
+        """)
+        cities = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading cities for district adjustment: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not cities:
+        msg = "❌ **No Cities Found**"
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="price_bulk_percentage")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = "🏘️ **Adjust District Prices by Percentage**\n\n"
+    msg += "First, select a city to see its districts:\n\n"
+    
+    keyboard = []
+    for city in cities:
+        city_name = city['city']
+        districts = city['district_count']
+        products = city['product_count']
+        
+        button_text = f"🏙️ {city_name} ({districts} districts, {products} items)"
+        callback_data = f"price_district_percentage_city|{city_name}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="price_bulk_percentage")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_district_percentage_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show districts in selected city for percentage adjustment"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid city", show_alert=True)
+        return
+    
+    city_name = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get districts in this city
+        c.execute("""
+            SELECT 
+                district,
+                COUNT(*) as product_count,
+                AVG(price) as avg_price
+            FROM products 
+            WHERE city = %s
+            GROUP BY district
+            ORDER BY district
+        """, (city_name,))
+        districts = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading districts: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not districts:
+        msg = f"❌ **No Districts Found in {city_name}**"
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="price_percentage_by_district")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = f"🏘️ **Districts in {city_name}**\n\n"
+    msg += "Select a district to adjust its prices:\n\n"
+    
+    keyboard = []
+    for district in districts:
+        district_name = district['district']
+        count = district['product_count']
+        avg = district['avg_price']
+        
+        button_text = f"🏘️ {district_name} ({count} items, avg ${avg:.2f})"
+        callback_data = f"price_district_percentage_select|{city_name}|{district_name}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to Cities", callback_data="price_percentage_by_district")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_district_percentage_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show percentage options for selected district"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get district statistics
+        c.execute("""
+            SELECT 
+                COUNT(*) as product_count,
+                AVG(price) as avg_price,
+                MIN(price) as min_price,
+                MAX(price) as max_price,
+                COUNT(DISTINCT product_type) as product_types
+            FROM products 
+            WHERE city = %s AND district = %s
+        """, (city_name, district_name))
+        stats = c.fetchone()
+        
+    except Exception as e:
+        logger.error(f"Error loading district stats: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = f"🏘️ **Adjust Prices in {city_name} → {district_name}**\n\n"
+    msg += f"**District Statistics:**\n"
+    msg += f"• Products: {stats['product_count']}\n"
+    msg += f"• Product Types: {stats['product_types']}\n"
+    msg += f"• Average Price: ${stats['avg_price']:.2f}\n"
+    msg += f"• Price Range: ${stats['min_price']:.2f} - ${stats['max_price']:.2f}\n\n"
+    msg += "**Select adjustment percentage:**"
+    
+    keyboard = [
+        [InlineKeyboardButton("📈 +10%", callback_data=f"price_district_percentage_apply|{city_name}|{district_name}|increase|10")],
+        [InlineKeyboardButton("📈 +15%", callback_data=f"price_district_percentage_apply|{city_name}|{district_name}|increase|15")],
+        [InlineKeyboardButton("📉 -10%", callback_data=f"price_district_percentage_apply|{city_name}|{district_name}|decrease|10")],
+        [InlineKeyboardButton("📉 -15%", callback_data=f"price_district_percentage_apply|{city_name}|{district_name}|decrease|15")],
+        [InlineKeyboardButton("⬅️ Back to Districts", callback_data=f"price_district_percentage_city|{city_name}")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_district_percentage_apply(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Apply percentage change to district products"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 4:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1]
+    action = params[2]  # 'increase' or 'decrease'
+    percentage = float(params[3])
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all products in this district
+        c.execute("""
+            SELECT id, price 
+            FROM products 
+            WHERE city = %s AND district = %s
+        """, (city_name, district_name))
+        products = c.fetchall()
+        
+        if not products:
+            await query.answer("No products found in this district", show_alert=True)
+            return
+        
+        # Calculate multiplier
+        if action == 'increase':
+            multiplier = 1 + (percentage / 100)
+        else:  # decrease
+            multiplier = 1 - (percentage / 100)
+        
+        # Update prices
+        updated_count = 0
+        for product in products:
+            old_price = product['price']
+            new_price = round(old_price * multiplier, 2)
+            
+            c.execute("""
+                UPDATE products 
+                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (new_price, product['id']))
+            
+            # Log the change
+            c.execute("""
+                INSERT INTO price_change_log 
+                (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            """, (
+                product['id'],
+                old_price,
+                new_price,
+                query.from_user.id,
+                f"District {action} {percentage}% - {city_name} → {district_name}"
+            ))
+            
+            updated_count += 1
+        
+        conn.commit()
+        
+        action_text = "increased" if action == 'increase' else "decreased"
+        symbol = "📈" if action == 'increase' else "📉"
+        
+        msg = f"✅ **District Price Update Complete!** {symbol}\n\n"
+        msg += f"**Location:** {city_name} → {district_name}\n"
+        msg += f"**Action:** {action_text.title()} by {percentage}%\n"
+        msg += f"**Products Updated:** {updated_count}\n\n"
+        msg += f"All prices in {district_name} have been {action_text} successfully!"
+        
+        keyboard = [
+            [InlineKeyboardButton("🏘️ Update Another District", callback_data=f"price_district_percentage_city|{city_name}")],
+            [InlineKeyboardButton("🏠 Back to Price Editor", callback_data="product_price_editor_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error applying district percentage update: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
+        await query.answer("Update failed", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
+
+# --- Price Comparison and Location Tools ---
+
+async def handle_price_comparison_view(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show price comparison for same product across different locations"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get product types with price variations
+        c.execute("""
+            SELECT 
+                product_type,
+                size,
+                COUNT(DISTINCT city) as city_count,
+                COUNT(DISTINCT district) as district_count,
+                COUNT(DISTINCT price) as price_variations,
+                MIN(price) as min_price,
+                MAX(price) as max_price,
+                AVG(price) as avg_price
+            FROM products 
+            GROUP BY product_type, size
+            HAVING COUNT(DISTINCT price) > 1
+            ORDER BY price_variations DESC, product_type, size
+        """)
+        products_with_variations = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading price comparison data: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not products_with_variations:
+        msg = "✅ **No Price Variations Found**\n\n"
+        msg += "All products have consistent pricing across locations.\n\n"
+        msg += "This means each product type and size has the same price everywhere."
+        
+        keyboard = [[InlineKeyboardButton("⬅️ Back to Price Editor", callback_data="product_price_editor_menu")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = "🔍 **Price Comparison Across Locations**\n\n"
+    msg += f"**Found {len(products_with_variations)} products with price variations:**\n\n"
+    msg += "Select a product to see detailed price breakdown:\n\n"
+    
+    keyboard = []
+    for product in products_with_variations[:15]:  # Limit to 15 products
+        ptype = product['product_type']
+        size = product['size']
+        variations = product['price_variations']
+        min_p = product['min_price']
+        max_p = product['max_price']
+        
+        button_text = f"{ptype} {size}: ${min_p:.2f}-${max_p:.2f} ({variations} prices)"
+        if len(button_text) > 60:
+            button_text = f"{ptype} {size} ({variations} prices)"
+        
+        callback_data = f"price_comparison_details|{ptype}|{size}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    if len(products_with_variations) > 15:
+        keyboard.append([InlineKeyboardButton(f"📄 ...and {len(products_with_variations) - 15} more products", callback_data="price_comparison_view")])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back to Price Editor", callback_data="product_price_editor_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_comparison_details(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show detailed price breakdown for a specific product"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    product_type = params[0]
+    size = params[1]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all locations and prices for this product
+        c.execute("""
+            SELECT 
+                city,
+                district,
+                price,
+                available,
+                COUNT(*) as duplicate_count
+            FROM products 
+            WHERE product_type = %s AND size = %s
+            GROUP BY city, district, price, available
+            ORDER BY price DESC, city, district
+        """, (product_type, size))
+        locations = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading comparison details: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    msg = f"🔍 **Price Details: {product_type} {size}**\n\n"
+    msg += f"**Price breakdown across all locations:**\n\n"
+    
+    # Group by price to show variations clearly
+    price_groups = {}
+    for loc in locations:
+        price = loc['price']
+        if price not in price_groups:
+            price_groups[price] = []
+        price_groups[price].append(loc)
+    
+    for price in sorted(price_groups.keys(), reverse=True):
+        locs = price_groups[price]
+        msg += f"💰 **${price:.2f}** ({len(locs)} locations):\n"
+        for loc in locs[:3]:  # Show first 3 locations per price
+            msg += f"  • {loc['city']} → {loc['district']} ({loc['available']} stock)\n"
+        if len(locs) > 3:
+            msg += f"  • ...and {len(locs) - 3} more locations\n"
+        msg += "\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("🔍 View All Products", callback_data="price_comparison_view")],
+        [InlineKeyboardButton("⬅️ Back to Price Editor", callback_data="product_price_editor_menu")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')

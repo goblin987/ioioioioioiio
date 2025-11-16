@@ -281,7 +281,14 @@ try:
         handle_price_bulk_all_locations, handle_price_bulk_select, handle_price_edit_by_city_district,
         handle_price_city_select, handle_price_city_district_select, handle_price_district_select,
         handle_price_city_product_select, handle_price_district_product_select,
-        handle_price_city_apply, handle_price_district_apply
+        handle_price_city_apply, handle_price_district_apply,
+        # Percentage-based bulk update handlers
+        handle_price_bulk_percentage, handle_price_percentage_increase_all, handle_price_percentage_decrease_all,
+        handle_price_apply_percentage_all, handle_price_percentage_by_city, handle_price_city_percentage_select,
+        handle_price_city_percentage_apply, handle_price_percentage_by_district, handle_price_district_percentage_city,
+        handle_price_district_percentage_select, handle_price_district_percentage_apply,
+        # Price comparison and location tools
+        handle_price_comparison_view, handle_price_comparison_details
     )
 except ImportError:
     import logging
@@ -1204,6 +1211,21 @@ def callback_query_router(func):
                 "price_district_product_select": handle_price_district_product_select,
                 "price_city_apply": handle_price_city_apply,
                 "price_district_apply": handle_price_district_apply,
+                # Percentage-based bulk update handlers
+                "price_bulk_percentage": handle_price_bulk_percentage,
+                "price_percentage_increase_all": handle_price_percentage_increase_all,
+                "price_percentage_decrease_all": handle_price_percentage_decrease_all,
+                "price_apply_percentage_all": handle_price_apply_percentage_all,
+                "price_percentage_by_city": handle_price_percentage_by_city,
+                "price_city_percentage_select": handle_price_city_percentage_select,
+                "price_city_percentage_apply": handle_price_city_percentage_apply,
+                "price_percentage_by_district": handle_price_percentage_by_district,
+                "price_district_percentage_city": handle_price_district_percentage_city,
+                "price_district_percentage_select": handle_price_district_percentage_select,
+                "price_district_percentage_apply": handle_price_district_percentage_apply,
+                # Price comparison and location tools
+                "price_comparison_view": handle_price_comparison_view,
+                "price_comparison_details": handle_price_comparison_details,
                 # Marketing and UI Theme handlers
                 "marketing_promotions_menu": handle_marketing_promotions_menu,
                 "ui_theme_designer": handle_ui_theme_designer,
