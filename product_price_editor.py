@@ -222,17 +222,12 @@ async def handle_product_price_editor_menu(update: Update, context: ContextTypes
         msg += f"• Cities: {stats['cities']} | Categories: {stats['categories']}\n\n"
     
     msg += f"📈 **Recent Changes:** {recent_changes} price updates in last 7 days\n\n"
-    msg += "**Choose your price editing method:**\n\n"
-    msg += "💡 **Note:** Each location can have different prices for the same product.\n"
-    msg += "Use comparison tools to identify pricing inconsistencies."
+    msg += "**Choose location to edit prices:**"
     
     keyboard = [
-        [InlineKeyboardButton("🌐 Bulk Price Update (All Locations)", callback_data="price_bulk_all_locations")],
-        [InlineKeyboardButton("📊 Adjust All Prices by %", callback_data="price_bulk_percentage")],
-        [InlineKeyboardButton("🏙️ Edit by City", callback_data="price_edit_by_city")],
-        [InlineKeyboardButton("🏘️ Edit by City & District", callback_data="price_edit_by_city_district")],
-        [InlineKeyboardButton("🔍 Price Comparison by Product", callback_data="price_comparison_view")],
-        [InlineKeyboardButton("📋 Price Change History", callback_data="price_change_history")],
+        [InlineKeyboardButton("🌐 All Cities", callback_data="price_simple_all_cities")],
+        [InlineKeyboardButton("🏙️ One City", callback_data="price_simple_select_city")],
+        [InlineKeyboardButton("🏘️ One District", callback_data="price_simple_select_district")],
         [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
     ]
     
@@ -2715,5 +2710,681 @@ async def handle_price_comparison_details(update: Update, context: ContextTypes.
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+# --- SIMPLIFIED PRICE EDITOR ---
+
+async def handle_price_simple_all_cities(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Simple: Select product to update price in all cities"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all unique product types and sizes
+        c.execute("""
+            SELECT 
+                product_type,
+                size,
+                COUNT(*) as total_products,
+                AVG(price) as avg_price
+            FROM products 
+            GROUP BY product_type, size
+            ORDER BY product_type, size
+        """)
+        products = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading products for all cities: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not products:
+        msg = "❌ No products found."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = "🌐 **Edit Price - All Cities**\n\n"
+    msg += "Select product to update:\n\n"
+    
+    keyboard = []
+    for product in products:
+        ptype = product['product_type']
+        size = product['size']
+        count = product['total_products']
+        avg = product['avg_price']
+        
+        button_text = f"{ptype} {size} ({count} items, avg ${avg:.2f})"
+        if len(button_text) > 60:
+            button_text = f"{ptype} {size} ({count} items)"
+        
+        callback_data = f"price_simple_all_type|{ptype}|{size}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_all_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Ask for new price for all cities"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    product_type = params[0]
+    size = params[1]
+    
+    # Store selection in context
+    context.user_data['price_edit'] = {
+        'scope': 'all_cities',
+        'product_type': product_type,
+        'size': size
+    }
+    context.user_data['state'] = 'awaiting_price_simple'
+    
+    msg = f"🌐 **All Cities - {product_type} {size}**\n\n"
+    msg += f"Type the new price for this product in ALL cities:\n\n"
+    msg += f"Example: 25.99"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="product_price_editor_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_select_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Simple: Select city"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get cities
+        c.execute("""
+            SELECT 
+                city,
+                COUNT(*) as product_count
+            FROM products 
+            GROUP BY city
+            ORDER BY city
+        """)
+        cities = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading cities: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not cities:
+        msg = "❌ No cities found."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = "🏙️ **Edit Price - Select City**\n\n"
+    msg += "Choose a city:\n\n"
+    
+    keyboard = []
+    for city in cities:
+        city_name = city['city']
+        count = city['product_count']
+        
+        button_text = f"🏙️ {city_name} ({count} products)"
+        callback_data = f"price_simple_city_products|{city_name}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_city_products(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show products in selected city"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid city", show_alert=True)
+        return
+    
+    city_name = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get products in this city
+        c.execute("""
+            SELECT 
+                product_type,
+                size,
+                COUNT(*) as total_products,
+                AVG(price) as avg_price
+            FROM products 
+            WHERE city = %s
+            GROUP BY product_type, size
+            ORDER BY product_type, size
+        """, (city_name,))
+        products = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading city products: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not products:
+        msg = f"❌ No products in {city_name}."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="price_simple_select_city")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = f"🏙️ **{city_name} - Select Product**\n\n"
+    msg += "Choose product to update:\n\n"
+    
+    keyboard = []
+    for product in products:
+        ptype = product['product_type']
+        size = product['size']
+        count = product['total_products']
+        avg = product['avg_price']
+        
+        button_text = f"{ptype} {size} ({count} items, avg ${avg:.2f})"
+        if len(button_text) > 60:
+            button_text = f"{ptype} {size} ({count} items)"
+        
+        callback_data = f"price_simple_city_type|{city_name}|{ptype}|{size}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="price_simple_select_city")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_city_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Ask for new price for city product"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 3:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    city_name = params[0]
+    product_type = params[1]
+    size = params[2]
+    
+    # Store selection in context
+    context.user_data['price_edit'] = {
+        'scope': 'one_city',
+        'city': city_name,
+        'product_type': product_type,
+        'size': size
+    }
+    context.user_data['state'] = 'awaiting_price_simple'
+    
+    msg = f"🏙️ **{city_name} - {product_type} {size}**\n\n"
+    msg += f"Type the new price for this product in {city_name}:\n\n"
+    msg += f"Example: 25.99"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="product_price_editor_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_select_district(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Simple: Select city first"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get cities with districts
+        c.execute("""
+            SELECT 
+                city,
+                COUNT(DISTINCT district) as district_count,
+                COUNT(*) as product_count
+            FROM products 
+            GROUP BY city
+            ORDER BY city
+        """)
+        cities = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading cities: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not cities:
+        msg = "❌ No cities found."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = "🏘️ **Edit Price - Select District**\n\n"
+    msg += "First, choose a city:\n\n"
+    
+    keyboard = []
+    for city in cities:
+        city_name = city['city']
+        districts = city['district_count']
+        
+        button_text = f"🏙️ {city_name} ({districts} districts)"
+        callback_data = f"price_simple_district_city|{city_name}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_district_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show districts in selected city"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params:
+        await query.answer("Invalid city", show_alert=True)
+        return
+    
+    city_name = params[0]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get districts in this city
+        c.execute("""
+            SELECT 
+                district,
+                COUNT(*) as product_count
+            FROM products 
+            WHERE city = %s
+            GROUP BY district
+            ORDER BY district
+        """, (city_name,))
+        districts = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading districts: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not districts:
+        msg = f"❌ No districts in {city_name}."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="price_simple_select_district")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = f"🏘️ **{city_name} - Select District**\n\n"
+    msg += "Choose a district:\n\n"
+    
+    keyboard = []
+    for district in districts:
+        district_name = district['district']
+        count = district['product_count']
+        
+        button_text = f"🏘️ {district_name} ({count} products)"
+        callback_data = f"price_simple_district_products|{city_name}|{district_name}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="price_simple_select_district")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_district_products(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show products in selected district"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 2:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1]
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get products in this district
+        c.execute("""
+            SELECT 
+                product_type,
+                size,
+                COUNT(*) as total_products,
+                AVG(price) as avg_price
+            FROM products 
+            WHERE city = %s AND district = %s
+            GROUP BY product_type, size
+            ORDER BY product_type, size
+        """, (city_name, district_name))
+        products = c.fetchall()
+        
+    except Exception as e:
+        logger.error(f"Error loading district products: {e}")
+        await query.answer("Error loading data", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not products:
+        msg = f"❌ No products in {city_name} → {district_name}."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data=f"price_simple_district_city|{city_name}")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        return
+    
+    msg = f"🏘️ **{city_name} → {district_name}**\n\n"
+    msg += "Select product to update:\n\n"
+    
+    keyboard = []
+    for product in products:
+        ptype = product['product_type']
+        size = product['size']
+        count = product['total_products']
+        avg = product['avg_price']
+        
+        button_text = f"{ptype} {size} ({count} items, avg ${avg:.2f})"
+        if len(button_text) > 60:
+            button_text = f"{ptype} {size} ({count} items)"
+        
+        callback_data = f"price_simple_district_type|{city_name}|{district_name}|{ptype}|{size}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data=f"price_simple_district_city|{city_name}")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_district_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Ask for new price for district product"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    if not params or len(params) < 4:
+        await query.answer("Invalid parameters", show_alert=True)
+        return
+    
+    city_name = params[0]
+    district_name = params[1]
+    product_type = params[2]
+    size = params[3]
+    
+    # Store selection in context
+    context.user_data['price_edit'] = {
+        'scope': 'one_district',
+        'city': city_name,
+        'district': district_name,
+        'product_type': product_type,
+        'size': size
+    }
+    context.user_data['state'] = 'awaiting_price_simple'
+    
+    msg = f"🏘️ **{city_name} → {district_name}**\n"
+    msg += f"**{product_type} {size}**\n\n"
+    msg += f"Type the new price for this product in {district_name}:\n\n"
+    msg += f"Example: 25.99"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="product_price_editor_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle price input from user"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    if context.user_data.get("state") != "awaiting_price_simple":
+        return
+    
+    if not update.message or not update.message.text:
+        await send_message_with_retry(context.bot, chat_id, "❌ Please enter a price.", parse_mode=None)
+        return
+    
+    price_input = update.message.text.strip().replace('$', '').replace(',', '')
+    
+    try:
+        new_price = float(price_input)
+        if new_price <= 0:
+            await send_message_with_retry(context.bot, chat_id, "❌ Price must be greater than 0.", parse_mode=None)
+            return
+        
+        if new_price > 999999:
+            await send_message_with_retry(context.bot, chat_id, "❌ Price too high. Maximum is $999,999.", parse_mode=None)
+            return
+        
+    except ValueError:
+        await send_message_with_retry(context.bot, chat_id, "❌ Invalid price. Enter a number like: 25.99", parse_mode=None)
+        return
+    
+    price_edit = context.user_data.get('price_edit', {})
+    if not price_edit:
+        await send_message_with_retry(context.bot, chat_id, "❌ Session expired. Please start again.", parse_mode=None)
+        return
+    
+    # Store the price and show confirmation
+    context.user_data['price_edit']['new_price'] = new_price
+    context.user_data['state'] = 'confirm_price_simple'
+    
+    scope = price_edit['scope']
+    product_type = price_edit['product_type']
+    size = price_edit['size']
+    
+    msg = "💰 **Confirm Price Change**\n\n"
+    
+    if scope == 'all_cities':
+        msg += f"🌐 **All Cities**\n"
+        msg += f"Product: {product_type} {size}\n"
+        msg += f"New Price: **${new_price:.2f}**\n\n"
+        msg += f"This will update ALL locations."
+    elif scope == 'one_city':
+        city = price_edit['city']
+        msg += f"🏙️ **City: {city}**\n"
+        msg += f"Product: {product_type} {size}\n"
+        msg += f"New Price: **${new_price:.2f}**\n\n"
+        msg += f"This will update all districts in {city}."
+    elif scope == 'one_district':
+        city = price_edit['city']
+        district = price_edit['district']
+        msg += f"🏘️ **Location: {city} → {district}**\n"
+        msg += f"Product: {product_type} {size}\n"
+        msg += f"New Price: **${new_price:.2f}**\n\n"
+        msg += f"This will update {district} only."
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Save", callback_data="price_simple_save")],
+        [InlineKeyboardButton("✏️ Edit Price Again", callback_data="price_simple_edit_again")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="product_price_editor_menu")]
+    ]
+    
+    await send_message_with_retry(context.bot, chat_id, msg, 
+        reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_edit_again(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Let user re-enter price"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    price_edit = context.user_data.get('price_edit', {})
+    if not price_edit:
+        await query.answer("Session expired", show_alert=True)
+        return
+    
+    scope = price_edit['scope']
+    product_type = price_edit['product_type']
+    size = price_edit['size']
+    
+    context.user_data['state'] = 'awaiting_price_simple'
+    
+    msg = f"✏️ **Enter New Price**\n\n"
+    
+    if scope == 'all_cities':
+        msg += f"🌐 All Cities - {product_type} {size}\n\n"
+    elif scope == 'one_city':
+        city = price_edit['city']
+        msg += f"🏙️ {city} - {product_type} {size}\n\n"
+    elif scope == 'one_district':
+        city = price_edit['city']
+        district = price_edit['district']
+        msg += f"🏘️ {city} → {district}\n{product_type} {size}\n\n"
+    
+    msg += "Type the new price:\n\n"
+    msg += "Example: 25.99"
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="product_price_editor_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_price_simple_save(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Save the price change"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    price_edit = context.user_data.get('price_edit', {})
+    if not price_edit or 'new_price' not in price_edit:
+        await query.answer("Session expired", show_alert=True)
+        return
+    
+    scope = price_edit['scope']
+    product_type = price_edit['product_type']
+    size = price_edit['size']
+    new_price = price_edit['new_price']
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Build query based on scope
+        if scope == 'all_cities':
+            c.execute("""
+                SELECT id, price 
+                FROM products 
+                WHERE product_type = %s AND size = %s
+            """, (product_type, size))
+        elif scope == 'one_city':
+            city = price_edit['city']
+            c.execute("""
+                SELECT id, price 
+                FROM products 
+                WHERE city = %s AND product_type = %s AND size = %s
+            """, (city, product_type, size))
+        elif scope == 'one_district':
+            city = price_edit['city']
+            district = price_edit['district']
+            c.execute("""
+                SELECT id, price 
+                FROM products 
+                WHERE city = %s AND district = %s AND product_type = %s AND size = %s
+            """, (city, district, product_type, size))
+        
+        products = c.fetchall()
+        
+        if not products:
+            await query.answer("No products found", show_alert=True)
+            return
+        
+        # Update all matching products
+        updated_count = 0
+        for product in products:
+            old_price = product['price']
+            
+            c.execute("""
+                UPDATE products 
+                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (new_price, product['id']))
+            
+            # Log the change
+            c.execute("""
+                INSERT INTO price_change_log 
+                (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            """, (
+                product['id'],
+                old_price,
+                new_price,
+                query.from_user.id,
+                f"Simple editor: {scope}"
+            ))
+            
+            updated_count += 1
+        
+        conn.commit()
+        
+        # Clear state
+        context.user_data.pop('price_edit', None)
+        context.user_data.pop('state', None)
+        
+        msg = f"✅ **Price Updated Successfully!**\n\n"
+        msg += f"**Product:** {product_type} {size}\n"
+        msg += f"**New Price:** ${new_price:.2f}\n"
+        msg += f"**Updated:** {updated_count} items\n\n"
+        
+        if scope == 'all_cities':
+            msg += f"Updated in ALL cities."
+        elif scope == 'one_city':
+            msg += f"Updated in {price_edit['city']}."
+        elif scope == 'one_district':
+            msg += f"Updated in {price_edit['city']} → {price_edit['district']}."
+        
+        keyboard = [
+            [InlineKeyboardButton("💰 Edit More Prices", callback_data="product_price_editor_menu")],
+            [InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_menu")]
+        ]
+        
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Error saving price: {e}", exc_info=True)
+        if conn:
+            conn.rollback()
+        await query.answer("Update failed", show_alert=True)
+        
+        msg = "❌ **Error updating prices.**\n\nPlease try again."
+        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="product_price_editor_menu")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    finally:
+        if conn:
+            conn.close()
 
 # --- END OF FILE product_price_editor.py ---

@@ -288,7 +288,12 @@ try:
         handle_price_city_percentage_apply, handle_price_percentage_by_district, handle_price_district_percentage_city,
         handle_price_district_percentage_select, handle_price_district_percentage_apply,
         # Price comparison and location tools
-        handle_price_comparison_view, handle_price_comparison_details
+        handle_price_comparison_view, handle_price_comparison_details,
+        # Simplified price editor handlers
+        handle_price_simple_all_cities, handle_price_simple_all_type, handle_price_simple_select_city,
+        handle_price_simple_city_products, handle_price_simple_city_type, handle_price_simple_select_district,
+        handle_price_simple_district_city, handle_price_simple_district_products, handle_price_simple_district_type,
+        handle_price_simple_message, handle_price_simple_edit_again, handle_price_simple_save
     )
 except ImportError:
     import logging
@@ -1226,6 +1231,18 @@ def callback_query_router(func):
                 # Price comparison and location tools
                 "price_comparison_view": handle_price_comparison_view,
                 "price_comparison_details": handle_price_comparison_details,
+                # Simplified price editor handlers
+                "price_simple_all_cities": handle_price_simple_all_cities,
+                "price_simple_all_type": handle_price_simple_all_type,
+                "price_simple_select_city": handle_price_simple_select_city,
+                "price_simple_city_products": handle_price_simple_city_products,
+                "price_simple_city_type": handle_price_simple_city_type,
+                "price_simple_select_district": handle_price_simple_select_district,
+                "price_simple_district_city": handle_price_simple_district_city,
+                "price_simple_district_products": handle_price_simple_district_products,
+                "price_simple_district_type": handle_price_simple_district_type,
+                "price_simple_edit_again": handle_price_simple_edit_again,
+                "price_simple_save": handle_price_simple_save,
                 # Marketing and UI Theme handlers
                 "marketing_promotions_menu": handle_marketing_promotions_menu,
                 "ui_theme_designer": handle_ui_theme_designer,
@@ -1641,6 +1658,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_welcome_text': handle_welcome_text_message,
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
+        'awaiting_price_simple': handle_price_simple_message,
         
         # Enhanced auto ads message handlers (testforwarder integration)
         'awaiting_session_file': handle_testforwarder_message,
