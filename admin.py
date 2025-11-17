@@ -553,12 +553,11 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         res_sales = c.fetchone(); total_sales_value = Decimal(str(res_sales['total_sales'])) if res_sales else Decimal('0.0')
         
         # Query today's sales
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         c.execute("""
             SELECT COALESCE(SUM(price_paid), 0.0) as today_sales 
             FROM purchases 
-            WHERE purchase_date >= %s
-        """, (today_start,))
+            WHERE DATE(purchase_date::timestamp) = CURRENT_DATE
+        """)
         res_today = c.fetchone()
         today_sales = Decimal(str(res_today['today_sales'])) if res_today else Decimal('0.0')
         
