@@ -61,29 +61,36 @@ async def handle_view_stock(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             keyboard = [[InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data=back_callback)]]
         else:
             msg = "📦 Current Bot Stock\n\n"
-            # Group products by location and type
+            # Group products by location and type - NEW STRUCTURE for summary display
+            # Structure: {city: {district: {product_type: {size: {'total': X, 'avail': Y, 'res': Z, 'price': P}}}}}
+            summary_data = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'total': 0, 'avail': 0, 'res': 0, 'price': 0}))))
+            
             for p in products:
-                # Access by column name
-                stock_data[p['city']][p['district']][p['product_type']].append(
-                    (p['size'], p['price'], p['available'], p['reserved'])
-                )
+                city = p['city']
+                district = p['district']
+                p_type = p['product_type']
+                size = p['size']
+                
+                # Aggregate totals for this product type + size combination
+                summary_data[city][district][p_type][size]['total'] += 1
+                summary_data[city][district][p_type][size]['avail'] += p['available']
+                summary_data[city][district][p_type][size]['res'] += p['reserved']
+                # Take the first price we see for this combo (assuming same product = same price)
+                if summary_data[city][district][p_type][size]['price'] == 0:
+                    summary_data[city][district][p_type][size]['price'] = p['price']
 
-            # Format the message (Plain Text)
-            for city, districts in sorted(stock_data.items()):
+            # Format the message (Plain Text) - ONE LINE PER PRODUCT TYPE+SIZE
+            for city, districts in sorted(summary_data.items()):
                 msg += f"🏙️ {city}\n"
                 for district, types in sorted(districts.items()):
                     msg += f"  🏘️ {district}\n"
-                    for p_type, items in sorted(types.items()):
-                        msg += f"    💎 {p_type}\n"
-                        items.sort(key=lambda x: x[1]) # Sort by price (index 1)
-                        for size, price, avail, res in items:
-                            price_str = format_currency(price)
-                            # Ensure display reflects reality (Avail cannot be less than Reserved after reservation)
-                            # Although the reservation logic should prevent Avail < Reserved, this adds safety.
-                            # It's generally better to rely on the actual DB values.
-                            msg += f"      - {size} ({price_str} €) | Av: {avail} / Res: {res}\n"
-                    msg += "\n" # Add a newline between product types
-                msg += "\n" # Add a newline between districts
+                    for p_type, sizes in sorted(types.items()):
+                        for size, stats in sorted(sizes.items()):
+                            price_str = format_currency(stats['price'])
+                            # Single line: product type - size (price) | Av: X / Res: Y
+                            msg += f"    💎 {p_type} - {size} ({price_str} €) | Av: {stats['avail']} / Res: {stats['res']}\n"
+                    msg += "\n" # Add newline after district
+                msg += "\n" # Add newline after city
 
             if len(msg) > 4000:
                 msg = msg[:4000] + "\n\n✂️ ... Message truncated due to length limit."

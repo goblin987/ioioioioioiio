@@ -965,6 +965,10 @@ def callback_query_router(func):
                 "admin_restart_services": admin.handle_admin_restart_services,
                 "admin_view_logs": admin.handle_admin_view_logs,
                 
+                # Product Management Submenu handlers
+                "adm_add_products_choice": admin.handle_adm_add_products_choice,
+                "adm_product_types_menu": admin.handle_adm_product_types_menu,
+                
                 # Product Removal System handlers
                 "remove_products_menu": admin.handle_remove_products_menu,
                 "remove_by_location": admin.handle_remove_by_location,

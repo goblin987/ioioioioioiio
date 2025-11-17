@@ -603,7 +603,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     keyboard = [
         # === FREQUENT ACTIONS (Full-width for easy mobile tapping) ===
         [InlineKeyboardButton("⚡ QUICK ACTIONS", callback_data="noop")],
-        [InlineKeyboardButton("➕ Add Products", callback_data="adm_city")],
+        [InlineKeyboardButton("➕ Add Products", callback_data="adm_add_products_choice")],
         [InlineKeyboardButton("📦 Check Stock", callback_data="view_stock")],
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],
         
@@ -696,14 +696,22 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
     
     msg = f"{breadcrumb}\n\n🛍️ **Product Management**\n\nManage your products and inventory:"
     keyboard = [
-        [InlineKeyboardButton("➕ Add Products", callback_data="adm_city")],
-        [InlineKeyboardButton("📦 Bulk Add Products", callback_data="adm_bulk_city")],
+        # QUICK VIEW section (header + button)
+        [InlineKeyboardButton("📊 QUICK VIEW", callback_data="noop")],
+        [InlineKeyboardButton("📦 View Stock & Inventory", callback_data="view_stock")],
+        
+        # ADD/REMOVE section (header + buttons)
+        [InlineKeyboardButton("➕ ADD / REMOVE", callback_data="noop")],
+        [InlineKeyboardButton("➕ Add Products", callback_data="adm_add_products_choice")],
         [InlineKeyboardButton("🗑️ Remove Products", callback_data="remove_products_menu")],
-        [InlineKeyboardButton("💰 Edit Product Prices", callback_data="product_price_editor_menu")],
-        [InlineKeyboardButton("🗑️ Manage Products", callback_data="adm_manage_products")],
-        [InlineKeyboardButton("📦 View Bot Stock", callback_data="view_stock")],
-        [InlineKeyboardButton("🧩 Manage Product Types", callback_data="adm_manage_types")],
-        [InlineKeyboardButton("🔄 Reassign Product Type", callback_data="adm_reassign_type_start")],
+        
+        # MODIFY section (header + buttons)
+        [InlineKeyboardButton("✏️ MODIFY", callback_data="noop")],
+        [InlineKeyboardButton("💰 Edit Prices", callback_data="product_price_editor_menu")],
+        [InlineKeyboardButton("📝 Manage Products", callback_data="adm_manage_products")],
+        [InlineKeyboardButton("🏷️ Product Types", callback_data="adm_product_types_menu")],
+        
+        # Navigation
         [
             get_back_button(context),
             InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
@@ -7106,6 +7114,54 @@ async def handle_adm_recent_purchases(update: Update, context: ContextTypes.DEFA
     except Exception as e:
         logger.error(f"Error in recent purchases display: {e}", exc_info=True)
         await query.edit_message_text("❌ Error displaying purchases.", parse_mode=None)
+
+# === PRODUCT MANAGEMENT SUBMENUS ===
+
+async def handle_adm_add_products_choice(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows choice between single or bulk product addition"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Add Products", "adm_add_products_choice")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n➕ **Add Products**\n\nChoose how you want to add products:\n\n"
+    msg += "• **Single Product** - Add one product at a time\n"
+    msg += "• **Bulk Products** - Add multiple products from text/file"
+    
+    keyboard = [
+        [InlineKeyboardButton("📝 Single Product", callback_data="adm_city")],
+        [InlineKeyboardButton("📦 Bulk Products", callback_data="adm_bulk_city")],
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_adm_product_types_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows product types submenu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Product Types", "adm_product_types_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🏷️ **Product Types Management**\n\nManage product categories and types:"
+    
+    keyboard = [
+        [InlineKeyboardButton("🧩 Manage Product Types", callback_data="adm_manage_types")],
+        [InlineKeyboardButton("🔄 Reassign Product Type", callback_data="adm_reassign_type_start")],
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 # === PRODUCT REMOVAL SYSTEM ===
 
