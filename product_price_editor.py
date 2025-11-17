@@ -3352,14 +3352,16 @@ async def handle_price_simple_save(update: Update, context: ContextTypes.DEFAULT
         for product in products:
             old_price = product['price']
             
+            # Update the product price
             c.execute("""
                 UPDATE products 
                 SET price = %s
                 WHERE id = %s
             """, (new_price, product['id']))
             
-            # Try to log the change (non-blocking)
+            # Try to log the change using savepoint (non-blocking)
             try:
+                c.execute("SAVEPOINT price_log")
                 c.execute("""
                     INSERT INTO price_change_log 
                     (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
@@ -3371,8 +3373,10 @@ async def handle_price_simple_save(update: Update, context: ContextTypes.DEFAULT
                     query.from_user.id,
                     f"Simple editor: {scope}"
                 ))
+                c.execute("RELEASE SAVEPOINT price_log")
             except Exception as log_error:
-                # Logging failed, but don't stop the price update
+                # Rollback to savepoint and continue
+                c.execute("ROLLBACK TO SAVEPOINT price_log")
                 logger.warning(f"Price change log failed for product {product['id']}: {log_error}")
             
             updated_count += 1
