@@ -538,7 +538,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             return
 
     total_users, total_user_balance, active_products, total_sales_value = 0, Decimal('0.0'), 0, Decimal('0.0')
-    today_sales, low_stock_count, new_users_today = Decimal('0.0'), 0, 0
+    today_sales, low_stock_count = Decimal('0.0'), 0
     conn = None
     try:
         conn = get_db_connection()
@@ -571,15 +571,6 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         res_low_stock = c.fetchone()
         low_stock_count = res_low_stock['low_stock_count'] if res_low_stock else 0
         
-        # Query new users registered today
-        c.execute("""
-            SELECT COUNT(*) as new_today 
-            FROM users 
-            WHERE DATE(first_interaction) = CURRENT_DATE
-        """)
-        res_new_users = c.fetchone()
-        new_users_today = res_new_users['new_today'] if res_new_users else 0
-        
     except Exception as e:
         logger.error(f"DB error fetching admin dashboard data: {e}", exc_info=True)
         error_message = "❌ Error loading admin data."
@@ -596,14 +587,14 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     
     # Build dashboard with visual indicators
     low_stock_indicator = "⚠️" if low_stock_count > 0 else "✅"
-    new_users_indicator = "📈" if new_users_today > 0 else "📊"
+    products_indicator = "📦" if active_products > 0 else "⚠️"
     
     msg = (
         f"🎯 ADMIN DASHBOARD\n\n"
         f"📊 Today's Overview:\n"
         f"├ 💰 Sales Today: {today_sales_str}€\n"
         f"├ {low_stock_indicator} Low Stock: {low_stock_count} items\n"
-        f"├ {new_users_indicator} New Users: {new_users_today}\n"
+        f"├ {products_indicator} Active Products: {active_products}\n"
         f"└ 💳 Total Balance: {total_user_balance_str}€\n\n"
         f"⚡ Quick Actions & Menu:"
     )
