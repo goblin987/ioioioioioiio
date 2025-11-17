@@ -199,7 +199,7 @@ async def handle_product_price_editor_menu(update: Update, context: ContextTypes
         c.execute("""
             SELECT COUNT(*) as recent_changes
             FROM price_change_log 
-            WHERE created_at >= datetime('now', '-7 days')
+            WHERE created_at >= NOW() - INTERVAL '7 days'
         """)
         recent_changes = c.fetchone()['recent_changes']
         
@@ -429,7 +429,7 @@ async def handle_price_bulk_apply(update: Update, context: ContextTypes.DEFAULT_
         # Update all prices
         c.execute("""
             UPDATE products 
-            SET price = %s, last_price_update = CURRENT_TIMESTAMP
+            SET price = %s
             WHERE product_type = %s AND size = %s
         """, (new_price, product_type, size))
         
@@ -1755,7 +1755,7 @@ async def handle_price_city_apply(update: Update, context: ContextTypes.DEFAULT_
         # Update all prices
         c.execute("""
             UPDATE products 
-            SET price = %s, last_price_update = CURRENT_TIMESTAMP
+            SET price = %s
             WHERE city = %s AND product_type = %s AND size = %s
         """, (new_price, city_name, product_type, size))
         
@@ -1849,7 +1849,7 @@ async def handle_price_district_apply(update: Update, context: ContextTypes.DEFA
         # Update all prices
         c.execute("""
             UPDATE products 
-            SET price = %s, last_price_update = CURRENT_TIMESTAMP
+            SET price = %s
             WHERE city = %s AND district = %s AND product_type = %s AND size = %s
         """, (new_price, city_name, district_name, product_type, size))
         
@@ -2052,7 +2052,7 @@ async def handle_price_apply_percentage_all(update: Update, context: ContextType
             
             c.execute("""
                 UPDATE products 
-                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                SET price = %s
                 WHERE id = %s
             """, (new_price, product['id']))
             
@@ -2259,7 +2259,7 @@ async def handle_price_city_percentage_apply(update: Update, context: ContextTyp
             
             c.execute("""
                 UPDATE products 
-                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                SET price = %s
                 WHERE id = %s
             """, (new_price, product['id']))
             
@@ -2523,7 +2523,7 @@ async def handle_price_district_percentage_apply(update: Update, context: Contex
             
             c.execute("""
                 UPDATE products 
-                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                SET price = %s
                 WHERE id = %s
             """, (new_price, product['id']))
             
@@ -3330,7 +3330,7 @@ async def handle_price_simple_save(update: Update, context: ContextTypes.DEFAULT
             
             c.execute("""
                 UPDATE products 
-                SET price = %s, last_price_update = CURRENT_TIMESTAMP
+                SET price = %s
                 WHERE id = %s
             """, (new_price, product['id']))
             
