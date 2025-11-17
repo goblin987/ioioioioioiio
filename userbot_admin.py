@@ -36,7 +36,7 @@ async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_T
     await _show_userbot_dashboard(query, context)
 
 async def _show_userbot_dashboard(query, context):
-    """Show dashboard with list of all userbots"""
+    """Show minimalistic dashboard with list of all userbots"""
     import time
     from userbot_database import get_db_connection
     
@@ -45,13 +45,14 @@ async def _show_userbot_dashboard(query, context):
     msg = f"🔐 <b>Secret Chat Userbots</b> <i>(Updated: {update_time})</i>\n\n"
     msg += "⚠️ <b>PURPOSE:</b> These userbots deliver products via TRUE encrypted Telegram secret chats ONLY.\n\n"
     
-    # Get all userbots from database
+    # Get all userbots from database with usage info
     conn = get_db_connection()
     c = conn.cursor()
     try:
         c.execute("""
             SELECT id, name, phone_number, is_enabled, is_connected, 
-                   status_message, last_connected_at, session_string
+                   status_message, last_connected_at, session_string,
+                   scout_mode_enabled
             FROM userbots 
             ORDER BY priority DESC, id ASC
         """)
@@ -64,7 +65,7 @@ async def _show_userbot_dashboard(query, context):
     
     if not userbots:
         msg += "📭 <b>No userbots configured yet.</b>\n\n"
-        msg += "Click <b>➕ Add Userbot</b> to add your first secret chat delivery account!"
+        msg += "Click <b>➕ Add Userbot</b> to add your first account!"
     else:
         msg += f"📊 <b>Total Userbots:</b> {len(userbots)}\n\n"
         
@@ -75,36 +76,53 @@ async def _show_userbot_dashboard(query, context):
             enabled = ub['is_enabled']
             connected = ub['is_connected']
             has_session = bool(ub['session_string'])
+            scout_enabled = ub.get('scout_mode_enabled', False)
             
-            status_icon = "✅" if (enabled and connected and has_session) else "⚠️" if enabled else "❌"
+            # Status icon
+            if enabled and connected and has_session:
+                status_icon = "✅"
+                status_text = "Connected & Ready"
+            elif has_session and not connected:
+                status_icon = "🟡"
+                status_text = "Session exists, not connected"
+            elif not has_session:
+                status_icon = "🔴"
+                status_text = "No session (needs setup)"
+            elif not enabled:
+                status_icon = "⏸️"
+                status_text = "Disabled"
+            else:
+                status_icon = "⚠️"
+                status_text = "Unknown status"
+            
+            # Build usage tags
+            usage_tags = []
+            if scout_enabled:
+                usage_tags.append("🔍 Scout")
+            # Add more usage checks here as features are added
+            # if auto_ads_enabled: usage_tags.append("📢 Ads")
+            
+            if not usage_tags:
+                usage_tags.append("💬 Delivery Only")
             
             msg += f"{status_icon} <b>{name}</b>\n"
             msg += f"   📱 {phone}\n"
-            
-            if has_session and connected:
-                msg += f"   🟢 Connected & Ready\n"
-            elif has_session and not connected:
-                msg += f"   🟡 Session exists, not connected\n"
-            elif not has_session:
-                msg += f"   🔴 No Telethon session (needs setup)\n"
-            
-            if not enabled:
-                msg += f"   ⏸️ Disabled\n"
-            
-            msg += "\n"
+            msg += f"   {status_text}\n"
+            msg += f"   Used for: {' | '.join(usage_tags)}\n\n"
     
-    # Keyboard
+    # Keyboard - minimalistic design
     keyboard = []
     
     if userbots:
-        # Show userbot management buttons
+        # Show userbot buttons with clear status indicators
         for ub in userbots[:5]:  # Show max 5 userbots in quick access
             userbot_id = ub['id']
             name = ub['name']
-            keyboard.append([InlineKeyboardButton(f"⚙️ {name}", callback_data=f"userbot_manage:{userbot_id}")])
+            connected = ub['is_connected']
+            icon = "🟢" if connected else "🔴"
+            keyboard.append([InlineKeyboardButton(f"{icon} {name}", callback_data=f"userbot_manage:{userbot_id}")])
     
     keyboard.append([InlineKeyboardButton("➕ Add New Userbot", callback_data="userbot_add_new")])
-    keyboard.append([InlineKeyboardButton("🔍 Scout System", callback_data="scout_menu")])
     
     if userbots:
         keyboard.append([
@@ -112,6 +130,7 @@ async def _show_userbot_dashboard(query, context):
             InlineKeyboardButton("📊 Statistics", callback_data="userbot_stats_all")
         ])
     
+    keyboard.append([InlineKeyboardButton("🔍 Scout System", callback_data="scout_menu")])
     keyboard.append([InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
@@ -565,7 +584,7 @@ async def handle_userbot_connect(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("❌ Connection failed. Check logs.", show_alert=True)
     
     # Refresh dashboard
-    await _show_status_dashboard(query, context)
+    await _show_userbot_dashboard(query, context)
 
 async def handle_userbot_disconnect(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Disconnect userbot"""
@@ -586,7 +605,7 @@ async def handle_userbot_disconnect(update: Update, context: ContextTypes.DEFAUL
         await query.answer("❌ Disconnect failed. Check logs.", show_alert=True)
     
     # Refresh dashboard
-    await _show_status_dashboard(query, context)
+    await _show_userbot_dashboard(query, context)
 
 async def handle_userbot_test(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Test userbot delivery"""
