@@ -1551,6 +1551,10 @@ def callback_query_router(func):
 
             if target_func and asyncio.iscoroutinefunction(target_func):
                 await target_func(update, context, params)
+            elif command == "noop":
+                # "noop" is used for non-interactive section headers - just answer silently
+                try: await query.answer()
+                except Exception as e: logger.error(f"Error answering noop callback: {e}")
             else:
                 logger.warning(f"No async handler function found or mapped for callback command: {command}")
                 try: await query.answer("Unknown action.", show_alert=True)

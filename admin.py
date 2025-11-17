@@ -635,10 +635,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             InlineKeyboardButton("🎨 Bot UI", callback_data="admin_bot_ui_menu"),
             InlineKeyboardButton("⚙️ System", callback_data="admin_system_menu")
         ],
-        [
-            InlineKeyboardButton("📢 Running Ads", callback_data="admin_marquee_settings"),
-            InlineKeyboardButton("🤖 Userbot", callback_data="userbot_control")
-        ],
+        [InlineKeyboardButton("🤖 Userbot Control", callback_data="userbot_control")],
         
         # === EXIT ===
         [InlineKeyboardButton("🏠 Exit to User Menu", callback_data="back_start")]
