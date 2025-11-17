@@ -967,7 +967,12 @@ def callback_query_router(func):
                 
                 # Product Management Submenu handlers
                 "adm_add_products_choice": admin.handle_adm_add_products_choice,
+                "adm_products_advanced": admin.handle_adm_products_advanced,
                 "adm_product_types_menu": admin.handle_adm_product_types_menu,
+                
+                # User Management Submenu handlers
+                "adm_resellers_menu": admin.handle_adm_resellers_menu,
+                "adm_users_other": admin.handle_adm_users_other,
                 
                 # Product Removal System handlers
                 "remove_products_menu": admin.handle_remove_products_menu,

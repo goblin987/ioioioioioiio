@@ -694,22 +694,20 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
     update_breadcrumb(context, "Products", "admin_products_menu")
     breadcrumb = get_breadcrumb_text(context)
     
-    msg = f"{breadcrumb}\n\n🛍️ **Product Management**\n\nManage your products and inventory:"
+    msg = f"{breadcrumb}\n\n🛍️ **Product Management**\n\nChoose an action:"
     keyboard = [
-        # QUICK VIEW section (header + button)
-        [InlineKeyboardButton("📊 QUICK VIEW", callback_data="noop")],
-        [InlineKeyboardButton("📦 View Stock & Inventory", callback_data="view_stock")],
+        # Core actions - paired for clean mobile layout
+        [
+            InlineKeyboardButton("📦 View Stock", callback_data="view_stock"),
+            InlineKeyboardButton("➕ Add Products", callback_data="adm_add_products_choice")
+        ],
+        [
+            InlineKeyboardButton("💰 Edit Prices", callback_data="product_price_editor_menu"),
+            InlineKeyboardButton("🗑️ Remove Products", callback_data="remove_products_menu")
+        ],
         
-        # ADD/REMOVE section (header + buttons)
-        [InlineKeyboardButton("➕ ADD / REMOVE", callback_data="noop")],
-        [InlineKeyboardButton("➕ Add Products", callback_data="adm_add_products_choice")],
-        [InlineKeyboardButton("🗑️ Remove Products", callback_data="remove_products_menu")],
-        
-        # MODIFY section (header + buttons)
-        [InlineKeyboardButton("✏️ MODIFY", callback_data="noop")],
-        [InlineKeyboardButton("💰 Edit Prices", callback_data="product_price_editor_menu")],
-        [InlineKeyboardButton("📝 Manage Products", callback_data="adm_manage_products")],
-        [InlineKeyboardButton("🏷️ Product Types", callback_data="adm_product_types_menu")],
+        # Advanced - single row
+        [InlineKeyboardButton("⚙️ Advanced", callback_data="adm_products_advanced")],
         
         # Navigation
         [
@@ -751,15 +749,17 @@ async def handle_admin_users_menu(update: Update, context: ContextTypes.DEFAULT_
     update_breadcrumb(context, "Users", "admin_users_menu")
     breadcrumb = get_breadcrumb_text(context)
     
-    msg = f"{breadcrumb}\n\n👥 **User Management**\n\nManage users and customer service:"
+    msg = f"{breadcrumb}\n\n👥 **User Management**\n\nChoose an action:"
     keyboard = [
-        [InlineKeyboardButton("🔍 Search User", callback_data="adm_search_user_start")],
-        [InlineKeyboardButton("👑 VIP System", callback_data="vip_management_menu")],
-        [InlineKeyboardButton("👑 Manage Resellers", callback_data="manage_resellers_menu")],
-        [InlineKeyboardButton("🏷️ Reseller Discounts", callback_data="manage_reseller_discounts_select_reseller|0")],
-        [InlineKeyboardButton("🎁 Referral System", callback_data="referral_admin_menu")],  # 🚀 YOLO MODE: ADDED!
-        [InlineKeyboardButton("🚫 Manage Reviews", callback_data="adm_manage_reviews|0")],
-        [InlineKeyboardButton("🧹 Clear Reservations", callback_data="adm_clear_reservations_confirm")],
+        [
+            InlineKeyboardButton("🔍 Find User", callback_data="adm_search_user_start"),
+            InlineKeyboardButton("👑 VIP System", callback_data="vip_management_menu")
+        ],
+        [
+            InlineKeyboardButton("👔 Resellers", callback_data="adm_resellers_menu"),
+            InlineKeyboardButton("🎁 Referrals", callback_data="referral_admin_menu")
+        ],
+        [InlineKeyboardButton("⚙️ Other Tools", callback_data="adm_users_other")],
         [
             get_back_button(context),
             InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
@@ -7133,6 +7133,72 @@ async def handle_adm_add_products_choice(update: Update, context: ContextTypes.D
     keyboard = [
         [InlineKeyboardButton("📝 Single Product", callback_data="adm_city")],
         [InlineKeyboardButton("📦 Bulk Products", callback_data="adm_bulk_city")],
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_adm_resellers_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows reseller management submenu"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Resellers", "adm_resellers_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n👔 **Reseller Management**\n\nManage reseller accounts and discounts:"
+    
+    keyboard = [
+        [InlineKeyboardButton("👑 Manage Resellers", callback_data="manage_resellers_menu")],
+        [InlineKeyboardButton("🏷️ Reseller Discounts", callback_data="manage_reseller_discounts_select_reseller|0")],
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_adm_users_other(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows other user management tools"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Other Tools", "adm_users_other")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n⚙️ **Other User Tools**\n\nAdditional user management options:"
+    
+    keyboard = [
+        [InlineKeyboardButton("🚫 Manage Reviews", callback_data="adm_manage_reviews|0")],
+        [InlineKeyboardButton("🧹 Clear Reservations", callback_data="adm_clear_reservations_confirm")],
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_adm_products_advanced(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Shows advanced product management options"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Advanced", "adm_products_advanced")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n⚙️ **Advanced Product Options**\n\nLess frequently used actions:"
+    
+    keyboard = [
+        [InlineKeyboardButton("📝 Manage Products", callback_data="adm_manage_products")],
+        [InlineKeyboardButton("🏷️ Product Types", callback_data="adm_product_types_menu")],
         [
             get_back_button(context),
             InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
