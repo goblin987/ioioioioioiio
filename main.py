@@ -1548,7 +1548,7 @@ def callback_query_router(func):
             except Exception as e:
                 logger.error(f"❌ Failed to register daily rewards handlers: {e}")
             
-            # Add userbot handlers if available
+            # Add userbot handlers if available, otherwise add fallback
             if USERBOT_AVAILABLE:
                 KNOWN_HANDLERS.update({
                     # Multi-userbot system handlers
@@ -1590,6 +1590,22 @@ def callback_query_router(func):
                     "scout_triggers": handle_scout_triggers,
                 })
                 logger.info("✅ Userbot handlers registered")
+            else:
+                # Fallback handler when userbots not available
+                async def userbot_unavailable_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+                    query = update.callback_query
+                    msg = (
+                        "🔐 **Scout Userbots Unavailable**\n\n"
+                        "The userbot system could not be loaded. This may be due to:\n"
+                        "• Missing Pyrogram library\n"
+                        "• Import errors\n\n"
+                        "Check server logs for details."
+                    )
+                    keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="admin_marketing_menu")]]
+                    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+                
+                KNOWN_HANDLERS["userbot_control"] = userbot_unavailable_handler
+                logger.warning("⚠️ Userbot system not available - registered fallback handler")
 
             target_func = KNOWN_HANDLERS.get(command)
 

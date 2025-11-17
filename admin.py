@@ -777,10 +777,11 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
     update_breadcrumb(context, "Marketing", "admin_marketing_menu")
     breadcrumb = get_breadcrumb_text(context)
     
-    msg = f"{breadcrumb}\n\n🎁 **Marketing & Promotions**\n\nManage discounts, campaigns, and broadcasts:"
+    msg = f"{breadcrumb}\n\n🎁 **Marketing & Promotions**\n\nManage discounts, campaigns, and scouts:"
     keyboard = [
         [InlineKeyboardButton("🏷️ Manage Discount Codes", callback_data="adm_manage_discounts")],
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
+        [InlineKeyboardButton("🔐 Scout Userbots", callback_data="userbot_control")],
         [InlineKeyboardButton("📢 Broadcast Message", callback_data="adm_broadcast_start")],
         [
             get_back_button(context),
