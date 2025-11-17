@@ -157,9 +157,21 @@ def init_price_editor_tables():
         
         # Migration: Change product_id from INTEGER to BIGINT if needed
         try:
+            # Drop foreign key constraint first
             c.execute("""
                 ALTER TABLE price_change_log 
-                ALTER COLUMN product_id TYPE BIGINT
+                DROP CONSTRAINT IF EXISTS price_change_log_product_id_fkey
+            """)
+            # Change column type
+            c.execute("""
+                ALTER TABLE price_change_log 
+                ALTER COLUMN product_id TYPE BIGINT USING product_id::BIGINT
+            """)
+            # Re-add foreign key constraint
+            c.execute("""
+                ALTER TABLE price_change_log 
+                ADD CONSTRAINT price_change_log_product_id_fkey 
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             """)
             conn.commit()
             logger.info("✅ Migrated price_change_log.product_id to BIGINT")
@@ -3346,18 +3358,22 @@ async def handle_price_simple_save(update: Update, context: ContextTypes.DEFAULT
                 WHERE id = %s
             """, (new_price, product['id']))
             
-            # Log the change
-            c.execute("""
-                INSERT INTO price_change_log 
-                (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
-                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-            """, (
-                product['id'],
-                old_price,
-                new_price,
-                query.from_user.id,
-                f"Simple editor: {scope}"
-            ))
+            # Try to log the change (non-blocking)
+            try:
+                c.execute("""
+                    INSERT INTO price_change_log 
+                    (product_id, old_price, new_price, changed_by_admin_id, change_reason, created_at)
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                """, (
+                    product['id'],
+                    old_price,
+                    new_price,
+                    query.from_user.id,
+                    f"Simple editor: {scope}"
+                ))
+            except Exception as log_error:
+                # Logging failed, but don't stop the price update
+                logger.warning(f"Price change log failed for product {product['id']}: {log_error}")
             
             updated_count += 1
         
