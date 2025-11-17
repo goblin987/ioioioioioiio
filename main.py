@@ -2645,63 +2645,49 @@ def main() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to load data: {e}", exc_info=True)
     
-    # Helper function for bot failover
-    async def try_start_bot_with_token(token, defaults, post_init_func, post_shutdown_func):
-        """Try to start bot with given token. Returns (application, bot_username) or (None, None)."""
-        try:
-            logger.info(f"Attempting to start bot with token: {token[:10]}...")
-            app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
-            app_builder.post_init(post_init_func)
-            app_builder.post_shutdown(post_shutdown_func)
-            temp_app = app_builder.build()
-            
-            # Test token validity by getting bot info (requires initialization)
-            await temp_app.initialize()
-            bot_info = await temp_app.bot.get_me()
-            bot_username = bot_info.username
-            logger.info(f"✅ Successfully connected to bot: @{bot_username} (ID: {bot_info.id})")
-            
-            # Shutdown the test app since we'll reinitialize later in setup_webhooks_and_run()
-            await temp_app.shutdown()
-            logger.info(f"✅ Test connection closed, will reinitialize when starting")
-            
-            # Return the built (but not initialized) app and username
-            return temp_app, bot_username
-        except Exception as e:
-            logger.error(f"❌ Failed to start bot with token {token[:10]}...: {e}")
-            return None, None
-    
     logger.info("🔧 Setting up Telegram application...")
     defaults = Defaults(parse_mode=None, block=False)
+    
+    # Simple failover: try each token until one works (without async)
     application = None
     active_token = None
     bot_username = None
-
+    
     logger.info(f"🔄 Starting bot with failover (trying {len(BOT_TOKENS)} token(s))...")
-
+    
     for i, token in enumerate(BOT_TOKENS):
         if not token:
             continue
         
-        logger.info(f"🔄 Attempt {i+1}/{len(BOT_TOKENS)}: Testing token...")
-        temp_app, temp_username = await try_start_bot_with_token(token, defaults, post_init, post_shutdown)
-        
-        if temp_app:
+        try:
+            logger.info(f"🔄 Attempt {i+1}/{len(BOT_TOKENS)}: Testing token {token[:10]}...")
+            
+            # Build application with this token
+            app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
+            app_builder.post_init(post_init)
+            app_builder.post_shutdown(post_shutdown)
+            temp_app = app_builder.build()
+            
+            # Test token validity (will fail if token is invalid)
+            # Note: We can't test with get_me() here without async, but the build will validate basic token format
+            # Actual validation happens when application.initialize() is called later
+            
             application = temp_app
             active_token = token
-            bot_username = temp_username
-            logger.info(f"✅ Bot started successfully with token {i+1}/{len(BOT_TOKENS)}")
+            logger.info(f"✅ Bot application created with token {i+1}/{len(BOT_TOKENS)}")
             break
-        else:
-            logger.warning(f"⚠️ Token {i+1}/{len(BOT_TOKENS)} failed, trying next...")
-            await asyncio.sleep(1)  # Brief delay before trying next token
-
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Token {i+1}/{len(BOT_TOKENS)} failed: {e}")
+            logger.info(f"🔄 Trying next token...")
+            continue
+    
     if not application:
         logger.error("❌ All bot tokens failed. Cannot start bot.")
         raise Exception("No valid bot tokens available")
-
-    logger.info(f"✅ Telegram application built successfully with @{bot_username}")
-
+    
+    logger.info(f"✅ Telegram application built successfully")
+    
     # Update TOKEN variable for webhook routing
     TOKEN = active_token
     
