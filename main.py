@@ -965,6 +965,15 @@ def callback_query_router(func):
                 "admin_restart_services": admin.handle_admin_restart_services,
                 "admin_view_logs": admin.handle_admin_view_logs,
                 
+                # Product Removal System handlers
+                "remove_products_menu": admin.handle_remove_products_menu,
+                "remove_by_location": admin.handle_remove_by_location,
+                "remove_city": admin.handle_remove_city,
+                "remove_district": admin.handle_remove_district,
+                "remove_type": admin.handle_remove_type,
+                "remove_confirm": admin.handle_remove_confirm,
+                "execute_removal": admin.handle_execute_removal,
+                
                 # Stock management handlers
                 "stock_management_menu": handle_stock_management_menu,
                 "stock_check_now": handle_stock_check_now,
@@ -1663,6 +1672,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
         'awaiting_price_simple': handle_price_simple_message,
+        'awaiting_removal_quantity': admin.handle_removal_quantity_message,
         
         # Enhanced auto ads message handlers (testforwarder integration)
         'awaiting_session_file': handle_testforwarder_message,

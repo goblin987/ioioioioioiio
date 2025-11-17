@@ -698,6 +698,7 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
     keyboard = [
         [InlineKeyboardButton("➕ Add Products", callback_data="adm_city")],
         [InlineKeyboardButton("📦 Bulk Add Products", callback_data="adm_bulk_city")],
+        [InlineKeyboardButton("🗑️ Remove Products", callback_data="remove_products_menu")],
         [InlineKeyboardButton("💰 Edit Product Prices", callback_data="product_price_editor_menu")],
         [InlineKeyboardButton("🗑️ Manage Products", callback_data="adm_manage_products")],
         [InlineKeyboardButton("📦 View Bot Stock", callback_data="view_stock")],
@@ -7105,5 +7106,451 @@ async def handle_adm_recent_purchases(update: Update, context: ContextTypes.DEFA
     except Exception as e:
         logger.error(f"Error in recent purchases display: {e}", exc_info=True)
         await query.edit_message_text("❌ Error displaying purchases.", parse_mode=None)
+
+# === PRODUCT REMOVAL SYSTEM ===
+
+async def handle_remove_products_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Main menu for product removal system"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Remove Products", "remove_products_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🗑️ **Remove Products from Inventory**\n\n"
+    msg += "Select removal scope:\n\n"
+    msg += "• **By Location** - Remove from specific city/district\n"
+    msg += "• **Entire City** - Remove all from one city\n"
+    msg += "• **By Category** - Remove all of one type (all locations)"
+    
+    keyboard = [
+        [InlineKeyboardButton("🏙️ By City & District", callback_data="remove_by_location")],
+        [InlineKeyboardButton("🗺️ Entire City", callback_data="remove_by_city_select")],
+        [InlineKeyboardButton("🎯 By Category (All Locations)", callback_data="remove_by_category_select")],
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_by_location(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Step 1: Select city for removal"""
+    query = update.callback_query
+    
+    update_breadcrumb(context, "By Location", "remove_by_location")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🏙️ **Select City**\n\nChoose the city to remove products from:"
+    
+    keyboard = []
+    for city_id, city_name in CITIES.items():
+        keyboard.append([InlineKeyboardButton(
+            f"{city_name}", 
+            callback_data=f"remove_city|{city_id}"
+        )])
+    
+    keyboard.append([
+        get_back_button(context),
+        InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Step 2: Select district"""
+    query = update.callback_query
+    city_id = params[0] if params else None
+    
+    if not city_id:
+        await query.answer("Error: No city selected", show_alert=True)
+        return
+    
+    city_name = CITIES.get(city_id)
+    districts = DISTRICTS.get(city_id, {})
+    
+    update_breadcrumb(context, city_name, f"remove_city|{city_id}")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🗺️ **Select District in {city_name}**\n\nChoose the district:"
+    
+    keyboard = []
+    for dist_id, dist_name in districts.items():
+        keyboard.append([InlineKeyboardButton(
+            f"{dist_name}",
+            callback_data=f"remove_district|{city_id}|{dist_id}"
+        )])
+    
+    keyboard.append([
+        get_back_button(context),
+        InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_district(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Step 3: Select product type"""
+    query = update.callback_query
+    city_id, dist_id = params[0], params[1] if params and len(params) >= 2 else (None, None)
+    
+    city = CITIES.get(city_id)
+    district = DISTRICTS.get(city_id, {}).get(dist_id)
+    
+    # Query available product types in this location
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT DISTINCT product_type 
+            FROM products 
+            WHERE city = %s AND district = %s AND available > reserved
+            ORDER BY product_type
+        """, (city, district))
+        
+        product_types = c.fetchall()
+    except Exception as e:
+        logger.error(f"Error fetching product types: {e}")
+        await query.answer("Database error", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not product_types:
+        await query.answer("No products available in this location", show_alert=True)
+        return
+    
+    update_breadcrumb(context, district, f"remove_district|{city_id}|{dist_id}")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n📦 **Select Product Type**\n\n**Location:** {city} / {district}\n\nChoose product type to remove:"
+    
+    keyboard = []
+    for row in product_types:
+        p_type = row['product_type']
+        keyboard.append([InlineKeyboardButton(
+            f"{PRODUCT_TYPES.get(p_type, '📦')} {p_type}",
+            callback_data=f"remove_type|{city_id}|{dist_id}|{p_type}"
+        )])
+    
+    keyboard.append([
+        get_back_button(context),
+        InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Step 4: Select size and show quantity"""
+    query = update.callback_query
+    city_id, dist_id, p_type = params[0], params[1], params[2] if params and len(params) >= 3 else (None, None, None)
+    
+    city = CITIES.get(city_id)
+    district = DISTRICTS.get(city_id, {}).get(dist_id)
+    
+    # Query available sizes and quantities
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT size, COUNT(*) as quantity 
+            FROM products 
+            WHERE city = %s AND district = %s AND product_type = %s AND available > reserved
+            GROUP BY size
+            ORDER BY size
+        """, (city, district, p_type))
+        
+        sizes = c.fetchall()
+    except Exception as e:
+        logger.error(f"Error fetching sizes: {e}")
+        await query.answer("Database error", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    if not sizes:
+        await query.answer("No items available", show_alert=True)
+        return
+    
+    update_breadcrumb(context, p_type, f"remove_type|{city_id}|{dist_id}|{p_type}")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n📏 **Select Size**\n\n**Location:** {city} / {district}\n**Product:** {p_type}\n\nChoose size to remove:"
+    
+    keyboard = []
+    for row in sizes:
+        size = row['size']
+        qty = row['quantity']
+        keyboard.append([InlineKeyboardButton(
+            f"{size} - Available: {qty} items",
+            callback_data=f"remove_confirm|{city_id}|{dist_id}|{p_type}|{size}"
+        )])
+    
+    keyboard.append([
+        get_back_button(context),
+        InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Step 5: Ask how many to remove"""
+    query = update.callback_query
+    city_id, dist_id, p_type, size = params[0], params[1], params[2], params[3] if params and len(params) >= 4 else (None, None, None, None)
+    
+    city = CITIES.get(city_id)
+    district = DISTRICTS.get(city_id, {}).get(dist_id)
+    
+    # Get available quantity
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT COUNT(*) as quantity 
+            FROM products 
+            WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved
+        """, (city, district, p_type, size))
+        
+        result = c.fetchone()
+    except Exception as e:
+        logger.error(f"Error fetching quantity: {e}")
+        await query.answer("Database error", show_alert=True)
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    available = result['quantity'] if result else 0
+    
+    if available == 0:
+        await query.answer("No items available", show_alert=True)
+        return
+    
+    # Store context for next step
+    context.user_data['removal_context'] = {
+        'city_id': city_id,
+        'dist_id': dist_id,
+        'city': city,
+        'district': district,
+        'product_type': p_type,
+        'size': size,
+        'available': available
+    }
+    context.user_data['state'] = 'awaiting_removal_quantity'
+    
+    msg = (
+        f"🔢 **Enter Quantity to Remove**\n\n"
+        f"**Location:** {city} / {district}\n"
+        f"**Product:** {p_type} - {size}\n"
+        f"**Available:** {available} items\n\n"
+        f"Reply with the number of items to remove (1-{available}):\n\n"
+        f"Examples:\n"
+        f"• Type `10` to remove 10 items\n"
+        f"• Type `all` to remove all {available} items\n"
+        f"• Type `cancel` to cancel"
+    )
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="remove_products_menu")]]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_removal_quantity_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle admin's quantity input"""
+    user_id = update.effective_user.id
+    
+    if not is_primary_admin(user_id):
+        return
+    
+    text = update.message.text.strip().lower()
+    removal_ctx = context.user_data.get('removal_context', {})
+    
+    if not removal_ctx:
+        await update.message.reply_text("❌ Error: Removal session expired. Please start again from /admin")
+        context.user_data.pop('state', None)
+        return
+    
+    available = removal_ctx['available']
+    
+    # Handle "cancel"
+    if text == 'cancel':
+        context.user_data.pop('state', None)
+        context.user_data.pop('removal_context', None)
+        await update.message.reply_text("❌ Removal cancelled.")
+        return
+    
+    # Handle "all"
+    if text == 'all':
+        quantity = available
+    else:
+        # Parse number
+        try:
+            quantity = int(text)
+        except ValueError:
+            await update.message.reply_text(
+                f"❌ Invalid input. Please enter a number between 1 and {available}, or type 'all' or 'cancel'."
+            )
+            return
+    
+    # Validate quantity
+    if quantity < 1 or quantity > available:
+        await update.message.reply_text(
+            f"❌ Invalid quantity. You can remove between 1 and {available} items."
+        )
+        return
+    
+    # Store quantity and ask for confirmation
+    removal_ctx['quantity'] = quantity
+    context.user_data['removal_context'] = removal_ctx
+    context.user_data['state'] = None  # Clear state
+    
+    msg = (
+        f"⚠️ **Confirm Removal**\n\n"
+        f"**Location:** {removal_ctx['city']} / {removal_ctx['district']}\n"
+        f"**Product:** {removal_ctx['product_type']} - {removal_ctx['size']}\n"
+        f"**Quantity:** {quantity} items\n\n"
+        f"**This will:**\n"
+        f"• Remove {quantity} products from database\n"
+        f"• Send you each product code (1 message per item)\n"
+        f"• This action CANNOT be undone\n\n"
+        f"Are you sure?"
+    )
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Yes, Remove", callback_data="execute_removal"),
+            InlineKeyboardButton("❌ Cancel", callback_data="remove_products_menu")
+        ]
+    ]
+    
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Execute the removal and send products one by one"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        return await query.answer("Access denied", show_alert=True)
+    
+    removal_ctx = context.user_data.get('removal_context', {})
+    
+    if not removal_ctx:
+        await query.answer("Error: Session expired", show_alert=True)
+        return
+    
+    city = removal_ctx['city']
+    district = removal_ctx['district']
+    p_type = removal_ctx['product_type']
+    size = removal_ctx['size']
+    quantity = removal_ctx['quantity']
+    
+    await query.edit_message_text("⏳ Removing products and preparing to send...", parse_mode=None)
+    
+    conn = None
+    removed_products = []
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Fetch products to remove
+        c.execute("""
+            SELECT id, name, original_text 
+            FROM products 
+            WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved
+            ORDER BY id 
+            LIMIT %s
+        """, (city, district, p_type, size, quantity))
+        
+        products = c.fetchall()
+        
+        if not products:
+            await query.edit_message_text("❌ Error: No products found. They may have been sold.", parse_mode=None)
+            return
+        
+        product_ids = [p['id'] for p in products]
+        
+        # Delete products
+        c.execute("""
+            DELETE FROM products 
+            WHERE id = ANY(%s)
+        """, (product_ids,))
+        
+        conn.commit()
+        
+        removed_products = products
+        
+        logger.info(f"Admin {user_id} removed {len(removed_products)} products: {p_type} {size} from {city}/{district}")
+        
+    except Exception as e:
+        logger.error(f"Error removing products: {e}", exc_info=True)
+        await query.edit_message_text(f"❌ Error removing products: {e}", parse_mode=None)
+        if conn:
+            conn.rollback()
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    # Clear context
+    context.user_data.pop('removal_context', None)
+    
+    # Send summary first
+    await query.edit_message_text(
+        f"✅ **Removal Complete**\n\n"
+        f"Removed {len(removed_products)} items.\n"
+        f"Sending product codes now...",
+        parse_mode='Markdown'
+    )
+    
+    # Send each product code one by one
+    for i, product in enumerate(removed_products, 1):
+        product_code = product['original_text'] or product['name']
+        msg = (
+            f"📦 **Product {i}/{len(removed_products)}**\n\n"
+            f"```\n{product_code}\n```"
+        )
+        
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=msg,
+                parse_mode='Markdown'
+            )
+            # Small delay to avoid flooding
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.error(f"Error sending product {i}: {e}")
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ Error sending product {i}: {product_code}",
+                parse_mode=None
+            )
+    
+    # Final summary
+    summary_msg = (
+        f"🎉 **All Done!**\n\n"
+        f"Successfully removed and sent {len(removed_products)} products.\n\n"
+        f"**Details:**\n"
+        f"• Location: {city} / {district}\n"
+        f"• Product: {p_type} - {size}\n"
+        f"• Removed: {len(removed_products)} items"
+    )
+    
+    keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
+                [InlineKeyboardButton("🏠 Admin Home", callback_data="admin_menu")]]
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=summary_msg,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 # --- END OF FILE admin.py ---
