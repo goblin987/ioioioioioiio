@@ -56,7 +56,25 @@ logger.info(f"Using Bot Media Config Path: {BOT_MEDIA_JSON_PATH}")
 
 
 # --- Configuration Loading (from Environment Variables) ---
-TOKEN = os.environ.get("TOKEN", "").strip()  # Strip whitespace
+# Multi-bot failover tokens
+BOT_TOKENS = [
+    os.environ.get("BOT_TOKEN_1", "").strip(),
+    os.environ.get("BOT_TOKEN_2", "").strip(),
+    os.environ.get("BOT_TOKEN_3", "").strip(),
+    os.environ.get("BOT_TOKEN_4", "").strip(),
+    os.environ.get("BOT_TOKEN_5", "").strip(),
+]
+
+# Backward compatibility: also check old TOKEN env var
+legacy_token = os.environ.get("TOKEN", "").strip()
+if legacy_token:
+    BOT_TOKENS.insert(0, legacy_token)
+
+# Remove empty tokens
+BOT_TOKENS = [t for t in BOT_TOKENS if t]
+
+# Set TOKEN to first available for backward compatibility
+TOKEN = BOT_TOKENS[0] if BOT_TOKENS else ""
 NOWPAYMENTS_API_KEY = os.environ.get("NOWPAYMENTS_API_KEY", "") # NOWPayments API Key
 NOWPAYMENTS_IPN_SECRET = os.environ.get("NOWPAYMENTS_IPN_SECRET", "")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "") # Base URL for Render app (e.g., https://app-name.onrender.com)
