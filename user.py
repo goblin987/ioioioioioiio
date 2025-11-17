@@ -1235,29 +1235,36 @@ async def handle_product_selection(update: Update, context: ContextTypes.DEFAULT
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT COUNT(*) as count FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved", (city, district, p_type, size, float(original_price)))
-        available_count_result = c.fetchone(); available_count = available_count_result['count'] if available_count_result else 0
-
-        if available_count <= 0:
+        # FIXED: Query current price from DB instead of using cached price
+        c.execute("SELECT price, COUNT(*) as count FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved GROUP BY price ORDER BY price LIMIT 1", (city, district, p_type, size))
+        result = c.fetchone()
+        
+        if not result or result['count'] <= 0:
             keyboard = [[InlineKeyboardButton(f"{EMOJI_BACK} {back_options_button}", callback_data=f"type|{city_id}|{dist_id}|{p_type}"), InlineKeyboardButton(f"{EMOJI_HOME} {home_button}", callback_data="back_start")]]
             await query.edit_message_text(f"❌ {drop_unavailable_msg}", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
         else:
-            original_price_formatted = format_currency(original_price)
+            # Use CURRENT price from database, not cached price
+            current_price = Decimal(str(result['price']))
+            available_count = result['count']
+            current_price_str = f"{current_price:.2f}"  # For callback data
+            
+            current_price_formatted = format_currency(current_price)
             reseller_discount_percent = await asyncio.to_thread(get_reseller_discount, user_id, p_type)
-            display_price_str = original_price_formatted
+            display_price_str = current_price_formatted
             if reseller_discount_percent > Decimal('0.0'):
-                discount_amount = (original_price * reseller_discount_percent / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
-                discounted_price = original_price - discount_amount
-                display_price_str = f"{format_currency(discounted_price)} (Orig: {original_price_formatted}€)"
+                discount_amount = (current_price * reseller_discount_percent / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                discounted_price = current_price - discount_amount
+                display_price_str = f"{format_currency(discounted_price)} (Orig: {current_price_formatted}€)"
 
             msg = (f"{EMOJI_CITY} {city} | {EMOJI_DISTRICT} {district}\n"
                    f"{product_emoji} {p_type} - {size}\n"
                    f"{EMOJI_PRICE} {price_label}: {display_price_str} EUR\n"
                    f"{EMOJI_QUANTITY} {available_label_long}: {available_count}")
 
-            add_callback = f"add|{city_id}|{dist_id}|{p_type}|{size}|{price_str}"
+            # Use CURRENT price in callback data
+            add_callback = f"add|{city_id}|{dist_id}|{p_type}|{size}|{current_price_str}"
             back_callback = f"type|{city_id}|{dist_id}|{p_type}"
-            pay_now_callback = f"pay_single_item|{city_id}|{dist_id}|{p_type}|{size}|{price_str}"
+            pay_now_callback = f"pay_single_item|{city_id}|{dist_id}|{p_type}|{size}|{current_price_str}"
 
             keyboard = [
                 [
@@ -1309,8 +1316,8 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
         c = conn.cursor()
         c.execute("BEGIN")
         
-        # Step 1: Find an available product
-        c.execute("SELECT id FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
+        # Step 1: Find an available product (FIXED: removed price from WHERE to use current price)
+        c.execute("SELECT id, price FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size))
         product_row = c.fetchone()
 
         if not product_row:
@@ -1320,6 +1327,9 @@ async def handle_add_to_basket(update: Update, context: ContextTypes.DEFAULT_TYP
             return
 
         product_id_reserved = product_row['id']
+        # Use CURRENT price from database, not cached price
+        current_price = Decimal(str(product_row['price']))
+        original_price = current_price  # Update to use current price for all subsequent calculations
         
         # Step 2: Atomically reserve the specific product with availability check
         # This prevents race conditions by ensuring reserved never exceeds available
@@ -2463,8 +2473,8 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("BEGIN")
-        # MODIFIED: Fetch city, district, original_text for snapshot
-        c.execute("SELECT id, name, price, size, product_type, city, district, original_text FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND price = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size, float(original_price)))
+        # FIXED: Removed price from WHERE to use current price from database
+        c.execute("SELECT id, name, price, size, product_type, city, district, original_text FROM products WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved ORDER BY id LIMIT 1", (city, district, p_type, size))
         product_to_reserve = c.fetchone()
 
         if not product_to_reserve:
@@ -2475,6 +2485,9 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
             error_occurred_reservation = True
         else:
             reserved_id = product_to_reserve['id']
+            # Use CURRENT price from database
+            current_price = Decimal(str(product_to_reserve['price']))
+            original_price = current_price  # Update to use current price for payment
             product_details_for_snapshot = dict(product_to_reserve) # Now contains enriched data
             c.execute("UPDATE products SET reserved = reserved + 1 WHERE id = %s AND available > reserved", (reserved_id,))
             if c.rowcount == 1:
