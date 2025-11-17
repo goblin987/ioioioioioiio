@@ -104,6 +104,7 @@ async def _show_userbot_dashboard(query, context):
             keyboard.append([InlineKeyboardButton(f"⚙️ {name}", callback_data=f"userbot_manage:{userbot_id}")])
     
     keyboard.append([InlineKeyboardButton("➕ Add New Userbot", callback_data="userbot_add_new")])
+    keyboard.append([InlineKeyboardButton("🔍 Scout System", callback_data="scout_menu")])
     
     if userbots:
         keyboard.append([

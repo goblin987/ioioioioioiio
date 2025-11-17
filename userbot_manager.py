@@ -148,6 +148,15 @@ class UserbotManager:
                 save_session_string(new_session)
                 logger.info("✅ Session string saved to database")
             
+            # 🔍 SCOUT MODE: Setup keyword detection handlers
+            try:
+                from userbot_scout import setup_scout_handlers
+                userbot_id = 1  # Legacy userbot ID
+                setup_scout_handlers(self.client, userbot_id)
+                logger.info("🔍 ✅ Scout mode handlers registered!")
+            except Exception as scout_err:
+                logger.warning(f"⚠️ Scout mode setup error (non-critical): {scout_err}")
+            
             # Start auto-reconnect monitor if enabled
             if userbot_config.auto_reconnect and not self.reconnect_task:
                 self.reconnect_task = asyncio.create_task(self._monitor_connection())

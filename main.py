@@ -212,6 +212,22 @@ try:
         handle_userbot_phone_message,
         handle_userbot_verification_code_message,
         handle_telethon_setup,
+    )
+    
+    print("🔍 YOLO DEBUG: Importing scout system handlers...")
+    from userbot_scout_admin import (
+        handle_scout_menu,
+        handle_scout_keywords,
+        handle_scout_add_keyword_start,
+        handle_scout_keyword_message,
+        handle_scout_toggle_keyword,
+        handle_scout_delete_keyword,
+        handle_scout_userbots,
+        handle_scout_toggle_bot,
+        handle_scout_triggers
+    )
+    
+    from userbot_admin import (
         handle_telethon_start_auth,
         handle_telethon_verification_code_message,
         handle_telethon_cancel_auth,
@@ -1562,6 +1578,16 @@ def callback_query_router(func):
                     "telethon_start_auth": handle_telethon_start_auth,
                     "telethon_cancel_auth": handle_telethon_cancel_auth,
                     "telethon_disconnect": handle_telethon_disconnect,
+                    
+                    # Scout system handlers
+                    "scout_menu": handle_scout_menu,
+                    "scout_keywords": handle_scout_keywords,
+                    "scout_add_keyword_start": handle_scout_add_keyword_start,
+                    "scout_toggle_keyword": handle_scout_toggle_keyword,
+                    "scout_delete_keyword": handle_scout_delete_keyword,
+                    "scout_userbots": handle_scout_userbots,
+                    "scout_toggle_bot": handle_scout_toggle_bot,
+                    "scout_triggers": handle_scout_triggers,
                 })
                 logger.info("✅ Userbot handlers registered")
 
@@ -1668,6 +1694,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_userbot_phone': handle_userbot_phone_message if USERBOT_AVAILABLE else None,
         'awaiting_userbot_verification_code': handle_userbot_verification_code_message if USERBOT_AVAILABLE else None,
         'awaiting_telethon_code': handle_telethon_verification_code_message if USERBOT_AVAILABLE else None,
+        
+        # Scout system message handlers
+        'awaiting_scout_keyword': handle_scout_keyword_message if USERBOT_AVAILABLE else None,
+        'awaiting_scout_response': handle_scout_keyword_message if USERBOT_AVAILABLE else None,
         
         # Auto ads system message handlers (removed - using testforwarder integration)
         

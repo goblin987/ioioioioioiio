@@ -377,6 +377,58 @@ def create_multi_userbot_schema():
         if result and result['count'] == 0:
             c.execute("INSERT INTO userbot_settings (id) VALUES (1)")
         
+        # === SCOUT SYSTEM TABLES ===
+        
+        # Scout keywords - keyword triggers and responses
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS scout_keywords (
+                id SERIAL PRIMARY KEY,
+                keyword TEXT NOT NULL,
+                match_type TEXT DEFAULT 'contains',
+                case_sensitive BOOLEAN DEFAULT FALSE,
+                response_text TEXT NOT NULL,
+                response_delay_seconds INTEGER DEFAULT 3,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                created_by BIGINT,
+                uses_count INTEGER DEFAULT 0,
+                last_used_at TIMESTAMP WITH TIME ZONE
+            )
+        """)
+        
+        # Scout triggers log - logs all keyword detections
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS scout_triggers (
+                id SERIAL PRIMARY KEY,
+                userbot_id INTEGER REFERENCES userbots(id) ON DELETE CASCADE,
+                keyword_id INTEGER REFERENCES scout_keywords(id) ON DELETE CASCADE,
+                chat_id BIGINT NOT NULL,
+                chat_title TEXT,
+                message_id INTEGER NOT NULL,
+                user_id BIGINT NOT NULL,
+                user_username TEXT,
+                detected_text TEXT,
+                response_sent BOOLEAN DEFAULT FALSE,
+                response_message_id INTEGER,
+                error_message TEXT,
+                triggered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Add scout mode columns to userbots table if they don't exist
+        c.execute("""
+            ALTER TABLE userbots 
+            ADD COLUMN IF NOT EXISTS scout_mode_enabled BOOLEAN DEFAULT FALSE
+        """)
+        c.execute("""
+            ALTER TABLE userbots 
+            ADD COLUMN IF NOT EXISTS scout_reply_in_pm BOOLEAN DEFAULT FALSE
+        """)
+        c.execute("""
+            ALTER TABLE userbots 
+            ADD COLUMN IF NOT EXISTS scout_groups_only BOOLEAN DEFAULT TRUE
+        """)
+        
         # Create indexes
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbots_enabled ON userbots(is_enabled)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbots_connected ON userbots(is_connected)")
@@ -384,6 +436,13 @@ def create_multi_userbot_schema():
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbot_deliveries_status ON userbot_deliveries(delivery_status)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbot_deliveries_userbot_id ON userbot_deliveries(userbot_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbot_deliveries_created_at ON userbot_deliveries(created_at DESC)")
+        
+        # Scout system indexes
+        c.execute("CREATE INDEX IF NOT EXISTS idx_scout_keywords_active ON scout_keywords(is_active)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_scout_triggers_userbot ON scout_triggers(userbot_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_scout_triggers_keyword ON scout_triggers(keyword_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_scout_triggers_date ON scout_triggers(triggered_at DESC)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_userbots_scout_mode ON userbots(scout_mode_enabled)")
         
         conn.commit()
         print("✅ YOLO: Multi-userbot schema committed successfully")
