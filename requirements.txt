@@ -11,3 +11,4 @@ aiohttp==3.9.1
 psycopg2-binary>=2.9.0
 qrcode[pil]>=7.0.0
 Pillow>=9.0.0
+Pyrogram>=2.0.0

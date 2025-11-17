@@ -29,6 +29,12 @@ async def handle_scout_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     c.execute("SELECT COUNT(*) as count FROM scout_keywords WHERE is_active = TRUE")
     active_keywords = c.fetchone()['count']
     
+    c.execute("SELECT COUNT(*) as count FROM userbots")
+    total_userbots = c.fetchone()['count']
+    
+    c.execute("SELECT COUNT(*) as count FROM userbots WHERE is_connected = TRUE")
+    connected_bots = c.fetchone()['count']
+    
     c.execute("SELECT COUNT(*) as count FROM userbots WHERE scout_mode_enabled = TRUE")
     scout_bots = c.fetchone()['count']
     
@@ -40,20 +46,39 @@ async def handle_scout_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     
     conn.close()
     
+    # Determine system status
+    if total_userbots == 0:
+        status = "⚠️ **No Userbots Configured**"
+        status_msg = "\n\n❗ You need to add userbots first!\nGo to: Marketing > Userbot Control > Add Userbot\n"
+    elif connected_bots == 0:
+        status = "🔴 **All Userbots Offline**"
+        status_msg = "\n\n⚠️ Connect your userbots to enable scout mode.\n"
+    elif scout_bots == 0:
+        status = "⚠️ **Scout Mode Disabled**"
+        status_msg = "\n\n💡 Enable scout mode on at least one userbot to start monitoring.\n"
+    elif active_keywords == 0:
+        status = "⚠️ **No Active Keywords**"
+        status_msg = "\n\n💡 Add keywords to detect and auto-reply to messages.\n"
+    else:
+        status = "✅ **Scout System Active**"
+        status_msg = "\n\n🎯 Scout mode is running and monitoring for keywords!\n"
+    
     msg = (
         f"🔍 **Scout System Control Panel**\n\n"
+        f"{status}{status_msg}\n"
         f"📊 **Statistics (Last 24h):**\n"
-        f"• Active Keywords: {active_keywords}\n"
-        f"• Scout Userbots: {scout_bots}\n"
-        f"• Triggers Detected: {triggers_24h}\n"
-        f"• Responses Sent: {responses_24h}\n\n"
-        f"Scout userbots automatically reply when they detect keywords in groups."
+        f"🔑 Active Keywords: **{active_keywords}**\n"
+        f"🤖 Userbots: **{connected_bots}/{total_userbots}** online | **{scout_bots}** with scout enabled\n"
+        f"🎯 Triggers Detected: **{triggers_24h}**\n"
+        f"✅ Responses Sent: **{responses_24h}**\n\n"
+        f"_Scout userbots automatically reply when they detect keywords in groups._"
     )
     
     keyboard = [
         [InlineKeyboardButton("🔑 Manage Keywords", callback_data="scout_keywords|0")],
         [InlineKeyboardButton("🤖 Configure Userbots", callback_data="scout_userbots")],
         [InlineKeyboardButton("📊 View Triggers Log", callback_data="scout_triggers|0")],
+        [InlineKeyboardButton("📖 Quick Start Guide", callback_data="scout_quick_start")],
         [InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]
     ]
     
@@ -107,6 +132,13 @@ async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TY
     
     keyboard = []
     keyboard.append([InlineKeyboardButton("➕ Add Keyword", callback_data="scout_add_keyword_start")])
+    
+    # Bulk actions (only show if there are keywords)
+    if keywords:
+        keyboard.append([
+            InlineKeyboardButton("✅ Enable All", callback_data="scout_bulk_enable"),
+            InlineKeyboardButton("❌ Disable All", callback_data="scout_bulk_disable")
+        ])
     
     # Pagination
     nav_row = []
@@ -418,4 +450,91 @@ async def handle_scout_triggers(update: Update, context: ContextTypes.DEFAULT_TY
     ])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+async def handle_scout_quick_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show quick start guide for scout system"""
+    query = update.callback_query
+    
+    if not is_primary_admin(query.from_user.id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    msg = (
+        "📖 **Scout System Quick Start Guide**\n\n"
+        "**What is Scout Mode?**\n"
+        "Scout userbots monitor group chats and automatically reply when specific keywords are detected.\n\n"
+        "**Setup Steps:**\n\n"
+        "1️⃣ **Add a Userbot**\n"
+        "   Go to: Marketing > Userbot Control > Add Userbot\n"
+        "   Enter API credentials and connect\n\n"
+        "2️⃣ **Join Groups**\n"
+        "   Make sure your userbot is a member of target groups\n\n"
+        "3️⃣ **Add Keywords**\n"
+        "   Click 'Manage Keywords' and add keywords to detect\n"
+        "   Example: 'discount code', 'steam games', 'shop'\n\n"
+        "4️⃣ **Enable Scout Mode**\n"
+        "   Click 'Configure Userbots' and enable scout for your userbot\n\n"
+        "5️⃣ **Test It**\n"
+        "   Send a message with your keyword in a group\n"
+        "   The userbot should reply automatically!\n\n"
+        "**Match Types:**\n"
+        "• **Contains:** Matches if keyword appears anywhere\n"
+        "• **Exact:** Matches only exact phrase\n"
+        "• **Starts With:** Matches if message starts with keyword\n"
+        "• **Regex:** Advanced pattern matching\n\n"
+        "**Tips:**\n"
+        "✅ Use natural keywords people actually type\n"
+        "✅ Add delay (3+ seconds) to look more human\n"
+        "✅ Keep responses friendly and helpful\n"
+        "⚠️ Don't spam - use scout mode responsibly!"
+    )
+    
+    keyboard = [
+        [InlineKeyboardButton("🤖 Go to Userbot Control", callback_data="userbot_control")],
+        [InlineKeyboardButton("🔑 Add Keywords", callback_data="scout_keywords|0")],
+        [InlineKeyboardButton("⬅️ Back to Scout Menu", callback_data="scout_menu")]
+    ]
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+
+async def handle_scout_bulk_enable(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Enable all keywords"""
+    query = update.callback_query
+    
+    if not is_primary_admin(query.from_user.id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("UPDATE scout_keywords SET is_active = TRUE")
+    affected = c.rowcount
+    conn.commit()
+    conn.close()
+    
+    await query.answer(f"✅ Enabled {affected} keyword(s)", show_alert=True)
+    await handle_scout_keywords(update, context, ['0'])
+
+
+async def handle_scout_bulk_disable(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Disable all keywords"""
+    query = update.callback_query
+    
+    if not is_primary_admin(query.from_user.id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("UPDATE scout_keywords SET is_active = FALSE")
+    affected = c.rowcount
+    conn.commit()
+    conn.close()
+    
+    await query.answer(f"✅ Disabled {affected} keyword(s)", show_alert=True)
+    await handle_scout_keywords(update, context, ['0'])
 

@@ -192,35 +192,43 @@ def setup_scout_handlers(client: Client, userbot_id: int):
     
     if not PYROGRAM_AVAILABLE:
         logger.error("❌ Pyrogram not available - cannot setup scout handlers")
-        return False
+        return {'success': False, 'error': 'Pyrogram not available'}
     
-    @client.on_message(filters.group & filters.text & ~filters.bot & ~filters.me)
-    async def handle_group_message(client: Client, message: Message):
-        """Monitor all group messages for keywords"""
-        try:
-            # Check if this userbot has scout mode enabled
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute("SELECT scout_mode_enabled FROM userbots WHERE id = %s", (userbot_id,))
-            result = c.fetchone()
-            conn.close()
-            
-            if not result or not result['scout_mode_enabled']:
-                return  # Scout mode disabled for this userbot
-            
-            # Check message for keywords
-            matched_keyword = await scout_system.check_message(message.text)
-            
-            if matched_keyword:
-                logger.info(f"🔍 Keyword detected: '{matched_keyword['keyword']}' in chat {message.chat.id}")
-                # Send auto-reply
-                await scout_system.send_auto_reply(client, userbot_id, message, matched_keyword)
+    try:
+        logger.info(f"🔍 Setting up scout handlers for userbot ID {userbot_id}")
         
-        except Exception as e:
-            logger.error(f"Error in scout message handler: {e}", exc_info=True)
-    
-    logger.info(f"✅ Scout handlers registered for userbot {userbot_id}")
-    return True
+        @client.on_message(filters.group & filters.text & ~filters.bot & ~filters.me)
+        async def handle_group_message(client: Client, message: Message):
+            """Monitor all group messages for keywords"""
+            try:
+                # Check if this userbot has scout mode enabled
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("SELECT scout_mode_enabled FROM userbots WHERE id = %s", (userbot_id,))
+                result = c.fetchone()
+                conn.close()
+                
+                if not result or not result['scout_mode_enabled']:
+                    return  # Scout mode disabled for this userbot
+                
+                # Check message for keywords
+                matched_keyword = await scout_system.check_message(message.text)
+                
+                if matched_keyword:
+                    logger.info(f"🔍 Keyword '{matched_keyword['keyword']}' detected in chat {message.chat.id} (userbot {userbot_id})")
+                    # Send auto-reply
+                    await scout_system.send_auto_reply(client, userbot_id, message, matched_keyword)
+            
+            except Exception as e:
+                logger.error(f"Error in scout message handler (userbot {userbot_id}): {e}", exc_info=True)
+        
+        logger.info(f"✅ Scout handlers registered successfully for userbot {userbot_id}")
+        logger.info(f"🎯 Userbot {userbot_id} is now monitoring group messages for keywords")
+        return {'success': True, 'userbot_id': userbot_id}
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to setup scout handlers for userbot {userbot_id}: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
 
 
 # === SCOUT DATABASE FUNCTIONS ===
@@ -311,4 +319,63 @@ def toggle_scout_mode(userbot_id: int, enabled: bool) -> bool:
     finally:
         if conn:
             conn.close()
+
+
+def test_scout_mode() -> Dict:
+    """Test scout mode status and configuration"""
+    status = {
+        'pyrogram_available': PYROGRAM_AVAILABLE,
+        'userbots_configured': 0,
+        'userbots_connected': 0,
+        'userbots_with_scout': 0,
+        'active_keywords': 0,
+        'errors': [],
+        'warnings': []
+    }
+    
+    # Check Pyrogram
+    if not PYROGRAM_AVAILABLE:
+        status['errors'].append("Pyrogram library not installed")
+        return status
+    
+    # Check database
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Count userbots
+        c.execute("SELECT COUNT(*) as count FROM userbots")
+        status['userbots_configured'] = c.fetchone()['count']
+        
+        # Count connected userbots
+        c.execute("SELECT COUNT(*) as count FROM userbots WHERE is_connected = TRUE")
+        status['userbots_connected'] = c.fetchone()['count']
+        
+        # Count userbots with scout mode
+        c.execute("SELECT COUNT(*) as count FROM userbots WHERE scout_mode_enabled = TRUE")
+        status['userbots_with_scout'] = c.fetchone()['count']
+        
+        # Count active keywords
+        c.execute("SELECT COUNT(*) as count FROM scout_keywords WHERE is_active = TRUE")
+        status['active_keywords'] = c.fetchone()['count']
+        
+        # Check for issues
+        if status['userbots_configured'] == 0:
+            status['warnings'].append("No userbots configured")
+        elif status['userbots_connected'] == 0:
+            status['warnings'].append("No userbots connected")
+        elif status['userbots_with_scout'] == 0:
+            status['warnings'].append("Scout mode not enabled on any userbot")
+        elif status['active_keywords'] == 0:
+            status['warnings'].append("No active keywords configured")
+        
+    except Exception as e:
+        status['errors'].append(f"Database error: {e}")
+        logger.error(f"Error testing scout mode: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
+    return status
 

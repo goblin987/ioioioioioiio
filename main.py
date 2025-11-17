@@ -224,7 +224,10 @@ try:
         handle_scout_delete_keyword,
         handle_scout_userbots,
         handle_scout_toggle_bot,
-        handle_scout_triggers
+        handle_scout_triggers,
+        handle_scout_quick_start,
+        handle_scout_bulk_enable,
+        handle_scout_bulk_disable
     )
     
     from userbot_admin import (
@@ -1588,6 +1591,9 @@ def callback_query_router(func):
                     "scout_userbots": handle_scout_userbots,
                     "scout_toggle_bot": handle_scout_toggle_bot,
                     "scout_triggers": handle_scout_triggers,
+                    "scout_quick_start": handle_scout_quick_start,
+                    "scout_bulk_enable": handle_scout_bulk_enable,
+                    "scout_bulk_disable": handle_scout_bulk_disable,
                 })
                 logger.info("✅ Userbot handlers registered")
             else:
