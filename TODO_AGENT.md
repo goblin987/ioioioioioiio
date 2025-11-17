@@ -206,3 +206,82 @@
 ---
 Last Updated: Comprehensive error handling added to case opening system! Admin must configure rewards before users can open cases.
 
+---
+
+## Admin Panel Mobile-First UX Improvements
+
+### Current Status: IMPLEMENTATION COMPLETE - TESTING PHASE
+
+### Overview
+Enhancing admin panel with three major features optimized for mobile phone usage.
+
+### Feature 1: Live Dashboard ✅
+- [x] Add today's sales query
+- [x] Add low stock count query (< 20 units)
+- [x] Add new users today query
+- [x] Update dashboard message format
+- [x] Add visual indicators (⚠️ for low stock, 📈 for new users)
+- [ ] TEST: Verify dashboard loads on mobile
+- [ ] TEST: Verify all metrics calculate correctly
+
+### Feature 2: Reorganized Menu by Frequency ✅
+- [x] Identify top 5 most-used actions (Add Products, Check Stock, Recent Purchases, Find User, Broadcast)
+- [x] Create full-width buttons for frequent actions
+- [x] Pair related secondary actions (2 per row)
+- [x] Add visual separators (━━━) between categories
+- [x] Implement "noop" callbacks for non-interactive headers
+- [ ] TEST: Verify menu displays correctly on mobile
+- [ ] TEST: Confirm noop buttons don't trigger errors
+
+### Feature 3: Breadcrumb Navigation ✅
+- [x] Create breadcrumb utility functions (update_breadcrumb, get_breadcrumb_text, get_back_button, clear_breadcrumbs)
+- [x] Update main admin menu to initialize breadcrumbs
+- [x] Update 7 submenu handlers to use breadcrumbs
+- [x] Implement smart back button (goes to previous level)
+- [x] Add "Home" button alongside "Back" button
+- [ ] TEST: Navigate deep (Admin → Products → Prices) and verify breadcrumb shows correctly
+- [ ] TEST: Tap "Back" button and verify it goes to previous page
+- [ ] TEST: Tap "Home" button and verify it goes to main admin menu
+
+### Handlers Updated with Breadcrumbs
+- [x] handle_admin_products_menu (line 700)
+- [x] handle_admin_locations_menu (line 726)
+- [x] handle_admin_users_menu (line 748)
+- [x] handle_admin_marketing_menu (line 774)
+- [x] handle_admin_bot_ui_menu (line 796)
+- [x] handle_admin_system_menu (line 854)
+- [x] handle_admin_analytics_menu (line 676)
+
+### Technical Details
+- **Breadcrumb Storage:** context.user_data['breadcrumbs'] (list of dicts with 'name' and 'callback')
+- **Breadcrumb Limit:** Last 5 pages (prevents memory bloat)
+- **Visual Format:** 🏠 Admin → Products → Edit Prices
+- **Button Mix:** Full-width for frequent actions, paired for secondary actions
+
+### User Requirements
+- Admin uses bot exclusively on mobile phone
+- Dashboard metrics: Sales today, Low stock count, New users today, Total balance
+- Most frequent actions: Add products, Check stock, View purchases, Search user, Broadcast
+- Navigation: Always show "Back" + "Home" buttons
+
+### Implementation Summary
+**Files Modified:**
+1. `admin.py` - All changes implemented
+   - Lines 71-108: Added breadcrumb utility functions
+   - Lines 504-656: Updated handle_admin_menu with dashboard, breadcrumbs, and reorganized menu
+   - Lines 676-934: Updated 7 submenu handlers with breadcrumbs
+
+**Database Queries Added:**
+- Today's sales: `SELECT SUM(price_paid) FROM purchases WHERE purchase_date >= TODAY`
+- Low stock: `SELECT COUNT(DISTINCT product_type) FROM products WHERE (available - reserved) < 20`
+- New users: `SELECT COUNT(*) FROM users WHERE DATE(first_interaction) = CURRENT_DATE`
+
+### Next Steps
+1. Deploy to production
+2. Test on mobile device (user will perform)
+3. Gather feedback on button sizes and navigation flow
+4. Iterate based on real-world usage
+
+---
+Last Updated: Admin Panel mobile-first improvements fully implemented! Ready for production testing.
+

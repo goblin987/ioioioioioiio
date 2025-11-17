@@ -67,6 +67,45 @@ try:
 except ImportError:
     logger_dummy_viewer = logging.getLogger(__name__ + "_dummy_viewer")
     logger_dummy_viewer.error("Could not import handlers from viewer_admin.py.")
+
+# === BREADCRUMB NAVIGATION SYSTEM ===
+def update_breadcrumb(context: ContextTypes.DEFAULT_TYPE, page_name: str, callback: str):
+    """Add a page to breadcrumb trail"""
+    if 'breadcrumbs' not in context.user_data:
+        context.user_data['breadcrumbs'] = []
+    
+    # Add new page
+    context.user_data['breadcrumbs'].append({
+        'name': page_name,
+        'callback': callback
+    })
+    
+    # Limit to last 5 pages to prevent memory bloat
+    if len(context.user_data['breadcrumbs']) > 5:
+        context.user_data['breadcrumbs'] = context.user_data['breadcrumbs'][-5:]
+
+def get_breadcrumb_text(context: ContextTypes.DEFAULT_TYPE) -> str:
+    """Generate breadcrumb text like: 🏠 Admin → Products → Edit Prices"""
+    if 'breadcrumbs' not in context.user_data or not context.user_data['breadcrumbs']:
+        return "🏠 Admin"
+    
+    trail = " → ".join([crumb['name'] for crumb in context.user_data['breadcrumbs']])
+    return f"🏠 {trail}"
+
+def get_back_button(context: ContextTypes.DEFAULT_TYPE) -> InlineKeyboardButton:
+    """Generate smart back button based on breadcrumb trail"""
+    if 'breadcrumbs' not in context.user_data or len(context.user_data['breadcrumbs']) <= 1:
+        # At root or one level deep - go to main admin menu
+        return InlineKeyboardButton("🏠 Admin Home", callback_data="admin_menu")
+    
+    # Go back one level
+    previous = context.user_data['breadcrumbs'][-2]
+    context.user_data['breadcrumbs'].pop()  # Remove current page
+    return InlineKeyboardButton(f"⬅️ Back to {previous['name']}", callback_data=previous['callback'])
+
+def clear_breadcrumbs(context: ContextTypes.DEFAULT_TYPE):
+    """Clear breadcrumb trail (call when returning to main admin menu)"""
+    context.user_data['breadcrumbs'] = []
     # Define dummy handlers for viewer admin menu and user management if import fails
     async def handle_viewer_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
         query = update.callback_query
@@ -464,6 +503,10 @@ async def handle_adm_drop_details_message(update: Update, context: ContextTypes.
 # --- Admin Callback Handlers ---
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Displays the main admin dashboard, handling both command and callback."""
+    # Clear breadcrumbs when returning to main menu
+    clear_breadcrumbs(context)
+    update_breadcrumb(context, "Admin", "admin_menu")
+    
     user = update.effective_user
     query = update.callback_query
     if not user:
@@ -495,6 +538,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             return
 
     total_users, total_user_balance, active_products, total_sales_value = 0, Decimal('0.0'), 0, Decimal('0.0')
+    today_sales, low_stock_count, new_users_today = Decimal('0.0'), 0, 0
     conn = None
     try:
         conn = get_db_connection()
@@ -507,6 +551,36 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         res_products = c.fetchone(); active_products = res_products['count'] if res_products else 0
         c.execute("SELECT COALESCE(SUM(price_paid), 0.0) as total_sales FROM purchases")
         res_sales = c.fetchone(); total_sales_value = Decimal(str(res_sales['total_sales'])) if res_sales else Decimal('0.0')
+        
+        # Query today's sales
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        c.execute("""
+            SELECT COALESCE(SUM(price_paid), 0.0) as today_sales 
+            FROM purchases 
+            WHERE purchase_date >= %s
+        """, (today_start,))
+        res_today = c.fetchone()
+        today_sales = Decimal(str(res_today['today_sales'])) if res_today else Decimal('0.0')
+        
+        # Query low stock items
+        c.execute("""
+            SELECT COUNT(DISTINCT product_type) as low_stock_count 
+            FROM products 
+            WHERE (available - reserved) < 20 
+            AND available > reserved
+        """)
+        res_low_stock = c.fetchone()
+        low_stock_count = res_low_stock['low_stock_count'] if res_low_stock else 0
+        
+        # Query new users registered today
+        c.execute("""
+            SELECT COUNT(*) as new_today 
+            FROM users 
+            WHERE DATE(first_interaction) = CURRENT_DATE
+        """)
+        res_new_users = c.fetchone()
+        new_users_today = res_new_users['new_today'] if res_new_users else 0
+        
     except Exception as e:
         logger.error(f"DB error fetching admin dashboard data: {e}", exc_info=True)
         error_message = "❌ Error loading admin data."
@@ -518,44 +592,66 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     finally:
         if conn: conn.close()
 
+    today_sales_str = format_currency(today_sales)
     total_user_balance_str = format_currency(total_user_balance)
-    total_sales_value_str = format_currency(total_sales_value)
+    
+    # Build dashboard with visual indicators
+    low_stock_indicator = "⚠️" if low_stock_count > 0 else "✅"
+    new_users_indicator = "📈" if new_users_today > 0 else "📊"
+    
     msg = (
-       f"🔧 Admin Dashboard (Primary)\n\n"
-       f"👥 Total Users: {total_users}\n"
-       f"💰 Sum of User Balances: {total_user_balance_str} EUR\n"
-       f"📈 Total Sales Value: {total_sales_value_str} EUR\n"
-       f"📦 Active Products: {active_products}\n\n"
-       "Select an action:"
+        f"🎯 ADMIN DASHBOARD\n\n"
+        f"📊 Today's Overview:\n"
+        f"├ 💰 Sales Today: {today_sales_str}€\n"
+        f"├ {low_stock_indicator} Low Stock: {low_stock_count} items\n"
+        f"├ {new_users_indicator} New Users: {new_users_today}\n"
+        f"└ 💳 Total Balance: {total_user_balance_str}€\n\n"
+        f"⚡ Quick Actions & Menu:"
     )
 
-    # Organized admin menu with categories
+    # Organized admin menu - mobile-first, frequency-based layout
     keyboard = [
-        # === ANALYTICS & MONITORING ===
-        [InlineKeyboardButton("📊 Analytics & Reports", callback_data="admin_analytics_menu")],
-        [InlineKeyboardButton("📦 Stock Management", callback_data="stock_management_menu")],
-        
-        # === PRODUCT MANAGEMENT ===
-        [InlineKeyboardButton("🛍️ Product Management", callback_data="admin_products_menu")],
-        [InlineKeyboardButton("🗺️ Location Management", callback_data="admin_locations_menu")],
-        [InlineKeyboardButton("💰 Edit Product Prices", callback_data="product_price_editor_menu")],
-        
-        # === USER & CUSTOMER MANAGEMENT ===
-        [InlineKeyboardButton("👥 User Management", callback_data="admin_users_menu")],
-        [InlineKeyboardButton("🎁 Marketing & Promotions", callback_data="admin_marketing_menu")],
-        
-        # === BOT INTERFACE & DESIGN ===
-        [InlineKeyboardButton("🎨 Bot UI Management", callback_data="admin_bot_ui_menu")],
-        [InlineKeyboardButton("📢 Running Ads Management", callback_data="admin_marquee_settings")],
-        
-        # === SYSTEM & SECURITY ===
-        [InlineKeyboardButton("⚙️ System Settings", callback_data="admin_system_menu")],
-        [InlineKeyboardButton("🤖 Userbot Control", callback_data="userbot_control")],
-        
-        # === QUICK ACCESS ===
+        # === FREQUENT ACTIONS (Full-width for easy mobile tapping) ===
+        [InlineKeyboardButton("⚡ QUICK ACTIONS", callback_data="noop")],
+        [InlineKeyboardButton("➕ Add Products", callback_data="adm_city")],
+        [InlineKeyboardButton("📦 Check Stock", callback_data="view_stock")],
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],
         
-        [InlineKeyboardButton("🏠 User Home Menu", callback_data="back_start")]
+        # === COMMON TASKS (Paired buttons to save space) ===
+        [
+            InlineKeyboardButton("👤 Find User", callback_data="adm_search_user_start"),
+            InlineKeyboardButton("📢 Broadcast", callback_data="adm_broadcast_start")
+        ],
+        [
+            InlineKeyboardButton("💰 Edit Prices", callback_data="product_price_editor_menu"),
+            InlineKeyboardButton("📊 Analytics", callback_data="admin_analytics_menu")
+        ],
+        
+        # === CATEGORIES (Full-width section headers) ===
+        [InlineKeyboardButton("━━━ BUSINESS ━━━", callback_data="noop")],
+        [
+            InlineKeyboardButton("🛍️ Products", callback_data="admin_products_menu"),
+            InlineKeyboardButton("🗺️ Locations", callback_data="admin_locations_menu")
+        ],
+        
+        [InlineKeyboardButton("━━━ CUSTOMERS ━━━", callback_data="noop")],
+        [
+            InlineKeyboardButton("👥 Users", callback_data="admin_users_menu"),
+            InlineKeyboardButton("🎁 Marketing", callback_data="admin_marketing_menu")
+        ],
+        
+        [InlineKeyboardButton("━━━ SETTINGS ━━━", callback_data="noop")],
+        [
+            InlineKeyboardButton("🎨 Bot UI", callback_data="admin_bot_ui_menu"),
+            InlineKeyboardButton("⚙️ System", callback_data="admin_system_menu")
+        ],
+        [
+            InlineKeyboardButton("📢 Running Ads", callback_data="admin_marquee_settings"),
+            InlineKeyboardButton("🤖 Userbot", callback_data="userbot_control")
+        ],
+        
+        # === EXIT ===
+        [InlineKeyboardButton("🏠 Exit to User Menu", callback_data="back_start")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -583,14 +679,21 @@ async def handle_admin_analytics_menu(update: Update, context: ContextTypes.DEFA
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "📊 **Analytics & Reports**\n\nChoose the analytics you want to view:"
+    # Add breadcrumb
+    update_breadcrumb(context, "Analytics", "admin_analytics_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n📊 **Analytics & Reports**\n\nChoose the analytics you want to view:"
     keyboard = [
         [InlineKeyboardButton("📈 Sales Analytics", callback_data="sales_analytics_menu")],
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],
         [InlineKeyboardButton("📜 Product Addition Log", callback_data="viewer_added_products|0")],
         [InlineKeyboardButton("📊 User Statistics", callback_data="admin_user_stats")],
         [InlineKeyboardButton("💰 Financial Reports", callback_data="admin_financial_reports")],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -600,7 +703,11 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "🛍️ **Product Management**\n\nManage your products and inventory:"
+    # Add breadcrumb
+    update_breadcrumb(context, "Products", "admin_products_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🛍️ **Product Management**\n\nManage your products and inventory:"
     keyboard = [
         [InlineKeyboardButton("➕ Add Products", callback_data="adm_city")],
         [InlineKeyboardButton("📦 Bulk Add Products", callback_data="adm_bulk_city")],
@@ -609,7 +716,10 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
         [InlineKeyboardButton("📦 View Bot Stock", callback_data="view_stock")],
         [InlineKeyboardButton("🧩 Manage Product Types", callback_data="adm_manage_types")],
         [InlineKeyboardButton("🔄 Reassign Product Type", callback_data="adm_reassign_type_start")],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -619,12 +729,19 @@ async def handle_admin_locations_menu(update: Update, context: ContextTypes.DEFA
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "🗺️ **Location Management**\n\nManage cities and districts:"
+    # Add breadcrumb
+    update_breadcrumb(context, "Locations", "admin_locations_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🗺️ **Location Management**\n\nManage cities and districts:"
     keyboard = [
         [InlineKeyboardButton("🏙️ Manage Cities", callback_data="adm_manage_cities")],
         [InlineKeyboardButton("➕ Add New City", callback_data="adm_add_city")],
         [InlineKeyboardButton("🗺️ Manage Districts", callback_data="adm_manage_districts")],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -634,7 +751,11 @@ async def handle_admin_users_menu(update: Update, context: ContextTypes.DEFAULT_
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "👥 **User Management**\n\nManage users and customer service:"
+    # Add breadcrumb
+    update_breadcrumb(context, "Users", "admin_users_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n👥 **User Management**\n\nManage users and customer service:"
     keyboard = [
         [InlineKeyboardButton("🔍 Search User", callback_data="adm_search_user_start")],
         [InlineKeyboardButton("👑 VIP System", callback_data="vip_management_menu")],
@@ -643,7 +764,10 @@ async def handle_admin_users_menu(update: Update, context: ContextTypes.DEFAULT_
         [InlineKeyboardButton("🎁 Referral System", callback_data="referral_admin_menu")],  # 🚀 YOLO MODE: ADDED!
         [InlineKeyboardButton("🚫 Manage Reviews", callback_data="adm_manage_reviews|0")],
         [InlineKeyboardButton("🧹 Clear Reservations", callback_data="adm_clear_reservations_confirm")],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -653,12 +777,19 @@ async def handle_admin_marketing_menu(update: Update, context: ContextTypes.DEFA
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
-    msg = "🎁 **Marketing & Promotions**\n\nManage discounts, campaigns, and broadcasts:"
+    # Add breadcrumb
+    update_breadcrumb(context, "Marketing", "admin_marketing_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🎁 **Marketing & Promotions**\n\nManage discounts, campaigns, and broadcasts:"
     keyboard = [
         [InlineKeyboardButton("🏷️ Manage Discount Codes", callback_data="adm_manage_discounts")],
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
         [InlineKeyboardButton("📢 Broadcast Message", callback_data="adm_broadcast_start")],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -668,11 +799,15 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
     
+    # Add breadcrumb
+    update_breadcrumb(context, "Bot UI", "admin_bot_ui_menu")
+    breadcrumb = get_breadcrumb_text(context)
+    
     from utils import is_daily_rewards_enabled
     
     daily_rewards_on = is_daily_rewards_enabled()
     
-    msg = "🎨 **Bot UI Management**\n\nManage bot interface, themes, and media:"
+    msg = f"{breadcrumb}\n\n🎨 **Bot UI Management**\n\nManage bot interface, themes, and media:"
     keyboard = [
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
@@ -680,7 +815,10 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
             f"{'✅' if daily_rewards_on else '❌'} Show Daily Rewards Button",
             callback_data=f"toggle_daily_rewards_button|{'disable' if daily_rewards_on else 'enable'}"
         )],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
@@ -718,6 +856,10 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     if not is_primary_admin(query.from_user.id): 
         return await query.answer("Access denied.", show_alert=True)
+    
+    # Add breadcrumb
+    update_breadcrumb(context, "System", "admin_system_menu")
+    breadcrumb = get_breadcrumb_text(context)
     
     # Check current system settings
     conn = None
@@ -765,7 +907,7 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
     placement_text = "BEFORE verification" if language_prompt_placement == 'before' else "AFTER verification"
     secret_chat_status = "✅ ENABLED" if secret_chat_enabled else "❌ DISABLED"
     
-    msg = f"⚙️ **System Settings**\n\nConfigure bot security and language settings:\n\n"
+    msg = f"{breadcrumb}\n\n⚙️ **System Settings**\n\nConfigure bot security and language settings:\n\n"
     msg += f"🤖 **Human Verification:** {verification_status}\n"
     msg += f"🔢 **Max Attempts:** {attempt_limit} tries\n"
     msg += f"⚠️ **Auto-Block:** After {attempt_limit} failed attempts\n\n"
@@ -784,7 +926,10 @@ async def handle_admin_system_menu(update: Update, context: ContextTypes.DEFAULT
         [InlineKeyboardButton(f"🔐 {'Disable' if secret_chat_enabled else 'Enable'} Secret Chat Delivery", 
                              callback_data=f"toggle_secret_chat_delivery|{'disable' if secret_chat_enabled else 'enable'}")],
         [InlineKeyboardButton("🎁 Daily Rewards Settings", callback_data="admin_daily_rewards_settings")],
-        [InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")]
+        [
+            get_back_button(context),
+            InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+        ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
