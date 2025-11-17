@@ -145,7 +145,7 @@ def init_price_editor_tables():
         c.execute("""
             CREATE TABLE IF NOT EXISTS price_change_log (
                 id SERIAL PRIMARY KEY,
-                product_id INTEGER NOT NULL,
+                product_id BIGINT NOT NULL,
                 old_price REAL NOT NULL,
                 new_price REAL NOT NULL,
                 changed_by_admin_id BIGINT NOT NULL,
@@ -154,6 +154,18 @@ def init_price_editor_tables():
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             )
         """)
+        
+        # Migration: Change product_id from INTEGER to BIGINT if needed
+        try:
+            c.execute("""
+                ALTER TABLE price_change_log 
+                ALTER COLUMN product_id TYPE BIGINT
+            """)
+            conn.commit()
+            logger.info("✅ Migrated price_change_log.product_id to BIGINT")
+        except Exception as e:
+            conn.rollback()
+            logger.info(f"ℹ️ price_change_log.product_id migration skipped: {e}")
         
         # Note: last_price_update column will be added later when needed to avoid startup delays
         logger.info("✅ Price editor tables initialized (column addition skipped for PostgreSQL)")
