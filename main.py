@@ -992,6 +992,7 @@ def callback_query_router(func):
                 # User Management Submenu handlers
                 "adm_resellers_menu": admin.handle_adm_resellers_menu,
                 "adm_users_other": admin.handle_adm_users_other,
+                "adm_export_usernames": admin.handle_adm_export_usernames,
                 
                 # Product Removal System handlers
                 "remove_products_menu": admin.handle_remove_products_menu,

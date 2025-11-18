@@ -7176,6 +7176,7 @@ async def handle_adm_users_other(update: Update, context: ContextTypes.DEFAULT_T
     msg = f"{breadcrumb}\n\n⚙️ **Other User Tools**\n\nAdditional user management options:"
     
     keyboard = [
+        [InlineKeyboardButton("📥 Export Usernames", callback_data="adm_export_usernames")],
         [InlineKeyboardButton("🚫 Manage Reviews", callback_data="adm_manage_reviews|0")],
         [InlineKeyboardButton("🧹 Clear Reservations", callback_data="adm_clear_reservations_confirm")],
         [
@@ -7185,6 +7186,81 @@ async def handle_adm_users_other(update: Update, context: ContextTypes.DEFAULT_T
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_adm_export_usernames(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Export all usernames to a text file"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    await query.answer("📥 Generating username export...", show_alert=False)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all users with usernames (non-null, non-empty)
+        c.execute("""
+            SELECT DISTINCT username 
+            FROM users 
+            WHERE username IS NOT NULL AND username != ''
+            ORDER BY username
+        """)
+        
+        users = c.fetchall()
+        
+        if not users:
+            await query.answer("❌ No users with usernames found", show_alert=True)
+            return
+        
+        # Generate text file content
+        username_list = []
+        for user in users:
+            username = user['username']
+            # Add @ prefix if not present
+            if not username.startswith('@'):
+                username = f"@{username}"
+            username_list.append(username)
+        
+        # Create file content
+        file_content = "\n".join(username_list)
+        
+        # Get stats
+        total_users = len(users)
+        
+        # Create file in memory
+        import io
+        from datetime import datetime
+        
+        file_buffer = io.BytesIO(file_content.encode('utf-8'))
+        file_buffer.name = f"usernames_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        file_buffer.seek(0)
+        
+        # Send file to admin
+        caption = (
+            f"📥 **Username Export**\n\n"
+            f"✅ Total usernames: **{total_users}**\n"
+            f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"All usernames from users who have interacted with the bot."
+        )
+        
+        await context.bot.send_document(
+            chat_id=query.from_user.id,
+            document=file_buffer,
+            filename=file_buffer.name,
+            caption=caption,
+            parse_mode='Markdown'
+        )
+        
+        await query.answer(f"✅ Exported {total_users} usernames!", show_alert=True)
+        
+    except Exception as e:
+        logger.error(f"Error exporting usernames: {e}", exc_info=True)
+        await query.answer("❌ Error generating export. Check logs.", show_alert=True)
+    finally:
+        if conn:
+            conn.close()
 
 async def handle_adm_products_advanced(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Shows advanced product management options"""
