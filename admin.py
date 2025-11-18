@@ -705,9 +705,10 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
             InlineKeyboardButton("💰 Edit Prices", callback_data="product_price_editor_menu"),
             InlineKeyboardButton("🗑️ Remove Products", callback_data="remove_products_menu")
         ],
-        
-        # Advanced - single row
-        [InlineKeyboardButton("⚙️ Advanced", callback_data="adm_products_advanced")],
+        [
+            InlineKeyboardButton("🏷️ Product Types", callback_data="adm_product_types_menu"),
+            InlineKeyboardButton("📝 Manage Products", callback_data="adm_manage_products")
+        ],
         
         # Navigation
         [
@@ -7188,12 +7189,12 @@ async def handle_adm_users_other(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
 async def handle_adm_export_usernames(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Export all usernames to a text file"""
+    """Export all usernames and user IDs to separate text files"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
     
-    await query.answer("📥 Generating username export...", show_alert=False)
+    await query.answer("📥 Generating user export...", show_alert=False)
     
     conn = None
     try:
@@ -7207,56 +7208,90 @@ async def handle_adm_export_usernames(update: Update, context: ContextTypes.DEFA
             WHERE username IS NOT NULL AND username != ''
             ORDER BY username
         """)
+        users_with_usernames = c.fetchall()
         
-        users = c.fetchall()
+        # Get all users WITHOUT usernames (null or empty)
+        c.execute("""
+            SELECT DISTINCT user_id 
+            FROM users 
+            WHERE username IS NULL OR username = ''
+            ORDER BY user_id
+        """)
+        users_without_usernames = c.fetchall()
         
-        if not users:
-            await query.answer("❌ No users with usernames found", show_alert=True)
-            return
-        
-        # Generate text file content
-        username_list = []
-        for user in users:
-            username = user['username']
-            # Add @ prefix if not present
-            if not username.startswith('@'):
-                username = f"@{username}"
-            username_list.append(username)
-        
-        # Create file content
-        file_content = "\n".join(username_list)
-        
-        # Get stats
-        total_users = len(users)
-        
-        # Create file in memory
         import io
         from datetime import datetime
         
-        file_buffer = io.BytesIO(file_content.encode('utf-8'))
-        file_buffer.name = f"usernames_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        file_buffer.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        files_sent = 0
         
-        # Send file to admin
-        caption = (
-            f"📥 **Username Export**\n\n"
-            f"✅ Total usernames: **{total_users}**\n"
-            f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-            f"All usernames from users who have interacted with the bot."
-        )
+        # FILE 1: Users with usernames
+        if users_with_usernames:
+            username_list = []
+            for user in users_with_usernames:
+                username = user['username']
+                # Add @ prefix if not present
+                if not username.startswith('@'):
+                    username = f"@{username}"
+                username_list.append(username)
+            
+            file_content = "\n".join(username_list)
+            file_buffer = io.BytesIO(file_content.encode('utf-8'))
+            file_buffer.name = f"usernames_{timestamp}.txt"
+            file_buffer.seek(0)
+            
+            caption = (
+                f"📥 **Usernames Export (Part 1/2)**\n\n"
+                f"✅ Users with @usernames: **{len(users_with_usernames)}**\n"
+                f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            
+            await context.bot.send_document(
+                chat_id=query.from_user.id,
+                document=file_buffer,
+                filename=file_buffer.name,
+                caption=caption,
+                parse_mode='Markdown'
+            )
+            files_sent += 1
         
-        await context.bot.send_document(
-            chat_id=query.from_user.id,
-            document=file_buffer,
-            filename=file_buffer.name,
-            caption=caption,
-            parse_mode='Markdown'
-        )
+        # FILE 2: Users without usernames (ID only)
+        if users_without_usernames:
+            user_id_list = []
+            for user in users_without_usernames:
+                user_id = str(user['user_id'])
+                user_id_list.append(user_id)
+            
+            file_content = "\n".join(user_id_list)
+            file_buffer = io.BytesIO(file_content.encode('utf-8'))
+            file_buffer.name = f"user_ids_{timestamp}.txt"
+            file_buffer.seek(0)
+            
+            caption = (
+                f"📥 **User IDs Export (Part 2/2)**\n\n"
+                f"✅ Users without @usernames: **{len(users_without_usernames)}**\n"
+                f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                f"These users don't have Telegram usernames. Only user IDs are shown."
+            )
+            
+            await context.bot.send_document(
+                chat_id=query.from_user.id,
+                document=file_buffer,
+                filename=file_buffer.name,
+                caption=caption,
+                parse_mode='Markdown'
+            )
+            files_sent += 1
         
-        await query.answer(f"✅ Exported {total_users} usernames!", show_alert=True)
+        if files_sent == 0:
+            await query.answer("❌ No users found in database", show_alert=True)
+            return
+        
+        total_users = len(users_with_usernames) + len(users_without_usernames)
+        await query.answer(f"✅ Exported {total_users} users ({files_sent} files)!", show_alert=True)
         
     except Exception as e:
-        logger.error(f"Error exporting usernames: {e}", exc_info=True)
+        logger.error(f"Error exporting users: {e}", exc_info=True)
         await query.answer("❌ Error generating export. Check logs.", show_alert=True)
     finally:
         if conn:
