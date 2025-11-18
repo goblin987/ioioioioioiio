@@ -64,6 +64,8 @@ class ScoutSystem:
         if not message_text:
             return None
         
+        logger.debug(f"🔍 Checking message against {len(self.keywords_cache)} keywords: '{message_text}'")
+        
         for kw in self.keywords_cache:
             keyword = kw['keyword']
             match_type = kw['match_type']

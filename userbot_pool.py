@@ -103,6 +103,16 @@ class UserbotPool:
                     
                     logger.info(f"✅ Userbot #{userbot_id} ({name}) connected as @{username}")
                     
+                    # Set up scout handlers if enabled for this userbot
+                    try:
+                        c.execute("SELECT scout_mode_enabled FROM userbots WHERE id = %s", (userbot_id,))
+                        scout_result = c.fetchone()
+                        if scout_result and scout_result['scout_mode_enabled']:
+                            logger.info(f"🔍 Setting up Telethon scout handlers for userbot #{userbot_id}...")
+                            self._setup_telethon_scout_handlers(client, userbot_id)
+                    except Exception as scout_err:
+                        logger.error(f"Error setting up scout handlers for userbot #{userbot_id}: {scout_err}")
+                    
                 except Exception as e:
                     logger.error(f"❌ Failed to initialize userbot #{userbot_id} ({name}): {e}", exc_info=True)
                     self._update_connection_status(userbot_id, False, f"Error: {str(e)[:100]}")
@@ -603,6 +613,91 @@ class UserbotPool:
             logger.error(f"❌ Secret chat delivery failed (userbot #{userbot_id}): {e}", exc_info=True)
             return False, f"Secret chat delivery error: {e}"
     
+    def _setup_telethon_scout_handlers(self, client: TelegramClient, userbot_id: int):
+        """Setup Telethon message handlers for scout mode"""
+        from telethon import events
+        from userbot_scout import scout_system
+        
+        logger.info(f"🔍 Registering Telethon scout handlers for userbot #{userbot_id}")
+        
+        @client.on(events.NewMessage(incoming=True))
+        async def handle_scout_message(event):
+            """Monitor all messages for keywords (Telethon version)"""
+            try:
+                # Only process group messages with text
+                if not event.is_group or not event.text:
+                    return
+                
+                # Don't process own messages
+                if event.out:
+                    return
+                
+                # Check if scout mode is still enabled
+                from userbot_database import get_db_connection
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("SELECT scout_mode_enabled FROM userbots WHERE id = %s", (userbot_id,))
+                result = c.fetchone()
+                conn.close()
+                
+                if not result or not result['scout_mode_enabled']:
+                    return
+                
+                # Check message for keywords
+                logger.debug(f"🔍 Checking message in chat {event.chat_id}: '{event.text[:50]}...'")
+                matched_keyword = await scout_system.check_message(event.text)
+                
+                if matched_keyword:
+                    logger.info(f"🔍 Keyword '{matched_keyword['keyword']}' detected in chat {event.chat_id} (userbot {userbot_id})")
+                    
+                    # Delay to look more human
+                    delay = matched_keyword.get('response_delay_seconds', 3)
+                    await asyncio.sleep(delay)
+                    
+                    # Send reply
+                    response_text = matched_keyword['response_text']
+                    sent_message = await event.reply(response_text)
+                    
+                    # Log successful trigger (create a mock message object for logging)
+                    class MockMessage:
+                        def __init__(self, event):
+                            self.id = event.id
+                            self.text = event.text
+                            
+                            class MockChat:
+                                def __init__(self, chat_id, title):
+                                    self.id = chat_id
+                                    self.title = title
+                            
+                            class MockUser:
+                                def __init__(self, sender):
+                                    if sender:
+                                        self.id = sender.id
+                                        self.username = getattr(sender, 'username', None)
+                                    else:
+                                        self.id = None
+                                        self.username = None
+                            
+                            self.chat = MockChat(event.chat_id, getattr(event.chat, 'title', None))
+                            self.from_user = MockUser(event.sender)
+                    
+                    mock_message = MockMessage(event)
+                    
+                    await scout_system.log_trigger(
+                        userbot_id=userbot_id,
+                        keyword_id=matched_keyword['id'],
+                        message=mock_message,
+                        response_sent=True,
+                        response_message_id=sent_message.id
+                    )
+                    
+                    logger.info(f"✅ Scout replied to keyword '{matched_keyword['keyword']}' in chat {event.chat_id}")
+            
+            except Exception as e:
+                logger.error(f"Error in Telethon scout handler (userbot {userbot_id}): {e}", exc_info=True)
+        
+        logger.info(f"✅ Telethon scout handlers registered for userbot #{userbot_id}")
+    
     async def connect_single_userbot(self, userbot_id: int) -> bool:
         """Connect a single userbot by ID"""
         from userbot_database import get_db_connection
@@ -671,7 +766,7 @@ class UserbotPool:
             
             logger.info(f"✅ Userbot #{userbot_id} ({name}) connected as @{username}")
             
-            # Set up scout handlers if needed
+            # Set up scout handlers if needed (Telethon-based)
             from userbot_database import get_db_connection
             scout_conn = get_db_connection()
             scout_c = scout_conn.cursor()
@@ -679,10 +774,10 @@ class UserbotPool:
                 scout_c.execute("SELECT scout_mode_enabled FROM userbots WHERE id = %s", (userbot_id,))
                 result = scout_c.fetchone()
                 if result and result['scout_mode_enabled']:
-                    # Try to setup scout handlers (only works for Pyrogram clients)
-                    logger.info(f"🔍 Userbot #{userbot_id} has scout mode enabled (Telethon client, scout not applicable)")
-            except Exception:
-                pass
+                    logger.info(f"🔍 Setting up Telethon scout handlers for userbot #{userbot_id}...")
+                    self._setup_telethon_scout_handlers(client, userbot_id)
+            except Exception as e:
+                logger.error(f"Error checking scout mode: {e}")
             finally:
                 scout_conn.close()
             
