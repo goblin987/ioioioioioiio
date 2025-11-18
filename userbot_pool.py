@@ -603,6 +603,98 @@ class UserbotPool:
             logger.error(f"❌ Secret chat delivery failed (userbot #{userbot_id}): {e}", exc_info=True)
             return False, f"Secret chat delivery error: {e}"
     
+    async def connect_single_userbot(self, userbot_id: int) -> bool:
+        """Connect a single userbot by ID"""
+        from userbot_database import get_db_connection
+        
+        logger.info(f"🔄 Connecting single userbot #{userbot_id}...")
+        
+        # Check if already connected
+        if userbot_id in self.clients:
+            logger.info(f"⚠️ Userbot #{userbot_id} already connected")
+            return True
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        try:
+            # Get userbot info
+            c.execute("""
+                SELECT id, name, api_id, api_hash, phone_number, session_string
+                FROM userbots
+                WHERE id = %s AND is_enabled = TRUE AND session_string IS NOT NULL
+            """, (userbot_id,))
+            
+            ub = c.fetchone()
+            
+            if not ub:
+                logger.warning(f"⚠️ Userbot #{userbot_id} not found or not enabled")
+                return False
+            
+            name = ub['name']
+            api_id = int(ub['api_id'])
+            api_hash = ub['api_hash']
+            session_string = ub['session_string']
+            
+            # Create Telethon client
+            from telethon import TelegramClient
+            from telethon.sessions import StringSession
+            
+            client = TelegramClient(
+                StringSession(session_string),
+                api_id,
+                api_hash
+            )
+            
+            await client.connect()
+            
+            # Check if authorized
+            if not await client.is_user_authorized():
+                logger.error(f"❌ Userbot #{userbot_id} not authorized!")
+                await client.disconnect()
+                self._update_connection_status(userbot_id, False, "Not authorized")
+                return False
+            
+            # Get user info
+            me = await client.get_me()
+            username = me.username or me.first_name
+            
+            # Create secret chat manager
+            secret_chat_manager = SecretChatManager(client, auto_accept=True)
+            
+            # Store in pool
+            self.clients[userbot_id] = client
+            self.secret_chat_managers[userbot_id] = secret_chat_manager
+            
+            # Update database status
+            self._update_connection_status(userbot_id, True, f"Connected as @{username}")
+            
+            logger.info(f"✅ Userbot #{userbot_id} ({name}) connected as @{username}")
+            
+            # Set up scout handlers if needed
+            from userbot_database import get_db_connection
+            scout_conn = get_db_connection()
+            scout_c = scout_conn.cursor()
+            try:
+                scout_c.execute("SELECT scout_mode_enabled FROM userbots WHERE id = %s", (userbot_id,))
+                result = scout_c.fetchone()
+                if result and result['scout_mode_enabled']:
+                    # Try to setup scout handlers (only works for Pyrogram clients)
+                    logger.info(f"🔍 Userbot #{userbot_id} has scout mode enabled (Telethon client, scout not applicable)")
+            except Exception:
+                pass
+            finally:
+                scout_conn.close()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to connect userbot #{userbot_id}: {e}", exc_info=True)
+            self._update_connection_status(userbot_id, False, f"Error: {str(e)[:100]}")
+            return False
+        finally:
+            conn.close()
+    
     async def disconnect_all(self):
         """Disconnect all userbots in the pool"""
         logger.info("🔌 Disconnecting all userbots in pool...")

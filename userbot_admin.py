@@ -1436,13 +1436,27 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
         context.user_data.pop('new_userbot_phone_code_hash', None)
         context.user_data.pop('new_userbot_temp_client', None)  # Clear the temp client too
         
+        # Auto-connect the userbot
+        logger.info(f"🔄 Auto-connecting newly created userbot #{new_userbot_id}...")
+        try:
+            from userbot_pool import userbot_pool
+            connect_success = await userbot_pool.connect_single_userbot(new_userbot_id)
+            
+            if connect_success:
+                connection_status = "✅ Connected & Ready"
+            else:
+                connection_status = "⚠️ Created but connection failed (check logs)"
+        except Exception as e:
+            logger.error(f"Error auto-connecting userbot: {e}")
+            connection_status = "⚠️ Created but connection failed"
+        
         # Success message
         msg = f"🎉 <b>Userbot Created Successfully!</b>\n\n"
         msg += f"✅ Name: <b>{name}</b>\n"
         msg += f"📱 Phone: <b>{phone}</b>\n"
         msg += f"👤 Logged in as: <b>@{username}</b>\n\n"
-        msg += f"🔐 This userbot is now ready for TRUE SECRET CHAT delivery!\n\n"
-        msg += f"The userbot will automatically connect and start delivering products via encrypted secret chats."
+        msg += f"🔐 Status: {connection_status}\n\n"
+        msg += f"This userbot is now ready for TRUE SECRET CHAT delivery!"
         
         await update.message.reply_text(msg, parse_mode='HTML')
         
