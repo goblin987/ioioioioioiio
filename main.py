@@ -420,254 +420,38 @@ except ImportError:
 try:
     from auto_ads_system import (
         handle_enhanced_auto_ads_menu,
-        handle_manage_accounts,
-        handle_add_account,
-        handle_my_configs,
-        handle_add_forwarding,
-        handle_settings,
-        handle_help,
-        handle_bump_service,
-        handle_upload_session,
-        handle_manual_setup,
-        handle_add_campaign,
-        handle_my_campaigns,
-        handle_campaign_stats,
-        handle_back_to_bump,
-        handle_config,
-        handle_delete_config,
-        handle_toggle_config,
-        handle_delete_account,
-        handle_manage_channels,
-        handle_add_channel,
-        handle_delete_channel,
-        handle_delete_campaign,
-        handle_edit_campaign,
-        handle_edit_text_content,
-        handle_edit_media,
-        handle_edit_buttons,
-        handle_edit_settings,
-        handle_edit_schedule,
-        handle_edit_targets,
-        handle_admin_menu,
-        handle_enhanced_session_file_upload,
-        handle_enhanced_account_details,
-        handle_enhanced_channel_link,
-        get_bot_instance as get_auto_ads_bot
+        handle_auto_ads_manage_accounts,
+        handle_auto_ads_add_account,
+        handle_auto_ads_upload_session,
+        handle_auto_ads_manual_setup,
+        handle_auto_ads_delete_account,
+        handle_auto_ads_confirm_delete_account,
+        handle_auto_ads_my_campaigns,
+        handle_auto_ads_add_campaign,
+        handle_auto_ads_start_campaign,
+        handle_auto_ads_toggle_campaign,
+        handle_auto_ads_delete_campaign,
+        handle_auto_ads_confirm_delete_campaign,
+        handle_auto_ads_select_account,
+        handle_auto_ads_target_all_groups,
+        handle_auto_ads_target_specific_chats,
+        handle_auto_ads_schedule_once,
+        handle_auto_ads_schedule_daily,
+        handle_auto_ads_confirm_create_campaign,
+        handle_auto_ads_help,
+        handle_auto_ads_message,
+        handle_auto_ads_document
     )
-    logging.getLogger(__name__).info("✅ Auto ads system handlers loaded successfully (30+ handlers)")
+    logging.getLogger(__name__).info("✅ Auto ads system handlers loaded successfully (Simplified UI)")
     
-    # Map old testforwarder names to new auto ads handlers
-    handle_testforwarder_menu = handle_enhanced_auto_ads_menu
-    handle_testforwarder_manage_accounts = handle_manage_accounts
-    handle_testforwarder_my_configs = handle_my_configs
-    handle_testforwarder_add_forwarding = handle_add_forwarding
-    handle_testforwarder_settings = handle_settings
-    handle_testforwarder_help = handle_help
-    handle_testforwarder_bump_service = handle_bump_service
-    handle_testforwarder_upload_session = handle_upload_session
-    handle_testforwarder_manual_setup = handle_manual_setup
-    handle_testforwarder_my_campaigns = handle_my_campaigns
-    handle_testforwarder_add_campaign = handle_add_campaign
-    handle_testforwarder_edit_account = handle_manage_accounts  # Uses same handler
-    handle_testforwarder_delete_account = handle_delete_account
-    handle_testforwarder_edit_config = handle_config
-    handle_testforwarder_delete_config = handle_delete_config
-    handle_testforwarder_edit_campaign = handle_edit_campaign
-    handle_testforwarder_delete_campaign = handle_delete_campaign
-    get_testforwarder_bot = get_auto_ads_bot
-    
-    # Message handlers (pass-through to bot instance)
-    async def handle_testforwarder_message(update, context):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
-    async def handle_testforwarder_login_code(update, context):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
-    async def handle_testforwarder_2fa(update, context):
-        bot = get_auto_ads_bot()
-        await bot.handle_message(update, context)
-    
-    # Campaign management handlers
-    async def handle_toggle_campaign(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query and query.data:
-            try:
-                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
-                await bot.toggle_campaign(query, campaign_id)
-            except (IndexError, ValueError) as e:
-                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
-                await query.answer("Invalid campaign selection", show_alert=True)
-    
-    async def handle_start_campaign(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query and query.data:
-            try:
-                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
-                await bot.start_campaign_manually(query, campaign_id)
-            except (IndexError, ValueError) as e:
-                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
-                await query.answer("Invalid campaign selection", show_alert=True)
-    
-    async def handle_test_campaign(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query and query.data:
-            try:
-                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
-                await bot.test_campaign(query, campaign_id)
-            except (IndexError, ValueError) as e:
-                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
-                await query.answer("Invalid campaign selection", show_alert=True)
-    
-    async def handle_view_campaign(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query and query.data:
-            try:
-                campaign_id = int(query.data.split("_")[2] if "_" in query.data else query.data.split("_")[1])
-                await bot.show_campaign_details(query, campaign_id)
-            except (IndexError, ValueError) as e:
-                logger.error(f"Error parsing campaign_id from {query.data}: {e}")
-                await query.answer("Invalid campaign selection", show_alert=True)
-    
-    # Stub handlers for features that need specific implementation
-    async def handle_testforwarder_select_account(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query and query.data:
-            # Extract account_id from callback data like "select_account_123"
-            try:
-                account_id = int(query.data.split("_")[2])
-                await bot.handle_account_selection(query, account_id)
-            except (IndexError, ValueError) as e:
-                logger.error(f"Error parsing account_id from {query.data}: {e}")
-                await query.answer("Invalid account selection", show_alert=True)
-    async def handle_testforwarder_run_campaign(update, context, params=None):
-        await update.callback_query.answer("Use 'My Campaigns' to run campaigns")
-    async def handle_testforwarder_select_forwarding_account(update, context, params=None):
-        await update.callback_query.answer("Select account from forwarding menu")
-    async def handle_testforwarder_add_buttons_yes(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_add_buttons_yes(query)
-    async def handle_testforwarder_add_buttons_no(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_add_buttons_no(query)
-    async def handle_testforwarder_target_all_groups(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_target_all_groups(query)
-    async def handle_testforwarder_target_specific_chats(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_target_specific_chats(query)
-    async def handle_testforwarder_schedule_daily(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_schedule_selection(query, 'daily')
-    async def handle_testforwarder_schedule_weekly(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_schedule_selection(query, 'weekly')
-    async def handle_testforwarder_schedule_hourly(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_schedule_selection(query, 'hourly')
-    async def handle_testforwarder_schedule_custom(update, context, params=None):
-        bot = get_auto_ads_bot()
-        query = update.callback_query
-        if query:
-            await bot.handle_schedule_selection(query, 'custom')
-    
-    # Additional stub handlers for missing callbacks
-    async def handle_testforwarder_back_to_ad_content(update, context, params=None):
-        bot = get_auto_ads_bot()
-        await bot.show_main_menu(update.callback_query)
-    async def handle_testforwarder_back_to_configs(update, context, params=None):
-        await handle_my_configs(update, context, params)
-    async def handle_testforwarder_advanced_settings(update, context, params=None):
-        bot = get_auto_ads_bot()
-        await bot.show_advanced_settings(update.callback_query)
-    async def handle_testforwarder_configure_plugins(update, context, params=None):
-        await update.callback_query.answer("Plugin configuration - Coming soon!")
-    async def handle_testforwarder_performance_settings(update, context, params=None):
-        await update.callback_query.answer("Performance settings - Coming soon!")
-    async def handle_testforwarder_security_settings(update, context, params=None):
-        await update.callback_query.answer("Security settings - Coming soon!")
-    async def handle_testforwarder_filter_settings(update, context, params=None):
-        await update.callback_query.answer("Filter settings - Coming soon!")
-    async def handle_testforwarder_format_settings(update, context, params=None):
-        await update.callback_query.answer("Format settings - Coming soon!")
-    async def handle_testforwarder_replace_settings(update, context, params=None):
-        await update.callback_query.answer("Replace settings - Coming soon!")
-    async def handle_testforwarder_caption_settings(update, context, params=None):
-        await update.callback_query.answer("Caption settings - Coming soon!")
-    async def handle_testforwarder_view_metrics(update, context, params=None):
-        await update.callback_query.answer("Metrics - Coming soon!")
-    async def handle_testforwarder_adjust_limits(update, context, params=None):
-        await update.callback_query.answer("Adjust limits - Coming soon!")
-    async def handle_testforwarder_access_control(update, context, params=None):
-        await update.callback_query.answer("Access control - Coming soon!")
-    async def handle_testforwarder_data_protection(update, context, params=None):
-        await update.callback_query.answer("Data protection - Coming soon!")
-    async def handle_testforwarder_security_logs(update, context, params=None):
-        await update.callback_query.answer("Security logs - Coming soon!")
-    async def handle_testforwarder_add_more_messages(update, context, params=None):
-        await update.callback_query.answer("Add more messages - Coming soon!")
-    async def handle_testforwarder_cancel_campaign(update, context, params=None):
-        bot = get_auto_ads_bot()
-        if update.effective_user.id in bot.user_sessions:
-            del bot.user_sessions[update.effective_user.id]
-        await bot.show_main_menu(update.callback_query)
-    async def handle_testforwarder_back_to_target_selection(update, context, params=None):
-        await update.callback_query.answer("Going back...")
-    async def handle_testforwarder_back_to_button_choice(update, context, params=None):
-        await update.callback_query.answer("Going back...")
-    async def handle_testforwarder_back_to_accounts(update, context, params=None):
-        await handle_manage_accounts(update, context, params)
+    # Simplified auto ads system - no complex mappings needed
+    # Handlers are called directly via callback_data prefixes (aa_*)
         
 except ImportError as e:
     logging.getLogger(__name__).warning(f"⚠️ Could not import auto ads handlers: {e}")
-    # Create fallback dummy handlers
-    async def handle_testforwarder_menu(update, context, params=None):
-        await update.callback_query.edit_message_text("🚧 Auto Ads System - Under Development")
-    handle_testforwarder_manage_accounts = handle_testforwarder_menu
-    handle_testforwarder_my_configs = handle_testforwarder_menu
-    handle_testforwarder_my_campaigns = handle_testforwarder_menu
-    handle_testforwarder_bump_service = handle_testforwarder_menu
-    handle_testforwarder_settings = handle_testforwarder_menu
-    handle_testforwarder_help = handle_testforwarder_menu
-    handle_testforwarder_manual_setup = handle_testforwarder_menu
-    handle_testforwarder_add_forwarding = handle_testforwarder_menu
-    handle_testforwarder_edit_account = handle_testforwarder_menu
-    handle_testforwarder_delete_account = handle_testforwarder_menu
-    handle_testforwarder_edit_config = handle_testforwarder_menu
-    handle_testforwarder_delete_config = handle_testforwarder_menu
-    handle_testforwarder_add_campaign = handle_testforwarder_menu
-    handle_testforwarder_edit_campaign = handle_testforwarder_menu
-    handle_testforwarder_delete_campaign = handle_testforwarder_menu
-    handle_testforwarder_select_account = handle_testforwarder_menu
-    handle_testforwarder_run_campaign = handle_testforwarder_menu
-    handle_testforwarder_select_forwarding_account = handle_testforwarder_menu
-    handle_testforwarder_upload_session = handle_testforwarder_menu
-    handle_testforwarder_add_buttons_yes = handle_testforwarder_menu
-    handle_testforwarder_add_buttons_no = handle_testforwarder_menu
-    handle_testforwarder_target_all_groups = handle_testforwarder_menu
-    handle_testforwarder_target_specific_chats = handle_testforwarder_menu
-    handle_testforwarder_schedule_daily = handle_testforwarder_menu
-    handle_testforwarder_schedule_weekly = handle_testforwarder_menu
-    handle_testforwarder_schedule_hourly = handle_testforwarder_menu
-    handle_testforwarder_schedule_custom = handle_testforwarder_menu
+    # Create fallback dummy handler
+    async def handle_enhanced_auto_ads_menu(update, context, params=None):
+        await update.callback_query.edit_message_text("🚧 Auto Ads System - Import Error")
     async def handle_testforwarder_message(update, context):
         pass
     async def handle_testforwarder_login_code(update, context):
@@ -1035,129 +819,28 @@ def callback_query_router(func):
                 "referral_code": handle_referral_code_payment,
                 "cancel_referral_code": handle_cancel_referral_code,
                 
-    # Testforwarder integration handlers
-    "auto_ads_menu": handle_testforwarder_menu,
-    "tf_main_menu": handle_testforwarder_menu,
-    "tf_manage_accounts": handle_testforwarder_menu,
-    "tf_manual_setup": handle_testforwarder_manual_setup,
-    "tf_bump_service": handle_testforwarder_bump_service,
-    "tf_my_configs": handle_testforwarder_my_configs,
-    "tf_add_forwarding": handle_testforwarder_add_forwarding,
-    "tf_help": handle_testforwarder_help,
-    # Original testforwarder callback data
-    "manage_accounts": handle_testforwarder_manage_accounts,
-    "add_account": handle_add_account,  # ADDED - missing handler
-    "manage_channels": handle_manage_channels,  # Channel management
-    "add_channel": handle_add_channel,
-    "delete_channel": handle_delete_channel,
-    "bump_service": handle_testforwarder_bump_service,
-    "my_configs": handle_testforwarder_my_configs,
-    "add_forwarding": handle_testforwarder_add_forwarding,
-    "settings": handle_testforwarder_settings,
-    "help": handle_testforwarder_help,
-    "manual_setup": handle_testforwarder_manual_setup,
-    "edit_account": handle_testforwarder_edit_account,
-    "delete_account": handle_testforwarder_delete_account,
-    "delete_account_1": handle_testforwarder_delete_account,
-    "delete_account_2": handle_testforwarder_delete_account,
-    "delete_account_3": handle_testforwarder_delete_account,
-    "delete_account_4": handle_testforwarder_delete_account,
-    "delete_account_5": handle_testforwarder_delete_account,
-    "main_menu": handle_testforwarder_menu,
-    "config": handle_config,  # ADDED - missing handler
-    "edit_config": handle_testforwarder_edit_config,
-    "delete_config": handle_testforwarder_delete_config,
-    "toggle_config": handle_toggle_config,  # ADDED - missing handler
-    "add_campaign": handle_testforwarder_add_campaign,
-    "my_campaigns": handle_testforwarder_my_campaigns,
-    "campaign_stats": handle_campaign_stats,  # ADDED - missing handler
-    "back_to_bump": handle_back_to_bump,  # ADDED - missing handler
-    "edit_campaign": handle_testforwarder_edit_campaign,
-    "delete_campaign": handle_testforwarder_delete_campaign,
-    "toggle_campaign": handle_toggle_campaign,
-    "start_campaign": handle_start_campaign,
-    "test_campaign": handle_test_campaign,
-    "view_campaign": handle_view_campaign,
-    "stats": handle_campaign_stats,
-    # Campaign handlers with IDs (1-20)
-    # Edit campaign handlers (IDs 1-50)
-    **{f"edit_campaign_{i}": handle_testforwarder_edit_campaign for i in range(1, 51)},
-    # Delete campaign handlers (IDs 1-50)
-    **{f"delete_campaign_{i}": handle_testforwarder_delete_campaign for i in range(1, 51)},
-    # Toggle campaign handlers (IDs 1-50)
-    **{f"toggle_campaign_{i}": handle_toggle_campaign for i in range(1, 51)},
-    # Start campaign handlers (IDs 1-50)
-    **{f"start_campaign_{i}": handle_start_campaign for i in range(1, 51)},
-    # Test campaign handlers (IDs 1-50)
-    **{f"test_campaign_{i}": handle_test_campaign for i in range(1, 51)},
-    # View campaign handlers (IDs 1-50)
-    **{f"view_campaign_{i}": handle_view_campaign for i in range(1, 51)},
-    # Stats handlers (IDs 1-50)
-    **{f"stats_{i}": handle_campaign_stats for i in range(1, 51)},
-    "edit_text_content": handle_edit_text_content,  # ADDED - missing handler
-    "edit_media": handle_edit_media,  # ADDED - missing handler
-    "edit_buttons": handle_edit_buttons,  # ADDED - missing handler
-    "edit_settings": handle_edit_settings,  # ADDED - missing handler
-    "edit_schedule": handle_edit_schedule,  # ADDED - missing handler
-    "edit_targets": handle_edit_targets,  # ADDED - missing handler
-    "select_account": handle_testforwarder_select_account,
-    "select_account_1": handle_testforwarder_select_account,
-    "select_account_2": handle_testforwarder_select_account,
-    "select_account_3": handle_testforwarder_select_account,
-    "select_account_4": handle_testforwarder_select_account,
-    "select_account_5": handle_testforwarder_select_account,
-    "select_account_6": handle_testforwarder_select_account,
-    "select_account_7": handle_testforwarder_select_account,
-    "select_account_8": handle_testforwarder_select_account,
-    "select_account_9": handle_testforwarder_select_account,
-    "select_account_10": handle_testforwarder_select_account,
-    "select_account_11": handle_testforwarder_select_account,
-    "select_account_12": handle_testforwarder_select_account,
-    "select_account_13": handle_testforwarder_select_account,
-    "select_account_14": handle_testforwarder_select_account,
-    "select_account_15": handle_testforwarder_select_account,
-    "select_account_16": handle_testforwarder_select_account,
-    "select_account_17": handle_testforwarder_select_account,
-    "select_account_18": handle_testforwarder_select_account,
-    "select_account_19": handle_testforwarder_select_account,
-    "select_account_20": handle_testforwarder_select_account,
-    "run_campaign": handle_testforwarder_run_campaign,
-    "run_campaign_1": handle_testforwarder_run_campaign,
-    "run_campaign_2": handle_testforwarder_run_campaign,
-    "run_campaign_3": handle_testforwarder_run_campaign,
-    "run_campaign_4": handle_testforwarder_run_campaign,
-    "run_campaign_5": handle_testforwarder_run_campaign,
-    "select_forwarding_account": handle_testforwarder_select_forwarding_account,
-    "upload_session": handle_testforwarder_upload_session,
-    "add_buttons_yes": handle_testforwarder_add_buttons_yes,
-    "add_buttons_no": handle_testforwarder_add_buttons_no,
-    "target_all_groups": handle_testforwarder_target_all_groups,
-    "target_specific_chats": handle_testforwarder_target_specific_chats,
-    "schedule_daily": handle_testforwarder_schedule_daily,
-    "schedule_weekly": handle_testforwarder_schedule_weekly,
-    "schedule_hourly": handle_testforwarder_schedule_hourly,
-    "schedule_custom": handle_testforwarder_schedule_custom,
-    # Additional auto ads handlers (ADDED - all missing callbacks)
-    "back_to_ad_content": handle_testforwarder_back_to_ad_content,
-    "back_to_configs": handle_testforwarder_back_to_configs,
-    "advanced_settings": handle_testforwarder_advanced_settings,
-    "configure_plugins": handle_testforwarder_configure_plugins,
-    "performance_settings": handle_testforwarder_performance_settings,
-    "security_settings": handle_testforwarder_security_settings,
-    "filter_settings": handle_testforwarder_filter_settings,
-    "format_settings": handle_testforwarder_format_settings,
-    "replace_settings": handle_testforwarder_replace_settings,
-    "caption_settings": handle_testforwarder_caption_settings,
-    "view_metrics": handle_testforwarder_view_metrics,
-    "adjust_limits": handle_testforwarder_adjust_limits,
-    "access_control": handle_testforwarder_access_control,
-    "data_protection": handle_testforwarder_data_protection,
-    "security_logs": handle_testforwarder_security_logs,
-    "add_more_messages": handle_testforwarder_add_more_messages,
-    "cancel_campaign": handle_testforwarder_cancel_campaign,
-    "back_to_target_selection": handle_testforwarder_back_to_target_selection,
-    "back_to_button_choice": handle_testforwarder_back_to_button_choice,
-    "back_to_accounts": handle_testforwarder_back_to_accounts,
+    # Auto Ads System - Simplified (aa_* prefix for all callbacks)
+    "auto_ads_menu": handle_enhanced_auto_ads_menu,
+    "aa_manage_accounts": handle_auto_ads_manage_accounts,
+    "aa_add_account": handle_auto_ads_add_account,
+    "aa_upload_session": handle_auto_ads_upload_session,
+    "aa_manual_setup": handle_auto_ads_manual_setup,
+    "aa_my_campaigns": handle_auto_ads_my_campaigns,
+    "aa_add_campaign": handle_auto_ads_add_campaign,
+    "aa_help": handle_auto_ads_help,
+    "aa_target_all_groups": handle_auto_ads_target_all_groups,
+    "aa_target_specific_chats": handle_auto_ads_target_specific_chats,
+    "aa_schedule_once": handle_auto_ads_schedule_once,
+    "aa_schedule_daily": handle_auto_ads_schedule_daily,
+    "aa_confirm_create_campaign": handle_auto_ads_confirm_create_campaign,
+    # Auto ads handlers with IDs (support up to 100 accounts/campaigns)
+    **{f"aa_delete_account_{i}": handle_auto_ads_delete_account for i in range(1, 101)},
+    **{f"aa_confirm_delete_account_{i}": handle_auto_ads_confirm_delete_account for i in range(1, 101)},
+    **{f"aa_start_campaign_{i}": handle_auto_ads_start_campaign for i in range(1, 101)},
+    **{f"aa_toggle_campaign_{i}": handle_auto_ads_toggle_campaign for i in range(1, 101)},
+    **{f"aa_delete_campaign_{i}": handle_auto_ads_delete_campaign for i in range(1, 101)},
+    **{f"aa_confirm_delete_campaign_{i}": handle_auto_ads_confirm_delete_campaign for i in range(1, 101)},
+    **{f"aa_select_account_{i}": handle_auto_ads_select_account for i in range(1, 101)},
                 
                 # VIP system handlers
                 "vip_management_menu": handle_vip_management_menu,
@@ -1824,19 +1507,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handler_func(update, context)
         return
     
-    # If no state handler, try testforwarder bot for text messages and documents
-    if update.message and (update.message.text or update.message.document):
-        logger.info(f"🔍 MESSAGE: Routing to testforwarder bot for user {user_id}")
+    # Check for auto ads session (simplified system)
+    if 'aa_session' in context.user_data:
+        logger.info(f"🔍 AUTO ADS: Routing message for user {user_id}")
         try:
             if update.message.document:
-                # Handle document uploads
-                bot = get_testforwarder_bot()
-                await bot.handle_document(update, context)
+                # Handle document uploads (session files)
+                await handle_auto_ads_document(update, context)
             else:
-                await handle_testforwarder_message(update, context)
-            return  # If testforwarder handled it, don't process further
+                # Handle text messages (wizard steps)
+                await handle_auto_ads_message(update, context)
+            return  # Auto ads handled it, don't process further
         except Exception as e:
-            logger.error(f"🔍 TESTFORWARDER FAILED: {e}")
+            logger.error(f"🔍 AUTO ADS FAILED: {e}")
     
     # No handler found
     logger.debug(f"No handler found for user {user_id} in state: {state}")
