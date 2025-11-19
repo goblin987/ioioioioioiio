@@ -54,23 +54,21 @@ class AutoAdsDatabase:
             ''')
             logger.info("✅ auto_ads_accounts table created/verified")
             
-            logger.info("📊 Checking for old table name...")
-            # Check if old table exists (autoadscampaigns without underscores)
-            cur.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_name='autoadscampaigns'
-            """)
-            if cur.fetchone():
-                logger.info("🔄 Found old table 'autoadscampaigns', migrating...")
-                # Drop old table if it exists (clean slate)
-                cur.execute("DROP TABLE IF EXISTS autoadscampaigns CASCADE")
-                logger.info("✅ Old table dropped")
+            logger.info("📊 Checking for existing tables...")
+            # Force drop BOTH possible table names
+            cur.execute("DROP TABLE IF EXISTS autoadscampaigns CASCADE")
+            logger.info("✅ Dropped autoadscampaigns if it existed")
+            cur.execute("DROP TABLE IF EXISTS auto_ads_campaigns CASCADE")
+            logger.info("✅ Dropped auto_ads_campaigns if it existed")
             
-            logger.info("📊 Creating auto_ads_campaigns table...")
-            # Auto ads campaigns table
+            # Commit the drops to ensure they take effect
+            conn.commit()
+            logger.info("✅ Committed table drops")
+            
+            logger.info("📊 Creating fresh auto_ads_campaigns table...")
+            # Auto ads campaigns table - FRESH START
             cur.execute('''
-                CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
+                CREATE TABLE auto_ads_campaigns (
                     id SERIAL PRIMARY KEY,
                     user_id BIGINT NOT NULL,
                     account_id INTEGER REFERENCES auto_ads_accounts(id) ON DELETE CASCADE,
@@ -86,46 +84,9 @@ class AutoAdsDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            logger.info("✅ auto_ads_campaigns table created/verified")
+            logger.info("✅ auto_ads_campaigns table created fresh")
             
-            # Migrate existing table - add ALL missing columns
-            logger.info("🔄 Checking for column migrations...")
-            try:
-                # List of required columns with their definitions
-                required_columns = {
-                    'campaign_name': "TEXT DEFAULT 'Untitled Campaign'",
-                    'ad_content': 'JSONB',
-                    'target_chats': 'JSONB',
-                    'buttons': 'JSONB',
-                    'schedule_type': "TEXT DEFAULT 'once'",
-                    'schedule_time': 'TEXT',
-                    'sent_count': 'INTEGER DEFAULT 0',
-                    'last_sent': 'TIMESTAMP'
-                }
-                
-                for col_name, col_definition in required_columns.items():
-                    cur.execute("""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name='auto_ads_campaigns' AND column_name=%s
-                    """, (col_name,))
-                    if not cur.fetchone():
-                        logger.info(f"➕ Adding {col_name} column...")
-                        cur.execute(f"ALTER TABLE auto_ads_campaigns ADD COLUMN {col_name} {col_definition}")
-                        logger.info(f"✅ {col_name} column added")
-                
-                # Rename last_run to last_sent if needed
-                cur.execute("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='auto_ads_campaigns' AND column_name='last_run'
-                """)
-                if cur.fetchone():
-                    logger.info("🔄 Renaming last_run to last_sent...")
-                    cur.execute("ALTER TABLE auto_ads_campaigns RENAME COLUMN last_run TO last_sent")
-                    logger.info("✅ Column renamed")
-            except Exception as migrate_error:
-                logger.warning(f"⚠️ Column migration check failed: {migrate_error}")
+            # No column migration needed - table is fresh!
             
             logger.info("📊 Creating account_usage_tracking table...")
             # Account usage tracking for anti-ban
