@@ -500,37 +500,45 @@ async def handle_auto_ads_help(update: Update, context: ContextTypes.DEFAULT_TYP
 
 **Getting Started:**
 
-1️⃣ **Add Account**
-   Upload your Telegram session file or enter API credentials.
+1️⃣ **Setup Bridge Channel (REQUIRED)**
+   • Create a private Telegram channel
+   • Add your bot to the channel as admin
+   • Add all userbots to the channel
+   • Post your ad in that channel (text/photo/video)
+   • Forward that message in campaigns
 
-2️⃣ **Create Campaign**  
-   Choose what to post, where to post it, and when to post it.
+2️⃣ **Add Account**
+   • Upload Telegram session file (.session)
+   • Or enter API credentials manually
+   • Wait for green status indicator
 
-3️⃣ **Start Campaign**
-   Your ads will post automatically on schedule or run immediately.
+3️⃣ **Create Campaign**  
+   • Choose account to use
+   • Forward message from bridge channel
+   • Select target groups (all or specific)
+   • Set schedule (once/daily)
 
-4️⃣ **Monitor Results**
-   Check sent count and last run time in "My Campaigns".
+4️⃣ **Start Campaign**
+   • Ads post automatically with anti-ban delays
+   • 2-5 minute random delays between messages
+   • Check progress in "My Campaigns"
+
+**Why Bridge Channel?**
+✅ Preserves premium emojis and formatting
+✅ Supports photos, videos, animations
+✅ Keeps message styling intact
+✅ Can update ad content in one place
 
 **Campaign Content Types:**
-• Text messages
-• Forwarded messages
-• Bridge channel messages (preserves premium emojis)
-
-**Posting Options:**
-• All groups the account is in
-• Specific chats/groups
-
-**Schedule Options:**
-• Once (immediate)
-• Daily (at specific time)
-• Weekly (specific day and time)
-• Hourly
+• Text messages (typed directly)
+• Forwarded messages (from bridge channel)
+• Bridge links (preserves premium content)
 
 **Anti-Ban Protection:**
-• Random delays between messages (2-5 minutes)
-• Account age limits for new accounts
-• Cooldown periods between campaigns
+• Random delays: 2-5 minutes
+• Night breaks: 3-6 AM (simulates sleep)
+• Daily limits: 20/60/unlimited
+• Account age consideration
 
 Need more help? Contact support.
     """

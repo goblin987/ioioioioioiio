@@ -1419,10 +1419,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_price_simple': handle_price_simple_message,
         'awaiting_removal_quantity': admin.handle_removal_quantity_message,
         
-        # Enhanced auto ads message handlers (testforwarder integration)
-        'awaiting_session_file': handle_testforwarder_message,
-        'awaiting_account_details': handle_testforwarder_message,
-        'awaiting_channel_link': handle_testforwarder_message,
+        # Auto ads uses session-based routing (aa_session in context.user_data)
+        # No state handlers needed - messages are routed directly in handle_message()
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,
