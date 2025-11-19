@@ -31,10 +31,13 @@ class AutoAdsDatabase:
     
     def init_tables(self):
         """Initialize auto ads database tables (PostgreSQL)"""
+        conn = None
         try:
+            logger.info("🔧 Initializing auto ads database tables...")
             conn = self._get_conn()
             cur = conn.cursor()
             
+            logger.info("📊 Creating auto_ads_accounts table...")
             # Auto ads accounts table
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS auto_ads_accounts (
@@ -49,7 +52,9 @@ class AutoAdsDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            logger.info("✅ auto_ads_accounts table created/verified")
             
+            logger.info("📊 Creating auto_ads_campaigns table...")
             # Auto ads campaigns table
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
@@ -67,7 +72,9 @@ class AutoAdsDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            logger.info("✅ auto_ads_campaigns table created/verified")
             
+            logger.info("📊 Creating account_usage_tracking table...")
             # Account usage tracking for anti-ban
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS account_usage_tracking (
@@ -79,29 +86,59 @@ class AutoAdsDatabase:
                     UNIQUE(account_id, date)
                 )
             ''')
+            logger.info("✅ account_usage_tracking table created/verified")
             
+            logger.info("📊 Creating indexes...")
             # Create indexes for performance
             cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_accounts_user_id ON auto_ads_accounts(user_id)')
             cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_campaigns_user_id ON auto_ads_campaigns(user_id)')
             cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_campaigns_account_id ON auto_ads_campaigns(account_id)')
             cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_tracking_account_id ON account_usage_tracking(account_id)')
+            logger.info("✅ Indexes created/verified")
             
             conn.commit()
             cur.close()
             conn.close()
             logger.info("✅ Auto ads database tables initialized successfully")
         except Exception as e:
-            logger.error(f"❌ Error initializing auto ads tables: {e}")
+            logger.error(f"❌ Error initializing auto ads tables: {type(e).__name__}: {e}")
+            logger.exception("Full traceback:")
             if conn:
-                conn.rollback()
-                conn.close()
+                try:
+                    conn.rollback()
+                    conn.close()
+                except:
+                    pass
     
     def add_telegram_account(self, user_id: int, account_name: str, phone_number: str, 
                            api_id: str, api_hash: str, session_string: str = None) -> int:
         """Add Telegram account"""
+        conn = None
         try:
+            logger.info(f"🔍 Attempting to add account: {account_name} for user {user_id}")
             conn = self._get_conn()
+            logger.info(f"✅ Database connection established")
             cur = conn.cursor()
+            
+            # First check if table exists
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'auto_ads_accounts'
+                )
+            """)
+            table_exists = cur.fetchone()[0]
+            logger.info(f"📊 Table auto_ads_accounts exists: {table_exists}")
+            
+            if not table_exists:
+                logger.error("❌ Table auto_ads_accounts does not exist! Creating tables now...")
+                cur.close()
+                conn.close()
+                self.init_tables()
+                conn = self._get_conn()
+                cur = conn.cursor()
+            
+            logger.info(f"💾 Inserting account data...")
             cur.execute('''
                 INSERT INTO auto_ads_accounts 
                 (user_id, account_name, phone_number, api_id, api_hash, session_string)
@@ -115,11 +152,15 @@ class AutoAdsDatabase:
             logger.info(f"✅ Added auto ads account {account_name} (ID: {account_id})")
             return account_id
         except Exception as e:
-            logger.error(f"❌ Error adding telegram account: {e}")
+            logger.error(f"❌ Error adding telegram account: {type(e).__name__}: {e}")
+            logger.exception("Full traceback:")
             if conn:
-                conn.rollback()
-                conn.close()
-            raise
+                try:
+                    conn.rollback()
+                    conn.close()
+                except:
+                    pass
+            raise Exception(f"Database error: {type(e).__name__}: {str(e)}")
     
     def get_user_accounts(self, user_id: int) -> List[Dict]:
         """Get all Telegram accounts for a user"""
