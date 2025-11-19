@@ -75,30 +75,31 @@ class AutoAdsDatabase:
             ''')
             logger.info("✅ auto_ads_campaigns table created/verified")
             
-            # Migrate old table if it exists without campaign_name or buttons columns
+            # Migrate old table - add ALL missing columns
             logger.info("🔄 Checking for column migrations...")
             try:
-                # Check if campaign_name column exists
-                cur.execute("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='auto_ads_campaigns' AND column_name='campaign_name'
-                """)
-                if not cur.fetchone():
-                    logger.info("➕ Adding campaign_name column...")
-                    cur.execute("ALTER TABLE auto_ads_campaigns ADD COLUMN campaign_name TEXT DEFAULT 'Untitled Campaign'")
-                    logger.info("✅ campaign_name column added")
+                # List of required columns with their definitions
+                required_columns = {
+                    'campaign_name': "TEXT DEFAULT 'Untitled Campaign'",
+                    'ad_content': 'JSONB',
+                    'target_chats': 'JSONB',
+                    'buttons': 'JSONB',
+                    'schedule_type': "TEXT DEFAULT 'once'",
+                    'schedule_time': 'TEXT',
+                    'sent_count': 'INTEGER DEFAULT 0',
+                    'last_sent': 'TIMESTAMP'
+                }
                 
-                # Check if buttons column exists
-                cur.execute("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='auto_ads_campaigns' AND column_name='buttons'
-                """)
-                if not cur.fetchone():
-                    logger.info("➕ Adding buttons column...")
-                    cur.execute("ALTER TABLE auto_ads_campaigns ADD COLUMN buttons JSONB")
-                    logger.info("✅ buttons column added")
+                for col_name, col_definition in required_columns.items():
+                    cur.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='auto_ads_campaigns' AND column_name=%s
+                    """, (col_name,))
+                    if not cur.fetchone():
+                        logger.info(f"➕ Adding {col_name} column...")
+                        cur.execute(f"ALTER TABLE auto_ads_campaigns ADD COLUMN {col_name} {col_definition}")
+                        logger.info(f"✅ {col_name} column added")
                 
                 # Rename last_run to last_sent if needed
                 cur.execute("""
