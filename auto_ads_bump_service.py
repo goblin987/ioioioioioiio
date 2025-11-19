@@ -153,6 +153,17 @@ class AutoAdsBumpService:
         results = {'success': True, 'sent_count': 0, 'failed_count': 0, 'details': []}
         
         try:
+            # Check if bridge link was properly parsed
+            if 'error' in ad_content:
+                results['success'] = False
+                results['message'] = ad_content['error']
+                return results
+                
+            if 'bridge_channel_entity' not in ad_content or 'bridge_message_id' not in ad_content:
+                results['success'] = False
+                results['message'] = 'Invalid bridge channel link. Please use format: https://t.me/c/channelid/messageid'
+                return results
+                
             source_chat = ad_content['bridge_channel_entity']
             message_id = ad_content['bridge_message_id']
             
@@ -292,4 +303,5 @@ class AutoAdsBumpService:
     async def cleanup(self):
         """Cleanup resources"""
         await self.telethon_manager.cleanup()
+
 

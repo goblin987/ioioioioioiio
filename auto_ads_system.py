@@ -410,9 +410,23 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
             f"❌ Error executing campaign: {str(e)}",
             parse_mode=ParseMode.MARKDOWN
         )
+        return
     
-    # Refresh campaign list
-    await handle_auto_ads_my_campaigns(update, context, params)
+    # Refresh campaign list (use answer to avoid "message not modified" error)
+    try:
+        await handle_auto_ads_my_campaigns(update, context, params)
+    except Exception as e:
+        # If message didn't change, just send a new one
+        if "Message is not modified" in str(e):
+            await query.message.reply_text(
+                "✅ Campaign execution complete. Use the button below to refresh the campaign list.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔄 Refresh Campaigns", callback_data="aa_my_campaigns")
+                ]]),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            raise e
 
 async def handle_auto_ads_toggle_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle campaign active status"""
@@ -881,12 +895,44 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
             'forwarded_message': True
         }
     elif update.message.text and ('t.me/' in update.message.text or 'telegram.me/' in update.message.text):
-        # Bridge channel link
-        session['data']['ad_content'] = {
-            'type': 'bridge',
-            'text': update.message.text,
-            'bridge_channel': True
-        }
+        # Bridge channel link - parse to extract channel ID and message ID
+        import re
+        bridge_text = update.message.text.strip()
+        
+        # Try to parse: https://t.me/c/1234567890/123 or https://t.me/channelname/123
+        match = re.search(r't\.me/c/(\d+)/(\d+)', bridge_text)
+        if match:
+            # Private channel: https://t.me/c/1234567890/123
+            channel_id = int('-100' + match.group(1))  # Convert to full channel ID
+            message_id = int(match.group(2))
+            session['data']['ad_content'] = {
+                'type': 'bridge',
+                'text': bridge_text,
+                'bridge_channel': True,
+                'bridge_channel_entity': channel_id,
+                'bridge_message_id': message_id
+            }
+        else:
+            # Try public channel: https://t.me/channelname/123
+            match = re.search(r't\.me/([a-zA-Z0-9_]+)/(\d+)', bridge_text)
+            if match:
+                channel_username = '@' + match.group(1)
+                message_id = int(match.group(2))
+                session['data']['ad_content'] = {
+                    'type': 'bridge',
+                    'text': bridge_text,
+                    'bridge_channel': True,
+                    'bridge_channel_entity': channel_username,
+                    'bridge_message_id': message_id
+                }
+            else:
+                # Couldn't parse - store as-is (will fail later with better error)
+                session['data']['ad_content'] = {
+                    'type': 'bridge',
+                    'text': bridge_text,
+                    'bridge_channel': True,
+                    'error': 'Could not parse message link - please use format: https://t.me/c/channelid/messageid'
+                }
     else:
         # Regular text
         session['data']['ad_content'] = {
