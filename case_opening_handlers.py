@@ -214,7 +214,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         
         # Build frame - CS:GO style: ONE row with fixed selector
         frame_msg = f"🎰 {config['emoji']} SPINNING... [{i+1}/{total_frames}]\n\n"
-        frame_msg += f"        ▼\n"
+        frame_msg += f"          ▼\n"
         frame_msg += f"  {left} | {center} | {right}\n\n"
         frame_msg += f"{progress_bar}"
         
@@ -234,7 +234,7 @@ async def handle_open_case(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     
     # STEP 4: Hold final result for 1 second - CS:GO style
     final_frame = f"🎰 {config['emoji']} RESULT!\n\n"
-    final_frame += f"        ▼\n"
+    final_frame += f"          ▼\n"
     final_frame += f"  {final_emoji} | **{final_emoji}** | {final_emoji}\n\n"
     final_frame += f"{'█' * 10}"
     
