@@ -580,6 +580,8 @@ async def handle_auto_ads_message(update: Update, context: ContextTypes.DEFAULT_
         # Route campaign wizard messages
         if step == 'ad_content':
             await handle_auto_ads_ad_content_received(update, context)
+        elif step == 'button_input':
+            await handle_button_input(update, context)
         elif step == 'target_chats_input':
             await handle_target_chats_input(update, context)
         elif step == 'schedule_time':
@@ -892,12 +894,76 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
             'text': update.message.text or update.message.caption or '[Media]'
         }
     
+    session['step'] = 'button_choice'
+    context.user_data['aa_session'] = session
+    
+    # Ask about buttons
+    text = """
+➕ **Step 4/6: Add Buttons**
+
+Would you like to add clickable buttons under your ad?
+
+**Example buttons:**
+• Shop Now → https://example.com
+• Contact Us → https://t.me/support
+• Visit Website → https://mysite.com
+
+Choose an option:
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Yes, Add Buttons", callback_data="aa_add_buttons_yes")],
+        [InlineKeyboardButton("❌ No Buttons", callback_data="aa_add_buttons_no")],
+        [InlineKeyboardButton("🔙 Cancel", callback_data="aa_my_campaigns")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+
+async def handle_auto_ads_add_buttons_yes(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle user choosing to add buttons"""
+    query = update.callback_query
+    await query.answer()
+    
+    session = context.user_data.get('aa_session', {})
+    session['step'] = 'button_input'
+    context.user_data['aa_session'] = session
+    
+    text = """
+➕ **Add Buttons to Your Ad**
+
+**Format:** `[Button Text] - [URL]`
+
+**Examples:**
+```
+Shop Now - https://example.com/shop
+Visit Website - https://mysite.com
+Contact Us - https://t.me/support
+```
+
+**Instructions:**
+• Send one button per message
+• Or send multiple buttons separated by new lines
+• When finished, type `done` or `finish`
+
+Send your first button now:
+    """
+    
+    await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
+
+async def handle_auto_ads_add_buttons_no(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle user choosing to skip buttons"""
+    query = update.callback_query
+    await query.answer()
+    
+    session = context.user_data.get('aa_session', {})
+    session['data']['buttons'] = []  # No buttons
     session['step'] = 'target_chats'
     context.user_data['aa_session'] = session
     
     # Show target selection
     text = """
-➕ **Step 4/6: Target Chats**
+➕ **Step 5/6: Target Chats**
 
 Where should this be posted?
 
@@ -914,7 +980,7 @@ Choose an option:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+    await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
 
 async def handle_auto_ads_target_all_groups(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle target all groups selection"""
@@ -1003,6 +1069,30 @@ Please send me the time when you want this campaign to run daily (e.g., "09:00",
     """
     
     await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
+
+async def handle_auto_ads_schedule_weekly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle schedule weekly selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    session = context.user_data.get('aa_session', {})
+    session['data']['schedule_type'] = 'weekly'
+    session['data']['schedule_time'] = 'Monday 09:00'
+    
+    # Show review
+    await show_campaign_review(query, context, session)
+
+async def handle_auto_ads_schedule_hourly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handle schedule hourly selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    session = context.user_data.get('aa_session', {})
+    session['data']['schedule_type'] = 'hourly'
+    session['data']['schedule_time'] = 'every hour'
+    
+    # Show review
+    await show_campaign_review(query, context, session)
 
 async def show_campaign_review(query, context, session):
     """Show campaign review and confirm"""
@@ -1188,6 +1278,89 @@ async def handle_session_upload_api(update: Update, context: ContextTypes.DEFAUL
         logger.error(f"Error adding account: {e}")
         await update.message.reply_text(
             f"❌ **Error Adding Account**\n\n{str(e)}\n\nPlease try again or contact support.",
+            parse_mode=ParseMode.MARKDOWN
+        )
+
+async def handle_button_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button input from user"""
+    session = context.user_data.get('aa_session', {})
+    if session.get('step') != 'button_input':
+        return
+    
+    text = update.message.text.strip()
+    
+    # Check if user wants to finish
+    if text.lower() in ['done', 'finish', 'complete', 'end']:
+        session['step'] = 'target_chats'
+        context.user_data['aa_session'] = session
+        
+        # Show target selection
+        target_text = """
+➕ **Step 5/6: Target Chats**
+
+Where should this be posted?
+
+**Option 1:** All groups the account is in
+**Option 2:** Specific chats (you'll provide chat IDs/usernames)
+
+Choose an option:
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("📢 All Groups", callback_data="aa_target_all_groups")],
+            [InlineKeyboardButton("🎯 Specific Chats", callback_data="aa_target_specific_chats")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="aa_my_campaigns")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        button_count = len(session['data'].get('buttons', []))
+        await update.message.reply_text(
+            f"✅ **Buttons Saved!** ({button_count} button{'s' if button_count != 1 else ''})\n\n{target_text}",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
+        return
+    
+    # Parse button input
+    buttons = session['data'].get('buttons', [])
+    
+    # Support multiple buttons separated by newlines
+    lines = text.split('\n')
+    parsed_count = 0
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Expected format: [Button Text] - [URL]
+        if ' - ' in line:
+            parts = line.split(' - ', 1)
+            button_text = parts[0].strip()
+            button_url = parts[1].strip()
+            
+            if button_text and button_url:
+                buttons.append({'text': button_text, 'url': button_url})
+                parsed_count += 1
+    
+    session['data']['buttons'] = buttons
+    context.user_data['aa_session'] = session
+    
+    if parsed_count > 0:
+        await update.message.reply_text(
+            f"✅ **Button{'s' if parsed_count > 1 else ''} Added!** ({parsed_count})\n\n"
+            f"Total buttons: {len(buttons)}\n\n"
+            f"**Send more buttons or type 'done' when finished.**",
+            parse_mode=ParseMode.MARKDOWN
+        )
+    else:
+        await update.message.reply_text(
+            "❌ **Invalid Format!**\n\n"
+            "**Please use this format:**\n"
+            "`Button Text - URL`\n\n"
+            "**Example:**\n"
+            "`Shop Now - https://example.com`\n\n"
+            "Try again or type 'done' to finish.",
             parse_mode=ParseMode.MARKDOWN
         )
 
