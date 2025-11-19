@@ -222,6 +222,30 @@ class AutoAdsBumpService:
             # Get source entity once
             source_entity = await client.get_entity(source_chat)
             
+            # Convert buttons to Telethon format if provided
+            telethon_buttons = None
+            if buttons:
+                try:
+                    from telethon import Button
+                    button_rows = []
+                    for btn in buttons:
+                        button_rows.append([Button.url(btn['text'], btn['url'])])
+                    telethon_buttons = button_rows
+                    logger.info(f"📎 Created {len(telethon_buttons)} button rows for bridge message")
+                except Exception as e:
+                    logger.error(f"Error creating buttons: {e}")
+            
+            # If buttons are specified, we need to COPY the message (not forward)
+            # because Telegram doesn't allow adding buttons to forwarded messages
+            if telethon_buttons:
+                logger.info("📎 Buttons specified - will COPY message instead of forwarding")
+                # Fetch the original message first
+                original_message = await client.get_messages(source_entity, ids=message_id)
+                if not original_message:
+                    results['success'] = False
+                    results['message'] = 'Could not fetch original message from bridge channel'
+                    return results
+            
             for target_chat in target_chats:
                 try:
                     # Add delay between messages (anti-ban)
@@ -234,17 +258,27 @@ class AutoAdsBumpService:
                     # Get a display name for logging
                     chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
-                    # Forward message directly to entity
-                    forwarded = await client.forward_messages(
-                        entity=target_chat,
-                        messages=message_id,
-                        from_peer=source_entity
-                    )
+                    if telethon_buttons:
+                        # COPY the message with buttons
+                        sent = await client.send_message(
+                            target_chat,
+                            original_message.text or original_message.message,
+                            file=original_message.media if original_message.media else None,
+                            buttons=telethon_buttons
+                        )
+                        logger.info(f"✅ Copied message with buttons to {chat_name}")
+                    else:
+                        # FORWARD message (no buttons)
+                        sent = await client.forward_messages(
+                            entity=target_chat,
+                            messages=message_id,
+                            from_peer=source_entity
+                        )
+                        logger.info(f"✅ Forwarded message to {chat_name}")
                     
-                    if forwarded:
+                    if sent:
                         results['sent_count'] += 1
                         results['details'].append(f"✅ {chat_name}")
-                        logger.info(f"✅ Forwarded to {chat_name}")
                     else:
                         results['failed_count'] += 1
                         results['details'].append(f"❌ {chat_name}")
@@ -253,7 +287,7 @@ class AutoAdsBumpService:
                     chat_name = getattr(target_chat, 'title', None) or str(getattr(target_chat, 'id', 'unknown'))
                     results['failed_count'] += 1
                     results['details'].append(f"❌ {chat_name}: {str(e)}")
-                    logger.error(f"Failed to forward to {chat_name}: {e}")
+                    logger.error(f"Failed to send to {chat_name}: {e}")
             
             return results
             

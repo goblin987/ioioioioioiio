@@ -1144,6 +1144,12 @@ async def show_campaign_review(query, context, session):
     """Show campaign review and confirm"""
     data = session['data']
     
+    # Format buttons if present
+    button_text = "No buttons"
+    if data.get('buttons'):
+        button_list = [f"• {btn['text']} → {btn['url']}" for btn in data['buttons']]
+        button_text = "\n".join(button_list)
+    
     text = f"""
 ➕ **Step 6/6: Review & Confirm**
 
@@ -1151,6 +1157,8 @@ async def show_campaign_review(query, context, session):
 **Account ID:** {data.get('account_id', 'N/A')}
 **Content Type:** {data.get('ad_content', {}).get('type', 'text')}
 **Target Chats:** {len(data.get('target_chats', [])) if data.get('target_chats') != ['all'] else 'All Groups'}
+**Buttons:** 
+{button_text}
 **Schedule:** {data.get('schedule_type', 'once').title()} at {data.get('schedule_time', 'now')}
 
 Ready to create this campaign?
@@ -1455,6 +1463,13 @@ async def handle_schedule_time_input(update: Update, context: ContextTypes.DEFAU
     
     # Show review
     data = session['data']
+    
+    # Format buttons if present
+    button_text = "No buttons"
+    if data.get('buttons'):
+        button_list = [f"• {btn['text']} → {btn['url']}" for btn in data['buttons']]
+        button_text = "\n".join(button_list)
+    
     text = f"""
 ➕ **Step 6/6: Review & Confirm**
 
@@ -1462,6 +1477,8 @@ async def handle_schedule_time_input(update: Update, context: ContextTypes.DEFAU
 **Account ID:** {data.get('account_id', 'N/A')}
 **Content Type:** {data.get('ad_content', {}).get('type', 'text')}
 **Target Chats:** {len(data.get('target_chats', [])) if data.get('target_chats') != ['all'] else 'All Groups'}
+**Buttons:** 
+{button_text}
 **Schedule:** {data.get('schedule_type', 'once').title()} at {data.get('schedule_time', 'now')}
 
 Ready to create this campaign?
