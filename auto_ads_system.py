@@ -711,12 +711,16 @@ async def handle_manual_setup_message(update: Update, context: ContextTypes.DEFA
                 session_string=session_string
             )
             
+            keyboard = [[InlineKeyboardButton("🚀 Go to Auto Ads System", callback_data="auto_ads_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await update.message.reply_text(
                 f"✅ **Account Added Successfully!**\n\n"
                 f"Account Name: {session['data']['account_name']}\n"
                 f"Phone: {phone}\n\n"
                 "You can now create campaigns using this account!",
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=reply_markup
             )
             
             # Clear session
@@ -773,12 +777,16 @@ async def handle_manual_setup_message(update: Update, context: ContextTypes.DEFA
                 session_string=session_string
             )
             
+            keyboard = [[InlineKeyboardButton("🚀 Go to Auto Ads System", callback_data="auto_ads_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await update.message.reply_text(
                 f"✅ **Account Added Successfully!**\n\n"
                 f"Account Name: {session['data']['account_name']}\n"
                 f"Phone: {phone}\n\n"
                 "You can now create campaigns using this account!",
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=reply_markup
             )
             
             # Clear session
@@ -863,7 +871,7 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
     session = context.user_data.get('aa_session', {})
     
     # Store ad content
-    if update.message.forward_date:
+    if hasattr(update.message, 'forward_date') and update.message.forward_date:
         # Forwarded message
         session['data']['ad_content'] = {
             'type': 'forward',
@@ -1164,9 +1172,13 @@ async def handle_session_upload_api(update: Update, context: ContextTypes.DEFAUL
             session_string=session['data']['session_string']
         )
         
+        keyboard = [[InlineKeyboardButton("🚀 Go to Auto Ads System", callback_data="auto_ads_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
             f"✅ **Account Added Successfully!**\n\nAccount Name: {session['data']['account_name']}\nAccount ID: {account_id}\n\nYou can now create campaigns using this account!",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
         )
         
         # Clear session
