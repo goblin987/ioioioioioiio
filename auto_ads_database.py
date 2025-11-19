@@ -120,23 +120,21 @@ class AutoAdsDatabase:
             logger.info(f"✅ Database connection established")
             cur = conn.cursor()
             
-            # First check if table exists
-            cur.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_name = 'auto_ads_accounts'
-                )
-            """)
-            table_exists = cur.fetchone()[0]
-            logger.info(f"📊 Table auto_ads_accounts exists: {table_exists}")
-            
-            if not table_exists:
-                logger.error("❌ Table auto_ads_accounts does not exist! Creating tables now...")
+            # First check if table exists (simpler approach)
+            try:
+                cur.execute("SELECT 1 FROM auto_ads_accounts LIMIT 1")
+                table_exists = True
+                logger.info(f"📊 Table auto_ads_accounts exists: True")
+            except Exception as check_error:
+                table_exists = False
+                logger.warning(f"📊 Table auto_ads_accounts does not exist: {check_error}")
+                logger.info("🔧 Creating tables now...")
                 cur.close()
                 conn.close()
                 self.init_tables()
                 conn = self._get_conn()
                 cur = conn.cursor()
+                logger.info("✅ Tables created, ready to insert")
             
             logger.info(f"💾 Inserting account data...")
             cur.execute('''
