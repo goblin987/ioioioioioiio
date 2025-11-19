@@ -27,6 +27,13 @@ logger = logging.getLogger(__name__)
 db = AutoAdsDatabase()
 bump_service = None  # Will be initialized when needed
 
+# Initialize database tables on import
+try:
+    db.init_tables()
+    logger.info("✅ Auto ads database initialized")
+except Exception as e:
+    logger.error(f"⚠️ Failed to initialize auto ads database: {e}")
+
 def get_bump_service():
     """Get or create bump service instance"""
     global bump_service

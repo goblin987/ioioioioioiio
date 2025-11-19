@@ -29,6 +29,73 @@ class AutoAdsDatabase:
         """Get PostgreSQL database connection from utils"""
         return get_db_connection()
     
+    def init_tables(self):
+        """Initialize auto ads database tables (PostgreSQL)"""
+        try:
+            conn = self._get_conn()
+            cur = conn.cursor()
+            
+            # Auto ads accounts table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS auto_ads_accounts (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    account_name TEXT NOT NULL,
+                    phone_number TEXT NOT NULL,
+                    api_id TEXT NOT NULL,
+                    api_hash TEXT NOT NULL,
+                    session_string TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Auto ads campaigns table
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    account_id INTEGER REFERENCES auto_ads_accounts(id) ON DELETE CASCADE,
+                    campaign_name TEXT NOT NULL,
+                    ad_content JSONB,
+                    target_chats JSONB,
+                    schedule_type TEXT,
+                    schedule_time TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    sent_count INTEGER DEFAULT 0,
+                    last_run TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Account usage tracking for anti-ban
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS account_usage_tracking (
+                    id SERIAL PRIMARY KEY,
+                    account_id INTEGER REFERENCES auto_ads_accounts(id) ON DELETE CASCADE,
+                    date DATE NOT NULL,
+                    messages_sent INTEGER DEFAULT 0,
+                    last_message_time TIMESTAMP,
+                    UNIQUE(account_id, date)
+                )
+            ''')
+            
+            # Create indexes for performance
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_accounts_user_id ON auto_ads_accounts(user_id)')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_campaigns_user_id ON auto_ads_campaigns(user_id)')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_campaigns_account_id ON auto_ads_campaigns(account_id)')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_aa_tracking_account_id ON account_usage_tracking(account_id)')
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            logger.info("✅ Auto ads database tables initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Error initializing auto ads tables: {e}")
+            if conn:
+                conn.rollback()
+                conn.close()
+    
     def add_telegram_account(self, user_id: int, account_name: str, phone_number: str, 
                            api_id: str, api_hash: str, session_string: str = None) -> int:
         """Add Telegram account"""
@@ -357,4 +424,5 @@ class AutoAdsDatabase:
             return json.loads(json_str)
         except (json.JSONDecodeError, TypeError):
             return {}
+
 
