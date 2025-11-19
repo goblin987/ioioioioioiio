@@ -108,8 +108,20 @@ class AutoAdsBumpService:
             
             # Extract campaign data
             ad_content = campaign['ad_content']
-            target_chats = campaign['target_chats']
+            target_chats_raw = campaign['target_chats']
             buttons = campaign.get('buttons')
+            
+            # Resolve target chats - if "all", get actual groups
+            target_chats = await self._resolve_target_chats(client, target_chats_raw)
+            
+            if not target_chats:
+                return {
+                    'success': False,
+                    'message': 'No target groups found. Make sure the userbot is added to some groups.',
+                    'sent_count': 0,
+                    'failed_count': 0,
+                    'details': []
+                }
             
             # Execute based on content type
             if isinstance(ad_content, dict):
@@ -147,6 +159,46 @@ class AutoAdsBumpService:
             results['message'] = f"Error: {str(e)}"
             return results
     
+    async def _resolve_target_chats(self, client, target_chats_raw: list) -> list:
+        """Resolve target chats - convert 'all' to actual group list"""
+        try:
+            # Check if target is "all groups"
+            if target_chats_raw == ['all'] or target_chats_raw == 'all' or 'all' in target_chats_raw:
+                logger.info("🔍 Resolving 'all' to actual groups...")
+                
+                # Get all dialogs and filter groups
+                dialogs = await client.get_dialogs()
+                target_entities = []
+                
+                for dialog in dialogs:
+                    # Only include groups (not channels)
+                    if dialog.is_group and not getattr(dialog.entity, 'broadcast', True):
+                        target_entities.append(dialog.entity)
+                        logger.info(f"✅ Found group: {dialog.name} (ID: {dialog.id})")
+                
+                logger.info(f"✅ Resolved 'all' to {len(target_entities)} groups")
+                return target_entities
+            
+            else:
+                # Specific chats - resolve to entities
+                target_entities = []
+                for chat in target_chats_raw:
+                    try:
+                        if isinstance(chat, str):
+                            entity = await client.get_entity(chat)
+                            target_entities.append(entity)
+                        else:
+                            # Already an entity or ID
+                            target_entities.append(chat)
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not resolve chat {chat}: {e}")
+                        
+                return target_entities
+                
+        except Exception as e:
+            logger.error(f"❌ Error resolving target chats: {e}")
+            return []
+    
     async def _execute_bridge_forward(self, client, ad_content: dict, 
                                      target_chats: list, buttons: list = None) -> Dict:
         """Execute campaign by forwarding from bridge channel"""
@@ -167,6 +219,9 @@ class AutoAdsBumpService:
             source_chat = ad_content['bridge_channel_entity']
             message_id = ad_content['bridge_message_id']
             
+            # Get source entity once
+            source_entity = await client.get_entity(source_chat)
+            
             for target_chat in target_chats:
                 try:
                     # Add delay between messages (anti-ban)
@@ -175,28 +230,30 @@ class AutoAdsBumpService:
                         logger.info(f"Waiting {delay:.1f}s before next message...")
                         await asyncio.sleep(delay)
                     
-                    # Forward message
-                    target_entity = await client.get_entity(target_chat)
-                    source_entity = await client.get_entity(source_chat)
+                    # target_chat is already an entity from _resolve_target_chats
+                    # Get a display name for logging
+                    chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
+                    # Forward message directly to entity
                     forwarded = await client.forward_messages(
-                        entity=target_entity,
+                        entity=target_chat,
                         messages=message_id,
                         from_peer=source_entity
                     )
                     
                     if forwarded:
                         results['sent_count'] += 1
-                        results['details'].append(f"✅ {target_chat}")
-                        logger.info(f"✅ Forwarded to {target_chat}")
+                        results['details'].append(f"✅ {chat_name}")
+                        logger.info(f"✅ Forwarded to {chat_name}")
                     else:
                         results['failed_count'] += 1
-                        results['details'].append(f"❌ {target_chat}")
+                        results['details'].append(f"❌ {chat_name}")
                         
                 except Exception as e:
+                    chat_name = getattr(target_chat, 'title', None) or str(getattr(target_chat, 'id', 'unknown'))
                     results['failed_count'] += 1
-                    results['details'].append(f"❌ {target_chat}: {str(e)}")
-                    logger.error(f"Failed to forward to {target_chat}: {e}")
+                    results['details'].append(f"❌ {chat_name}: {str(e)}")
+                    logger.error(f"Failed to forward to {chat_name}: {e}")
             
             return results
             
@@ -253,6 +310,18 @@ class AutoAdsBumpService:
         results = {'success': True, 'sent_count': 0, 'failed_count': 0, 'details': []}
         
         try:
+            # Convert buttons to Telethon format if provided
+            telethon_buttons = None
+            if buttons:
+                try:
+                    from telethon import Button
+                    button_rows = []
+                    for btn in buttons:
+                        button_rows.append([Button.url(btn['text'], btn['url'])])
+                    telethon_buttons = button_rows
+                except Exception as e:
+                    logger.error(f"Error creating buttons: {e}")
+            
             for target_chat in target_chats:
                 try:
                     # Add delay between messages
@@ -260,22 +329,25 @@ class AutoAdsBumpService:
                         delay = self._get_safe_delay()
                         await asyncio.sleep(delay)
                     
-                    # Send message
-                    success = await self.telethon_manager.send_text_message(
-                        client, target_chat, text, buttons
+                    # target_chat is already an entity
+                    chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
+                    
+                    # Send message directly to entity
+                    await client.send_message(
+                        target_chat,
+                        text,
+                        buttons=telethon_buttons
                     )
                     
-                    if success:
-                        results['sent_count'] += 1
-                        results['details'].append(f"✅ {target_chat}")
-                    else:
-                        results['failed_count'] += 1
-                        results['details'].append(f"❌ {target_chat}")
+                    results['sent_count'] += 1
+                    results['details'].append(f"✅ {chat_name}")
+                    logger.info(f"✅ Sent to {chat_name}")
                         
                 except Exception as e:
+                    chat_name = getattr(target_chat, 'title', None) or str(getattr(target_chat, 'id', 'unknown'))
                     results['failed_count'] += 1
-                    results['details'].append(f"❌ {target_chat}: {str(e)}")
-                    logger.error(f"Failed to send to {target_chat}: {e}")
+                    results['details'].append(f"❌ {chat_name}: {str(e)}")
+                    logger.error(f"Failed to send to {chat_name}: {e}")
             
             return results
             
