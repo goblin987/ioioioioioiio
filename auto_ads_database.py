@@ -64,15 +64,54 @@ class AutoAdsDatabase:
                     campaign_name TEXT NOT NULL,
                     ad_content JSONB,
                     target_chats JSONB,
+                    buttons JSONB,
                     schedule_type TEXT,
                     schedule_time TEXT,
                     is_active BOOLEAN DEFAULT TRUE,
                     sent_count INTEGER DEFAULT 0,
-                    last_run TIMESTAMP,
+                    last_sent TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
             logger.info("✅ auto_ads_campaigns table created/verified")
+            
+            # Migrate old table if it exists without campaign_name or buttons columns
+            logger.info("🔄 Checking for column migrations...")
+            try:
+                # Check if campaign_name column exists
+                cur.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='auto_ads_campaigns' AND column_name='campaign_name'
+                """)
+                if not cur.fetchone():
+                    logger.info("➕ Adding campaign_name column...")
+                    cur.execute("ALTER TABLE auto_ads_campaigns ADD COLUMN campaign_name TEXT DEFAULT 'Untitled Campaign'")
+                    logger.info("✅ campaign_name column added")
+                
+                # Check if buttons column exists
+                cur.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='auto_ads_campaigns' AND column_name='buttons'
+                """)
+                if not cur.fetchone():
+                    logger.info("➕ Adding buttons column...")
+                    cur.execute("ALTER TABLE auto_ads_campaigns ADD COLUMN buttons JSONB")
+                    logger.info("✅ buttons column added")
+                
+                # Rename last_run to last_sent if needed
+                cur.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='auto_ads_campaigns' AND column_name='last_run'
+                """)
+                if cur.fetchone():
+                    logger.info("🔄 Renaming last_run to last_sent...")
+                    cur.execute("ALTER TABLE auto_ads_campaigns RENAME COLUMN last_run TO last_sent")
+                    logger.info("✅ Column renamed")
+            except Exception as migrate_error:
+                logger.warning(f"⚠️ Column migration check failed: {migrate_error}")
             
             logger.info("📊 Creating account_usage_tracking table...")
             # Account usage tracking for anti-ban
