@@ -143,7 +143,7 @@ class AutoAdsDatabase:
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (user_id, account_name, phone_number, api_id, api_hash, session_string))
-            account_id = cur.fetchone()[0]
+            account_id = cur.fetchone()['id']  # Use dict access like existing userbot system
             conn.commit()
             cur.close()
             conn.close()
@@ -177,15 +177,15 @@ class AutoAdsDatabase:
             conn.close()
             
             return [{
-                'id': row[0],
-                'user_id': row[1],
-                'account_name': row[2],
-                'phone_number': row[3],
-                'api_id': row[4],
-                'api_hash': row[5],
-                'session_string': row[6],
-                'is_active': row[7],
-                'created_at': row[8]
+                'id': row['id'],
+                'user_id': row['user_id'],
+                'account_name': row['account_name'],
+                'phone_number': row['phone_number'],
+                'api_id': row['api_id'],
+                'api_hash': row['api_hash'],
+                'session_string': row['session_string'],
+                'is_active': row['is_active'],
+                'created_at': row['created_at']
             } for row in rows]
         except Exception as e:
             logger.error(f"❌ Error getting user accounts: {e}")
@@ -208,15 +208,15 @@ class AutoAdsDatabase:
             
             if row:
                 return {
-                    'id': row[0],
-                    'user_id': row[1],
-                    'account_name': row[2],
-                    'phone_number': row[3],
-                    'api_id': row[4],
-                    'api_hash': row[5],
-                    'session_string': row[6],
-                    'is_active': row[7],
-                    'created_at': row[8]
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'account_name': row['account_name'],
+                    'phone_number': row['phone_number'],
+                    'api_id': row['api_id'],
+                    'api_hash': row['api_hash'],
+                    'session_string': row['session_string'],
+                    'is_active': row['is_active'],
+                    'created_at': row['created_at']
                 }
             return None
         except Exception as e:
@@ -296,7 +296,7 @@ class AutoAdsDatabase:
             ''', (user_id, account_id, campaign_name, ad_content_json, target_chats_json, 
                   buttons_json, schedule_type, schedule_time))
             
-            campaign_id = cur.fetchone()[0]
+            campaign_id = cur.fetchone()['id']  # Use dict access like existing userbot system
             conn.commit()
             cur.close()
             conn.close()
@@ -331,21 +331,21 @@ class AutoAdsDatabase:
             campaigns = []
             for row in rows:
                 campaign = {
-                    'id': row[0],
-                    'user_id': row[1],
-                    'account_id': row[2],
-                    'campaign_name': row[3],
-                    'ad_content': self._parse_json(row[4]),
-                    'target_chats': self._parse_json(row[5]),
-                    'buttons': self._parse_json(row[6]),
-                    'schedule_type': row[7],
-                    'schedule_time': row[8],
-                    'is_active': row[9],
-                    'sent_count': row[10] or 0,
-                    'last_sent': row[11],
-                    'created_at': row[12],
-                    'account_name': row[13],
-                    'phone_number': row[14]
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'account_id': row['account_id'],
+                    'campaign_name': row['campaign_name'],
+                    'ad_content': self._parse_json(row['ad_content']),
+                    'target_chats': self._parse_json(row['target_chats']),
+                    'buttons': self._parse_json(row['buttons']),
+                    'schedule_type': row['schedule_type'],
+                    'schedule_time': row['schedule_time'],
+                    'is_active': row['is_active'],
+                    'sent_count': row['sent_count'] or 0,
+                    'last_sent': row['last_sent'],
+                    'created_at': row['created_at'],
+                    'account_name': row['account_name'],
+                    'phone_number': row['phone_number']
                 }
                 campaigns.append(campaign)
             
@@ -375,21 +375,21 @@ class AutoAdsDatabase:
             
             if row:
                 return {
-                    'id': row[0],
-                    'user_id': row[1],
-                    'account_id': row[2],
-                    'campaign_name': row[3],
-                    'ad_content': self._parse_json(row[4]),
-                    'target_chats': self._parse_json(row[5]),
-                    'buttons': self._parse_json(row[6]),
-                    'schedule_type': row[7],
-                    'schedule_time': row[8],
-                    'is_active': row[9],
-                    'sent_count': row[10] or 0,
-                    'last_sent': row[11],
-                    'created_at': row[12],
-                    'account_name': row[13],
-                    'phone_number': row[14]
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'account_id': row['account_id'],
+                    'campaign_name': row['campaign_name'],
+                    'ad_content': self._parse_json(row['ad_content']),
+                    'target_chats': self._parse_json(row['target_chats']),
+                    'buttons': self._parse_json(row['buttons']),
+                    'schedule_type': row['schedule_type'],
+                    'schedule_time': row['schedule_time'],
+                    'is_active': row['is_active'],
+                    'sent_count': row['sent_count'] or 0,
+                    'last_sent': row['last_sent'],
+                    'created_at': row['created_at'],
+                    'account_name': row['account_name'],
+                    'phone_number': row['phone_number']
                 }
             return None
         except Exception as e:
