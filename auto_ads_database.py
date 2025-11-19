@@ -54,6 +54,19 @@ class AutoAdsDatabase:
             ''')
             logger.info("✅ auto_ads_accounts table created/verified")
             
+            logger.info("📊 Checking for old table name...")
+            # Check if old table exists (autoadscampaigns without underscores)
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='autoadscampaigns'
+            """)
+            if cur.fetchone():
+                logger.info("🔄 Found old table 'autoadscampaigns', migrating...")
+                # Drop old table if it exists (clean slate)
+                cur.execute("DROP TABLE IF EXISTS autoadscampaigns CASCADE")
+                logger.info("✅ Old table dropped")
+            
             logger.info("📊 Creating auto_ads_campaigns table...")
             # Auto ads campaigns table
             cur.execute('''
@@ -75,7 +88,7 @@ class AutoAdsDatabase:
             ''')
             logger.info("✅ auto_ads_campaigns table created/verified")
             
-            # Migrate old table - add ALL missing columns
+            # Migrate existing table - add ALL missing columns
             logger.info("🔄 Checking for column migrations...")
             try:
                 # List of required columns with their definitions
