@@ -505,7 +505,7 @@ async def handle_auto_ads_help(update: Update, context: ContextTypes.DEFAULT_TYP
    • Add your bot to the channel as admin
    • Add all userbots to the channel
    • Post your ad in that channel (text/photo/video)
-   • Forward that message in campaigns
+   • Copy the message link and paste in bot when creating campaign
 
 2️⃣ **Add Account**
    • Upload Telegram session file (.session)
@@ -514,7 +514,7 @@ async def handle_auto_ads_help(update: Update, context: ContextTypes.DEFAULT_TYP
 
 3️⃣ **Create Campaign**  
    • Choose account to use
-   • Forward message from bridge channel
+   • Paste bridge channel message link
    • Select target groups (all or specific)
    • Set schedule (once/daily)
 
@@ -614,29 +614,101 @@ async def handle_manual_setup_message(update: Update, context: ContextTypes.DEFA
     
     elif step == 'api_hash':
         session['data']['api_hash'] = text
-        session['step'] = 'session_string'
+        session['step'] = 'login_code'
         
-        await update.message.reply_text(
-            "⚙️ **Step 5/5: Session String**\n\nPlease send me the session string (or upload .session file):",
-            parse_mode=ParseMode.MARKDOWN
-        )
-    
-    elif step == 'session_string':
-        session['data']['session_string'] = text
-        
-        # Save account to database
+        # Create Telethon client and send code request
         try:
+            from telethon import TelegramClient
+            from telethon.sessions import StringSession
+            
+            api_id = int(session['data']['api_id'])
+            api_hash = session['data']['api_hash']
+            phone = session['data']['phone_number']
+            
+            # Create temp client to send code
+            temp_client = TelegramClient(
+                StringSession(),
+                api_id,
+                api_hash
+            )
+            
+            await temp_client.connect()
+            
+            # Send code request
+            await temp_client.send_code_request(phone)
+            
+            # Store client in session for later use
+            session['temp_client'] = temp_client
+            context.user_data['aa_session'] = session
+            
+            await update.message.reply_text(
+                "⚙️ **Step 5/5: Login Code**\n\n"
+                "📱 A login code has been sent to your Telegram account.\n\n"
+                "Please check your Telegram app and send me the code here (e.g., 12345):",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending login code: {e}")
+            await update.message.reply_text(
+                f"❌ **Error Sending Login Code**\n\n{str(e)}\n\n"
+                "Please verify:\n"
+                "• Phone number is correct (with country code)\n"
+                "• API ID and API Hash are valid\n"
+                "• Account exists and is not banned",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            # Clear session on error
+            if 'aa_session' in context.user_data:
+                del context.user_data['aa_session']
+    
+    elif step == 'login_code':
+        # User provided login code
+        code = text.replace(' ', '').replace('-', '')  # Clean code
+        
+        try:
+            temp_client = session.get('temp_client')
+            if not temp_client:
+                raise Exception("Session expired. Please start again.")
+            
+            phone = session['data']['phone_number']
+            
+            # Try to login with code
+            try:
+                await temp_client.sign_in(phone, code)
+            except SessionPasswordNeededError:
+                # 2FA enabled - ask for password
+                session['step'] = '2fa_password'
+                context.user_data['aa_session'] = session
+                
+                await update.message.reply_text(
+                    "🔐 **Two-Factor Authentication**\n\n"
+                    "Your account has 2FA enabled. Please send me your 2FA password:",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+            
+            # Get session string
+            session_string = temp_client.session.save()
+            
+            # Disconnect temp client
+            await temp_client.disconnect()
+            
+            # Save account to database
             account_id = db.add_telegram_account(
                 user_id=user_id,
                 account_name=session['data']['account_name'],
-                phone_number=session['data']['phone_number'],
+                phone_number=phone,
                 api_id=session['data']['api_id'],
                 api_hash=session['data']['api_hash'],
-                session_string=text
+                session_string=session_string
             )
             
             await update.message.reply_text(
-                f"✅ **Account Added Successfully!**\n\nAccount Name: {session['data']['account_name']}\nPhone: {session['data']['phone_number']}\n\nYou can now create campaigns using this account!",
+                f"✅ **Account Added Successfully!**\n\n"
+                f"Account Name: {session['data']['account_name']}\n"
+                f"Phone: {phone}\n\n"
+                "You can now create campaigns using this account!",
                 parse_mode=ParseMode.MARKDOWN
             )
             
@@ -644,11 +716,78 @@ async def handle_manual_setup_message(update: Update, context: ContextTypes.DEFA
             del context.user_data['aa_session']
             
         except Exception as e:
-            logger.error(f"Error adding account: {e}")
+            logger.error(f"Error logging in: {e}")
+            error_msg = str(e)
+            
+            if "PHONE_CODE_INVALID" in error_msg:
+                await update.message.reply_text(
+                    "❌ **Invalid Code**\n\n"
+                    "The code you provided is incorrect. Please try again or restart the setup.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            else:
+                await update.message.reply_text(
+                    f"❌ **Login Error**\n\n{error_msg}\n\n"
+                    "Please try again or contact support.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            
+            # Clear session on error
+            if 'aa_session' in context.user_data:
+                del context.user_data['aa_session']
+    
+    elif step == '2fa_password':
+        # User provided 2FA password
+        password = text
+        
+        try:
+            temp_client = session.get('temp_client')
+            if not temp_client:
+                raise Exception("Session expired. Please start again.")
+            
+            # Login with 2FA password
+            await temp_client.sign_in(password=password)
+            
+            # Get session string
+            session_string = temp_client.session.save()
+            
+            # Disconnect temp client
+            await temp_client.disconnect()
+            
+            phone = session['data']['phone_number']
+            
+            # Save account to database
+            account_id = db.add_telegram_account(
+                user_id=user_id,
+                account_name=session['data']['account_name'],
+                phone_number=phone,
+                api_id=session['data']['api_id'],
+                api_hash=session['data']['api_hash'],
+                session_string=session_string
+            )
+            
             await update.message.reply_text(
-                f"❌ **Error Adding Account**\n\n{str(e)}\n\nPlease try again or contact support.",
+                f"✅ **Account Added Successfully!**\n\n"
+                f"Account Name: {session['data']['account_name']}\n"
+                f"Phone: {phone}\n\n"
+                "You can now create campaigns using this account!",
                 parse_mode=ParseMode.MARKDOWN
             )
+            
+            # Clear session
+            del context.user_data['aa_session']
+            
+        except Exception as e:
+            logger.error(f"Error with 2FA: {e}")
+            await update.message.reply_text(
+                f"❌ **2FA Error**\n\n{str(e)}\n\n"
+                "Password may be incorrect. Please try the setup again.",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+            # Clear session on error
+            if 'aa_session' in context.user_data:
+                del context.user_data['aa_session']
 
 async def handle_campaign_message(update: Update, context: ContextTypes.DEFAULT_TYPE, session: dict, step: str):
     """Handle campaign creation messages"""
@@ -695,9 +834,14 @@ async def handle_auto_ads_select_account(update: Update, context: ContextTypes.D
 
 What would you like to post?
 
-**Option 1:** Send me a text message
-**Option 2:** Forward a message to me
-**Option 3:** Send a bridge channel link (e.g., t.me/yourchannel/123)
+**Option 1:** Type your ad text directly
+
+**Option 2:** Paste a bridge channel link (RECOMMENDED)
+   • Right-click message in channel → Copy Link
+   • Format: t.me/yourchannel/123
+   • Preserves premium emojis, photos, videos
+
+**Option 3:** Forward a message from bridge channel
 
 Send your content now:
     """
