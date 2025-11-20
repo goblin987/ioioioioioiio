@@ -34,11 +34,14 @@ try:
 except Exception as e:
     logger.error(f"⚠️ Failed to initialize auto ads database: {e}")
 
-def get_bump_service():
-    """Get or create bump service instance"""
+def get_bump_service(bot_instance=None):
+    """Get or create bump service instance with bot instance for button support"""
     global bump_service
     if bump_service is None:
-        bump_service = AutoAdsBumpService()
+        bump_service = AutoAdsBumpService(bot_instance=bot_instance)
+    elif bot_instance and not bump_service.bot_instance:
+        # Update bot instance if it wasn't set before
+        bump_service.bot_instance = bot_instance
     return bump_service
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -285,7 +288,7 @@ async def handle_auto_ads_my_campaigns(update: Update, context: ContextTypes.DEF
     await query.answer()
     
     user_id = query.from_user.id
-    service = get_bump_service()
+    service = get_bump_service(bot_instance=context.bot)
     campaigns = service.get_user_campaigns(user_id)
     
     if not campaigns:
@@ -389,7 +392,8 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
     
     # Get campaign details for the confirmation message
     try:
-        service = get_bump_service()
+        # Pass bot instance for inline button support
+        service = get_bump_service(bot_instance=context.bot)
         campaign = service.get_campaign(campaign_id)
         
         if not campaign:
@@ -471,7 +475,7 @@ async def handle_auto_ads_toggle_campaign(update: Update, context: ContextTypes.
     campaign_id = int(callback_data.split('_')[-1])
     
     try:
-        service = get_bump_service()
+        service = get_bump_service(bot_instance=context.bot)
         success = service.toggle_campaign(campaign_id)
         
         if success:
@@ -494,7 +498,7 @@ async def handle_auto_ads_delete_campaign(update: Update, context: ContextTypes.
     callback_data = query.data
     campaign_id = int(callback_data.split('_')[-1])
     
-    service = get_bump_service()
+    service = get_bump_service(bot_instance=context.bot)
     campaign = service.get_campaign(campaign_id)
     
     if not campaign:
@@ -531,7 +535,7 @@ async def handle_auto_ads_confirm_delete_campaign(update: Update, context: Conte
     campaign_id = int(callback_data.split('_')[-1])
     
     try:
-        service = get_bump_service()
+        service = get_bump_service(bot_instance=context.bot)
         service.delete_campaign(campaign_id)
         await query.answer("✅ Campaign deleted successfully!", show_alert=True)
     except Exception as e:
@@ -1221,7 +1225,7 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
     data = session.get('data', {})
     
     try:
-        service = get_bump_service()
+        service = get_bump_service(bot_instance=context.bot)
         campaign_id = service.add_campaign(
             user_id=user_id,
             account_id=data['account_id'],

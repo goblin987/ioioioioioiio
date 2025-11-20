@@ -16,7 +16,7 @@ import logging
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from telethon import Button
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from auto_ads_database import AutoAdsDatabase
 from auto_ads_telethon_manager import auto_ads_telethon_manager
 from auto_ads_config import AutoAdsConfig
@@ -228,8 +228,8 @@ class AutoAdsBumpService:
             # Get source entity once
             source_entity = await client.get_entity(source_chat)
             
-            # Get the original message from bridge channel to copy content
-            logger.info(f"📎 Bridge mode - fetching message from storage channel to copy with buttons")
+            # Get the original message from bridge channel
+            logger.info(f"📎 Bridge mode - fetching original message from storage channel")
             
             try:
                 original_message = await client.get_messages(source_entity, ids=message_id)
@@ -247,27 +247,57 @@ class AutoAdsBumpService:
                 results['message'] = f'Failed to get message from bridge: {str(e)}'
                 return results
             
-            # Convert buttons to Telethon inline format if provided
-            telethon_buttons = None
-            if buttons:
+            # SOLUTION: Use Bot API to create a NEW message WITH BUTTONS in bridge channel, then forward it
+            message_to_forward = message_id  # Default: forward original
+            
+            if buttons and self.bot_instance:
                 try:
-                    logger.info(f"📎 Creating {len(buttons)} inline URL button(s)")
-                    # Create inline buttons using Telethon's high-level Button API
-                    # Button.url() creates inline buttons when used in list format
-                    button_rows = []
-                    for btn in buttons:
-                        # Each row is a list of buttons - Button.url creates inline buttons
-                        button_rows.append([Button.url(btn['text'], btn['url'])])
+                    logger.info(f"🤖 Using Bot API to add {len(buttons)} inline button(s) to bridge message")
                     
-                    telethon_buttons = button_rows
-                    logger.info(f"✅ Created {len(button_rows)} inline button row(s) using Button.url()")
-                    logger.info(f"🔍 DEBUG: Button rows type: {type(telethon_buttons)}")
-                    logger.info(f"🔍 DEBUG: First button type: {type(telethon_buttons[0][0]) if telethon_buttons else 'None'}")
-                    logger.info(f"🔍 DEBUG: Button structure: {telethon_buttons}")
+                    # Create inline keyboard markup using Bot API
+                    keyboard = []
+                    for btn in buttons:
+                        keyboard.append([InlineKeyboardButton(btn['text'], url=btn['url'])])
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    logger.info(f"✅ Created InlineKeyboardMarkup with {len(keyboard)} button(s)")
+                    
+                    # Send a NEW message with buttons to the bridge channel using Bot API
+                    if original_message.media:
+                        # For media messages, we need to copy the media
+                        # Download media to temp location then upload with buttons
+                        logger.info(f"📥 Downloading media from original message...")
+                        media_file = await client.download_media(original_message, file=bytes)
+                        
+                        logger.info(f"📤 Uploading media with buttons to bridge channel using Bot API...")
+                        bot_msg = await self.bot_instance.send_photo(
+                            chat_id=int(source_chat),
+                            photo=media_file,
+                            caption=original_message.message or "",
+                            reply_markup=reply_markup
+                        )
+                        message_to_forward = bot_msg.message_id
+                        logger.info(f"✅ Created bridge message with buttons (ID: {message_to_forward})")
+                    else:
+                        # For text messages, just send text with buttons
+                        logger.info(f"📤 Sending text with buttons to bridge channel using Bot API...")
+                        bot_msg = await self.bot_instance.send_message(
+                            chat_id=int(source_chat),
+                            text=original_message.message or "",
+                            reply_markup=reply_markup
+                        )
+                        message_to_forward = bot_msg.message_id
+                        logger.info(f"✅ Created bridge message with buttons (ID: {message_to_forward})")
+                        
                 except Exception as e:
-                    logger.error(f"❌ Error creating buttons: {e}")
+                    logger.error(f"❌ Failed to create bridge message with buttons using Bot API: {e}")
                     import traceback
-                    logger.error(f"❌ Button error traceback: {traceback.format_exc()}")
+                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
+                    logger.warning(f"⚠️ Falling back to forwarding original message without buttons")
+                    message_to_forward = message_id
+            
+            # Now forward the message (with buttons if we created one) to all target chats
+            logger.info(f"🚀 Forwarding message {message_to_forward} from bridge to {len(target_chats)} groups")
             
             for target_chat in target_chats:
                 try:
@@ -281,39 +311,17 @@ class AutoAdsBumpService:
                     # Get a display name for logging
                     chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
-                    # SEND message (not forward) with inline buttons using buttons parameter
-                    logger.info(f"🔍 DEBUG: About to send with inline buttons: {telethon_buttons is not None}")
-                    logger.info(f"🔍 DEBUG: Button markup object: {telethon_buttons}")
-                    if original_message.media:
-                        # Send media with caption and inline buttons
-                        sent = await client.send_file(
-                            target_chat,
-                            original_message.media,
-                            caption=original_message.message,
-                            buttons=telethon_buttons,
-                            link_preview=False
-                        )
-                        logger.info(f"✅ Sent media message with inline buttons to {chat_name}")
-                    else:
-                        # Send text with inline buttons
-                        sent = await client.send_message(
-                            target_chat,
-                            original_message.message,
-                            buttons=telethon_buttons,
-                            link_preview=False
-                        )
-                        logger.info(f"✅ Sent text message with inline buttons to {chat_name}")
-                    
-                    logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
-                    logger.info(f"🔍 DEBUG: Sent message type: {type(sent)}")
-                    logger.info(f"🔍 DEBUG: Sent message has .buttons attr: {hasattr(sent, 'buttons')}")
-                    logger.info(f"🔍 DEBUG: Sent message has .reply_markup attr: {hasattr(sent, 'reply_markup')}")
-                    if hasattr(sent, 'buttons'):
-                        logger.info(f"🔍 DEBUG: sent.buttons value: {sent.buttons}")
-                    if hasattr(sent, 'reply_markup'):
-                        logger.info(f"🔍 DEBUG: sent.reply_markup value: {sent.reply_markup}")
+                    # FORWARD the message from bridge channel (preserves buttons!)
+                    logger.info(f"📨 Forwarding message to {chat_name}")
+                    sent = await client.forward_messages(
+                        entity=target_chat,
+                        messages=message_to_forward,
+                        from_peer=source_entity
+                    )
                     
                     if sent:
+                        logger.info(f"✅ Forwarded message with buttons to {chat_name}")
+                        logger.info(f"🔍 DEBUG: Forwarded message ID: {sent.id if hasattr(sent, 'id') else sent[0].id if isinstance(sent, list) else 'Unknown'}")
                         results['sent_count'] += 1
                         results['details'].append(f"✅ {chat_name}")
                     else:
@@ -324,7 +332,7 @@ class AutoAdsBumpService:
                     chat_name = getattr(target_chat, 'title', None) or str(getattr(target_chat, 'id', 'unknown'))
                     results['failed_count'] += 1
                     results['details'].append(f"❌ {chat_name}: {str(e)}")
-                    logger.error(f"Failed to send to {chat_name}: {e}")
+                    logger.error(f"Failed to forward to {chat_name}: {e}")
             
             return results
             
