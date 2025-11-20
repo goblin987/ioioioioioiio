@@ -49,9 +49,13 @@ from utils import (
 # Import auto ads system initialization
 try:
     from auto_ads_system import init_enhanced_auto_ads_tables
+    from auto_ads_scheduler import get_scheduler
 except ImportError:
     def init_enhanced_auto_ads_tables(): 
         logging.getLogger(__name__).warning("Auto ads system not available")
+    def get_scheduler(bot=None):
+        logging.getLogger(__name__).warning("Auto ads scheduler not available")
+        return None
         return True
 
 import user # Import user module
@@ -2376,8 +2380,8 @@ def main() -> None:
             
             # Build application with this token
             app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
-            app_builder.post_init(post_init)
-            app_builder.post_shutdown(post_shutdown)
+    app_builder.post_init(post_init)
+    app_builder.post_shutdown(post_shutdown)
             temp_app = app_builder.build()
             
             # Test token validity (will fail if token is invalid)
@@ -2492,6 +2496,15 @@ def main() -> None:
         flask_thread = threading.Thread(target=run_flask, daemon=True)
         flask_thread.start()
         logger.info(f"✅ Flask server started in background thread on port {port}.")
+        
+        # Start Auto Ads Scheduler
+        try:
+            scheduler = get_scheduler(application.bot)
+            if scheduler:
+                await scheduler.start()
+                logger.info("✅ Auto Ads Scheduler started successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to start Auto Ads Scheduler: {e}")
         
         # Wait a moment for Flask to start
         await asyncio.sleep(2)

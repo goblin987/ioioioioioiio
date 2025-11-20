@@ -387,21 +387,57 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
     
     await query.answer("⏳ Starting campaign... This may take a moment.", show_alert=False)
     
+    # Get campaign details for the confirmation message
     try:
         service = get_bump_service()
+        campaign = service.get_campaign(campaign_id)
+        
+        if not campaign:
+            await query.message.reply_text("❌ Campaign not found.", parse_mode=ParseMode.MARKDOWN)
+            return
+        
+        # Send initial confirmation message
+        start_message = f"""
+🚀 **Campaign Started!**
+
+**Name:** {campaign.get('campaign_name', 'Unnamed')}
+**Schedule:** {campaign.get('schedule_type', 'once')}
+**Status:** Running...
+
+⏳ Please wait while your ads are being sent to all target groups...
+        """
+        status_msg = await query.message.reply_text(start_message, parse_mode=ParseMode.MARKDOWN)
+        
+        # Execute the campaign
         results = await service.execute_campaign(campaign_id)
         
+        # Update the message with results
         if results['success']:
-            message = f"✅ Campaign executed successfully!\n\n"
-            message += f"📤 Sent: {results['sent_count']}\n"
-            message += f"❌ Failed: {results['failed_count']}\n\n"
-            if results.get('details'):
-                message += "**Details:**\n" + "\n".join(results['details'][:10])
+            message = f"""
+✅ **Campaign Execution Complete!**
+
+**Name:** {campaign.get('campaign_name', 'Unnamed')}
+**Schedule:** {campaign.get('schedule_type', 'once')}
+
+📊 **Results:**
+📤 Sent: {results['sent_count']}
+❌ Failed: {results['failed_count']}
+"""
             
-            await query.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+            if campaign.get('schedule_type') == 'hourly':
+                message += "\n🔄 **Next run:** In 1 hour"
+            elif campaign.get('schedule_type') == 'daily':
+                message += "\n🔄 **Next run:** Tomorrow at same time"
+            elif campaign.get('schedule_type') == 'weekly':
+                message += "\n🔄 **Next run:** Next week at same time"
+            
+            if results.get('details'):
+                message += "\n\n**Details:**\n" + "\n".join(results['details'][:10])
+            
+            await status_msg.edit_text(message, parse_mode=ParseMode.MARKDOWN)
         else:
-            await query.message.reply_text(
-                f"❌ Campaign failed: {results.get('message', 'Unknown error')}",
+            await status_msg.edit_text(
+                f"❌ **Campaign Failed**\n\n{results.get('message', 'Unknown error')}",
                 parse_mode=ParseMode.MARKDOWN
             )
     except Exception as e:
