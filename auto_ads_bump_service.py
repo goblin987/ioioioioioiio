@@ -16,7 +16,7 @@ import logging
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from telethon.tl.custom import Button
+from telethon.tl.types import ReplyInlineMarkup, KeyboardButtonRow, KeyboardButtonUrl
 from auto_ads_database import AutoAdsDatabase
 from auto_ads_telethon_manager import auto_ads_telethon_manager
 from auto_ads_config import AutoAdsConfig
@@ -252,14 +252,21 @@ class AutoAdsBumpService:
             if buttons:
                 try:
                     logger.info(f"📎 Creating {len(buttons)} inline URL button(s)")
-                    # Create inline buttons using Button.url (inline=True by default)
+                    # Create inline buttons using ReplyInlineMarkup API
                     button_rows = []
                     for btn in buttons:
-                        # Button.url() creates inline buttons by default
-                        button_rows.append([Button.url(text=btn['text'], url=btn['url'])])
-                    telethon_buttons = button_rows
-                    logger.info(f"✅ Created {len(telethon_buttons)} inline button row(s)")
-                    logger.info(f"🔍 DEBUG: Button type: {type(telethon_buttons[0][0])}")
+                        # Create KeyboardButtonUrl for inline buttons
+                        inline_btn = KeyboardButtonUrl(
+                            text=btn['text'],
+                            url=btn['url']
+                        )
+                        # Wrap in KeyboardButtonRow
+                        button_rows.append(KeyboardButtonRow(buttons=[inline_btn]))
+                    
+                    # Create ReplyInlineMarkup for inline buttons (appear under message)
+                    telethon_buttons = ReplyInlineMarkup(rows=button_rows)
+                    logger.info(f"✅ Created ReplyInlineMarkup with {len(button_rows)} inline button row(s)")
+                    logger.info(f"🔍 DEBUG: Button type: {type(telethon_buttons)}")
                     logger.info(f"🔍 DEBUG: Button structure: {telethon_buttons}")
                 except Exception as e:
                     logger.error(f"❌ Error creating buttons: {e}")
@@ -278,27 +285,27 @@ class AutoAdsBumpService:
                     # Get a display name for logging
                     chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
-                    # SEND message (not forward) with buttons - like testforwarder bot does
-                    logger.info(f"🔍 DEBUG: About to send with buttons: {telethon_buttons is not None}")
+                    # SEND message (not forward) with inline buttons using reply_markup
+                    logger.info(f"🔍 DEBUG: About to send with inline buttons: {telethon_buttons is not None}")
                     if original_message.media:
-                        # Send media with caption and buttons
+                        # Send media with caption and inline buttons
                         sent = await client.send_file(
                             target_chat,
                             original_message.media,
                             caption=original_message.message,
-                            buttons=telethon_buttons,
+                            reply_markup=telethon_buttons,
                             link_preview=False
                         )
-                        logger.info(f"✅ Sent media message to {chat_name}")
+                        logger.info(f"✅ Sent media message with inline buttons to {chat_name}")
                     else:
-                        # Send text with buttons
+                        # Send text with inline buttons
                         sent = await client.send_message(
                             target_chat,
                             original_message.message,
-                            buttons=telethon_buttons,
+                            reply_markup=telethon_buttons,
                             link_preview=False
                         )
-                        logger.info(f"✅ Sent text message to {chat_name}")
+                        logger.info(f"✅ Sent text message with inline buttons to {chat_name}")
                     
                     logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
                     logger.info(f"🔍 DEBUG: Sent message type: {type(sent)}")
