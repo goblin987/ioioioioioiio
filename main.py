@@ -2380,8 +2380,8 @@ def main() -> None:
             
             # Build application with this token
             app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
-    app_builder.post_init(post_init)
-    app_builder.post_shutdown(post_shutdown)
+            app_builder.post_init(post_init)
+            app_builder.post_shutdown(post_shutdown)
             temp_app = app_builder.build()
             
             # Test token validity (will fail if token is invalid)
