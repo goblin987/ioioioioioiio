@@ -227,33 +227,13 @@ class AutoAdsBumpService:
             # Get source entity once
             source_entity = await client.get_entity(source_chat)
             
-            # Convert buttons to Telethon format if provided
-            telethon_buttons = None
-            if buttons:
-                try:
-                    from telethon import Button
-                    logger.info(f"🔍 DEBUG: Raw buttons from DB: {buttons}")
-                    button_rows = []
-                    for btn in buttons:
-                        logger.info(f"🔍 DEBUG: Processing button: {btn}")
-                        button_rows.append([Button.url(btn['text'], btn['url'])])
-                    telethon_buttons = button_rows
-                    logger.info(f"📎 Created {len(telethon_buttons)} button rows for bridge message")
-                    logger.info(f"🔍 DEBUG: Telethon buttons structure: {telethon_buttons}")
-                except Exception as e:
-                    logger.error(f"❌ Error creating buttons: {e}")
-                    logger.exception("Full button creation error:")
+            # IMPORTANT: Bridge channel messages should ALREADY have buttons attached when posted
+            # We FORWARD them to preserve buttons (not copy and add buttons separately)
+            # The buttons parameter is stored in DB for reference/display only
             
-            # If buttons are specified, we need to COPY the message (not forward)
-            # because Telegram doesn't allow adding buttons to forwarded messages
-            if telethon_buttons:
-                logger.info("📎 Buttons specified - will COPY message instead of forwarding")
-                # Fetch the original message first
-                original_message = await client.get_messages(source_entity, ids=message_id)
-                if not original_message:
-                    results['success'] = False
-                    results['message'] = 'Could not fetch original message from bridge channel'
-                    return results
+            logger.info(f"📎 Bridge forward mode - forwarding message from storage channel")
+            if buttons:
+                logger.info(f"📎 Note: {len(buttons)} button(s) should already be in the bridge message")
             
             for target_chat in target_chats:
                 try:
@@ -267,26 +247,14 @@ class AutoAdsBumpService:
                     # Get a display name for logging
                     chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
-                    if telethon_buttons:
-                        # COPY the message with buttons
-                        logger.info(f"🔍 DEBUG: About to send message with buttons to {chat_name}")
-                        logger.info(f"🔍 DEBUG: Buttons being sent: {telethon_buttons}")
-                        sent = await client.send_message(
-                            target_chat,
-                            original_message.text or original_message.message,
-                            file=original_message.media if original_message.media else None,
-                            buttons=telethon_buttons
-                        )
-                        logger.info(f"✅ Copied message with buttons to {chat_name}")
-                        logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
-                    else:
-                        # FORWARD message (no buttons)
-                        sent = await client.forward_messages(
-                            entity=target_chat,
-                            messages=message_id,
-                            from_peer=source_entity
-                        )
-                        logger.info(f"✅ Forwarded message to {chat_name}")
+                    # ALWAYS FORWARD bridge messages - this preserves ALL formatting, buttons, premium emojis
+                    sent = await client.forward_messages(
+                        entity=target_chat,
+                        messages=message_id,
+                        from_peer=source_entity
+                    )
+                    logger.info(f"✅ Forwarded message to {chat_name}")
+                    logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
                     
                     if sent:
                         results['sent_count'] += 1
