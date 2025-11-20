@@ -786,14 +786,14 @@ def callback_query_router(func):
                 "adm_users_other": admin.handle_adm_users_other,
                 "adm_export_usernames": admin.handle_adm_export_usernames,
                 
-                # Product Removal System handlers
-                "remove_products_menu": admin.handle_remove_products_menu,
-                "remove_by_location": admin.handle_remove_by_location,
-                "remove_city": admin.handle_remove_city,
-                "remove_district": admin.handle_remove_district,
-                "remove_type": admin.handle_remove_type,
-                "remove_confirm": admin.handle_remove_confirm,
-                "execute_removal": admin.handle_execute_removal,
+                # Product Removal System handlers - DISABLED (use Manage Products instead)
+                # "remove_products_menu": admin.handle_remove_products_menu,
+                # "remove_by_location": admin.handle_remove_by_location,
+                # "remove_city": admin.handle_remove_city,
+                # "remove_district": admin.handle_remove_district,
+                # "remove_type": admin.handle_remove_type,
+                # "remove_confirm": admin.handle_remove_confirm,
+                # "execute_removal": admin.handle_execute_removal,
                 
                 # Stock management handlers
                 "stock_management_menu": handle_stock_management_menu,

@@ -703,9 +703,6 @@ async def handle_admin_products_menu(update: Update, context: ContextTypes.DEFAU
         ],
         [
             InlineKeyboardButton("💰 Edit Prices", callback_data="product_price_editor_menu"),
-            InlineKeyboardButton("🗑️ Remove Products", callback_data="remove_products_menu")
-        ],
-        [
             InlineKeyboardButton("🏷️ Product Types", callback_data="adm_product_types_menu"),
             InlineKeyboardButton("📝 Manage Products", callback_data="adm_manage_products")
         ],

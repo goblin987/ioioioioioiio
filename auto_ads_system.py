@@ -1229,6 +1229,8 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
         results = await service.execute_campaign(campaign_id)
         
         # Show final success message with navigation
+        # Campaign created and started silently - no success message needed
+        # Just show navigation options
         keyboard = [
             [InlineKeyboardButton("📋 My Campaigns", callback_data="aa_my_campaigns")],
             [InlineKeyboardButton("🔙 Auto Ads Menu", callback_data="auto_ads_menu")],
@@ -1236,21 +1238,8 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        schedule_info = ""
-        if data.get('schedule_type') == 'hourly':
-            schedule_info = "\n\n🔄 **Next run:** In 1 hour (automatically)"
-        elif data.get('schedule_type') == 'daily':
-            schedule_info = "\n\n🔄 **Next run:** Tomorrow at same time"
-        elif data.get('schedule_type') == 'weekly':
-            schedule_info = "\n\n🔄 **Next run:** Next week at same time"
-        
-        await query.message.reply_text(
-            f"✅ **Campaign Created & Started!**\n\n"
-            f"**Name:** {data['campaign_name']}\n"
-            f"📤 **Sent:** {results['sent_count']}\n"
-            f"❌ **Failed:** {results['failed_count']}"
-            f"{schedule_info}",
-            parse_mode=ParseMode.MARKDOWN,
+        await query.edit_message_text(
+            "Campaign created and running in background.",
             reply_markup=reply_markup
         )
         
