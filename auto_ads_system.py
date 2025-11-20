@@ -316,9 +316,16 @@ Your campaigns will appear here once created!
             status_icon = "▶️" if campaign['is_active'] else "⏸️"
             toggle_text = "Pause" if campaign['is_active'] else "Start"
             
+            # Calculate target count correctly
+            target_chats = campaign.get('target_chats', [])
+            if target_chats == ['all'] or target_chats == 'all':
+                target_display = "All groups"
+            else:
+                target_display = f"{len(target_chats)} chat(s)"
+            
             text += f"{status_icon} **{campaign['campaign_name']}**\n"
             text += f"   📱 Account: {campaign.get('account_name', 'Unknown')}\n"
-            text += f"   🎯 Targets: {len(campaign.get('target_chats', []))} chat(s)\n"
+            text += f"   🎯 Targets: {target_display}\n"
             text += f"   📊 Sent: {campaign.get('sent_count', 0)} times\n\n"
             
             keyboard.append([
@@ -400,47 +407,28 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
             await query.message.reply_text("❌ Campaign not found.", parse_mode=ParseMode.MARKDOWN)
             return
         
-        # Send initial confirmation message
-        start_message = f"""
-🚀 **Campaign Started!**
-
-**Name:** {campaign.get('campaign_name', 'Unnamed')}
-**Schedule:** {campaign.get('schedule_type', 'once')}
-**Status:** Running...
-
-⏳ Please wait while your ads are being sent to all target groups...
-        """
-        status_msg = await query.message.reply_text(start_message, parse_mode=ParseMode.MARKDOWN)
-        
-        # Execute the campaign
+        # Execute the campaign (no "Execution Complete" message)
         results = await service.execute_campaign(campaign_id)
         
-        # Update the message with results
+        # Show results
         if results['success']:
-            message = f"""
-✅ **Campaign Execution Complete!**
-
-**Name:** {campaign.get('campaign_name', 'Unnamed')}
-**Schedule:** {campaign.get('schedule_type', 'once')}
-
-📊 **Results:**
-📤 Sent: {results['sent_count']}
-❌ Failed: {results['failed_count']}
-"""
-            
+            schedule_info = ""
             if campaign.get('schedule_type') == 'hourly':
-                message += "\n🔄 **Next run:** In 1 hour"
+                schedule_info = "\n\n🔄 **Next run:** In 1 hour"
             elif campaign.get('schedule_type') == 'daily':
-                message += "\n🔄 **Next run:** Tomorrow at same time"
+                schedule_info = "\n\n🔄 **Next run:** Tomorrow at same time"
             elif campaign.get('schedule_type') == 'weekly':
-                message += "\n🔄 **Next run:** Next week at same time"
+                schedule_info = "\n\n🔄 **Next run:** Next week at same time"
             
-            if results.get('details'):
-                message += "\n\n**Details:**\n" + "\n".join(results['details'][:10])
-            
-            await status_msg.edit_text(message, parse_mode=ParseMode.MARKDOWN)
+            await query.message.reply_text(
+                f"✅ **Campaign Running!**\n\n"
+                f"📤 **Sent:** {results['sent_count']}\n"
+                f"❌ **Failed:** {results['failed_count']}"
+                f"{schedule_info}",
+                parse_mode=ParseMode.MARKDOWN
+            )
         else:
-            await status_msg.edit_text(
+            await query.message.reply_text(
                 f"❌ **Campaign Failed**\n\n{results.get('message', 'Unknown error')}",
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -1240,7 +1228,23 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
         # Clear session first
         del context.user_data['aa_session']
         
-        # Add navigation buttons
+        # Show "Campaign Started" message
+        start_message = f"""
+🚀 **Campaign Started!**
+
+**Name:** {data['campaign_name']}
+**Schedule:** {data.get('schedule_type', 'once').title()}
+**Status:** Running...
+
+⏳ Sending ads to all target groups now...
+        """
+        await query.edit_message_text(start_message, parse_mode=ParseMode.MARKDOWN)
+        
+        # AUTO-START the campaign immediately
+        logger.info(f"🚀 Auto-starting campaign {campaign_id} after creation")
+        results = await service.execute_campaign(campaign_id)
+        
+        # Show final success message with navigation
         keyboard = [
             [InlineKeyboardButton("📋 My Campaigns", callback_data="aa_my_campaigns")],
             [InlineKeyboardButton("🔙 Auto Ads Menu", callback_data="auto_ads_menu")],
@@ -1248,11 +1252,20 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(
-            f"✅ **Campaign Created Successfully!**\n\n"
-            f"**Campaign Name:** {data['campaign_name']}\n"
-            f"**Campaign ID:** {campaign_id}\n\n"
-            f"Your campaign is ready! Click 'My Campaigns' to start it now.",
+        schedule_info = ""
+        if data.get('schedule_type') == 'hourly':
+            schedule_info = "\n\n🔄 **Next run:** In 1 hour (automatically)"
+        elif data.get('schedule_type') == 'daily':
+            schedule_info = "\n\n🔄 **Next run:** Tomorrow at same time"
+        elif data.get('schedule_type') == 'weekly':
+            schedule_info = "\n\n🔄 **Next run:** Next week at same time"
+        
+        await query.message.reply_text(
+            f"✅ **Campaign Created & Started!**\n\n"
+            f"**Name:** {data['campaign_name']}\n"
+            f"📤 **Sent:** {results['sent_count']}\n"
+            f"❌ **Failed:** {results['failed_count']}"
+            f"{schedule_info}",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=reply_markup
         )

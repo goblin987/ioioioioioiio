@@ -54,21 +54,10 @@ class AutoAdsDatabase:
             ''')
             logger.info("✅ auto_ads_accounts table created/verified")
             
-            logger.info("📊 Checking for existing tables...")
-            # Force drop BOTH possible table names
-            cur.execute("DROP TABLE IF EXISTS autoadscampaigns CASCADE")
-            logger.info("✅ Dropped autoadscampaigns if it existed")
-            cur.execute("DROP TABLE IF EXISTS auto_ads_campaigns CASCADE")
-            logger.info("✅ Dropped auto_ads_campaigns if it existed")
-            
-            # Commit the drops to ensure they take effect
-            conn.commit()
-            logger.info("✅ Committed table drops")
-            
-            logger.info("📊 Creating fresh auto_ads_campaigns table...")
-            # Auto ads campaigns table - FRESH START
+            logger.info("📊 Creating auto_ads_campaigns table...")
+            # Auto ads campaigns table - persist campaigns across restarts
             cur.execute('''
-                CREATE TABLE auto_ads_campaigns (
+                CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
                     id SERIAL PRIMARY KEY,
                     user_id BIGINT NOT NULL,
                     account_id INTEGER REFERENCES auto_ads_accounts(id) ON DELETE CASCADE,
