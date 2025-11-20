@@ -43,10 +43,10 @@ class AutoAdsConfig:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     # Message Sending Delays (CRITICAL FOR AVOIDING BANS)
-    # OPTIMIZED FOR MATURE ACCOUNTS (2023): Moderate speed to avoid FloodWait
-    # These delays prevent Telegram from triggering 50+ minute FloodWait errors
-    MIN_DELAY_BETWEEN_MESSAGES = int(os.getenv('AA_MIN_DELAY_BETWEEN_MESSAGES', 120))  # 2 minutes minimum
-    MAX_DELAY_BETWEEN_MESSAGES = int(os.getenv('AA_MAX_DELAY_BETWEEN_MESSAGES', 300))  # 5 minutes maximum
+    # OPTIMIZED FOR MATURE ACCOUNTS (2023): Moderate speed - safe and fast
+    # Mature accounts from 2023 can handle faster speeds safely
+    MIN_DELAY_BETWEEN_MESSAGES = int(os.getenv('AA_MIN_DELAY_BETWEEN_MESSAGES', 5))  # 5 seconds minimum
+    MAX_DELAY_BETWEEN_MESSAGES = int(os.getenv('AA_MAX_DELAY_BETWEEN_MESSAGES', 15))  # 15 seconds maximum
     
     # Account Daily Limits (DISABLED for mature accounts from 2023)
     MAX_MESSAGES_PER_DAY_NEW_ACCOUNT = int(os.getenv('AA_MAX_MESSAGES_PER_DAY_NEW_ACCOUNT', 20))  # First 2 weeks (conservative)
@@ -135,4 +135,5 @@ class AutoAdsConfig:
     SESSION_VALIDATION_INTERVAL = 120
     AUTO_RECONNECT_ENABLED = True
     AGGRESSIVE_MODE = True
+
 

@@ -379,9 +379,10 @@ class AutoAdsBumpService:
         # Use random delay for unpredictable timing
         base_delay = random.uniform(min_delay, max_delay)
         
-        # Add occasional longer pauses (10% chance of 2x delay)
-        if random.random() < 0.1:
-            base_delay *= 2
+        # Add occasional longer pauses (5% chance of 1.5x delay for moderate speed)
+        # Reduced from 10% and 2x to keep campaigns fast
+        if random.random() < 0.05:
+            base_delay *= 1.5
             logger.info(f"🛡️ ANTI-BAN: Extended delay for natural behavior")
         
         return base_delay
