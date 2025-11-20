@@ -526,9 +526,8 @@ async def handle_auto_ads_help(update: Update, context: ContextTypes.DEFAULT_TYP
    • Add your bot to the channel as admin
    • Add all userbots to the channel
    • Post your ad in that channel (text/photo/video)
-   • **IMPORTANT:** Add buttons to the message BEFORE copying link
-   • Use @UrlButtonBot or edit message to add inline buttons
    • Copy the message link and paste in bot when creating campaign
+   • Bot will add buttons during campaign (if you specify them)
 
 2️⃣ **Add Account**
    • Upload Telegram session file (.session)
@@ -945,30 +944,25 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
     session['step'] = 'button_choice'
     context.user_data['aa_session'] = session
     
-    # Ask about buttons with NEW instructions
+    # Ask about buttons
     text = """
-➕ **Step 4/6: Add Buttons (Important!)**
+➕ **Step 4/6: Add Buttons**
 
-**🎯 How to Add Buttons That Work:**
+Would you like to add clickable buttons under your ad?
 
-If you want buttons under your ad, you need to add them to the message IN THE BRIDGE CHANNEL **before** copying the link.
-
-**Two methods:**
-1. Use @BotFather inline mode: `@BotFather text` then select "Add buttons"
-2. Or add buttons manually using Telegram's link button feature
+**The bot will add these buttons automatically when sending your ad!**
 
 **Example buttons:**
 • Shop Now → https://example.com
 • Contact Us → https://t.me/support  
 • Visit Website → https://mysite.com
 
-**Did you already add buttons to your bridge message?**
 Choose an option:
     """
     
     keyboard = [
-        [InlineKeyboardButton("✅ Yes, I Added Buttons", callback_data="aa_add_buttons_yes")],
-        [InlineKeyboardButton("❌ No Buttons Needed", callback_data="aa_add_buttons_no")],
+        [InlineKeyboardButton("✅ Yes, Add Buttons", callback_data="aa_add_buttons_yes")],
+        [InlineKeyboardButton("❌ No Buttons", callback_data="aa_add_buttons_no")],
         [InlineKeyboardButton("🔙 Cancel", callback_data="aa_my_campaigns")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -976,7 +970,7 @@ Choose an option:
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
 
 async def handle_auto_ads_add_buttons_yes(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle user confirming buttons were added to bridge message"""
+    """Handle user choosing to add buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -985,9 +979,7 @@ async def handle_auto_ads_add_buttons_yes(update: Update, context: ContextTypes.
     context.user_data['aa_session'] = session
     
     text = """
-➕ **Track Your Buttons (Optional)**
-
-Great! Since you added buttons to your bridge message, you can optionally tell me what buttons you added for tracking/display purposes.
+➕ **Add Buttons to Your Ad**
 
 **Format:** `[Button Text] - [URL]`
 
@@ -999,12 +991,13 @@ Contact Us - https://t.me/support
 ```
 
 **Instructions:**
-• Send button details one per line
-• Or type `skip` to continue without tracking
+• Send one button per message
+• Or send multiple buttons separated by new lines
+• When finished, type `done` or `finish`
 
-**Note:** The actual buttons will come from your bridge message (already working!). This is just for your records.
+**The bot will automatically add these buttons when sending your ad!**
 
-Send button info or type `skip`:
+Send your first button now:
     """
     
     await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
@@ -1367,8 +1360,8 @@ async def handle_button_input(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     text = update.message.text.strip()
     
-    # Check if user wants to skip or finish
-    if text.lower() in ['done', 'finish', 'complete', 'end', 'skip']:
+    # Check if user wants to finish
+    if text.lower() in ['done', 'finish', 'complete', 'end']:
         session['step'] = 'target_chats'
         context.user_data['aa_session'] = session
         

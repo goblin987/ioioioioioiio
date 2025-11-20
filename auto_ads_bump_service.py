@@ -227,13 +227,38 @@ class AutoAdsBumpService:
             # Get source entity once
             source_entity = await client.get_entity(source_chat)
             
-            # IMPORTANT: Bridge channel messages should ALREADY have buttons attached when posted
-            # We FORWARD them to preserve buttons (not copy and add buttons separately)
-            # The buttons parameter is stored in DB for reference/display only
+            # Get the original message from bridge channel to copy content
+            logger.info(f"📎 Bridge mode - fetching message from storage channel to copy with buttons")
             
-            logger.info(f"📎 Bridge forward mode - forwarding message from storage channel")
+            try:
+                original_message = await client.get_messages(source_entity, ids=message_id)
+                if not original_message:
+                    results['success'] = False
+                    results['message'] = 'Could not fetch original message from bridge channel'
+                    return results
+                
+                logger.info(f"✅ Retrieved original message from bridge channel")
+                logger.info(f"Message has media: {bool(original_message.media)}")
+                logger.info(f"Message has buttons: {bool(original_message.buttons)}")
+            except Exception as e:
+                logger.error(f"❌ Failed to get original message: {e}")
+                results['success'] = False
+                results['message'] = f'Failed to get message from bridge: {str(e)}'
+                return results
+            
+            # Convert buttons to Telethon format if provided
+            telethon_buttons = None
             if buttons:
-                logger.info(f"📎 Note: {len(buttons)} button(s) should already be in the bridge message")
+                try:
+                    from telethon import Button
+                    logger.info(f"📎 Creating {len(buttons)} inline URL button(s)")
+                    button_rows = []
+                    for btn in buttons:
+                        button_rows.append([Button.url(btn['text'], btn['url'])])
+                    telethon_buttons = button_rows
+                    logger.info(f"✅ Created {len(telethon_buttons)} button row(s)")
+                except Exception as e:
+                    logger.error(f"❌ Error creating buttons: {e}")
             
             for target_chat in target_chats:
                 try:
@@ -247,13 +272,25 @@ class AutoAdsBumpService:
                     # Get a display name for logging
                     chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
-                    # ALWAYS FORWARD bridge messages - this preserves ALL formatting, buttons, premium emojis
-                    sent = await client.forward_messages(
-                        entity=target_chat,
-                        messages=message_id,
-                        from_peer=source_entity
-                    )
-                    logger.info(f"✅ Forwarded message to {chat_name}")
+                    # SEND message (not forward) with buttons - like testforwarder bot does
+                    if original_message.media:
+                        # Send media with caption and buttons
+                        sent = await client.send_file(
+                            target_chat,
+                            original_message.media,
+                            caption=original_message.message,
+                            buttons=telethon_buttons
+                        )
+                        logger.info(f"✅ Sent media message with buttons to {chat_name}")
+                    else:
+                        # Send text with buttons
+                        sent = await client.send_message(
+                            target_chat,
+                            original_message.message,
+                            buttons=telethon_buttons
+                        )
+                        logger.info(f"✅ Sent text message with buttons to {chat_name}")
+                    
                     logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
                     
                     if sent:
