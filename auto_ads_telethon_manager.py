@@ -297,3 +297,4 @@ class AutoAdsTelethonManager:
 # Global instance
 auto_ads_telethon_manager = AutoAdsTelethonManager()
 
+

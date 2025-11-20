@@ -27,21 +27,11 @@ logger = logging.getLogger(__name__)
 db = AutoAdsDatabase()
 bump_service = None  # Will be initialized when needed
 
-# Initialize database tables on import
-try:
-    db.init_tables()
-    logger.info("✅ Auto ads database initialized")
-except Exception as e:
-    logger.error(f"⚠️ Failed to initialize auto ads database: {e}")
-
-def get_bump_service(bot_instance=None):
-    """Get or create bump service instance with bot instance for button support"""
+def get_bump_service():
+    """Get or create bump service instance"""
     global bump_service
     if bump_service is None:
-        bump_service = AutoAdsBumpService(bot_instance=bot_instance)
-    elif bot_instance and not bump_service.bot_instance:
-        # Update bot instance if it wasn't set before
-        bump_service.bot_instance = bot_instance
+        bump_service = AutoAdsBumpService()
     return bump_service
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -288,7 +278,7 @@ async def handle_auto_ads_my_campaigns(update: Update, context: ContextTypes.DEF
     await query.answer()
     
     user_id = query.from_user.id
-    service = get_bump_service(bot_instance=context.bot)
+    service = get_bump_service()
     campaigns = service.get_user_campaigns(user_id)
     
     if not campaigns:
@@ -316,16 +306,9 @@ Your campaigns will appear here once created!
             status_icon = "▶️" if campaign['is_active'] else "⏸️"
             toggle_text = "Pause" if campaign['is_active'] else "Start"
             
-            # Calculate target count correctly
-            target_chats = campaign.get('target_chats', [])
-            if target_chats == ['all'] or target_chats == 'all':
-                target_display = "All groups"
-            else:
-                target_display = f"{len(target_chats)} chat(s)"
-            
             text += f"{status_icon} **{campaign['campaign_name']}**\n"
             text += f"   📱 Account: {campaign.get('account_name', 'Unknown')}\n"
-            text += f"   🎯 Targets: {target_display}\n"
+            text += f"   🎯 Targets: {len(campaign.get('target_chats', []))} chat(s)\n"
             text += f"   📊 Sent: {campaign.get('sent_count', 0)} times\n\n"
             
             keyboard.append([
@@ -397,23 +380,21 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
     
     await query.answer("⏳ Starting campaign... This may take a moment.", show_alert=False)
     
-    # Get campaign details for the confirmation message
     try:
-        # Pass bot instance for inline button support
-        service = get_bump_service(bot_instance=context.bot)
-        campaign = service.get_campaign(campaign_id)
-        
-        if not campaign:
-            await query.message.reply_text("❌ Campaign not found.", parse_mode=ParseMode.MARKDOWN)
-            return
-        
-        # Execute the campaign silently (no messages)
+        service = get_bump_service()
         results = await service.execute_campaign(campaign_id)
         
-        # Only show error if campaign actually failed
-        if not results['success']:
+        if results['success']:
+            message = f"✅ Campaign executed successfully!\n\n"
+            message += f"📤 Sent: {results['sent_count']}\n"
+            message += f"❌ Failed: {results['failed_count']}\n\n"
+            if results.get('details'):
+                message += "**Details:**\n" + "\n".join(results['details'][:10])
+            
+            await query.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        else:
             await query.message.reply_text(
-                f"❌ **Campaign Failed**\n\n{results.get('message', 'Unknown error')}",
+                f"❌ Campaign failed: {results.get('message', 'Unknown error')}",
                 parse_mode=ParseMode.MARKDOWN
             )
     except Exception as e:
@@ -422,21 +403,9 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
             f"❌ Error executing campaign: {str(e)}",
             parse_mode=ParseMode.MARKDOWN
         )
-        return
     
-    # Refresh campaign list (handle callback query timeout)
-    try:
-        # Create a fresh update object to avoid "query too old" error
-        await query.message.reply_text(
-            "✅ Campaign execution complete. Use the button below to view campaigns.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("📢 My Campaigns", callback_data="aa_my_campaigns"),
-                InlineKeyboardButton("🚀 Auto Ads Menu", callback_data="auto_ads_menu")
-            ]]),
-            parse_mode=ParseMode.MARKDOWN
-        )
-    except Exception as e:
-        logger.error(f"Error sending completion message: {e}")
+    # Refresh campaign list
+    await handle_auto_ads_my_campaigns(update, context, params)
 
 async def handle_auto_ads_toggle_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle campaign active status"""
@@ -447,7 +416,7 @@ async def handle_auto_ads_toggle_campaign(update: Update, context: ContextTypes.
     campaign_id = int(callback_data.split('_')[-1])
     
     try:
-        service = get_bump_service(bot_instance=context.bot)
+        service = get_bump_service()
         success = service.toggle_campaign(campaign_id)
         
         if success:
@@ -470,7 +439,7 @@ async def handle_auto_ads_delete_campaign(update: Update, context: ContextTypes.
     callback_data = query.data
     campaign_id = int(callback_data.split('_')[-1])
     
-    service = get_bump_service(bot_instance=context.bot)
+    service = get_bump_service()
     campaign = service.get_campaign(campaign_id)
     
     if not campaign:
@@ -507,7 +476,7 @@ async def handle_auto_ads_confirm_delete_campaign(update: Update, context: Conte
     campaign_id = int(callback_data.split('_')[-1])
     
     try:
-        service = get_bump_service(bot_instance=context.bot)
+        service = get_bump_service()
         service.delete_campaign(campaign_id)
         await query.answer("✅ Campaign deleted successfully!", show_alert=True)
     except Exception as e:
@@ -531,46 +500,37 @@ async def handle_auto_ads_help(update: Update, context: ContextTypes.DEFAULT_TYP
 
 **Getting Started:**
 
-1️⃣ **Setup Bridge Channel (REQUIRED)**
-   • Create a private Telegram channel
-   • Add your bot to the channel as admin
-   • Add all userbots to the channel
-   • Post your ad in that channel (text/photo/video)
-   • Copy the message link and paste in bot when creating campaign
-   • Bot will add buttons during campaign (if you specify them)
+1️⃣ **Add Account**
+   Upload your Telegram session file or enter API credentials.
 
-2️⃣ **Add Account**
-   • Upload Telegram session file (.session)
-   • Or enter API credentials manually
-   • Wait for green status indicator
+2️⃣ **Create Campaign**  
+   Choose what to post, where to post it, and when to post it.
 
-3️⃣ **Create Campaign**  
-   • Choose account to use
-   • Paste bridge channel message link
-   • Select target groups (all or specific)
-   • Set schedule (once/daily)
+3️⃣ **Start Campaign**
+   Your ads will post automatically on schedule or run immediately.
 
-4️⃣ **Start Campaign**
-   • Ads post automatically with anti-ban delays
-   • 2-5 minute random delays between messages
-   • Check progress in "My Campaigns"
-
-**Why Bridge Channel?**
-✅ Preserves premium emojis and formatting
-✅ Supports photos, videos, animations
-✅ Keeps message styling intact
-✅ Can update ad content in one place
+4️⃣ **Monitor Results**
+   Check sent count and last run time in "My Campaigns".
 
 **Campaign Content Types:**
-• Text messages (typed directly)
-• Forwarded messages (from bridge channel)
-• Bridge links (preserves premium content)
+• Text messages
+• Forwarded messages
+• Bridge channel messages (preserves premium emojis)
+
+**Posting Options:**
+• All groups the account is in
+• Specific chats/groups
+
+**Schedule Options:**
+• Once (immediate)
+• Daily (at specific time)
+• Weekly (specific day and time)
+• Hourly
 
 **Anti-Ban Protection:**
-• Random delays: 2-5 minutes
-• Night breaks: 3-6 AM (simulates sleep)
-• Daily limits: 20/60/unlimited
-• Account age consideration
+• Random delays between messages (2-5 minutes)
+• Account age limits for new accounts
+• Cooldown periods between campaigns
 
 Need more help? Contact support.
     """
@@ -605,8 +565,6 @@ async def handle_auto_ads_message(update: Update, context: ContextTypes.DEFAULT_
         # Route campaign wizard messages
         if step == 'ad_content':
             await handle_auto_ads_ad_content_received(update, context)
-        elif step == 'button_input':
-            await handle_button_input(update, context)
         elif step == 'target_chats_input':
             await handle_target_chats_input(update, context)
         elif step == 'schedule_time':
@@ -648,188 +606,41 @@ async def handle_manual_setup_message(update: Update, context: ContextTypes.DEFA
     
     elif step == 'api_hash':
         session['data']['api_hash'] = text
-        session['step'] = 'login_code'
+        session['step'] = 'session_string'
         
-        # Create Telethon client and send code request
-        try:
-            from telethon import TelegramClient
-            from telethon.sessions import StringSession
-            
-            api_id = int(session['data']['api_id'])
-            api_hash = session['data']['api_hash']
-            phone = session['data']['phone_number']
-            
-            # Create temp client to send code
-            temp_client = TelegramClient(
-                StringSession(),
-                api_id,
-                api_hash
-            )
-            
-            await temp_client.connect()
-            
-            # Send code request
-            await temp_client.send_code_request(phone)
-            
-            # Store client in session for later use
-            session['temp_client'] = temp_client
-            context.user_data['aa_session'] = session
-            
-            await update.message.reply_text(
-                "⚙️ **Step 5/5: Login Code**\n\n"
-                "📱 A login code has been sent to your Telegram account.\n\n"
-                "Please check your Telegram app and send me the code here (e.g., 12345):",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            
-        except Exception as e:
-            logger.error(f"Error sending login code: {e}")
-            await update.message.reply_text(
-                f"❌ **Error Sending Login Code**\n\n{str(e)}\n\n"
-                "Please verify:\n"
-                "• Phone number is correct (with country code)\n"
-                "• API ID and API Hash are valid\n"
-                "• Account exists and is not banned",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            # Clear session on error
-            if 'aa_session' in context.user_data:
-                del context.user_data['aa_session']
+        await update.message.reply_text(
+            "⚙️ **Step 5/5: Session String**\n\nPlease send me the session string (or upload .session file):",
+            parse_mode=ParseMode.MARKDOWN
+        )
     
-    elif step == 'login_code':
-        # User provided login code
-        code = text.replace(' ', '').replace('-', '')  # Clean code
+    elif step == 'session_string':
+        session['data']['session_string'] = text
         
+        # Save account to database
         try:
-            temp_client = session.get('temp_client')
-            if not temp_client:
-                raise Exception("Session expired. Please start again.")
-            
-            phone = session['data']['phone_number']
-            
-            # Try to login with code
-            try:
-                await temp_client.sign_in(phone, code)
-            except SessionPasswordNeededError:
-                # 2FA enabled - ask for password
-                session['step'] = '2fa_password'
-                context.user_data['aa_session'] = session
-                
-                await update.message.reply_text(
-                    "🔐 **Two-Factor Authentication**\n\n"
-                    "Your account has 2FA enabled. Please send me your 2FA password:",
-                    parse_mode=ParseMode.MARKDOWN
-                )
-                return
-            
-            # Get session string
-            session_string = temp_client.session.save()
-            
-            # Disconnect temp client
-            await temp_client.disconnect()
-            
-            # Save account to database
             account_id = db.add_telegram_account(
                 user_id=user_id,
                 account_name=session['data']['account_name'],
-                phone_number=phone,
+                phone_number=session['data']['phone_number'],
                 api_id=session['data']['api_id'],
                 api_hash=session['data']['api_hash'],
-                session_string=session_string
+                session_string=text
             )
             
-            keyboard = [[InlineKeyboardButton("🚀 Go to Auto Ads System", callback_data="auto_ads_menu")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
             await update.message.reply_text(
-                f"✅ **Account Added Successfully!**\n\n"
-                f"Account Name: {session['data']['account_name']}\n"
-                f"Phone: {phone}\n\n"
-                "You can now create campaigns using this account!",
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=reply_markup
+                f"✅ **Account Added Successfully!**\n\nAccount Name: {session['data']['account_name']}\nPhone: {session['data']['phone_number']}\n\nYou can now create campaigns using this account!",
+                parse_mode=ParseMode.MARKDOWN
             )
             
             # Clear session
             del context.user_data['aa_session']
             
         except Exception as e:
-            logger.error(f"Error logging in: {e}")
-            error_msg = str(e)
-            
-            if "PHONE_CODE_INVALID" in error_msg:
-                await update.message.reply_text(
-                    "❌ **Invalid Code**\n\n"
-                    "The code you provided is incorrect. Please try again or restart the setup.",
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            else:
-                await update.message.reply_text(
-                    f"❌ **Login Error**\n\n{error_msg}\n\n"
-                    "Please try again or contact support.",
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            
-            # Clear session on error
-            if 'aa_session' in context.user_data:
-                del context.user_data['aa_session']
-    
-    elif step == '2fa_password':
-        # User provided 2FA password
-        password = text
-        
-        try:
-            temp_client = session.get('temp_client')
-            if not temp_client:
-                raise Exception("Session expired. Please start again.")
-            
-            # Login with 2FA password
-            await temp_client.sign_in(password=password)
-            
-            # Get session string
-            session_string = temp_client.session.save()
-            
-            # Disconnect temp client
-            await temp_client.disconnect()
-            
-            phone = session['data']['phone_number']
-            
-            # Save account to database
-            account_id = db.add_telegram_account(
-                user_id=user_id,
-                account_name=session['data']['account_name'],
-                phone_number=phone,
-                api_id=session['data']['api_id'],
-                api_hash=session['data']['api_hash'],
-                session_string=session_string
-            )
-            
-            keyboard = [[InlineKeyboardButton("🚀 Go to Auto Ads System", callback_data="auto_ads_menu")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
+            logger.error(f"Error adding account: {e}")
             await update.message.reply_text(
-                f"✅ **Account Added Successfully!**\n\n"
-                f"Account Name: {session['data']['account_name']}\n"
-                f"Phone: {phone}\n\n"
-                "You can now create campaigns using this account!",
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=reply_markup
-            )
-            
-            # Clear session
-            del context.user_data['aa_session']
-            
-        except Exception as e:
-            logger.error(f"Error with 2FA: {e}")
-            await update.message.reply_text(
-                f"❌ **2FA Error**\n\n{str(e)}\n\n"
-                "Password may be incorrect. Please try the setup again.",
+                f"❌ **Error Adding Account**\n\n{str(e)}\n\nPlease try again or contact support.",
                 parse_mode=ParseMode.MARKDOWN
             )
-            
-            # Clear session on error
-            if 'aa_session' in context.user_data:
-                del context.user_data['aa_session']
 
 async def handle_campaign_message(update: Update, context: ContextTypes.DEFAULT_TYPE, session: dict, step: str):
     """Handle campaign creation messages"""
@@ -876,14 +687,9 @@ async def handle_auto_ads_select_account(update: Update, context: ContextTypes.D
 
 What would you like to post?
 
-**Option 1:** Type your ad text directly
-
-**Option 2:** Paste a bridge channel link (RECOMMENDED)
-   • Right-click message in channel → Copy Link
-   • Format: t.me/yourchannel/123
-   • Preserves premium emojis, photos, videos
-
-**Option 3:** Forward a message from bridge channel
+**Option 1:** Send me a text message
+**Option 2:** Forward a message to me
+**Option 3:** Send a bridge channel link (e.g., t.me/yourchannel/123)
 
 Send your content now:
     """
@@ -898,7 +704,7 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
     session = context.user_data.get('aa_session', {})
     
     # Store ad content
-    if hasattr(update.message, 'forward_date') and update.message.forward_date:
+    if update.message.forward_date:
         # Forwarded message
         session['data']['ad_content'] = {
             'type': 'forward',
@@ -906,44 +712,12 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
             'forwarded_message': True
         }
     elif update.message.text and ('t.me/' in update.message.text or 'telegram.me/' in update.message.text):
-        # Bridge channel link - parse to extract channel ID and message ID
-        import re
-        bridge_text = update.message.text.strip()
-        
-        # Try to parse: https://t.me/c/1234567890/123 or https://t.me/channelname/123
-        match = re.search(r't\.me/c/(\d+)/(\d+)', bridge_text)
-        if match:
-            # Private channel: https://t.me/c/1234567890/123
-            channel_id = int('-100' + match.group(1))  # Convert to full channel ID
-            message_id = int(match.group(2))
-            session['data']['ad_content'] = {
-                'type': 'bridge',
-                'text': bridge_text,
-                'bridge_channel': True,
-                'bridge_channel_entity': channel_id,
-                'bridge_message_id': message_id
-            }
-        else:
-            # Try public channel: https://t.me/channelname/123
-            match = re.search(r't\.me/([a-zA-Z0-9_]+)/(\d+)', bridge_text)
-            if match:
-                channel_username = '@' + match.group(1)
-                message_id = int(match.group(2))
-                session['data']['ad_content'] = {
-                    'type': 'bridge',
-                    'text': bridge_text,
-                    'bridge_channel': True,
-                    'bridge_channel_entity': channel_username,
-                    'bridge_message_id': message_id
-                }
-            else:
-                # Couldn't parse - store as-is (will fail later with better error)
-                session['data']['ad_content'] = {
-                    'type': 'bridge',
-                    'text': bridge_text,
-                    'bridge_channel': True,
-                    'error': 'Could not parse message link - please use format: https://t.me/c/channelid/messageid'
-                }
+        # Bridge channel link
+        session['data']['ad_content'] = {
+            'type': 'bridge',
+            'text': update.message.text,
+            'bridge_channel': True
+        }
     else:
         # Regular text
         session['data']['ad_content'] = {
@@ -951,80 +725,12 @@ async def handle_auto_ads_ad_content_received(update: Update, context: ContextTy
             'text': update.message.text or update.message.caption or '[Media]'
         }
     
-    session['step'] = 'button_choice'
-    context.user_data['aa_session'] = session
-    
-    # Ask about buttons
-    text = """
-➕ **Step 4/6: Add Buttons**
-
-Would you like to add clickable buttons under your ad?
-
-**The bot will add these buttons automatically when sending your ad!**
-
-**Example buttons:**
-• Shop Now → https://example.com
-• Contact Us → https://t.me/support  
-• Visit Website → https://mysite.com
-
-Choose an option:
-    """
-    
-    keyboard = [
-        [InlineKeyboardButton("✅ Yes, Add Buttons", callback_data="aa_add_buttons_yes")],
-        [InlineKeyboardButton("❌ No Buttons", callback_data="aa_add_buttons_no")],
-        [InlineKeyboardButton("🔙 Cancel", callback_data="aa_my_campaigns")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
-
-async def handle_auto_ads_add_buttons_yes(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle user choosing to add buttons"""
-    query = update.callback_query
-    await query.answer()
-    
-    session = context.user_data.get('aa_session', {})
-    session['step'] = 'button_input'
-    context.user_data['aa_session'] = session
-    
-    text = """
-➕ **Add Buttons to Your Ad**
-
-**Format:** `[Button Text] - [URL]`
-
-**Examples:**
-```
-Shop Now - https://example.com/shop
-Visit Website - https://mysite.com
-Contact Us - https://t.me/support
-```
-
-**Instructions:**
-• Send one button per message
-• Or send multiple buttons separated by new lines
-• When finished, type `done` or `finish`
-
-**The bot will automatically add these buttons when sending your ad!**
-
-Send your first button now:
-    """
-    
-    await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
-
-async def handle_auto_ads_add_buttons_no(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle user choosing to skip buttons"""
-    query = update.callback_query
-    await query.answer()
-    
-    session = context.user_data.get('aa_session', {})
-    session['data']['buttons'] = []  # No buttons
     session['step'] = 'target_chats'
     context.user_data['aa_session'] = session
     
     # Show target selection
     text = """
-➕ **Step 5/6: Target Chats**
+➕ **Step 4/6: Target Chats**
 
 Where should this be posted?
 
@@ -1041,7 +747,7 @@ Choose an option:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
 
 async def handle_auto_ads_target_all_groups(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handle target all groups selection"""
@@ -1131,39 +837,9 @@ Please send me the time when you want this campaign to run daily (e.g., "09:00",
     
     await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
 
-async def handle_auto_ads_schedule_weekly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle schedule weekly selection"""
-    query = update.callback_query
-    await query.answer()
-    
-    session = context.user_data.get('aa_session', {})
-    session['data']['schedule_type'] = 'weekly'
-    session['data']['schedule_time'] = 'Monday 09:00'
-    
-    # Show review
-    await show_campaign_review(query, context, session)
-
-async def handle_auto_ads_schedule_hourly(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Handle schedule hourly selection"""
-    query = update.callback_query
-    await query.answer()
-    
-    session = context.user_data.get('aa_session', {})
-    session['data']['schedule_type'] = 'hourly'
-    session['data']['schedule_time'] = 'every hour'
-    
-    # Show review
-    await show_campaign_review(query, context, session)
-
 async def show_campaign_review(query, context, session):
     """Show campaign review and confirm"""
     data = session['data']
-    
-    # Format buttons if present
-    button_text = "No buttons"
-    if data.get('buttons'):
-        button_list = [f"• {btn['text']} → {btn['url']}" for btn in data['buttons']]
-        button_text = "\n".join(button_list)
     
     text = f"""
 ➕ **Step 6/6: Review & Confirm**
@@ -1172,8 +848,6 @@ async def show_campaign_review(query, context, session):
 **Account ID:** {data.get('account_id', 'N/A')}
 **Content Type:** {data.get('ad_content', {}).get('type', 'text')}
 **Target Chats:** {len(data.get('target_chats', [])) if data.get('target_chats') != ['all'] else 'All Groups'}
-**Buttons:** 
-{button_text}
 **Schedule:** {data.get('schedule_type', 'once').title()} at {data.get('schedule_time', 'now')}
 
 Ready to create this campaign?
@@ -1197,7 +871,7 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
     data = session.get('data', {})
     
     try:
-        service = get_bump_service(bot_instance=context.bot)
+        service = get_bump_service()
         campaign_id = service.add_campaign(
             user_id=user_id,
             account_id=data['account_id'],
@@ -1209,50 +883,13 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
             schedule_time=data.get('schedule_time', 'now')
         )
         
-        # Clear session first
-        del context.user_data['aa_session']
-        
-        # Show "Campaign Started" message
-        start_message = f"""
-🚀 **Campaign Started!**
-
-**Name:** {data['campaign_name']}
-**Schedule:** {data.get('schedule_type', 'once').title()}
-**Status:** Running...
-
-⏳ Sending ads to all target groups now...
-        """
-        await query.edit_message_text(start_message, parse_mode=ParseMode.MARKDOWN)
-        
-        # AUTO-START the campaign immediately
-        logger.info(f"🚀 Auto-starting campaign {campaign_id} after creation")
-        results = await service.execute_campaign(campaign_id)
-        
-        # Show final success message with navigation
-        keyboard = [
-            [InlineKeyboardButton("📋 My Campaigns", callback_data="aa_my_campaigns")],
-            [InlineKeyboardButton("🔙 Auto Ads Menu", callback_data="auto_ads_menu")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="start")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        schedule_info = ""
-        if data.get('schedule_type') == 'hourly':
-            schedule_info = "\n\n🔄 **Next run:** In 1 hour (automatically)"
-        elif data.get('schedule_type') == 'daily':
-            schedule_info = "\n\n🔄 **Next run:** Tomorrow at same time"
-        elif data.get('schedule_type') == 'weekly':
-            schedule_info = "\n\n🔄 **Next run:** Next week at same time"
-        
-        await query.message.reply_text(
-            f"✅ **Campaign Created & Started!**\n\n"
-            f"**Name:** {data['campaign_name']}\n"
-            f"📤 **Sent:** {results['sent_count']}\n"
-            f"❌ **Failed:** {results['failed_count']}"
-            f"{schedule_info}",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=reply_markup
+        await query.edit_message_text(
+            f"✅ **Campaign Created Successfully!**\n\nCampaign Name: {data['campaign_name']}\nCampaign ID: {campaign_id}\n\nYour campaign is ready! Go to 'My Campaigns' to start it.",
+            parse_mode=ParseMode.MARKDOWN
         )
+        
+        # Clear session
+        del context.user_data['aa_session']
         
     except Exception as e:
         logger.error(f"Error creating campaign: {e}")
@@ -1368,13 +1005,9 @@ async def handle_session_upload_api(update: Update, context: ContextTypes.DEFAUL
             session_string=session['data']['session_string']
         )
         
-        keyboard = [[InlineKeyboardButton("🚀 Go to Auto Ads System", callback_data="auto_ads_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await update.message.reply_text(
             f"✅ **Account Added Successfully!**\n\nAccount Name: {session['data']['account_name']}\nAccount ID: {account_id}\n\nYou can now create campaigns using this account!",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=reply_markup
+            parse_mode=ParseMode.MARKDOWN
         )
         
         # Clear session
@@ -1384,89 +1017,6 @@ async def handle_session_upload_api(update: Update, context: ContextTypes.DEFAUL
         logger.error(f"Error adding account: {e}")
         await update.message.reply_text(
             f"❌ **Error Adding Account**\n\n{str(e)}\n\nPlease try again or contact support.",
-            parse_mode=ParseMode.MARKDOWN
-        )
-
-async def handle_button_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle button input from user"""
-    session = context.user_data.get('aa_session', {})
-    if session.get('step') != 'button_input':
-        return
-    
-    text = update.message.text.strip()
-    
-    # Check if user wants to finish
-    if text.lower() in ['done', 'finish', 'complete', 'end']:
-        session['step'] = 'target_chats'
-        context.user_data['aa_session'] = session
-        
-        # Show target selection
-        target_text = """
-➕ **Step 5/6: Target Chats**
-
-Where should this be posted?
-
-**Option 1:** All groups the account is in
-**Option 2:** Specific chats (you'll provide chat IDs/usernames)
-
-Choose an option:
-        """
-        
-        keyboard = [
-            [InlineKeyboardButton("📢 All Groups", callback_data="aa_target_all_groups")],
-            [InlineKeyboardButton("🎯 Specific Chats", callback_data="aa_target_specific_chats")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="aa_my_campaigns")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        button_count = len(session['data'].get('buttons', []))
-        await update.message.reply_text(
-            f"✅ **Buttons Saved!** ({button_count} button{'s' if button_count != 1 else ''})\n\n{target_text}",
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=reply_markup
-        )
-        return
-    
-    # Parse button input
-    buttons = session['data'].get('buttons', [])
-    
-    # Support multiple buttons separated by newlines
-    lines = text.split('\n')
-    parsed_count = 0
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # Expected format: [Button Text] - [URL]
-        if ' - ' in line:
-            parts = line.split(' - ', 1)
-            button_text = parts[0].strip()
-            button_url = parts[1].strip()
-            
-            if button_text and button_url:
-                buttons.append({'text': button_text, 'url': button_url})
-                parsed_count += 1
-    
-    session['data']['buttons'] = buttons
-    context.user_data['aa_session'] = session
-    
-    if parsed_count > 0:
-        await update.message.reply_text(
-            f"✅ **Button{'s' if parsed_count > 1 else ''} Added!** ({parsed_count})\n\n"
-            f"Total buttons: {len(buttons)}\n\n"
-            f"**Send more buttons or type 'done' when finished.**",
-            parse_mode=ParseMode.MARKDOWN
-        )
-    else:
-        await update.message.reply_text(
-            "❌ **Invalid Format!**\n\n"
-            "**Please use this format:**\n"
-            "`Button Text - URL`\n\n"
-            "**Example:**\n"
-            "`Shop Now - https://example.com`\n\n"
-            "Try again or type 'done' to finish.",
             parse_mode=ParseMode.MARKDOWN
         )
 
@@ -1515,13 +1065,6 @@ async def handle_schedule_time_input(update: Update, context: ContextTypes.DEFAU
     
     # Show review
     data = session['data']
-    
-    # Format buttons if present
-    button_text = "No buttons"
-    if data.get('buttons'):
-        button_list = [f"• {btn['text']} → {btn['url']}" for btn in data['buttons']]
-        button_text = "\n".join(button_list)
-    
     text = f"""
 ➕ **Step 6/6: Review & Confirm**
 
@@ -1529,8 +1072,6 @@ async def handle_schedule_time_input(update: Update, context: ContextTypes.DEFAU
 **Account ID:** {data.get('account_id', 'N/A')}
 **Content Type:** {data.get('ad_content', {}).get('type', 'text')}
 **Target Chats:** {len(data.get('target_chats', [])) if data.get('target_chats') != ['all'] else 'All Groups'}
-**Buttons:** 
-{button_text}
 **Schedule:** {data.get('schedule_type', 'once').title()} at {data.get('schedule_time', 'now')}
 
 Ready to create this campaign?

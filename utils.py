@@ -2590,6 +2590,113 @@ def clear_all_expired_baskets():
     logger.info(f"Scheduled job clear_all_expired_baskets finished. Processed: {processed_user_count}, Users with errors: {failed_user_count}, Total items un-reserved: {sum(all_expired_product_counts.values())}")
 
 
+def clean_abandoned_reservations():
+    """
+    Clean up stuck reservations where reserved > 0 but no active basket or pending payment exists.
+    This fixes products that get stuck in "reserved" state when users abandon the purchase flow.
+    """
+    logger.info("Running scheduled job: clean_abandoned_reservations")
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN")
+        
+        # Get all products with reservations
+        c.execute("SELECT id, reserved FROM products WHERE reserved > 0")
+        reserved_products = c.fetchall()
+        
+        if not reserved_products:
+            logger.info("No products with reservations found.")
+            c.execute("COMMIT")
+            return
+        
+        logger.info(f"Found {len(reserved_products)} products with reservations. Checking for abandoned ones...")
+        
+        # Get all active basket items (product_ids currently in baskets)
+        c.execute("SELECT basket FROM users WHERE basket IS NOT NULL AND basket != ''")
+        baskets = c.fetchall()
+        
+        active_basket_products = Counter()
+        for basket_row in baskets:
+            basket_str = basket_row['basket']
+            if not basket_str:
+                continue
+            items = basket_str.split(',')
+            for item_str in items:
+                if not item_str:
+                    continue
+                try:
+                    prod_id_str, _ = item_str.split(':')
+                    prod_id = int(prod_id_str)
+                    active_basket_products[prod_id] += 1
+                except (ValueError, IndexError):
+                    continue
+        
+        # Get all pending payments (products being paid for)
+        c.execute("""
+            SELECT basket_snapshot FROM pending_deposits 
+            WHERE basket_snapshot IS NOT NULL AND basket_snapshot != ''
+        """)
+        pending_payments = c.fetchall()
+        
+        pending_payment_products = Counter()
+        for payment_row in pending_payments:
+            basket_snapshot = payment_row['basket_snapshot']
+            if not basket_snapshot:
+                continue
+            try:
+                import json
+                snapshot_data = json.loads(basket_snapshot) if isinstance(basket_snapshot, str) else basket_snapshot
+                if isinstance(snapshot_data, list):
+                    for item in snapshot_data:
+                        if isinstance(item, dict) and 'product_id' in item:
+                            pending_payment_products[item['product_id']] += 1
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+        
+        # Now find abandoned reservations
+        products_to_fix = []
+        total_stuck_reservations = 0
+        
+        for product_row in reserved_products:
+            product_id = product_row['id']
+            reserved_count = product_row['reserved']
+            
+            # Calculate legitimate reservations
+            basket_count = active_basket_products.get(product_id, 0)
+            payment_count = pending_payment_products.get(product_id, 0)
+            legitimate_reservations = basket_count + payment_count
+            
+            # Calculate stuck reservations
+            stuck_count = reserved_count - legitimate_reservations
+            
+            if stuck_count > 0:
+                products_to_fix.append((stuck_count, product_id))
+                total_stuck_reservations += stuck_count
+                logger.info(f"Product {product_id}: Reserved={reserved_count}, InBaskets={basket_count}, InPayments={payment_count}, Stuck={stuck_count}")
+        
+        # Release stuck reservations
+        if products_to_fix:
+            c.executemany("UPDATE products SET reserved = GREATEST(0, reserved - %s) WHERE id = %s", products_to_fix)
+            logger.info(f"✅ Released {total_stuck_reservations} stuck reservations across {len(products_to_fix)} products")
+        else:
+            logger.info("No stuck reservations found. All reservations are legitimate.")
+        
+        conn.commit()
+        
+    except Exception as e:
+        logger.error(f"Error in clean_abandoned_reservations: {e}", exc_info=True)
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
+    finally:
+        if conn:
+            conn.close()
+
+
 def fetch_last_purchases(user_id, limit=10):
     try:
         with get_db_connection() as conn:
