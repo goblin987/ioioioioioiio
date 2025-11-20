@@ -1194,13 +1194,25 @@ async def handle_auto_ads_confirm_create_campaign(update: Update, context: Conte
             schedule_time=data.get('schedule_time', 'now')
         )
         
-        await query.edit_message_text(
-            f"✅ **Campaign Created Successfully!**\n\nCampaign Name: {data['campaign_name']}\nCampaign ID: {campaign_id}\n\nYour campaign is ready! Go to 'My Campaigns' to start it.",
-            parse_mode=ParseMode.MARKDOWN
-        )
-        
-        # Clear session
+        # Clear session first
         del context.user_data['aa_session']
+        
+        # Add navigation buttons
+        keyboard = [
+            [InlineKeyboardButton("📋 My Campaigns", callback_data="aa_my_campaigns")],
+            [InlineKeyboardButton("🔙 Auto Ads Menu", callback_data="auto_ads_menu")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="start")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            f"✅ **Campaign Created Successfully!**\n\n"
+            f"**Campaign Name:** {data['campaign_name']}\n"
+            f"**Campaign ID:** {campaign_id}\n\n"
+            f"Your campaign is ready! Click 'My Campaigns' to start it now.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
+        )
         
     except Exception as e:
         logger.error(f"Error creating campaign: {e}")
