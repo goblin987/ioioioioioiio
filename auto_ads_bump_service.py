@@ -247,17 +247,20 @@ class AutoAdsBumpService:
                 results['message'] = f'Failed to get message from bridge: {str(e)}'
                 return results
             
-            # Convert buttons to Telethon format if provided
+            # Convert buttons to Telethon inline format if provided
             telethon_buttons = None
             if buttons:
                 try:
                     logger.info(f"📎 Creating {len(buttons)} inline URL button(s)")
+                    # Create inline buttons using Button.url (inline=True by default)
                     button_rows = []
                     for btn in buttons:
-                        button_rows.append([Button.url(btn['text'], btn['url'])])
+                        # Button.url() creates inline buttons by default
+                        button_rows.append([Button.url(text=btn['text'], url=btn['url'])])
                     telethon_buttons = button_rows
-                    logger.info(f"✅ Created {len(telethon_buttons)} button row(s)")
-                    logger.info(f"🔍 DEBUG: Button rows structure: {telethon_buttons}")
+                    logger.info(f"✅ Created {len(telethon_buttons)} inline button row(s)")
+                    logger.info(f"🔍 DEBUG: Button type: {type(telethon_buttons[0][0])}")
+                    logger.info(f"🔍 DEBUG: Button structure: {telethon_buttons}")
                 except Exception as e:
                     logger.error(f"❌ Error creating buttons: {e}")
                     import traceback
@@ -276,28 +279,35 @@ class AutoAdsBumpService:
                     chat_name = getattr(target_chat, 'title', None) or getattr(target_chat, 'username', None) or str(getattr(target_chat, 'id', target_chat))
                     
                     # SEND message (not forward) with buttons - like testforwarder bot does
+                    logger.info(f"🔍 DEBUG: About to send with buttons: {telethon_buttons is not None}")
                     if original_message.media:
                         # Send media with caption and buttons
                         sent = await client.send_file(
                             target_chat,
                             original_message.media,
                             caption=original_message.message,
-                            buttons=telethon_buttons
+                            buttons=telethon_buttons,
+                            link_preview=False
                         )
-                        logger.info(f"✅ Sent media message with buttons to {chat_name}")
+                        logger.info(f"✅ Sent media message to {chat_name}")
                     else:
                         # Send text with buttons
                         sent = await client.send_message(
                             target_chat,
                             original_message.message,
-                            buttons=telethon_buttons
+                            buttons=telethon_buttons,
+                            link_preview=False
                         )
-                        logger.info(f"✅ Sent text message with buttons to {chat_name}")
+                        logger.info(f"✅ Sent text message to {chat_name}")
                     
                     logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
-                    logger.info(f"🔍 DEBUG: Sent message has buttons: {bool(sent.buttons) if sent else 'N/A'}")
-                    if sent and sent.buttons:
-                        logger.info(f"🔍 DEBUG: Sent message button count: {len(sent.buttons)}")
+                    logger.info(f"🔍 DEBUG: Sent message type: {type(sent)}")
+                    logger.info(f"🔍 DEBUG: Sent message has .buttons attr: {hasattr(sent, 'buttons')}")
+                    logger.info(f"🔍 DEBUG: Sent message has .reply_markup attr: {hasattr(sent, 'reply_markup')}")
+                    if hasattr(sent, 'buttons'):
+                        logger.info(f"🔍 DEBUG: sent.buttons value: {sent.buttons}")
+                    if hasattr(sent, 'reply_markup'):
+                        logger.info(f"🔍 DEBUG: sent.reply_markup value: {sent.reply_markup}")
                     
                     if sent:
                         results['sent_count'] += 1

@@ -448,21 +448,19 @@ async def handle_auto_ads_start_campaign(update: Update, context: ContextTypes.D
         )
         return
     
-    # Refresh campaign list (use answer to avoid "message not modified" error)
+    # Refresh campaign list (handle callback query timeout)
     try:
-        await handle_auto_ads_my_campaigns(update, context, params)
+        # Create a fresh update object to avoid "query too old" error
+        await query.message.reply_text(
+            "✅ Campaign execution complete. Use the button below to view campaigns.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("📢 My Campaigns", callback_data="aa_my_campaigns"),
+                InlineKeyboardButton("🚀 Auto Ads Menu", callback_data="auto_ads_menu")
+            ]]),
+            parse_mode=ParseMode.MARKDOWN
+        )
     except Exception as e:
-        # If message didn't change, just send a new one
-        if "Message is not modified" in str(e):
-            await query.message.reply_text(
-                "✅ Campaign execution complete. Use the button below to refresh the campaign list.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔄 Refresh Campaigns", callback_data="aa_my_campaigns")
-                ]]),
-                parse_mode=ParseMode.MARKDOWN
-            )
-        else:
-            raise e
+        logger.error(f"Error sending completion message: {e}")
 
 async def handle_auto_ads_toggle_campaign(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle campaign active status"""
