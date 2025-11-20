@@ -16,6 +16,7 @@ import logging
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+from telethon.tl.custom import Button
 from auto_ads_database import AutoAdsDatabase
 from auto_ads_telethon_manager import auto_ads_telethon_manager
 from auto_ads_config import AutoAdsConfig
@@ -250,15 +251,17 @@ class AutoAdsBumpService:
             telethon_buttons = None
             if buttons:
                 try:
-                    from telethon import Button
                     logger.info(f"📎 Creating {len(buttons)} inline URL button(s)")
                     button_rows = []
                     for btn in buttons:
                         button_rows.append([Button.url(btn['text'], btn['url'])])
                     telethon_buttons = button_rows
                     logger.info(f"✅ Created {len(telethon_buttons)} button row(s)")
+                    logger.info(f"🔍 DEBUG: Button rows structure: {telethon_buttons}")
                 except Exception as e:
                     logger.error(f"❌ Error creating buttons: {e}")
+                    import traceback
+                    logger.error(f"❌ Button error traceback: {traceback.format_exc()}")
             
             for target_chat in target_chats:
                 try:
@@ -292,6 +295,9 @@ class AutoAdsBumpService:
                         logger.info(f"✅ Sent text message with buttons to {chat_name}")
                     
                     logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
+                    logger.info(f"🔍 DEBUG: Sent message has buttons: {bool(sent.buttons) if sent else 'N/A'}")
+                    if sent and sent.buttons:
+                        logger.info(f"🔍 DEBUG: Sent message button count: {len(sent.buttons)}")
                     
                     if sent:
                         results['sent_count'] += 1
