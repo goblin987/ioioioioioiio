@@ -111,6 +111,11 @@ class AutoAdsBumpService:
             target_chats_raw = campaign['target_chats']
             buttons = campaign.get('buttons')
             
+            logger.info(f"🔍 DEBUG: Campaign {campaign_id} buttons from DB: {buttons}")
+            logger.info(f"🔍 DEBUG: Buttons type: {type(buttons)}")
+            if buttons:
+                logger.info(f"🔍 DEBUG: Buttons length: {len(buttons)}")
+            
             # Resolve target chats - if "all", get actual groups
             target_chats = await self._resolve_target_chats(client, target_chats_raw)
             
@@ -227,13 +232,17 @@ class AutoAdsBumpService:
             if buttons:
                 try:
                     from telethon import Button
+                    logger.info(f"🔍 DEBUG: Raw buttons from DB: {buttons}")
                     button_rows = []
                     for btn in buttons:
+                        logger.info(f"🔍 DEBUG: Processing button: {btn}")
                         button_rows.append([Button.url(btn['text'], btn['url'])])
                     telethon_buttons = button_rows
                     logger.info(f"📎 Created {len(telethon_buttons)} button rows for bridge message")
+                    logger.info(f"🔍 DEBUG: Telethon buttons structure: {telethon_buttons}")
                 except Exception as e:
-                    logger.error(f"Error creating buttons: {e}")
+                    logger.error(f"❌ Error creating buttons: {e}")
+                    logger.exception("Full button creation error:")
             
             # If buttons are specified, we need to COPY the message (not forward)
             # because Telegram doesn't allow adding buttons to forwarded messages
@@ -260,6 +269,8 @@ class AutoAdsBumpService:
                     
                     if telethon_buttons:
                         # COPY the message with buttons
+                        logger.info(f"🔍 DEBUG: About to send message with buttons to {chat_name}")
+                        logger.info(f"🔍 DEBUG: Buttons being sent: {telethon_buttons}")
                         sent = await client.send_message(
                             target_chat,
                             original_message.text or original_message.message,
@@ -267,6 +278,7 @@ class AutoAdsBumpService:
                             buttons=telethon_buttons
                         )
                         logger.info(f"✅ Copied message with buttons to {chat_name}")
+                        logger.info(f"🔍 DEBUG: Sent message ID: {sent.id if sent else 'None'}")
                     else:
                         # FORWARD message (no buttons)
                         sent = await client.forward_messages(
