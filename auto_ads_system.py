@@ -897,8 +897,16 @@ async def handle_campaign_message(update: Update, context: ContextTypes.DEFAULT_
         session['data']['campaign_name'] = text
         session['step'] = 'select_account'
         
-        # Show account selection
-        accounts = db.get_user_accounts(user_id)
+        # Check if user is admin or worker with marketing permission
+        is_admin = is_primary_admin(user_id)
+        is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+        
+        # Show account selection - workers and admins see ALL accounts
+        if is_admin or is_auth_worker:
+            accounts = db.get_all_accounts()
+        else:
+            accounts = db.get_user_accounts(user_id)
+        
         keyboard = []
         for account in accounts:
             keyboard.append([InlineKeyboardButton(
