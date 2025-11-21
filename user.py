@@ -39,6 +39,14 @@ from utils import (
 import json # <<< Make sure json is imported
 import payment # <<< Make sure payment module is imported
 
+# Import worker management
+try:
+    from worker_management import is_worker
+    from worker_ui import handle_worker_dashboard
+except ImportError:
+    def is_worker(user_id): return False
+    async def handle_worker_dashboard(update, context): pass
+
 # --- Import Reseller Helper ---
 try:
     from reseller_management import get_reseller_discount
@@ -640,6 +648,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_callback = update.callback_query is not None
     user_id = user.id
     username = user.username or user.first_name or f"User_{user_id}"
+
+    # WORKER REDIRECT
+    if is_worker(user_id) and not is_primary_admin(user_id):
+        return await handle_worker_dashboard(update, context)
     
     # LANGUAGE SELECTION CHECK - Before verification if enabled
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':

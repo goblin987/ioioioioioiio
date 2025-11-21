@@ -54,6 +54,9 @@ from utils import (
     # Admin authorization helpers
     is_primary_admin, is_secondary_admin, is_any_admin, get_first_primary_admin_id
 )
+# Import worker management
+from worker_management import is_worker, check_worker_permission, get_worker_by_user_id
+
 # --- Import viewer admin handlers ---
 # These now include the user management handlers
 try:
@@ -416,7 +419,12 @@ async def handle_adm_drop_details_message(update: Update, context: ContextTypes.
     chat_id = update.effective_chat.id
     user_specific_data = context.user_data
 
-    if not is_primary_admin(user_id): return
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return
 
     if user_specific_data.get("state") != "awaiting_drop_details":
         logger.debug(f"Ignoring drop details message from user {user_id}, state is not 'awaiting_drop_details' (state: {user_specific_data.get('state')})")
@@ -1689,32 +1697,82 @@ async def handle_sales_run(update: Update, context: ContextTypes.DEFAULT_TYPE, p
 async def handle_adm_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects city to add product to."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     lang, lang_data = _get_lang_data(context) # Use helper
-    if not CITIES:
+    
+    # Filter cities for worker
+    available_cities = CITIES.copy()
+    if is_auth_worker and not is_admin:
+        worker = get_worker_by_user_id(user_id)
+        allowed_locs = worker.get('allowed_locations', {})
+        # Ensure allowed_locs is a dictionary
+        if isinstance(allowed_locs, list): # Handle legacy format if any
+            allowed_locs = {}
+        
+        # Filter CITIES to only allowed ones
+        available_cities = {cid: cname for cid, cname in CITIES.items() if cid in allowed_locs}
+    
+    if not available_cities:
+        if is_auth_worker:
+             return await query.edit_message_text("You have no assigned cities. Contact admin.", parse_mode=None)
         return await query.edit_message_text("No cities configured. Please add a city first via 'Manage Cities'.", parse_mode=None)
-    sorted_city_ids = sorted(CITIES.keys(), key=lambda city_id: CITIES.get(city_id, ''))
-    keyboard = [[InlineKeyboardButton(f"🏙️ {CITIES.get(c,'N/A')}", callback_data=f"adm_dist|{c}")] for c in sorted_city_ids]
-    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")])
+        
+    sorted_city_ids = sorted(available_cities.keys(), key=lambda city_id: available_cities.get(city_id, ''))
+    keyboard = [[InlineKeyboardButton(f"🏙️ {available_cities.get(c,'N/A')}", callback_data=f"adm_dist|{c}")] for c in sorted_city_ids]
+    
+    # Back button destination
+    back_cb = "worker_menu" if is_auth_worker else "admin_menu"
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data=back_cb)])
+    
     select_city_text = lang_data.get("admin_select_city", "Select City to Add Product:")
     await query.edit_message_text(select_city_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
 
 async def handle_adm_dist(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects district within the chosen city."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not params: return await query.answer("Error: City ID missing.", show_alert=True)
     city_id = params[0]
     city_name = CITIES.get(city_id)
     if not city_name:
         return await query.edit_message_text("Error: City not found. Please select again.", parse_mode=None)
+    
     districts_in_city = DISTRICTS.get(city_id, {})
+    
+    # Filter districts for worker
+    if is_auth_worker and not is_admin:
+        worker = get_worker_by_user_id(user_id)
+        allowed_locs = worker.get('allowed_locations', {})
+        allowed_districts = allowed_locs.get(city_id, [])
+        
+        # Filter districts_in_city (unless 'all' is specified)
+        if allowed_districts != "all":
+            districts_in_city = {did: dname for did, dname in districts_in_city.items() if did in allowed_districts}
+
     lang, lang_data = _get_lang_data(context) # Use helper
     select_district_template = lang_data.get("admin_select_district", "Select District in {city}:")
+    
     if not districts_in_city:
         keyboard = [[InlineKeyboardButton("⬅️ Back to Cities", callback_data="adm_city")]]
-        return await query.edit_message_text(f"No districts found for {city_name}. Please add districts via 'Manage Districts'.",
-                                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+        msg = f"No allowed districts found for {city_name}." if is_auth_worker else f"No districts found for {city_name}. Please add districts via 'Manage Districts'."
+        return await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+        
     sorted_district_ids = sorted(districts_in_city.keys(), key=lambda dist_id: districts_in_city.get(dist_id,''))
     keyboard = []
     for d in sorted_district_ids:
@@ -1729,7 +1787,15 @@ async def handle_adm_dist(update: Update, context: ContextTypes.DEFAULT_TYPE, pa
 async def handle_adm_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects product type."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not params or len(params) < 2: return await query.answer("Error: City or District ID missing.", show_alert=True)
     city_id, dist_id = params[0], params[1]
     city_name = CITIES.get(city_id)
@@ -1752,7 +1818,15 @@ async def handle_adm_type(update: Update, context: ContextTypes.DEFAULT_TYPE, pa
 async def handle_adm_add(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects size for the new product."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not params or len(params) < 3: return await query.answer("Error: Location/Type info missing.", show_alert=True)
     city_id, dist_id, p_type = params
     city_name = CITIES.get(city_id)
@@ -1773,7 +1847,15 @@ async def handle_adm_add(update: Update, context: ContextTypes.DEFAULT_TYPE, par
 async def handle_adm_size(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handles selection of a predefined size."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not params: return await query.answer("Error: Size missing.", show_alert=True)
     size = params[0]
     if not all(k in context.user_data for k in ["admin_city", "admin_district", "admin_product_type"]):
@@ -1788,7 +1870,14 @@ async def handle_adm_size(update: Update, context: ContextTypes.DEFAULT_TYPE, pa
 async def handle_adm_custom_size(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handles 'Custom Size' button press."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
     if not all(k in context.user_data for k in ["admin_city", "admin_district", "admin_product_type"]):
         return await query.edit_message_text("❌ Error: Context lost. Please start adding the product again.", parse_mode=None)
     context.user_data["state"] = "awaiting_custom_size"
@@ -1801,7 +1890,13 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
     """Handles confirmation (Yes/No) for adding the drop."""
     query = update.callback_query
     user_id = query.from_user.id
-    if not is_primary_admin(user_id): return await query.answer("Access denied.", show_alert=True)
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
     chat_id = query.message.chat_id
     user_specific_data = context.user_data # Use context.user_data for the admin's data
     pending_drop = user_specific_data.get("pending_drop")
@@ -2072,7 +2167,14 @@ async def handle_adm_bulk_custom_size_message(update: Update, context: ContextTy
     """Handles the custom size reply for bulk products."""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    if not is_primary_admin(user_id): return
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return
+
     if not update.message or not update.message.text: return
     if context.user_data.get("state") != "awaiting_bulk_custom_size": return
 
@@ -2090,7 +2192,14 @@ async def handle_adm_bulk_price_message(update: Update, context: ContextTypes.DE
     """Handles the price reply for bulk products."""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    if not is_primary_admin(user_id): return
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return
+
     if not update.message or not update.message.text: return
     if context.user_data.get("state") != "awaiting_bulk_price": return
 
@@ -2136,7 +2245,14 @@ async def handle_adm_bulk_drop_details_message(update: Update, context: ContextT
     """Handles collecting multiple different messages for bulk products."""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    if not is_primary_admin(user_id): return
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return
+
     if not update.message: return
     if context.user_data.get("state") != "awaiting_bulk_messages": return
 
@@ -2311,7 +2427,14 @@ async def show_bulk_messages_status(update: Update, context: ContextTypes.DEFAUL
 async def handle_adm_bulk_remove_last_message(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Removes the last collected message from bulk operation."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
     
     bulk_messages = context.user_data.get("bulk_messages", [])
     if not bulk_messages:
@@ -3928,7 +4051,14 @@ async def handle_adm_delete_review_confirm(update: Update, context: ContextTypes
 async def handle_adm_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Starts the broadcast message process by asking for the target audience."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access Denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access Denied.", show_alert=True)
 
     lang, lang_data = _get_lang_data(context) # Use helper
 
@@ -4085,7 +4215,13 @@ async def handle_cancel_broadcast(update: Update, context: ContextTypes.DEFAULT_
 # --- Handler for Broadcast Message Content ---
 async def handle_adm_broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the admin sending broadcast message content."""
-    if not is_primary_admin(update.effective_user.id):
+    user_id = update.effective_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await update.message.reply_text("Access Denied.", parse_mode=None)
         return
 
@@ -5365,7 +5501,14 @@ async def handle_adm_custom_size_message(update: Update, context: ContextTypes.D
     """Handles text reply when state is 'awaiting_custom_size'."""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    if not is_primary_admin(user_id): return
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return
+
     if not update.message or not update.message.text: return
     if context.user_data.get("state") != "awaiting_custom_size": return
     custom_size = update.message.text.strip()
@@ -5385,7 +5528,14 @@ async def handle_adm_price_message(update: Update, context: ContextTypes.DEFAULT
     """Handles price input for regular product adding."""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    if not is_primary_admin(user_id): return
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return
+
     if not update.message or not update.message.text: return
     if context.user_data.get("state") != "awaiting_price": return
     
@@ -5528,7 +5678,14 @@ async def display_user_search_results(bot, chat_id: int, user_info: dict):
 async def handle_adm_bulk_back_to_messages(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Returns to the message collection interface."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
     
     context.user_data["state"] = "awaiting_bulk_messages"
     await show_bulk_messages_status(update, context)
@@ -5536,7 +5693,14 @@ async def handle_adm_bulk_back_to_messages(update: Update, context: ContextTypes
 async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Executes the bulk product creation from collected messages."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
     
     chat_id = query.message.chat_id
     bulk_messages = context.user_data.get("bulk_messages", [])

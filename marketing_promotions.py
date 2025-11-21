@@ -9,6 +9,13 @@ from telegram.ext import ContextTypes
 from utils import get_db_connection, send_message_with_retry, is_primary_admin, get_translation
 from datetime import datetime, timezone
 
+# Import worker permissions
+try:
+    from worker_management import is_worker, check_worker_permission
+except ImportError:
+    def is_worker(uid): return False
+    def check_worker_permission(uid, perm): return False
+
 logger = logging.getLogger(__name__)
 
 # UI Theme Constants
@@ -334,7 +341,13 @@ def get_active_ui_theme():
 async def handle_marketing_promotions_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Main marketing and promotions management menu"""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id):
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         return await query.answer("Access denied.", show_alert=True)
     
     # Get current active theme

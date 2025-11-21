@@ -20,6 +20,14 @@ from telegram.constants import ParseMode
 from auto_ads_database import AutoAdsDatabase
 from auto_ads_bump_service import AutoAdsBumpService
 from auto_ads_telethon_manager import auto_ads_telethon_manager
+from utils import is_primary_admin, send_message_with_retry
+
+# Import worker permissions
+try:
+    from worker_management import is_worker, check_worker_permission
+except ImportError:
+    def is_worker(uid): return False
+    def check_worker_permission(uid, perm): return False
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +59,16 @@ def get_bump_service(bot_instance=None):
 async def handle_enhanced_auto_ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Main auto ads menu with simplified 6-button interface"""
     query = update.callback_query
+    user_id = query.from_user.id if query else update.effective_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        if query: await query.answer("Access denied.", show_alert=True)
+        return
+        
     if query:
         await query.answer()
     
@@ -89,9 +107,17 @@ Select an option below:
 async def handle_auto_ads_manage_accounts(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show list of accounts"""
     query = update.callback_query
+    user_id = query.from_user.id
+
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+
     await query.answer()
     
-    user_id = query.from_user.id
     accounts = db.get_user_accounts(user_id)
     
     if not accounts:
@@ -131,9 +157,16 @@ Click "Add Account" below to get started!
 async def handle_auto_ads_add_account(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Start add account wizard"""
     query = update.callback_query
-    await query.answer()
-    
     user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+
+    await query.answer()
     
     text = """
 ➕ **Add Account**
@@ -285,9 +318,16 @@ async def handle_auto_ads_confirm_delete_account(update: Update, context: Contex
 async def handle_auto_ads_my_campaigns(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show list of campaigns"""
     query = update.callback_query
-    await query.answer()
-    
     user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+
+    await query.answer()
     service = get_bump_service(bot_instance=context.bot)
     campaigns = service.get_user_campaigns(user_id)
     

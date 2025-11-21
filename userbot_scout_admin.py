@@ -10,6 +10,13 @@ from telegram.ext import ContextTypes
 from utils import is_primary_admin, get_db_connection
 from userbot_scout import add_keyword, toggle_keyword, delete_keyword, toggle_scout_mode
 
+# Import worker permissions
+try:
+    from worker_management import is_worker, check_worker_permission
+except ImportError:
+    def is_worker(uid): return False
+    def check_worker_permission(uid, perm): return False
+
 logger = logging.getLogger(__name__)
 
 # ==================== MAIN SCOUT MENU ====================
@@ -17,8 +24,13 @@ logger = logging.getLogger(__name__)
 async def handle_scout_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Main scout system menu"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -312,8 +324,13 @@ async def handle_scout_delete_keyword(update: Update, context: ContextTypes.DEFA
 async def handle_scout_userbots(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Configure scout mode for userbots"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     

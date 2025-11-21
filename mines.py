@@ -91,6 +91,7 @@ def generate_grid_buttons(game, reveal_all=False):
     for i in range(GRID_SIZE):
         row = []
         for j in range(GRID_SIZE):
+           
             tile = grid[i][j]
             if reveal_all or tile['revealed']:
                 if tile['type'] == 'mine' and (i, j) in revealed_mines:
