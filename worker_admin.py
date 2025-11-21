@@ -109,29 +109,81 @@ async def handle_add_worker_username(update: Update, context: ContextTypes.DEFAU
             logger.warning(f"Could not get username for user_id {user_id}: {e}")
             username = f"ID_{user_id}"
     else:
-        # Input is a username
+        # Input is a username - try multiple methods
         username = input_text
         # Remove @ if present
         if username.startswith('@'):
             username = username[1:]
         
-        # Try to get user_id via Bot API
+        # Method 1: Try Bot API
         try:
             chat = await context.bot.get_chat(f"@{username}")
             user_id = chat.id
-            logger.info(f"Resolved username @{username} to user_id: {user_id}")
+            logger.info(f"Resolved username @{username} to user_id via Bot API: {user_id}")
         except Exception as e:
-            logger.error(f"Error resolving username @{username}: {e}")
-            await update.message.reply_text(
-                f"❌ Could not find user @{username}.\n\n"
-                "**Try these solutions:**\n"
-                "1. Ask the worker to send /start to this bot first\n"
-                "2. Get their User ID from them (they can see it in 'Profile' after using /start)\n"
-                "3. Send their numeric User ID directly\n\n"
-                "**Example:** Send `123456789` instead of username",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="workers_menu")]])
-            )
-            return
+            logger.warning(f"Bot API failed for @{username}: {e}")
+            
+            # Method 2: Search in database (users who have used the bot)
+            try:
+                from utils import get_db_connection
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("SELECT user_id, username FROM users WHERE LOWER(username) = LOWER(%s) LIMIT 1", (username,))
+                result = c.fetchone()
+                conn.close()
+                
+                if result:
+                    user_id = result['user_id']
+                    username = result['username'] or username
+                    logger.info(f"✅ Found @{username} in database with user_id: {user_id}")
+                else:
+                    logger.error(f"Username @{username} not found in database either")
+                    
+                    # Show helpful error with recent users from database
+                    try:
+                        conn = get_db_connection()
+                        c = conn.cursor()
+                        c.execute("""
+                            SELECT user_id, username FROM users 
+                            WHERE username IS NOT NULL AND username != ''
+                            ORDER BY user_id DESC LIMIT 5
+                        """)
+                        recent_users = c.fetchall()
+                        conn.close()
+                    except Exception:
+                        recent_users = []
+                    
+                    msg = f"❌ Could not find user @{username}\n\n"
+                    
+                    if recent_users:
+                        msg += "**Recent users who used the bot:**\n"
+                        for u in recent_users:
+                            msg += f"• @{u['username']} (ID: `{u['user_id']}`)\n"
+                        msg += "\n💡 Copy and send the User ID number"
+                    else:
+                        msg += "**Solutions:**\n"
+                        msg += "1. Ask worker to send /start\n"
+                        msg += "2. Ask worker to check their User ID in Profile\n"
+                        msg += "3. Send the numeric User ID directly"
+                    
+                    await update.message.reply_text(
+                        msg,
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="workers_menu")]]),
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                    return
+            except Exception as db_error:
+                logger.error(f"Database search failed: {db_error}")
+                await update.message.reply_text(
+                    f"❌ Could not find user @{username}\n\n"
+                    "**Send their User ID instead:**\n"
+                    "Ask the worker to:\n"
+                    "1. Send /start to this bot\n"
+                    "2. Tap Profile\n"
+                    "3. Send you the User ID number shown there",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="workers_menu")]])
+                )
+                return
     
     # Check if worker already exists
     existing_worker = get_worker_by_user_id(user_id)
