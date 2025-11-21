@@ -86,12 +86,17 @@ async def handle_scout_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         f"_Scout userbots automatically reply when they detect keywords in groups._"
     )
     
+    # Dynamic back button based on user role
+    back_callback = "userbot_control"  # Default for admin
+    if is_auth_worker and not is_admin:
+        back_callback = "worker_marketing"  # For workers
+    
     keyboard = [
         [InlineKeyboardButton("🔑 Manage Keywords", callback_data="scout_keywords|0")],
         [InlineKeyboardButton("🤖 Configure Userbots", callback_data="scout_userbots")],
         [InlineKeyboardButton("📊 View Triggers Log", callback_data="scout_triggers|0")],
         [InlineKeyboardButton("📖 Quick Start Guide", callback_data="scout_quick_start")],
-        [InlineKeyboardButton("⬅️ Back", callback_data="userbot_control")]
+        [InlineKeyboardButton("⬅️ Back", callback_data=back_callback)]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
@@ -123,11 +128,13 @@ async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TY
     c.execute("SELECT COUNT(*) as count FROM scout_keywords")
     total = c.fetchone()['count']
     
-    # Get keywords for this page
+    # Get keywords for this page with creator info
     c.execute("""
-        SELECT id, keyword, match_type, response_text, is_active, uses_count
-        FROM scout_keywords
-        ORDER BY is_active DESC, uses_count DESC, id DESC
+        SELECT sk.id, sk.keyword, sk.match_type, sk.response_text, sk.is_active, sk.uses_count, 
+               sk.created_by, COALESCE(w.username, 'Admin') as added_by_name
+        FROM scout_keywords sk
+        LEFT JOIN workers w ON sk.created_by = w.user_id
+        ORDER BY sk.is_active DESC, sk.uses_count DESC, sk.id DESC
         LIMIT %s OFFSET %s
     """, (per_page, offset))
     keywords = c.fetchall()
@@ -137,6 +144,8 @@ async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TY
     
     msg = f"🔑 **Scout Keywords** (Page {page + 1}/{max(total_pages, 1)})\n\n"
     
+    keyboard = []
+    
     if not keywords:
         msg += "No keywords configured yet.\n\nAdd your first keyword to start scout mode!"
     else:
@@ -145,9 +154,16 @@ async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TY
             response_preview = kw['response_text'][:40] + "..." if len(kw['response_text']) > 40 else kw['response_text']
             msg += f"{status} **{kw['keyword']}** ({kw['match_type']})\n"
             msg += f"   Uses: {kw['uses_count']} | Response: {response_preview}\n"
-            msg += f"   [Edit](scout_edit_keyword|{kw['id']}) | [Toggle](scout_toggle_keyword|{kw['id']}) | [Delete](scout_delete_keyword|{kw['id']})\n\n"
+            msg += f"   Added by: {kw['added_by_name']}\n\n"
+            
+            # Add action buttons for each keyword
+            toggle_text = "🔴 Disable" if kw['is_active'] else "🟢 Enable"
+            keyboard.append([
+                InlineKeyboardButton("✏️ Edit", callback_data=f"scout_edit_keyword|{kw['id']}"),
+                InlineKeyboardButton(toggle_text, callback_data=f"scout_toggle_keyword|{kw['id']}"),
+                InlineKeyboardButton("🗑️ Delete", callback_data=f"scout_delete_keyword|{kw['id']}")
+            ])
     
-    keyboard = []
     keyboard.append([InlineKeyboardButton("➕ Add Keyword", callback_data="scout_add_keyword_start")])
     
     # Bulk actions (only show if there are keywords)
@@ -341,6 +357,395 @@ async def handle_scout_delete_keyword(update: Update, context: ContextTypes.DEFA
     
     # Refresh the list
     await handle_scout_keywords(update, context, ['0'])
+
+
+# ==================== EDIT KEYWORD HANDLERS ====================
+
+async def handle_scout_edit_keyword(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Show edit menu for a keyword"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    keyword_id = int(params[0]) if params else None
+    if not keyword_id:
+        await query.answer("❌ Invalid keyword ID", show_alert=True)
+        return
+    
+    # Get keyword details
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, keyword, match_type, response_text, is_active, 
+               case_sensitive, response_delay
+        FROM scout_keywords 
+        WHERE id = %s
+    """, (keyword_id,))
+    kw = c.fetchone()
+    conn.close()
+    
+    if not kw:
+        await query.answer("❌ Keyword not found", show_alert=True)
+        return
+    
+    msg = (
+        f"✏️ **Edit Keyword**\n\n"
+        f"**Current Settings:**\n"
+        f"🔑 Keyword: `{kw['keyword']}`\n"
+        f"💬 Response: {kw['response_text'][:100]}{'...' if len(kw['response_text']) > 100 else ''}\n"
+        f"🎯 Match Type: {kw['match_type']}\n"
+        f"⏱️ Delay: {kw['response_delay']}s\n"
+        f"{'✅' if kw['is_active'] else '❌'} Status: {'Active' if kw['is_active'] else 'Disabled'}\n\n"
+        f"What would you like to change?"
+    )
+    
+    keyboard = [
+        [InlineKeyboardButton("✏️ Edit Keyword Text", callback_data=f"scout_edit_kw_text|{keyword_id}")],
+        [InlineKeyboardButton("💬 Edit Response", callback_data=f"scout_edit_kw_response|{keyword_id}")],
+        [InlineKeyboardButton("🎯 Change Match Type", callback_data=f"scout_edit_kw_match|{keyword_id}")],
+        [InlineKeyboardButton("⏱️ Change Delay", callback_data=f"scout_edit_kw_delay|{keyword_id}")],
+        [InlineKeyboardButton(f"{'🔴 Disable' if kw['is_active'] else '🟢 Enable'}", 
+                             callback_data=f"scout_toggle_keyword|{keyword_id}")],
+        [InlineKeyboardButton("⬅️ Back to Keywords", callback_data="scout_keywords|0")]
+    ]
+    
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date")
+        else:
+            logger.error(f"Error editing keyword menu: {e}")
+            raise
+
+
+async def handle_scout_edit_kw_text(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start editing keyword text"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    keyword_id = int(params[0]) if params else None
+    if not keyword_id:
+        await query.answer("❌ Invalid keyword ID", show_alert=True)
+        return
+    
+    # Get current keyword
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT keyword FROM scout_keywords WHERE id = %s", (keyword_id,))
+    result = c.fetchone()
+    conn.close()
+    
+    if not result:
+        await query.answer("❌ Keyword not found", show_alert=True)
+        return
+    
+    msg = (
+        f"✏️ **Edit Keyword Text**\n\n"
+        f"Current keyword: `{result['keyword']}`\n\n"
+        f"Type the new keyword text:"
+    )
+    
+    context.user_data['state'] = 'awaiting_scout_edit_keyword_text'
+    context.user_data['edit_keyword_id'] = keyword_id
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"scout_edit_keyword|{keyword_id}")]]
+    
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date")
+        else:
+            logger.error(f"Error starting keyword text edit: {e}")
+            raise
+
+
+async def handle_scout_edit_kw_response(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start editing keyword response"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    keyword_id = int(params[0]) if params else None
+    if not keyword_id:
+        await query.answer("❌ Invalid keyword ID", show_alert=True)
+        return
+    
+    # Get current response
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT response_text FROM scout_keywords WHERE id = %s", (keyword_id,))
+    result = c.fetchone()
+    conn.close()
+    
+    if not result:
+        await query.answer("❌ Keyword not found", show_alert=True)
+        return
+    
+    msg = (
+        f"💬 **Edit Response Message**\n\n"
+        f"Current response:\n{result['response_text'][:200]}{'...' if len(result['response_text']) > 200 else ''}\n\n"
+        f"Type the new response message:"
+    )
+    
+    context.user_data['state'] = 'awaiting_scout_edit_response'
+    context.user_data['edit_keyword_id'] = keyword_id
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"scout_edit_keyword|{keyword_id}")]]
+    
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date")
+        else:
+            logger.error(f"Error starting response edit: {e}")
+            raise
+
+
+async def handle_scout_edit_kw_match(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Change keyword match type"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    keyword_id = int(params[0]) if params else None
+    if not keyword_id:
+        await query.answer("❌ Invalid keyword ID", show_alert=True)
+        return
+    
+    # Get current match type
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT match_type FROM scout_keywords WHERE id = %s", (keyword_id,))
+    result = c.fetchone()
+    conn.close()
+    
+    if not result:
+        await query.answer("❌ Keyword not found", show_alert=True)
+        return
+    
+    current = result['match_type']
+    
+    msg = (
+        f"🎯 **Change Match Type**\n\n"
+        f"Current: **{current}**\n\n"
+        f"**Match Types:**\n"
+        f"• **contains** - Matches if keyword appears anywhere\n"
+        f"• **exact** - Matches only exact phrase\n"
+        f"• **starts_with** - Matches if message starts with keyword\n"
+        f"• **regex** - Advanced pattern matching\n\n"
+        f"Select new match type:"
+    )
+    
+    keyboard = [
+        [InlineKeyboardButton(f"{'✅' if current == 'contains' else '◻️'} Contains", 
+                             callback_data=f"scout_set_match|{keyword_id}|contains")],
+        [InlineKeyboardButton(f"{'✅' if current == 'exact' else '◻️'} Exact", 
+                             callback_data=f"scout_set_match|{keyword_id}|exact")],
+        [InlineKeyboardButton(f"{'✅' if current == 'starts_with' else '◻️'} Starts With", 
+                             callback_data=f"scout_set_match|{keyword_id}|starts_with")],
+        [InlineKeyboardButton(f"{'✅' if current == 'regex' else '◻️'} Regex", 
+                             callback_data=f"scout_set_match|{keyword_id}|regex")],
+        [InlineKeyboardButton("⬅️ Back", callback_data=f"scout_edit_keyword|{keyword_id}")]
+    ]
+    
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date")
+        else:
+            logger.error(f"Error showing match type options: {e}")
+            raise
+
+
+async def handle_scout_set_match(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Set new match type for keyword"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if not params or len(params) < 2:
+        await query.answer("❌ Invalid parameters", show_alert=True)
+        return
+    
+    keyword_id = int(params[0])
+    new_match_type = params[1]
+    
+    # Update match type
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("UPDATE scout_keywords SET match_type = %s WHERE id = %s", (new_match_type, keyword_id))
+    conn.commit()
+    conn.close()
+    
+    await query.answer(f"✅ Match type changed to {new_match_type}", show_alert=False)
+    
+    # Go back to edit menu
+    await handle_scout_edit_keyword(update, context, [str(keyword_id)])
+
+
+async def handle_scout_edit_kw_delay(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Start editing keyword response delay"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    keyword_id = int(params[0]) if params else None
+    if not keyword_id:
+        await query.answer("❌ Invalid keyword ID", show_alert=True)
+        return
+    
+    # Get current delay
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT response_delay FROM scout_keywords WHERE id = %s", (keyword_id,))
+    result = c.fetchone()
+    conn.close()
+    
+    if not result:
+        await query.answer("❌ Keyword not found", show_alert=True)
+        return
+    
+    msg = (
+        f"⏱️ **Edit Response Delay**\n\n"
+        f"Current delay: **{result['response_delay']} seconds**\n\n"
+        f"Enter new delay in seconds (1-60):\n"
+        f"_Recommended: 3-10 seconds to look more human_"
+    )
+    
+    context.user_data['state'] = 'awaiting_scout_edit_delay'
+    context.user_data['edit_keyword_id'] = keyword_id
+    
+    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data=f"scout_edit_keyword|{keyword_id}")]]
+    
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date")
+        else:
+            logger.error(f"Error starting delay edit: {e}")
+            raise
+
+
+# Message handlers for edit operations
+async def handle_scout_edit_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle messages during keyword editing"""
+    user_id = update.effective_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        return
+    
+    state = context.user_data.get('state')
+    keyword_id = context.user_data.get('edit_keyword_id')
+    text = update.message.text.strip()
+    
+    if not state or not keyword_id:
+        return
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        if state == 'awaiting_scout_edit_keyword_text':
+            # Update keyword text
+            c.execute("UPDATE scout_keywords SET keyword = %s WHERE id = %s", (text, keyword_id))
+            conn.commit()
+            
+            msg = f"✅ **Keyword updated to:** `{text}`"
+            keyboard = [[InlineKeyboardButton("⬅️ Back to Edit Menu", callback_data=f"scout_edit_keyword|{keyword_id}")]]
+            
+            await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+            
+        elif state == 'awaiting_scout_edit_response':
+            # Update response text
+            c.execute("UPDATE scout_keywords SET response_text = %s WHERE id = %s", (text, keyword_id))
+            conn.commit()
+            
+            msg = f"✅ **Response updated!**\n\nNew response:\n{text[:200]}{'...' if len(text) > 200 else ''}"
+            keyboard = [[InlineKeyboardButton("⬅️ Back to Edit Menu", callback_data=f"scout_edit_keyword|{keyword_id}")]]
+            
+            await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+            
+        elif state == 'awaiting_scout_edit_delay':
+            # Update delay
+            try:
+                delay = int(text)
+                if delay < 1 or delay > 60:
+                    await update.message.reply_text("❌ Delay must be between 1 and 60 seconds. Please try again.")
+                    return
+                
+                c.execute("UPDATE scout_keywords SET response_delay = %s WHERE id = %s", (delay, keyword_id))
+                conn.commit()
+                
+                msg = f"✅ **Delay updated to {delay} seconds!**"
+                keyboard = [[InlineKeyboardButton("⬅️ Back to Edit Menu", callback_data=f"scout_edit_keyword|{keyword_id}")]]
+                
+                await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+                
+            except ValueError:
+                await update.message.reply_text("❌ Please enter a valid number between 1 and 60.")
+                return
+        
+        # Clear state
+        context.user_data.pop('state', None)
+        context.user_data.pop('edit_keyword_id', None)
+        
+    except Exception as e:
+        logger.error(f"Error updating keyword: {e}")
+        await update.message.reply_text(f"❌ Error updating keyword: {str(e)}")
+    finally:
+        conn.close()
 
 
 # ==================== USERBOT CONFIGURATION ====================

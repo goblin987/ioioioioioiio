@@ -248,6 +248,13 @@ try:
         handle_scout_keyword_message,
         handle_scout_toggle_keyword,
         handle_scout_delete_keyword,
+        handle_scout_edit_keyword,
+        handle_scout_edit_kw_text,
+        handle_scout_edit_kw_response,
+        handle_scout_edit_kw_match,
+        handle_scout_set_match,
+        handle_scout_edit_kw_delay,
+        handle_scout_edit_messages,
         handle_scout_userbots,
         handle_scout_toggle_bot,
         handle_scout_triggers,
@@ -1364,6 +1371,12 @@ def callback_query_router(func):
                     "scout_add_keyword_start": handle_scout_add_keyword_start,
                     "scout_toggle_keyword": handle_scout_toggle_keyword,
                     "scout_delete_keyword": handle_scout_delete_keyword,
+                    "scout_edit_keyword": handle_scout_edit_keyword,
+                    "scout_edit_kw_text": handle_scout_edit_kw_text,
+                    "scout_edit_kw_response": handle_scout_edit_kw_response,
+                    "scout_edit_kw_match": handle_scout_edit_kw_match,
+                    "scout_set_match": handle_scout_set_match,
+                    "scout_edit_kw_delay": handle_scout_edit_kw_delay,
                     "scout_userbots": handle_scout_userbots,
                     "scout_toggle_bot": handle_scout_toggle_bot,
                     "scout_triggers": handle_scout_triggers,
@@ -1496,6 +1509,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Scout system message handlers
         'awaiting_scout_keyword': handle_scout_keyword_message if USERBOT_AVAILABLE else None,
         'awaiting_scout_response': handle_scout_keyword_message if USERBOT_AVAILABLE else None,
+        'awaiting_scout_edit_keyword_text': handle_scout_edit_messages if USERBOT_AVAILABLE else None,
+        'awaiting_scout_edit_response': handle_scout_edit_messages if USERBOT_AVAILABLE else None,
+        'awaiting_scout_edit_delay': handle_scout_edit_messages if USERBOT_AVAILABLE else None,
         
         # Auto ads system message handlers (removed - using testforwarder integration)
         
