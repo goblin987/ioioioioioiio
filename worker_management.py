@@ -5,23 +5,14 @@ Handles CRUD operations, permissions, and activity logging for workers.
 
 import logging
 import json
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any
 from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+# Import database connection from utils
+from utils import get_db_connection
 
-def get_db_connection():
-    """Get PostgreSQL database connection"""
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        raise ValueError("DATABASE_URL environment variable not set")
-    
-    conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-    return conn
+logger = logging.getLogger(__name__)
 
 # ============= WORKER CRUD OPERATIONS =============
 

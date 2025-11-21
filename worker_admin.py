@@ -53,7 +53,7 @@ async def handle_workers_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 # ============= ADD WORKER FLOW =============
 
 async def handle_add_worker_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Step 1: Prompt for worker username"""
+    """Step 1: Prompt for worker username or user ID"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
@@ -68,15 +68,19 @@ async def handle_add_worker_start(update: Update, context: ContextTypes.DEFAULT_
     }
     
     msg = "👷 **Add New Worker**\n\n"
-    msg += "Please send the Telegram username of the worker.\n\n"
-    msg += "Example: `@worker_username` or `worker_username`"
+    msg += "You can add a worker in two ways:\n\n"
+    msg += "**Option 1:** Send their Telegram username\n"
+    msg += "Example: `@worker_username` or `worker_username`\n\n"
+    msg += "**Option 2:** Send their Telegram User ID\n"
+    msg += "Example: `123456789`\n\n"
+    msg += "💡 **Tip:** If username doesn't work, ask the worker to send /start to your bot, then use their User ID."
     
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="workers_menu")]]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN)
 
 async def handle_add_worker_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Step 2: Process username and ask for permissions"""
+    """Step 2: Process username/user_id and ask for permissions"""
     if not is_primary_admin(update.message.from_user.id):
         return
     
@@ -84,53 +88,71 @@ async def handle_add_worker_username(update: Update, context: ContextTypes.DEFAU
     if session.get('step') != 'awaiting_username':
         return
     
-    username = update.message.text.strip()
+    input_text = update.message.text.strip()
     
-    # Remove @ if present
-    if username.startswith('@'):
-        username = username[1:]
-    
-    if not username:
-        await update.message.reply_text("❌ Invalid username. Please try again.")
+    if not input_text:
+        await update.message.reply_text("❌ Invalid input. Please try again.")
         return
     
-    # Try to get user_id via Bot API
-    try:
-        # Use context.bot.get_chat to resolve username to user_id
-        chat = await context.bot.get_chat(f"@{username}")
-        user_id = chat.id
+    user_id = None
+    username = None
+    
+    # Check if input is a numeric user ID
+    if input_text.isdigit():
+        user_id = int(input_text)
+        # Try to get username from user_id
+        try:
+            chat = await context.bot.get_chat(user_id)
+            username = chat.username if hasattr(chat, 'username') and chat.username else f"ID_{user_id}"
+            logger.info(f"Resolved user ID {user_id} to username: {username}")
+        except Exception as e:
+            logger.warning(f"Could not get username for user_id {user_id}: {e}")
+            username = f"ID_{user_id}"
+    else:
+        # Input is a username
+        username = input_text
+        # Remove @ if present
+        if username.startswith('@'):
+            username = username[1:]
         
-        # Check if worker already exists
-        existing_worker = get_worker_by_user_id(user_id)
-        if existing_worker:
+        # Try to get user_id via Bot API
+        try:
+            chat = await context.bot.get_chat(f"@{username}")
+            user_id = chat.id
+            logger.info(f"Resolved username @{username} to user_id: {user_id}")
+        except Exception as e:
+            logger.error(f"Error resolving username @{username}: {e}")
             await update.message.reply_text(
-                f"❌ Worker @{username} is already registered!\n\n"
-                "Use 'View Workers' to manage existing workers.",
+                f"❌ Could not find user @{username}.\n\n"
+                "**Try these solutions:**\n"
+                "1. Ask the worker to send /start to this bot first\n"
+                "2. Get their User ID from them (they can see it in 'Profile' after using /start)\n"
+                "3. Send their numeric User ID directly\n\n"
+                "**Example:** Send `123456789` instead of username",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="workers_menu")]])
             )
-            context.user_data.pop('worker_session', None)
             return
-        
-        # Store in session
-        session['username'] = username
-        session['user_id'] = user_id
-        session['step'] = 'selecting_permissions'
-        context.user_data['worker_session'] = session
-        
-        # Show permissions selection
-        await show_permissions_selection(update, context)
-        
-    except Exception as e:
-        logger.error(f"Error resolving username @{username}: {e}")
+    
+    # Check if worker already exists
+    existing_worker = get_worker_by_user_id(user_id)
+    if existing_worker:
+        display_name = f"@{username}" if not username.startswith("ID_") else f"User ID: {user_id}"
         await update.message.reply_text(
-            f"❌ Could not find user @{username}.\n\n"
-            "Make sure:\n"
-            "• Username is correct\n"
-            "• User has started a chat with the bot\n"
-            "• Username is public (not hidden)",
+            f"❌ Worker {display_name} is already registered!\n\n"
+            "Use 'View Workers' to manage existing workers.",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="workers_menu")]])
         )
         context.user_data.pop('worker_session', None)
+        return
+    
+    # Store in session
+    session['username'] = username
+    session['user_id'] = user_id
+    session['step'] = 'selecting_permissions'
+    context.user_data['worker_session'] = session
+    
+    # Show permissions selection
+    await show_permissions_selection(update, context)
 
 async def show_permissions_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show permissions selection interface"""

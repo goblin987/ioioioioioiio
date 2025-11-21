@@ -3,22 +3,13 @@ Database initialization script for Worker Management System.
 Creates workers, worker_activity_log tables and extends products table.
 """
 
-import psycopg2
-import os
 import logging
-from psycopg2.extras import RealDictCursor
+
+# Import database connection from utils
+from utils import get_db_connection
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-def get_db_connection():
-    """Get PostgreSQL database connection"""
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        raise ValueError("DATABASE_URL environment variable not set")
-    
-    conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-    return conn
 
 def init_worker_tables():
     """Initialize worker management tables"""
