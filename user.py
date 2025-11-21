@@ -215,17 +215,6 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         logger.info(f"🎁 Adding Daily Rewards button to default keyboard for user {user_id}")
         default_keyboard.append([InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")])
     
-    # Check if user is a worker and add Worker Dashboard button
-    try:
-        from worker_management import is_worker
-        if is_worker(user_id):
-            logger.info(f"👷 User {user_id} is a worker, adding Worker Dashboard button")
-            default_keyboard.append([InlineKeyboardButton("👷 Worker Dashboard", callback_data="worker_menu")])
-    except ImportError:
-        pass  # Worker system not available
-    except Exception as e:
-        logger.error(f"Error checking worker status for user {user_id}: {e}")
-    
     default_keyboard.extend([
         [InlineKeyboardButton(f"{EMOJI_PROFILE} {profile_button_text}", callback_data="profile"),
          InlineKeyboardButton(f"{EMOJI_REFILL} {top_up_button_text}", callback_data="refill")],
@@ -253,6 +242,14 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
                 # Conditionally add Daily Rewards button for classic theme
                 if show_daily_rewards:
                     keyboard.append([InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")])
+                
+                # Add Worker Dashboard button for classic theme if user is a worker
+                try:
+                    from worker_management import is_worker
+                    if is_worker(user_id):
+                        keyboard.append([InlineKeyboardButton("👷 Worker Dashboard", callback_data="worker_menu")])
+                except:
+                    pass
                 
                 keyboard.extend([
                     [InlineKeyboardButton("👤 Profile", callback_data="profile"), 
@@ -317,6 +314,19 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     except Exception as e:
         keyboard = default_keyboard
         logger.warning(f"Error applying custom layout for user {user_id}: {e}")
+    
+    # Add Worker Dashboard button AFTER custom layout is applied
+    try:
+        from worker_management import is_worker
+        if is_worker(user_id):
+            logger.info(f"👷 User {user_id} is a worker, adding Worker Dashboard button to final keyboard")
+            # Insert worker button after Daily Rewards (if exists) or after Shop button
+            insert_position = 2 if show_daily_rewards else 1
+            keyboard.insert(insert_position, [InlineKeyboardButton("👷 Worker Dashboard", callback_data="worker_menu")])
+    except ImportError:
+        pass  # Worker system not available
+    except Exception as e:
+        logger.error(f"Error adding worker button for user {user_id}: {e}")
     
     # Add admin button if user is admin
     if is_primary_admin(user_id):

@@ -632,7 +632,7 @@ async def handle_view_worker_details(update: Update, context: ContextTypes.DEFAU
     
     username = worker['username'] or f"ID: {worker['user_id']}"
     permissions = worker['permissions'] if isinstance(worker['permissions'], list) else []
-    locations = worker['locations'] if isinstance(worker.get('allowed_locations'), dict) else {}
+    locations = worker.get('allowed_locations', {}) if isinstance(worker.get('allowed_locations'), dict) else {}
     
     msg = f"👷 **Worker Details**\n\n"
     msg += f"**Username:** @{username}\n"
