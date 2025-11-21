@@ -81,9 +81,9 @@ async def handle_worker_add_single(update: Update, context: ContextTypes.DEFAULT
     context.user_data['is_worker'] = True
     context.user_data['worker_id'] = get_worker_by_user_id(user_id)['id']
     
-    # Redirect to standard admin add product flow
-    from admin import handle_adm_add_products_choice
-    await handle_adm_add_products_choice(update, context, params)
+    # Redirect to single product city selection
+    from admin import handle_adm_city
+    await handle_adm_city(update, context, params)
 
 async def handle_worker_add_bulk(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Redirect to admin bulk add flow with worker tracking"""
@@ -101,11 +101,9 @@ async def handle_worker_add_bulk(update: Update, context: ContextTypes.DEFAULT_T
     context.user_data['is_worker'] = True
     context.user_data['worker_id'] = get_worker_by_user_id(user_id)['id']
     
-    # Redirect to bulk add flow
-    from admin import handle_adm_add_products_choice
-    # Simulate selecting bulk option
-    update.callback_query._data = "adm_add_choice_bulk"
-    await handle_adm_add_products_choice(update, context, ['bulk'])
+    # Redirect to bulk add city selection
+    from admin import handle_adm_bulk_city
+    await handle_adm_bulk_city(update, context, params)
 
 # ============= WORKER CHECK STOCK =============
 
