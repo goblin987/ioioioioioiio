@@ -1545,6 +1545,17 @@ def init_enhanced_auto_ads_tables():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        logger.info("🔧 Initializing Auto Ads tables...")
+        
+        # Check existing campaigns before table creation
+        try:
+            cur.execute("SELECT COUNT(*) FROM auto_ads_campaigns")
+            existing_campaigns = cur.fetchone()[0]
+            logger.info(f"📊 Found {existing_campaigns} existing campaigns before init")
+        except Exception as e:
+            logger.info(f"📊 Campaigns table doesn't exist yet or error: {e}")
+            existing_campaigns = 0
+        
         # Auto ads accounts table
         cur.execute('''
             CREATE TABLE IF NOT EXISTS auto_ads_accounts (
@@ -1559,8 +1570,9 @@ def init_enhanced_auto_ads_tables():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         ''')
+        logger.info("✅ Auto ads accounts table ready")
         
-        # Auto ads campaigns table
+        # Auto ads campaigns table - NEVER DROP, only CREATE IF NOT EXISTS
         cur.execute('''
             CREATE TABLE IF NOT EXISTS auto_ads_campaigns (
                 id SERIAL PRIMARY KEY,
@@ -1578,6 +1590,17 @@ def init_enhanced_auto_ads_tables():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         ''')
+        logger.info("✅ Auto ads campaigns table ready")
+        
+        # Check campaigns after table creation
+        cur.execute("SELECT COUNT(*) FROM auto_ads_campaigns")
+        campaigns_after = cur.fetchone()[0]
+        logger.info(f"📊 Found {campaigns_after} campaigns after init")
+        
+        if existing_campaigns > 0 and campaigns_after == 0:
+            logger.error(f"⚠️ WARNING: {existing_campaigns} campaigns were LOST during init!")
+        elif campaigns_after > 0:
+            logger.info(f"✅ {campaigns_after} campaigns preserved successfully")
         
         # Account usage tracking table (for anti-ban)
         cur.execute('''
