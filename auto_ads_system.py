@@ -85,13 +85,17 @@ Automate your advertising campaigns across multiple Telegram accounts.
 Select an option below:
     """
     
+    back_callback = "admin_panel"
+    if is_auth_worker and not is_admin:
+        back_callback = "worker_dashboard"
+    
     keyboard = [
         [InlineKeyboardButton("📢 My Campaigns", callback_data="aa_my_campaigns"),
          InlineKeyboardButton("➕ Create Campaign", callback_data="aa_add_campaign")],
         [InlineKeyboardButton("👥 Manage Accounts", callback_data="aa_manage_accounts"),
          InlineKeyboardButton("➕ Add Account", callback_data="aa_add_account")],
         [InlineKeyboardButton("❓ Help", callback_data="aa_help"),
-         InlineKeyboardButton("🔙 Back to Admin", callback_data="admin_panel")]
+         InlineKeyboardButton("🔙 Back", callback_data=back_callback)]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -118,7 +122,11 @@ async def handle_auto_ads_manage_accounts(update: Update, context: ContextTypes.
 
     await query.answer()
     
-    accounts = db.get_user_accounts(user_id)
+    # Workers/Admins see all accounts (shared pool)
+    if is_admin or is_auth_worker:
+        accounts = db.get_all_accounts()
+    else:
+        accounts = db.get_user_accounts(user_id)
     
     if not accounts:
         text = """
@@ -143,10 +151,18 @@ Click "Add Account" below to get started!
             text += f"{status} **{account['account_name']}**\n"
             text += f"   📱 {account['phone_number']}\n\n"
             
-            keyboard.append([
-                InlineKeyboardButton(f"🗑️ Delete {account['account_name']}", 
-                                   callback_data=f"aa_delete_account_{account['id']}")
-            ])
+            # Delete button logic: Admins can delete any, workers can only delete their own (if added by them) or maybe hide it
+            # For simplicity, letting workers delete for now if they can see them, OR restricting deletion to admins
+            if is_admin:
+                keyboard.append([
+                    InlineKeyboardButton(f"🗑️ Delete {account['account_name']}", 
+                                       callback_data=f"aa_delete_account_{account['id']}")
+                ])
+            elif is_auth_worker and account['user_id'] == user_id: # Workers can delete their own added accounts
+                 keyboard.append([
+                    InlineKeyboardButton(f"🗑️ Delete {account['account_name']}", 
+                                       callback_data=f"aa_delete_account_{account['id']}")
+                ])
         
         keyboard.append([InlineKeyboardButton("➕ Add Account", callback_data="aa_add_account")])
         keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="auto_ads_menu")])
@@ -388,7 +404,15 @@ async def handle_auto_ads_add_campaign(update: Update, context: ContextTypes.DEF
     user_id = query.from_user.id
     
     # Check if user has accounts
-    accounts = db.get_user_accounts(user_id)
+    # Workers/Admins see all accounts
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if is_admin or is_auth_worker:
+        accounts = db.get_all_accounts()
+    else:
+        accounts = db.get_user_accounts(user_id)
+
     if not accounts:
         text = """
 ❌ **No Accounts Found**

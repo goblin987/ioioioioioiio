@@ -1216,7 +1216,7 @@ def callback_query_router(func):
                     handle_worker_check_stock,
                     handle_worker_marketing
                 )
-                from worker_admin import handle_worker_stats_select
+                from worker_admin import handle_worker_stats_select, handle_workers_menu
 
                 KNOWN_HANDLERS.update({
                     "daily_rewards_menu": handle_daily_rewards_menu,
@@ -1229,6 +1229,7 @@ def callback_query_router(func):
                     "worker_check_stock": handle_worker_check_stock,
                     "worker_marketing": handle_worker_marketing,
                     "worker_stats_select": handle_worker_stats_select, # For admin to view worker stats
+                    "workers_menu": handle_workers_menu, # Admin Manage Workers menu
 
                     "case_opening_menu": handle_case_opening_menu,
                     "open_case": handle_open_case,

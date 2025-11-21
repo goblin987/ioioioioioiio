@@ -193,6 +193,37 @@ class AutoAdsDatabase:
         except Exception as e:
             logger.error(f"❌ Error getting user accounts: {e}")
             return []
+
+    def get_all_accounts(self) -> List[Dict]:
+        """Get all active Telegram accounts (for workers/admins)"""
+        try:
+            conn = self._get_conn()
+            cur = conn.cursor()
+            cur.execute('''
+                SELECT id, user_id, account_name, phone_number, api_id, api_hash, 
+                       session_string, is_active, created_at
+                FROM auto_ads_accounts 
+                WHERE is_active = TRUE
+                ORDER BY created_at DESC
+            ''')
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            
+            return [{
+                'id': row['id'],
+                'user_id': row['user_id'],
+                'account_name': row['account_name'],
+                'phone_number': row['phone_number'],
+                'api_id': row['api_id'],
+                'api_hash': row['api_hash'],
+                'session_string': row['session_string'],
+                'is_active': row['is_active'],
+                'created_at': row['created_at']
+            } for row in rows]
+        except Exception as e:
+            logger.error(f"❌ Error getting all accounts: {e}")
+            return []
     
     def get_account(self, account_id: int) -> Optional[Dict]:
         """Get account by ID"""

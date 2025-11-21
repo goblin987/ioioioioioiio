@@ -62,34 +62,16 @@ async def handle_view_stock(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         # Use column names
         # >>> MODIFIED QUERY HERE <<<
         query_sql = """
-            SELECT city, district, city_id, district_id, product_type, size, price, available, reserved
+            SELECT city, district, product_type, size, price, available, reserved
             FROM products WHERE available > 0 OR reserved > 0
             ORDER BY city, district, product_type, price, size
         """
-        # Need to join with CITIES/DISTRICTS to filter by ID? 
-        # The products table usually stores city NAME and district NAME, not IDs.
-        # Wait, let's check products table schema or how other queries do it.
-        # Admin uses city and district strings. 
-        # Worker allowed_locations uses IDs.
-        # I need to map names to IDs or filter in python.
-        # Since I don't have IDs in products table (probably), I'll fetch all and filter in Python.
-        # BUT, products table MIGHT have city_id/district_id if updated recently?
-        # Let's assume it stores strings 'city', 'district'.
-        # I need to map city names to IDs to check against allowed_locations.
-        
-        # Actually, products table has 'city' and 'district' as TEXT.
-        # I need to import CITIES and DISTRICTS from somewhere to map back?
-        # Or I can just fetch all and filter if I can map.
-        # Alternatively, I can check if user has access to city NAME.
-        
         c.execute(query_sql)
         # >>> END MODIFICATION <<<
         products = c.fetchall()
 
         # Need to import CITIES and DISTRICTS to map names <-> IDs for filtering
-        from userbot_config import CITIES, DISTRICTS # Assuming they are here or config
-        # If not, I might need to rely on the fact that products table might NOT match IDs directly.
-        # Let's filter in Python loop.
+        from utils import CITIES, DISTRICTS 
         
         filtered_products = []
         if is_auth_worker and not primary_admin and not secondary_admin:
@@ -101,8 +83,10 @@ async def handle_view_stock(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                  d_name = p['district']
                  
                  c_id = city_name_to_id.get(c_name)
+                 # If we can't map the city name to an ID, we assume it's not allowed (safe default)
+                 # Or, if the city ID is not in the allowed list
                  if not c_id or c_id not in worker_allowed_locations:
-                     continue # City not allowed
+                     continue 
                  
                  allowed_dists = worker_allowed_locations[c_id]
                  if allowed_dists == "all":

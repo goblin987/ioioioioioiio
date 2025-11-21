@@ -2562,7 +2562,14 @@ async def handle_adm_bulk_back_to_management(update: Update, context: ContextTyp
 async def handle_adm_bulk_confirm_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Confirms and creates all products from the collected messages."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
     
     bulk_messages = context.user_data.get("bulk_messages", [])
     if not bulk_messages:
