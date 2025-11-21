@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # ============= WORKER MENU =============
 
-async def handle_worker_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+async def handle_worker_dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Main menu for workers based on their permissions"""
     query = update.callback_query if hasattr(update, 'callback_query') and update.callback_query else None
     user_id = update.effective_user.id
@@ -79,7 +79,9 @@ async def handle_worker_add_single(update: Update, context: ContextTypes.DEFAULT
     
     # Set worker flag in context for tracking
     context.user_data['is_worker'] = True
-    context.user_data['worker_id'] = get_worker_by_user_id(user_id)['id']
+    worker = get_worker_by_user_id(user_id)
+    if worker:
+        context.user_data['worker_id'] = worker['id']
     
     # Redirect to single product city selection
     from admin import handle_adm_city
@@ -99,7 +101,9 @@ async def handle_worker_add_bulk(update: Update, context: ContextTypes.DEFAULT_T
     
     # Set worker flag in context for tracking
     context.user_data['is_worker'] = True
-    context.user_data['worker_id'] = get_worker_by_user_id(user_id)['id']
+    worker = get_worker_by_user_id(user_id)
+    if worker:
+        context.user_data['worker_id'] = worker['id']
     
     # Redirect to bulk add city selection
     from admin import handle_adm_bulk_city
@@ -120,7 +124,7 @@ async def handle_worker_check_stock(update: Update, context: ContextTypes.DEFAUL
     await query.answer()
     
     # Redirect to view stock handler
-    from admin import handle_view_stock
+    from stock import handle_view_stock
     await handle_view_stock(update, context, params)
 
 # ============= WORKER MARKETING =============
@@ -144,7 +148,7 @@ async def handle_worker_marketing(update: Update, context: ContextTypes.DEFAULT_
         [InlineKeyboardButton("🚀 Auto Ads System", callback_data="auto_ads_menu")],
         [InlineKeyboardButton("🔍 Scout Userbots", callback_data="scout_menu")],
         [InlineKeyboardButton("📢 Broadcast Message", callback_data="adm_broadcast_start")],
-        [InlineKeyboardButton("🔙 Back to Worker Menu", callback_data="worker_menu")]
+        [InlineKeyboardButton("🔙 Back to Worker Dashboard", callback_data="worker_dashboard")]
     ]
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN)

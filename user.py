@@ -360,7 +360,7 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
     # Check if user has exceeded attempt limit
     current_attempts = get_user_verification_attempts(user_id)
     max_attempts = get_verification_attempt_limit()
-    
+
     if current_attempts >= max_attempts:
         # User has exceeded attempts, block them
         block_user_for_failed_verification(user_id)

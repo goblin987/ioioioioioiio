@@ -1931,17 +1931,27 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
         return await query.edit_message_text("❌ Error: Incomplete drop data. Please start again.", parse_mode=None)
 
     product_name = f"{p_type} {size} {int(time.time())}"; conn = None; product_id = None
+    
+    # Determine worker context
+    worker_id = None
+    added_by_user = user_id # Use actual user ID who added it
+    
+    if is_auth_worker and not is_admin:
+        worker = get_worker_by_user_id(user_id)
+        if worker:
+            worker_id = worker['id']
+
     try:
         conn = get_db_connection(); c = conn.cursor(); c.execute("BEGIN")
+        
         insert_params = (
-            city, district, p_type, size, product_name, price, 1, 0, original_text, ADMIN_ID, datetime.now(timezone.utc).isoformat()
+            city, district, p_type, size, product_name, price, 1, 0, original_text, added_by_user, datetime.now(timezone.utc).isoformat(), worker_id
         )
         logger.info(f"🔧 INSERT PARAMS: {insert_params}")
-        logger.info(f"🔧 ADMIN_ID type: {type(ADMIN_ID)}, value: {ADMIN_ID}")
-        logger.debug(f"Inserting product with params count: {len(insert_params)}") # Add debug log
+        
         c.execute("""INSERT INTO products
-                        (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", insert_params)
+                        (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date, added_by_worker_id)
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", insert_params)
         result = c.fetchone()
         product_id = result['id'] if result else None
 
@@ -2049,32 +2059,89 @@ async def cancel_add(update: Update, context: ContextTypes.DEFAULT_TYPE, params=
 async def handle_adm_bulk_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects city to add bulk products to."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+
     lang, lang_data = _get_lang_data(context) # Use helper
-    if not CITIES:
-        return await query.edit_message_text("No cities configured. Please add a city first via 'Manage Cities'.", parse_mode=None)
-    sorted_city_ids = sorted(CITIES.keys(), key=lambda city_id: CITIES.get(city_id, ''))
-    keyboard = [[InlineKeyboardButton(f"🏙️ {CITIES.get(c,'N/A')}", callback_data=f"adm_bulk_dist|{c}")] for c in sorted_city_ids]
-    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")])
+    
+    available_cities = CITIES.copy()
+    if is_auth_worker and not is_admin:
+        worker = get_worker_by_user_id(user_id)
+        if worker:
+            allowed_locs = worker.get('allowed_locations', {})
+            if isinstance(allowed_locs, list): # Handle legacy format if exists (though new system uses dict)
+                 allowed_locs = {} 
+            # Filter cities: Only show cities present in allowed_locations
+            available_cities = {cid: cname for cid, cname in CITIES.items() if cid in allowed_locs}
+        else:
+            available_cities = {}
+
+    if not available_cities:
+         if is_auth_worker:
+             return await query.answer("No allowed cities assigned to you.", show_alert=True)
+         return await query.edit_message_text("No cities configured. Please add a city first via 'Manage Cities'.", parse_mode=None)
+
+    sorted_city_ids = sorted(available_cities.keys(), key=lambda city_id: available_cities.get(city_id, ''))
+    keyboard = [[InlineKeyboardButton(f"🏙️ {available_cities.get(c,'N/A')}", callback_data=f"adm_bulk_dist|{c}")] for c in sorted_city_ids]
+    
+    # Back button logic
+    if is_auth_worker and not is_admin:
+         keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="worker_dashboard")])
+    else:
+         keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")])
+
     select_city_text = lang_data.get("admin_select_city", "Select City to Add Bulk Products:")
     await query.edit_message_text(f"📦 Bulk Add Products\n\n{select_city_text}", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
 
 async def handle_adm_bulk_dist(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects district for bulk products."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+
     if not params: return await query.answer("Error: City ID missing.", show_alert=True)
     city_id = params[0]
     city_name = CITIES.get(city_id)
+    
     if not city_name:
         return await query.edit_message_text("Error: City not found. Please select again.", parse_mode=None)
+
+    # Filter districts if worker
     districts_in_city = DISTRICTS.get(city_id, {})
+    if is_auth_worker and not is_admin:
+        worker = get_worker_by_user_id(user_id)
+        if worker:
+             allowed_locs = worker.get('allowed_locations', {})
+             if isinstance(allowed_locs, list): allowed_locs = {}
+             allowed_districts = allowed_locs.get(city_id, [])
+             
+             if allowed_districts != "all":
+                 # Filter districts
+                 districts_in_city = {did: dname for did, dname in districts_in_city.items() if did in allowed_districts}
+        else:
+            districts_in_city = {}
+
     lang, lang_data = _get_lang_data(context) # Use helper
     select_district_template = lang_data.get("admin_select_district", "Select District in {city}:")
+    
     if not districts_in_city:
         keyboard = [[InlineKeyboardButton("⬅️ Back to Cities", callback_data="adm_bulk_city")]]
-        return await query.edit_message_text(f"No districts found for {city_name}. Please add districts via 'Manage Districts'.",
-                                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+        msg_text = f"No districts found for {city_name}."
+        if is_auth_worker and not is_admin:
+             msg_text = f"No allowed districts for you in {city_name}."
+        
+        return await query.edit_message_text(msg_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+
     sorted_district_ids = sorted(districts_in_city.keys(), key=lambda d_id: districts_in_city.get(d_id,''))
     keyboard = []
     for d in sorted_district_ids:
@@ -2082,6 +2149,7 @@ async def handle_adm_bulk_dist(update: Update, context: ContextTypes.DEFAULT_TYP
         if dist_name:
             keyboard.append([InlineKeyboardButton(f"🏘️ {dist_name}", callback_data=f"adm_bulk_type|{city_id}|{d}")])
         else: logger.warning(f"District name missing for ID {d} in city {city_id}")
+    
     keyboard.append([InlineKeyboardButton("⬅️ Back to Cities", callback_data="adm_bulk_city")])
     select_district_text = select_district_template.format(city=city_name)
     await query.edit_message_text(select_district_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
@@ -2089,7 +2157,14 @@ async def handle_adm_bulk_dist(update: Update, context: ContextTypes.DEFAULT_TYP
 async def handle_adm_bulk_type(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects product type for bulk products."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+    
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+
     if not params or len(params) < 2: return await query.answer("Error: City or District ID missing.", show_alert=True)
     city_id, dist_id = params[0], params[1]
     city_name = CITIES.get(city_id)
@@ -2111,7 +2186,14 @@ async def handle_adm_bulk_type(update: Update, context: ContextTypes.DEFAULT_TYP
 async def handle_adm_bulk_add(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin selects size for the bulk products."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not params or len(params) < 3: return await query.answer("Error: Location/Type info missing.", show_alert=True)
     city_id, dist_id, p_type = params
     city_name = CITIES.get(city_id)
@@ -2139,7 +2221,14 @@ async def handle_adm_bulk_add(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def handle_adm_bulk_size(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handles selection of a predefined size for bulk products."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not params: return await query.answer("Error: Size missing.", show_alert=True)
     size = params[0]
     if not all(k in context.user_data for k in ["bulk_admin_city", "bulk_admin_district", "bulk_admin_product_type"]):
@@ -2154,7 +2243,14 @@ async def handle_adm_bulk_size(update: Update, context: ContextTypes.DEFAULT_TYP
 async def handle_adm_bulk_custom_size(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Handles 'Custom Size' button press for bulk products."""
     query = update.callback_query
-    if not is_primary_admin(query.from_user.id): return await query.answer("Access denied.", show_alert=True)
+    user_id = query.from_user.id
+    
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'add_products')
+
+    if not is_admin and not is_auth_worker:
+        return await query.answer("Access denied.", show_alert=True)
+        
     if not all(k in context.user_data for k in ["bulk_admin_city", "bulk_admin_district", "bulk_admin_product_type"]):
         return await query.edit_message_text("❌ Error: Context lost. Please start adding the bulk products again.", parse_mode=None)
     context.user_data["state"] = "awaiting_bulk_custom_size"
@@ -5721,6 +5817,15 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
     failed_messages = []  # Track failed messages with details
     successful_products = []  # Track successfully created products
     
+    # Determine worker context
+    worker_id = None
+    added_by_user = user_id
+    
+    if is_auth_worker and not is_admin:
+        worker = get_worker_by_user_id(user_id)
+        if worker:
+            worker_id = worker['id']
+    
     # Process each message as a separate product
     for i, message_data in enumerate(bulk_messages):
         message_number = i + 1
@@ -5767,12 +5872,12 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
             c.execute("BEGIN")
             
             insert_params = (
-                city, district, p_type, size, product_name, price, text_content, ADMIN_ID, datetime.now(timezone.utc).isoformat()
+                city, district, p_type, size, product_name, price, text_content, added_by_user, datetime.now(timezone.utc).isoformat(), worker_id
             )
             
             c.execute("""INSERT INTO products
-                            (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date)
-                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s) RETURNING id""", insert_params)
+                            (city, district, product_type, size, name, price, available, reserved, original_text, added_by, added_date, added_by_worker_id)
+                         VALUES (%s, %s, %s, %s, %s, %s, 1, 0, %s, %s, %s, %s) RETURNING id""", insert_params)
             product_id = c.fetchone()['id']
             
             # Handle media for this product

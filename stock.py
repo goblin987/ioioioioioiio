@@ -17,6 +17,7 @@ from utils import (
     get_db_connection, # Import DB helper
     is_primary_admin, is_secondary_admin, is_any_admin # Admin helper functions
 )
+from worker_management import is_worker, check_worker_permission, get_worker_by_user_id
 
 # Setup logger for this file
 logger = logging.getLogger(__name__)
@@ -30,8 +31,9 @@ async def handle_view_stock(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     # --- Authorization Check ---
     primary_admin = is_primary_admin(user_id)
     secondary_admin = is_secondary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'check_stock')
 
-    if not primary_admin and not secondary_admin:
+    if not primary_admin and not secondary_admin and not is_auth_worker:
         await query.answer("Access Denied.", show_alert=True)
         return
     # --- END Check ---
@@ -44,28 +46,97 @@ async def handle_view_stock(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         conn = get_db_connection() # Use helper
         # row_factory is set in helper
         c = conn.cursor()
+        
+        # Filter logic for workers
+        worker_allowed_cities = []
+        worker_allowed_locations = {} # {city_id: [district_ids] or "all"}
+        
+        if is_auth_worker and not primary_admin and not secondary_admin:
+            worker = get_worker_by_user_id(user_id)
+            if worker:
+                worker_allowed_locations = worker.get('allowed_locations', {})
+                if isinstance(worker_allowed_locations, list): worker_allowed_locations = {}
+                worker_allowed_cities = list(worker_allowed_locations.keys())
+        
         # Fetch all products that have *any* stock (available OR reserved)
         # Use column names
         # >>> MODIFIED QUERY HERE <<<
-        c.execute("""
-            SELECT city, district, product_type, size, price, available, reserved
+        query_sql = """
+            SELECT city, district, city_id, district_id, product_type, size, price, available, reserved
             FROM products WHERE available > 0 OR reserved > 0
             ORDER BY city, district, product_type, price, size
-        """)
+        """
+        # Need to join with CITIES/DISTRICTS to filter by ID? 
+        # The products table usually stores city NAME and district NAME, not IDs.
+        # Wait, let's check products table schema or how other queries do it.
+        # Admin uses city and district strings. 
+        # Worker allowed_locations uses IDs.
+        # I need to map names to IDs or filter in python.
+        # Since I don't have IDs in products table (probably), I'll fetch all and filter in Python.
+        # BUT, products table MIGHT have city_id/district_id if updated recently?
+        # Let's assume it stores strings 'city', 'district'.
+        # I need to map city names to IDs to check against allowed_locations.
+        
+        # Actually, products table has 'city' and 'district' as TEXT.
+        # I need to import CITIES and DISTRICTS from somewhere to map back?
+        # Or I can just fetch all and filter if I can map.
+        # Alternatively, I can check if user has access to city NAME.
+        
+        c.execute(query_sql)
         # >>> END MODIFICATION <<<
         products = c.fetchall()
 
-        if not products:
+        # Need to import CITIES and DISTRICTS to map names <-> IDs for filtering
+        from userbot_config import CITIES, DISTRICTS # Assuming they are here or config
+        # If not, I might need to rely on the fact that products table might NOT match IDs directly.
+        # Let's filter in Python loop.
+        
+        filtered_products = []
+        if is_auth_worker and not primary_admin and not secondary_admin:
+             # Create reverse map for easy lookup: name -> id
+             city_name_to_id = {v: k for k, v in CITIES.items()}
+             
+             for p in products:
+                 c_name = p['city']
+                 d_name = p['district']
+                 
+                 c_id = city_name_to_id.get(c_name)
+                 if not c_id or c_id not in worker_allowed_locations:
+                     continue # City not allowed
+                 
+                 allowed_dists = worker_allowed_locations[c_id]
+                 if allowed_dists == "all":
+                     filtered_products.append(p)
+                     continue
+                     
+                 # Need district ID map
+                 # DISTRICTS structure: {city_id: {dist_id: dist_name}}
+                 dist_map = DISTRICTS.get(c_id, {})
+                 dist_name_to_id = {v: k for k, v in dist_map.items()}
+                 d_id = dist_name_to_id.get(d_name)
+                 
+                 if d_id and d_id in allowed_dists:
+                     filtered_products.append(p)
+        else:
+            filtered_products = products
+
+        if not filtered_products:
             msg = "📦 Bot Stock\n\nNo products currently in stock (neither available nor reserved)." # Clarified message
-            back_callback = "admin_menu" if primary_admin else "viewer_admin_menu"
-            keyboard = [[InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data=back_callback)]]
+            if is_auth_worker and not primary_admin and not secondary_admin:
+                 msg = "📦 Bot Stock\n\nNo products found in your assigned locations."
+            
+            back_callback = "admin_menu"
+            if secondary_admin: back_callback = "viewer_admin_menu"
+            if is_auth_worker and not primary_admin and not secondary_admin: back_callback = "worker_dashboard"
+            
+            keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data=back_callback)]]
         else:
             msg = "📦 Current Bot Stock\n\n"
             # Group products by location and type - NEW STRUCTURE for summary display
-            # Structure: {city: {district: {product_type: {size: {'total': X, 'avail': Y, 'res': Z, 'price': P}}}}}
+            # Structure: {city: {district: {product_type: {size: {'total': 0, 'avail': 0, 'res': 0, 'price': 0}}}}}
             summary_data = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'total': 0, 'avail': 0, 'res': 0, 'price': 0}))))
             
-            for p in products:
+            for p in filtered_products:
                 city = p['city']
                 district = p['district']
                 p_type = p['product_type']
@@ -96,8 +167,11 @@ async def handle_view_stock(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 msg = msg[:4000] + "\n\n✂️ ... Message truncated due to length limit."
                 logger.warning("Stock list message truncated due to length.")
 
-            back_callback = "admin_menu" if primary_admin else "viewer_admin_menu"
-            keyboard = [[InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data=back_callback)]]
+            back_callback = "admin_menu"
+            if secondary_admin: back_callback = "viewer_admin_menu"
+            if is_auth_worker and not primary_admin and not secondary_admin: back_callback = "worker_dashboard"
+            
+            keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data=back_callback)]]
 
         # Try sending/editing the message
         try:

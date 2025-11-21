@@ -1209,9 +1209,27 @@ def callback_query_router(func):
                     handle_select_product,
                     handle_convert_to_balance
                 )
+                from worker_ui import (
+                    handle_worker_dashboard,
+                    handle_worker_add_single,
+                    handle_worker_add_bulk,
+                    handle_worker_check_stock,
+                    handle_worker_marketing
+                )
+                from worker_admin import handle_worker_stats_select
+
                 KNOWN_HANDLERS.update({
                     "daily_rewards_menu": handle_daily_rewards_menu,
                     "claim_daily_reward": handle_claim_daily_reward,
+                    
+                    # Worker UI Handlers
+                    "worker_dashboard": handle_worker_dashboard,
+                    "worker_add_single": handle_worker_add_single,
+                    "worker_add_bulk": handle_worker_add_bulk,
+                    "worker_check_stock": handle_worker_check_stock,
+                    "worker_marketing": handle_worker_marketing,
+                    "worker_stats_select": handle_worker_stats_select, # For admin to view worker stats
+
                     "case_opening_menu": handle_case_opening_menu,
                     "open_case": handle_open_case,
                     "my_case_stats": handle_my_case_stats,
