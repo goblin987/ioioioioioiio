@@ -267,7 +267,9 @@ try:
         handle_userbot_manage,
         handle_userbot_toggle_enable_single,
         handle_userbot_delete_confirm,
-        handle_userbot_delete_confirmed
+        handle_userbot_delete_confirmed,
+        handle_userbot_connect_single,
+        handle_userbot_disconnect_single
     )
     print("✅ YOLO DEBUG: userbot_admin handlers imported successfully")
     
@@ -1336,6 +1338,8 @@ def callback_query_router(func):
                     "userbot_toggle_enable": handle_userbot_toggle_enable_single,
                     "userbot_delete_confirm": handle_userbot_delete_confirm,
                     "userbot_delete_confirmed": handle_userbot_delete_confirmed,
+                    "userbot_connect_single": handle_userbot_connect_single,
+                    "userbot_disconnect_single": handle_userbot_disconnect_single,
                     
                     # Legacy handlers (kept for compatibility)
                     "userbot_setup_start": handle_userbot_setup_start,

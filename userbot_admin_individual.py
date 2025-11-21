@@ -8,12 +8,24 @@ from utils import is_primary_admin
 
 logger = logging.getLogger(__name__)
 
+# Helper function for permission checks
+def check_userbot_access(user_id):
+    """Check if user has access to userbot features (admin or worker with marketing permission)"""
+    try:
+        from worker_management import is_worker, check_worker_permission
+        is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    except ImportError:
+        is_auth_worker = False
+    
+    is_admin = is_primary_admin(user_id)
+    return is_admin or is_auth_worker
+
 async def handle_userbot_manage(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show management options for a specific userbot"""
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -106,7 +118,7 @@ async def handle_userbot_toggle_enable_single(update: Update, context: ContextTy
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -150,7 +162,7 @@ async def handle_userbot_delete_confirm(update: Update, context: ContextTypes.DE
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -195,7 +207,7 @@ async def handle_userbot_delete_confirmed(update: Update, context: ContextTypes.
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -236,4 +248,72 @@ async def handle_userbot_delete_confirmed(update: Update, context: ContextTypes.
     # Go back to main dashboard
     from userbot_admin import handle_userbot_control
     await handle_userbot_control(update, context)
+
+async def handle_userbot_connect_single(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Connect a single userbot"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not check_userbot_access(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if params:
+        userbot_id = params[0]
+    else:
+        try:
+            userbot_id = int(query.data.split(':')[1])
+        except:
+            await query.answer("❌ Invalid userbot ID", show_alert=True)
+            return
+    
+    # Connect the userbot via userbot manager
+    from userbot_manager import userbot_manager
+    
+    try:
+        success = await userbot_manager.connect_userbot(userbot_id)
+        if success:
+            await query.answer("✅ Userbot connected!", show_alert=False)
+        else:
+            await query.answer("❌ Failed to connect userbot", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error connecting userbot {userbot_id}: {e}")
+        await query.answer(f"❌ Error: {str(e)}", show_alert=True)
+    
+    # Refresh the management view
+    await handle_userbot_manage(update, context, params=[userbot_id])
+
+async def handle_userbot_disconnect_single(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Disconnect a single userbot"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not check_userbot_access(user_id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    if params:
+        userbot_id = params[0]
+    else:
+        try:
+            userbot_id = int(query.data.split(':')[1])
+        except:
+            await query.answer("❌ Invalid userbot ID", show_alert=True)
+            return
+    
+    # Disconnect the userbot via userbot manager
+    from userbot_manager import userbot_manager
+    
+    try:
+        success = await userbot_manager.disconnect_userbot(userbot_id)
+        if success:
+            await query.answer("✅ Userbot disconnected!", show_alert=False)
+        else:
+            await query.answer("❌ Failed to disconnect userbot", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error disconnecting userbot {userbot_id}: {e}")
+        await query.answer(f"❌ Error: {str(e)}", show_alert=True)
+    
+    # Refresh the management view
+    await handle_userbot_manage(update, context, params=[userbot_id])
 

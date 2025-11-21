@@ -500,7 +500,13 @@ async def handle_scout_triggers(update: Update, context: ContextTypes.DEFAULT_TY
         InlineKeyboardButton("⬅️ Back", callback_data="scout_menu")
     ])
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date")
+        else:
+            raise
 
 
 # ==================== HELPER FUNCTIONS ====================
