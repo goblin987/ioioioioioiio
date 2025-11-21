@@ -215,6 +215,17 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         logger.info(f"🎁 Adding Daily Rewards button to default keyboard for user {user_id}")
         default_keyboard.append([InlineKeyboardButton("🎁 Daily Rewards", callback_data="daily_rewards_menu")])
     
+    # Check if user is a worker and add Worker Dashboard button
+    try:
+        from worker_management import is_worker
+        if is_worker(user_id):
+            logger.info(f"👷 User {user_id} is a worker, adding Worker Dashboard button")
+            default_keyboard.append([InlineKeyboardButton("👷 Worker Dashboard", callback_data="worker_menu")])
+    except ImportError:
+        pass  # Worker system not available
+    except Exception as e:
+        logger.error(f"Error checking worker status for user {user_id}: {e}")
+    
     default_keyboard.extend([
         [InlineKeyboardButton(f"{EMOJI_PROFILE} {profile_button_text}", callback_data="profile"),
          InlineKeyboardButton(f"{EMOJI_REFILL} {top_up_button_text}", callback_data="refill")],

@@ -428,9 +428,15 @@ async def show_district_selection_for_city(update: Update, context: ContextTypes
                                           callback_data="worker_next_city")])
     keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="workers_menu")])
     
-    await update.callback_query.edit_message_text(
-        msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN
-    )
+    try:
+        await update.callback_query.edit_message_text(
+            msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN
+        )
+    except Exception as e:
+        if "message is not modified" in str(e).lower():
+            await update.callback_query.answer()
+        else:
+            raise
 
 async def handle_worker_district_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Set all districts for a city"""
