@@ -1183,7 +1183,6 @@ def callback_query_router(func):
                     handle_admin_marquee_set_speed,
                     handle_admin_marquee_preview
                 )
-                from running_ads_display import handle_running_ads_display
                 # NEW CS:GO-Style Case System
                 from case_rewards_admin import (
                     handle_admin_product_pool_v2,
@@ -1226,7 +1225,6 @@ def callback_query_router(func):
                     "admin_marquee_speed": handle_admin_marquee_speed,
                     "admin_marquee_set_speed": handle_admin_marquee_set_speed,
                     "admin_marquee_preview": handle_admin_marquee_preview,
-                    "running_ads_display": handle_running_ads_display,
                     "admin_edit_reward_day": handle_admin_edit_reward_day,
                     "admin_save_reward_day": handle_admin_save_reward_day,
                     "admin_custom_reward_day": handle_admin_custom_reward_day,
