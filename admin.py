@@ -397,15 +397,16 @@ async def _process_bulk_collected_media(context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"BULK DEBUG: Added media group {media_group_id} to bulk_messages as single message. New count: {len(bulk_messages)}")
     
-    # Send a simple status update message instead of trying to recreate the full status
-    try:
-        from utils import send_message_with_retry
-        await send_message_with_retry(context.bot, chat_id, 
-            f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
-            parse_mode=None)
-        logger.info(f"BULK DEBUG: Sent status update for media group {media_group_id}")
-    except Exception as e:
-        logger.error(f"BULK DEBUG: Error sending bulk status update: {e}")
+    # Don't send status messages after each media group - reduces spam
+    # User will see the final count when they click "Finish & Create Products"
+    # try:
+    #     from utils import send_message_with_retry
+    #     await send_message_with_retry(context.bot, chat_id, 
+    #         f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
+    #         parse_mode=None)
+    #     logger.info(f"BULK DEBUG: Sent status update for media group {media_group_id}")
+    # except Exception as e:
+    #     logger.error(f"BULK DEBUG: Error sending bulk status update: {e}")
 
 
 # --- Modified Handler for Drop Details Message ---
@@ -2418,9 +2419,10 @@ async def handle_adm_bulk_drop_details_message(update: Update, context: ContextT
                 bulk_messages = context.user_data.get("bulk_messages", [])
                 bulk_messages.append(message_data)
                 context.user_data["bulk_messages"] = bulk_messages
-                await send_message_with_retry(context.bot, chat_id, 
-                    f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
-                    parse_mode=None)
+                # Don't spam status messages - user will see count when they click finish
+                # await send_message_with_retry(context.bot, chat_id, 
+                #     f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
+                #     parse_mode=None)
         else:
             logger.error("JobQueue not found in context. Cannot schedule bulk media group processing.")
             # Fallback: Process immediately if no job queue
@@ -2434,9 +2436,10 @@ async def handle_adm_bulk_drop_details_message(update: Update, context: ContextT
                 bulk_messages = context.user_data.get("bulk_messages", [])
                 bulk_messages.append(message_data)
                 context.user_data["bulk_messages"] = bulk_messages
-                await send_message_with_retry(context.bot, chat_id, 
-                    f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
-                    parse_mode=None)
+                # Don't spam status messages
+                # await send_message_with_retry(context.bot, chat_id, 
+                #     f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
+                #     parse_mode=None)
             else:
                 await send_message_with_retry(context.bot, chat_id, "❌ Error: Internal components missing. Cannot process media group.", parse_mode=None)
 
@@ -2466,8 +2469,8 @@ async def handle_adm_bulk_drop_details_message(update: Update, context: ContextT
         
         logger.info(f"BULK DEBUG: Added single message to bulk_messages. New count: {len(bulk_messages)}")
         
-        # Show updated status
-        await show_bulk_messages_status(update, context)
+        # Don't show status after each message - user will click "Finish" when done
+        # await show_bulk_messages_status(update, context)
 
 async def show_bulk_messages_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Shows the current status of collected bulk messages."""

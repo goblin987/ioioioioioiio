@@ -151,18 +151,11 @@ Click "Add Account" below to get started!
             text += f"{status} **{account['account_name']}**\n"
             text += f"   📱 {account['phone_number']}\n\n"
             
-            # Delete button logic: Admins can delete any, workers can only delete their own (if added by them) or maybe hide it
-            # For simplicity, letting workers delete for now if they can see them, OR restricting deletion to admins
-            if is_admin:
-                keyboard.append([
-                    InlineKeyboardButton(f"🗑️ Delete {account['account_name']}", 
-                                       callback_data=f"aa_delete_account_{account['id']}")
-                ])
-            elif is_auth_worker and account['user_id'] == user_id: # Workers can delete their own added accounts
-                 keyboard.append([
-                    InlineKeyboardButton(f"🗑️ Delete {account['account_name']}", 
-                                       callback_data=f"aa_delete_account_{account['id']}")
-                ])
+            # Show delete button for all accounts (workers and admins see same UI)
+            keyboard.append([
+                InlineKeyboardButton(f"🗑️ Delete {account['account_name']}", 
+                                   callback_data=f"aa_delete_account_{account['id']}")
+            ])
         
         keyboard.append([InlineKeyboardButton("➕ Add Account", callback_data="aa_add_account")])
         keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="auto_ads_menu")])
