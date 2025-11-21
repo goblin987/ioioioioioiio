@@ -21,6 +21,18 @@ from utils import is_primary_admin, send_message_with_retry
 
 logger = logging.getLogger(__name__)
 
+# Helper function for permission checks
+def check_userbot_access(user_id):
+    """Check if user has access to userbot features (admin or worker with marketing permission)"""
+    try:
+        from worker_management import is_worker, check_worker_permission
+        is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    except ImportError:
+        is_auth_worker = False
+    
+    is_admin = is_primary_admin(user_id)
+    return is_admin or is_auth_worker
+
 # ==================== MAIN USERBOT CONTROL PANEL ====================
 
 async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -28,7 +40,7 @@ async def handle_userbot_control(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -140,7 +152,7 @@ async def handle_userbot_add_new(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -170,7 +182,7 @@ async def handle_userbot_add_start_name(update: Update, context: ContextTypes.DE
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -192,7 +204,7 @@ async def handle_userbot_stats_all(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -211,7 +223,7 @@ async def handle_userbot_reconnect_all(update: Update, context: ContextTypes.DEF
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -362,7 +374,7 @@ async def handle_userbot_setup_start(update: Update, context: ContextTypes.DEFAU
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -387,7 +399,7 @@ async def handle_userbot_api_id_message(update: Update, context: ContextTypes.DE
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     api_id = update.message.text.strip()
@@ -419,7 +431,7 @@ async def handle_userbot_api_hash_message(update: Update, context: ContextTypes.
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     api_hash = update.message.text.strip()
@@ -452,7 +464,7 @@ async def handle_userbot_phone_message(update: Update, context: ContextTypes.DEF
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     phone_number = update.message.text.strip()
@@ -509,7 +521,7 @@ async def handle_userbot_verification_code_message(update: Update, context: Cont
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     code = update.message.text.strip()
@@ -570,7 +582,7 @@ async def handle_userbot_connect(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -591,7 +603,7 @@ async def handle_userbot_disconnect(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -612,7 +624,7 @@ async def handle_userbot_test(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -633,7 +645,7 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -688,7 +700,7 @@ async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DE
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -717,7 +729,7 @@ async def handle_userbot_toggle_reconnect(update: Update, context: ContextTypes.
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -745,7 +757,7 @@ async def handle_userbot_toggle_notifications(update: Update, context: ContextTy
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -775,7 +787,7 @@ async def handle_userbot_stats(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -812,7 +824,7 @@ async def handle_userbot_reset_confirm(update: Update, context: ContextTypes.DEF
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -836,7 +848,7 @@ async def handle_userbot_reset_confirmed(update: Update, context: ContextTypes.D
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -867,7 +879,7 @@ async def handle_telethon_setup(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -931,7 +943,7 @@ async def handle_telethon_start_auth(update: Update, context: ContextTypes.DEFAU
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -990,7 +1002,7 @@ async def handle_telethon_verification_code_message(update: Update, context: Con
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     code = update.message.text.strip()
@@ -1102,7 +1114,7 @@ async def handle_telethon_disconnect(update: Update, context: ContextTypes.DEFAU
     query = update.callback_query
     user_id = query.from_user.id
     
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -1138,7 +1150,7 @@ async def handle_new_userbot_name_message(update: Update, context: ContextTypes.
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     name = update.message.text.strip()
@@ -1183,7 +1195,7 @@ async def handle_new_userbot_api_id_message(update: Update, context: ContextType
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     api_id = update.message.text.strip()
@@ -1215,7 +1227,7 @@ async def handle_new_userbot_api_hash_message(update: Update, context: ContextTy
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     api_hash = update.message.text.strip()
@@ -1249,7 +1261,7 @@ async def handle_new_userbot_phone_message(update: Update, context: ContextTypes
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     phone = update.message.text.strip()
@@ -1329,7 +1341,7 @@ async def handle_new_userbot_code_message(update: Update, context: ContextTypes.
         return
     
     user_id = update.effective_user.id
-    if not is_primary_admin(user_id):
+    if not check_userbot_access(user_id):
         return
     
     code = update.message.text.strip()

@@ -397,16 +397,15 @@ async def _process_bulk_collected_media(context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"BULK DEBUG: Added media group {media_group_id} to bulk_messages as single message. New count: {len(bulk_messages)}")
     
-    # Don't send status messages after each media group - reduces spam
-    # User will see the final count when they click "Finish & Create Products"
-    # try:
-    #     from utils import send_message_with_retry
-    #     await send_message_with_retry(context.bot, chat_id, 
-    #         f"✅ Media group added to bulk collection! Total messages: {len(bulk_messages)}/10", 
-    #         parse_mode=None)
-    #     logger.info(f"BULK DEBUG: Sent status update for media group {media_group_id}")
-    # except Exception as e:
-    #     logger.error(f"BULK DEBUG: Error sending bulk status update: {e}")
+    # Send a quick confirmation with count
+    try:
+        from utils import send_message_with_retry
+        await send_message_with_retry(context.bot, chat_id, 
+            f"✅ Media group {len(bulk_messages)}/10 collected!\n\nSend more messages or click '✅ Finish & Create Products' when done.", 
+            parse_mode=None)
+        logger.info(f"BULK DEBUG: Sent status update for media group {media_group_id}")
+    except Exception as e:
+        logger.error(f"BULK DEBUG: Error sending bulk status update: {e}")
 
 
 # --- Modified Handler for Drop Details Message ---
@@ -2469,8 +2468,14 @@ async def handle_adm_bulk_drop_details_message(update: Update, context: ContextT
         
         logger.info(f"BULK DEBUG: Added single message to bulk_messages. New count: {len(bulk_messages)}")
         
-        # Don't show status after each message - user will click "Finish" when done
-        # await show_bulk_messages_status(update, context)
+        # Send a quick confirmation with count
+        try:
+            await update.message.reply_text(
+                f"✅ Message {len(bulk_messages)}/10 collected!\n\nSend more messages or click '✅ Finish & Create Products' when done.",
+                parse_mode=None
+            )
+        except Exception as e:
+            logger.error(f"Error sending bulk collection confirmation: {e}")
 
 async def show_bulk_messages_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Shows the current status of collected bulk messages."""

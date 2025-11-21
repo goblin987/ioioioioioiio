@@ -102,8 +102,13 @@ async def handle_scout_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """List all keywords with pagination"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -172,8 +177,13 @@ async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_scout_add_keyword_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Start adding a new keyword"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -199,7 +209,11 @@ async def handle_scout_keyword_message(update: Update, context: ContextTypes.DEF
     """Handle admin messages for keyword creation"""
     user_id = update.effective_user.id
     
-    if not is_primary_admin(user_id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         return
     
     state = context.user_data.get('state')
@@ -266,8 +280,13 @@ async def handle_scout_keyword_message(update: Update, context: ContextTypes.DEF
 async def handle_scout_toggle_keyword(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle keyword active status"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -300,8 +319,13 @@ async def handle_scout_toggle_keyword(update: Update, context: ContextTypes.DEFA
 async def handle_scout_delete_keyword(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Delete a keyword"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -370,8 +394,13 @@ async def handle_scout_userbots(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_scout_toggle_bot(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle scout mode for a userbot"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -406,8 +435,13 @@ async def handle_scout_toggle_bot(update: Update, context: ContextTypes.DEFAULT_
 async def handle_scout_triggers(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """View scout triggers log"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -474,8 +508,13 @@ async def handle_scout_triggers(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_scout_quick_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show quick start guide for scout system"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -521,8 +560,13 @@ async def handle_scout_quick_start(update: Update, context: ContextTypes.DEFAULT
 async def handle_scout_bulk_enable(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Enable all keywords"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
@@ -540,8 +584,13 @@ async def handle_scout_bulk_enable(update: Update, context: ContextTypes.DEFAULT
 async def handle_scout_bulk_disable(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Disable all keywords"""
     query = update.callback_query
+    user_id = query.from_user.id
     
-    if not is_primary_admin(query.from_user.id):
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
         await query.answer("Access denied", show_alert=True)
         return
     
