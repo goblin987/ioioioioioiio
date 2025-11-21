@@ -908,7 +908,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
              elif query: await query.answer()
         except telegram_error.BadRequest as e:
             if "message is not modified" in str(e).lower():
-                await query.answer()
+                try:
+                    await query.answer()
+                except telegram_error.BadRequest:
+                    pass
             else:
                 logger.warning(f"Failed to edit start message (callback): {e}. Sending new.")
                 await send_message_with_retry(context.bot, chat_id, full_welcome, reply_markup=reply_markup, parse_mode=None)

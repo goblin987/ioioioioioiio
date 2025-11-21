@@ -744,6 +744,29 @@ async def handle_worker_analytics_menu(update: Update, context: ContextTypes.DEF
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN)
 
+async def handle_worker_stats_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select a worker to view stats"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    workers = get_all_workers()
+    if not workers:
+        return await query.answer("No workers found.", show_alert=True)
+        
+    await query.answer()
+    
+    msg = "📊 **Select Worker for Analytics**\n\n"
+    
+    keyboard = []
+    for worker in workers:
+        status = "🟢" if worker['is_active'] else "🔴"
+        keyboard.append([InlineKeyboardButton(f"{status} {worker['username']}", callback_data=f"worker_stats_single|{worker['id']}")])
+        
+    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="worker_analytics_menu")])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.MARKDOWN)
+
 async def handle_worker_stats_all(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Show statistics for all workers"""
     query = update.callback_query

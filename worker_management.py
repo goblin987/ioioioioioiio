@@ -459,7 +459,7 @@ def get_worker_stats(worker_id: int, date_from: Optional[datetime] = None,
         
         # Products sold (from purchases table)
         c.execute("""
-            SELECT COUNT(*) as sold, COALESCE(SUM(p.price), 0) as revenue
+            SELECT COUNT(*) as sold, COALESCE(SUM(pr.price), 0) as revenue
             FROM purchases pu
             JOIN products pr ON pu.product_id = pr.id
             WHERE pr.added_by_worker_id = %s AND pu.status = 'completed'

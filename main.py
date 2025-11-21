@@ -96,7 +96,8 @@ try:
         handle_worker_district_all, handle_worker_toggle_district, handle_worker_next_city,
         handle_view_workers, handle_view_worker_details,
         handle_confirm_remove_worker, handle_execute_remove_worker,
-        handle_worker_analytics_menu, handle_worker_stats_all, handle_worker_stats_single
+        handle_worker_analytics_menu, handle_worker_stats_all, handle_worker_stats_single,
+        handle_worker_stats_select
     )
     from worker_ui import (
         handle_worker_menu, handle_worker_add_single, handle_worker_add_bulk,
@@ -766,6 +767,7 @@ def callback_query_router(func):
                 "execute_remove_worker": handle_execute_remove_worker if WORKER_SYSTEM_AVAILABLE else None,
                 "worker_analytics_menu": handle_worker_analytics_menu if WORKER_SYSTEM_AVAILABLE else None,
                 "worker_stats_all": handle_worker_stats_all if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_stats_select": handle_worker_stats_select if WORKER_SYSTEM_AVAILABLE else None,
                 "worker_stats_single": handle_worker_stats_single if WORKER_SYSTEM_AVAILABLE else None,
                 
                 # Worker UI Handlers (from worker_ui.py)
