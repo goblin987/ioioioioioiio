@@ -1549,8 +1549,9 @@ def init_enhanced_auto_ads_tables():
         
         # Check existing campaigns before table creation
         try:
-            cur.execute("SELECT COUNT(*) FROM auto_ads_campaigns")
-            existing_campaigns = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) as count FROM auto_ads_campaigns")
+            result = cur.fetchone()
+            existing_campaigns = result['count'] if result else 0
             logger.info(f"📊 Found {existing_campaigns} existing campaigns before init")
         except Exception as e:
             logger.info(f"📊 Campaigns table doesn't exist yet or error: {e}")
@@ -1593,8 +1594,9 @@ def init_enhanced_auto_ads_tables():
         logger.info("✅ Auto ads campaigns table ready")
         
         # Check campaigns after table creation
-        cur.execute("SELECT COUNT(*) FROM auto_ads_campaigns")
-        campaigns_after = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as count FROM auto_ads_campaigns")
+        result_after = cur.fetchone()
+        campaigns_after = result_after['count'] if result_after else 0
         logger.info(f"📊 Found {campaigns_after} campaigns after init")
         
         if existing_campaigns > 0 and campaigns_after == 0:
