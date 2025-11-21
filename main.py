@@ -86,6 +86,27 @@ from user import (
 )
 import admin # Import admin module
 import marketing_promotions # Import marketing and promotions module
+
+# Import worker management
+try:
+    from worker_admin import (
+        handle_workers_menu, handle_add_worker_start, handle_add_worker_username,
+        handle_worker_toggle_permission, handle_worker_confirm_permissions,
+        handle_worker_toggle_city, handle_worker_configure_districts,
+        handle_worker_district_all, handle_worker_toggle_district, handle_worker_next_city,
+        handle_view_workers, handle_view_worker_details,
+        handle_confirm_remove_worker, handle_execute_remove_worker,
+        handle_worker_analytics_menu, handle_worker_stats_all, handle_worker_stats_single
+    )
+    from worker_ui import (
+        handle_worker_menu, handle_worker_add_single, handle_worker_add_bulk,
+        handle_worker_check_stock, handle_worker_marketing
+    )
+    from init_worker_tables import init_worker_tables
+    WORKER_SYSTEM_AVAILABLE = True
+except ImportError as e:
+    logging.getLogger(__name__).warning(f"Worker management system not available: {e}")
+    WORKER_SYSTEM_AVAILABLE = False
 from marketing_promotions import (
     init_marketing_tables, handle_marketing_promotions_menu, handle_ui_theme_designer,
     handle_select_ui_theme, handle_classic_welcome, handle_minimalist_welcome, handle_minimalist_shop,
@@ -728,6 +749,31 @@ def callback_query_router(func):
                 "adm_view_user": handle_view_user_profile,
                 "adm_adjust_balance_start": handle_adjust_balance_start,
                 "adm_toggle_ban": handle_toggle_ban_user,
+
+                # Worker Management Handlers (from worker_admin.py)
+                "workers_menu": handle_workers_menu if WORKER_SYSTEM_AVAILABLE else None,
+                "add_worker_start": handle_add_worker_start if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_toggle_perm": handle_worker_toggle_permission if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_confirm_permissions": handle_worker_confirm_permissions if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_toggle_city": handle_worker_toggle_city if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_configure_districts": handle_worker_configure_districts if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_district_all": handle_worker_district_all if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_toggle_district": handle_worker_toggle_district if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_next_city": handle_worker_next_city if WORKER_SYSTEM_AVAILABLE else None,
+                "view_workers": handle_view_workers if WORKER_SYSTEM_AVAILABLE else None,
+                "view_worker_details": handle_view_worker_details if WORKER_SYSTEM_AVAILABLE else None,
+                "confirm_remove_worker": handle_confirm_remove_worker if WORKER_SYSTEM_AVAILABLE else None,
+                "execute_remove_worker": handle_execute_remove_worker if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_analytics_menu": handle_worker_analytics_menu if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_stats_all": handle_worker_stats_all if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_stats_single": handle_worker_stats_single if WORKER_SYSTEM_AVAILABLE else None,
+                
+                # Worker UI Handlers (from worker_ui.py)
+                "worker_menu": handle_worker_menu if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_add_single": handle_worker_add_single if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_add_bulk": handle_worker_add_bulk if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_check_stock": handle_worker_check_stock if WORKER_SYSTEM_AVAILABLE else None,
+                "worker_marketing": handle_worker_marketing if WORKER_SYSTEM_AVAILABLE else None,
 
                 # Reseller Management Handlers (from reseller_management.py)
                 "manage_resellers_menu": handle_manage_resellers_menu,
@@ -1433,6 +1479,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Auto ads uses session-based routing (aa_session in context.user_data)
         # No state handlers needed - messages are routed directly in handle_message()
+        
+        # Worker system uses session-based routing (worker_session in context.user_data)
+        # Messages are routed based on session step in handle_message()
 
         # Admin Message Handlers (from admin.py)
         'awaiting_new_city_name': admin.handle_adm_add_city_message,
@@ -1530,6 +1579,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return  # Auto ads handled it, don't process further
         except Exception as e:
             logger.error(f"🔍 AUTO ADS FAILED: {e}")
+    
+    # Check for worker session (add worker wizard)
+    if 'worker_session' in context.user_data and WORKER_SYSTEM_AVAILABLE:
+        session = context.user_data.get('worker_session', {})
+        step = session.get('step')
+        logger.info(f"🔍 WORKER SYSTEM: Routing message for user {user_id}, step: {step}")
+        try:
+            if step == 'awaiting_username':
+                await handle_add_worker_username(update, context)
+                return
+        except Exception as e:
+            logger.error(f"🔍 WORKER SYSTEM FAILED: {e}")
     
     # No handler found
     logger.debug(f"No handler found for user {user_id} in state: {state}")
@@ -1631,6 +1692,19 @@ async def post_init(application: Application) -> None:
             
         except Exception as e:
             logger.error(f"❌ Userbot pool initialization failed: {e}", exc_info=True)
+    
+    # Initialize worker management tables
+    if WORKER_SYSTEM_AVAILABLE:
+        try:
+            logger.info("🔄 Initializing worker management tables...")
+            from init_worker_tables import init_worker_tables
+            success = await asyncio.to_thread(init_worker_tables)
+            if success:
+                logger.info("✅ Worker management tables initialized")
+            else:
+                logger.warning("⚠️ Worker management tables initialization had issues - check logs")
+        except Exception as e:
+            logger.error(f"❌ Worker tables initialization failed: {e}", exc_info=True)
     
     logger.info("Post_init finished.")
 

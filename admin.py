@@ -629,6 +629,9 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             InlineKeyboardButton("👥 Users", callback_data="admin_users_menu"),
             InlineKeyboardButton("🎁 Marketing", callback_data="admin_marketing_menu")
         ],
+        [
+            InlineKeyboardButton("👷 Workers", callback_data="workers_menu")
+        ],
         
         [InlineKeyboardButton("━━━ SETTINGS ━━━", callback_data="noop")],
         [
@@ -675,6 +678,7 @@ async def handle_admin_analytics_menu(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("📈 Sales Analytics", callback_data="sales_analytics_menu")],
         [InlineKeyboardButton("🔍 Recent Purchases", callback_data="adm_recent_purchases|0")],
         [InlineKeyboardButton("📜 Product Addition Log", callback_data="viewer_added_products|0")],
+        [InlineKeyboardButton("👷 Worker Performance", callback_data="worker_analytics_menu")],
         [InlineKeyboardButton("📊 User Statistics", callback_data="admin_user_stats")],
         [InlineKeyboardButton("💰 Financial Reports", callback_data="admin_financial_reports")],
         [
