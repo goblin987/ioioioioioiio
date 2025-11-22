@@ -397,15 +397,76 @@ async def _process_bulk_collected_media(context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"BULK DEBUG: Added media group {media_group_id} to bulk_messages as single message. New count: {len(bulk_messages)}")
     
-    # Send a quick confirmation with count
+    # Update the status message to show new count
+    await _update_bulk_status_message(context, user_id, chat_id)
+
+
+async def _update_bulk_status_message(context: ContextTypes.DEFAULT_TYPE, user_id: int, chat_id: int):
+    """Updates the single bulk status message with current collection info."""
     try:
-        from utils import send_message_with_retry
-        await send_message_with_retry(context.bot, chat_id, 
-            f"✅ Media group {len(bulk_messages)}/10 collected!\n\nSend more messages or click '✅ Finish & Create Products' when done.", 
-            parse_mode=None)
-        logger.info(f"BULK DEBUG: Sent status update for media group {media_group_id}")
+        user_data = context.application.user_data.get(user_id, {})
+        status_message_id = user_data.get("bulk_status_message_id")
+        
+        if not status_message_id:
+            logger.warning(f"No bulk status message ID found for user {user_id}")
+            return
+        
+        bulk_messages = user_data.get("bulk_messages", [])
+        price = user_data.get("bulk_pending_drop_price", 0)
+        size = user_data.get("bulk_pending_drop_size", "")
+        p_type = user_data.get("bulk_admin_product_type", "")
+        city = user_data.get("bulk_admin_city", "")
+        district = user_data.get("bulk_admin_district", "")
+        type_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
+        price_str = format_currency(price)
+        
+        msg = (f"📦 **Bulk Products Collection**\n\n"
+               f"📍 {city} / {district}\n"
+               f"{type_emoji} {p_type} | 📏 {size} | 💰 {price_str}€\n\n"
+               f"✅ **{len(bulk_messages)} product(s) collected** (max: 10)\n\n")
+        
+        if bulk_messages:
+            msg += "**Collected Products:**\n"
+            for i, msg_data in enumerate(bulk_messages, 1):
+                text_preview = msg_data.get("text", "")[:30]
+                if len(text_preview) > 30:
+                    text_preview += "..."
+                if not text_preview:
+                    text_preview = "(No text)"
+                
+                media_count = len(msg_data.get("media", []))
+                media_info = f" [{media_count} media]" if media_count > 0 else ""
+                
+                msg += f"{i}. {text_preview}{media_info}\n"
+            
+            msg += f"\n💡 You can add {10 - len(bulk_messages)} more\n\n"
+            msg += "**Ready to create?** Click **Create All** below!"
+        else:
+            msg += "**Instructions:**\n"
+            msg += "• Forward or send messages with product details\n"
+            msg += "• Each message = 1 separate product\n"
+            msg += "• Can include photos, videos, GIFs, text\n\n"
+            msg += "💡 After collecting products, click **Create All**"
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ Create All Products", callback_data="adm_bulk_create_all")],
+            [InlineKeyboardButton("❌ Cancel Operation", callback_data="cancel_bulk_add")]
+        ]
+        
+        # Edit the existing message
+        await context.bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=status_message_id,
+            text=msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"Updated bulk status message for user {user_id}, count: {len(bulk_messages)}")
+        
     except Exception as e:
-        logger.error(f"BULK DEBUG: Error sending bulk status update: {e}")
+        # If message editing fails (e.g., message was deleted), log but don't crash
+        logger.warning(f"Could not update bulk status message for user {user_id}: {e}")
 
 
 # --- Modified Handler for Drop Details Message ---
@@ -2318,24 +2379,25 @@ async def handle_adm_bulk_price_message(update: Update, context: ContextTypes.DE
     district = context.user_data.get("bulk_admin_district", "")
     type_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
     
-    msg = (f"📦 Bulk Products Setup Complete\n\n"
-           f"📍 Location: {city} / {district}\n"
-           f"{type_emoji} Type: {p_type}\n"
-           f"📏 Size: {size}\n"
-           f"💰 Price: {price_str}€\n\n"
-           f"Now forward or send up to 10 different messages. Each message can contain:\n"
-           f"• Photos, videos, GIFs\n"
-           f"• Text descriptions\n"
-           f"• Any combination of media and text\n\n"
-           f"Each message will become a separate product drop in this category.\n\n"
-           f"Messages collected: 0/10")
+    msg = (f"📦 **Bulk Products Collection**\n\n"
+           f"📍 {city} / {district}\n"
+           f"{type_emoji} {p_type} | 📏 {size} | 💰 {price_str}€\n\n"
+           f"✅ **0 product(s) collected** (max: 10)\n\n"
+           f"**Instructions:**\n"
+           f"• Forward or send messages with product details\n"
+           f"• Each message = 1 separate product\n"
+           f"• Can include photos, videos, GIFs, text\n\n"
+           f"💡 After collecting products, click **Create All**")
     
     keyboard = [
-        [InlineKeyboardButton("✅ Finish & Create Products", callback_data="adm_bulk_create_all")],
-        [InlineKeyboardButton("❌ Cancel Bulk Operation", callback_data="cancel_bulk_add")]
+        [InlineKeyboardButton("✅ Create All Products", callback_data="adm_bulk_create_all")],
+        [InlineKeyboardButton("❌ Cancel Operation", callback_data="cancel_bulk_add")]
     ]
     
-    await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    # Send initial status message and store its ID so we can update it
+    sent_msg = await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    if sent_msg:
+        context.user_data["bulk_status_message_id"] = sent_msg.message_id
 
 async def handle_adm_bulk_drop_details_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles collecting multiple different messages for bulk products."""
@@ -2468,17 +2530,11 @@ async def handle_adm_bulk_drop_details_message(update: Update, context: ContextT
         
         logger.info(f"BULK DEBUG: Added single message to bulk_messages. New count: {len(bulk_messages)}")
         
-        # Send a quick confirmation with count
-        try:
-            await update.message.reply_text(
-                f"✅ Message {len(bulk_messages)}/10 collected!\n\nSend more messages or click '✅ Finish & Create Products' when done.",
-                parse_mode=None
-            )
-        except Exception as e:
-            logger.error(f"Error sending bulk collection confirmation: {e}")
+        # Update the status message to show new count
+        await _update_bulk_status_message(context, user_id, chat_id)
 
 async def show_bulk_messages_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Shows the current status of collected bulk messages."""
+    """Shows the current status of collected bulk messages with action buttons."""
     chat_id = update.effective_chat.id if update.effective_chat else update.message.chat_id
     
     bulk_messages = context.user_data.get("bulk_messages", [])
@@ -2490,30 +2546,30 @@ async def show_bulk_messages_status(update: Update, context: ContextTypes.DEFAUL
     type_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
     price_str = format_currency(price)
     
-    msg = (f"📦 Bulk Products Collection\n\n"
+    msg = (f"📦 **Bulk Products Collection**\n\n"
            f"📍 Location: {city} / {district}\n"
            f"{type_emoji} Type: {p_type}\n"
            f"📏 Size: {size}\n"
            f"💰 Price: {price_str}€\n\n"
-           f"Messages collected: {len(bulk_messages)}/10\n\n")
+           f"✅ **{len(bulk_messages)} message(s) collected** (max: 10)\n\n")
     
     if not bulk_messages:
         msg += "No messages collected yet. Send or forward your first message with product details and media."
     else:
-        msg += "Collected messages:\n"
+        msg += "**Collected Products:**\n"
         for i, msg_data in enumerate(bulk_messages, 1):
-            text_preview = msg_data.get("text", "")[:50]
-            if len(text_preview) > 50:
+            text_preview = msg_data.get("text", "")[:40]
+            if len(text_preview) > 40:
                 text_preview += "..."
             if not text_preview:
                 text_preview = "(No text)"
             
             media_count = len(msg_data.get("media", []))
-            media_info = f" + {media_count} media" if media_count > 0 else ""
+            media_info = f" [{media_count} media]" if media_count > 0 else ""
             
             msg += f"{i}. {text_preview}{media_info}\n"
-    
-    msg += f"\n{10 - len(bulk_messages)} more messages can be added."
+        
+        msg += f"\n💡 You can add {10 - len(bulk_messages)} more message(s)"
     
     keyboard = []
     
