@@ -142,8 +142,18 @@ async def _show_userbot_dashboard(query, context):
             InlineKeyboardButton("📊 Statistics", callback_data="userbot_stats_all")
         ])
     
+    # Dynamic back button for workers
+    try:
+        from worker_management import is_worker, check_worker_permission
+        is_auth_worker = is_worker(query.from_user.id) and check_worker_permission(query.from_user.id, 'marketing')
+    except:
+        is_auth_worker = False
+    
+    is_admin = is_primary_admin(query.from_user.id)
+    back_callback = "admin_menu" if not is_auth_worker or is_admin else "worker_marketing"
+    
     keyboard.append([InlineKeyboardButton("🔍 Scout System", callback_data="scout_menu")])
-    keyboard.append([InlineKeyboardButton("⬅️ Back to Admin", callback_data="admin_menu")])
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data=back_callback)])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
