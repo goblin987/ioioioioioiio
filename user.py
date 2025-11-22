@@ -2395,88 +2395,11 @@ async def handle_skip_discount_basket_pay(update: Update, context: ContextTypes.
 # --- NEW: Helper to Show Crypto Choices for Basket Payment ---
 # <<< MODIFIED: Use SUPPORTED_CRYPTO dictionary >>>
 async def _show_crypto_choices_for_basket(update: Update, context: ContextTypes.DEFAULT_TYPE, edit_message: bool = False):
-    """Displays cryptocurrency selection buttons for the basket total."""
-    query = update.callback_query # May be None if called from message handler
-    chat_id = update.effective_chat.id
-    lang, lang_data = _get_lang_data(context)
-
-    # Determine if this is for single item or full basket based on context keys
-    is_single_item_flow = 'single_item_pay_final_eur' in context.user_data and 'single_item_pay_snapshot' in context.user_data
-    
-    if is_single_item_flow:
-        total_eur_float = context.user_data.get('single_item_pay_final_eur')
-        # Map single item context to basket_pay context for NOWPayments call consistency
-        context.user_data['basket_pay_snapshot'] = context.user_data['single_item_pay_snapshot']
-        context.user_data['basket_pay_total_eur'] = context.user_data['single_item_pay_final_eur']
-        context.user_data['basket_pay_discount_code'] = context.user_data.get('single_item_pay_discount_code')
-        cancel_callback = f"product|{context.user_data['single_item_pay_back_params'][0]}|{context.user_data['single_item_pay_back_params'][1]}|{context.user_data['single_item_pay_back_params'][2]}|{context.user_data['single_item_pay_back_params'][3]}|{context.user_data['single_item_pay_back_params'][4]}"
-
-    else: # Full basket flow
-        total_eur_float = context.user_data.get('basket_pay_total_eur')
-        cancel_callback = "view_basket"
-
-
-    if total_eur_float is None:
-        logger.error("Cannot show crypto choices: total EUR missing from context.")
-        msg = "Error: Payment amount missing. Returning to previous screen."
-        kb = [[InlineKeyboardButton("⬅️ Back", callback_data=cancel_callback)]] # Use dynamic cancel
-        if query and edit_message: await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=None)
-        else: await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=None)
-        if query: await query.answer("Error: Amount missing.", show_alert=True)
-        return
-
-    # Filter currencies to only show those supported by NOWPayments API
-    from utils import is_currency_supported
-
-    asset_buttons = []
-    row = []
-    supported_currencies = {}
-    
-    # Validate each currency against NOWPayments API
-    for code, display_name in SUPPORTED_CRYPTO.items():
-        if is_currency_supported(code):
-            supported_currencies[code] = display_name
-        else:
-            logger.warning(f"Currency {code} is not supported by NOWPayments API, hiding from user")
-    
-    # If no currencies are supported, show error
-    if not supported_currencies:
-        logger.error("No supported currencies found from NOWPayments API")
-        msg = "❌ No payment methods available at the moment. Please try again later."
-        kb = [[InlineKeyboardButton("⬅️ Back", callback_data=cancel_callback)]]
-        if query and edit_message: 
-            await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=None)
-        else: 
-            await send_message_with_retry(context.bot, chat_id, msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode=None)
-        if query: 
-            await query.answer("No payment methods available.", show_alert=True)
-        return
-    
-    # Build buttons for supported currencies
-    for code, display_name in supported_currencies.items():
-        row.append(InlineKeyboardButton(display_name, callback_data=f"select_basket_crypto|{code}")) # select_basket_crypto handles both
-        if len(row) >= 3:
-            asset_buttons.append(row)
-            row = []
-    if row: asset_buttons.append(row)
-
-    cancel_button_text = lang_data.get("cancel_button", "Cancel")
-    asset_buttons.append([InlineKeyboardButton(f"❌ {cancel_button_text}", callback_data=cancel_callback)])
-
-    amount_str = format_currency(total_eur_float)
-    prompt_template = lang_data.get("choose_crypto_for_purchase", "Choose crypto to pay {amount} EUR for your items:")
-    prompt_msg = prompt_template.format(amount=amount_str)
-
-    if query and edit_message:
-        try:
-            await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(asset_buttons), parse_mode=None)
-        except telegram_error.BadRequest as e:
-            if "message is not modified" not in str(e).lower():
-                 logger.error(f"Error editing message for crypto choice (basket/single): {e}")
-                 await send_message_with_retry(context.bot, chat_id, prompt_msg, reply_markup=InlineKeyboardMarkup(asset_buttons), parse_mode=None)
-            elif query: await query.answer()
-    else:
-        await send_message_with_retry(context.bot, chat_id, prompt_msg, reply_markup=InlineKeyboardMarkup(asset_buttons), parse_mode=None)
+    """Auto-selects SOL for basket payment (skipping selection)."""
+    # Skip selection UI and proceed with 'sol'
+    from payment import handle_select_basket_crypto
+    # We need to fake the params as if user clicked "select_basket_crypto|sol"
+    await handle_select_basket_crypto(update, context, params=['sol'])
 
 # --- END _show_crypto_choices_for_basket ---
 
@@ -2946,49 +2869,89 @@ async def handle_refill_amount_message(update: Update, context: ContextTypes.DEF
             return
 
         context.user_data['refill_eur_amount'] = float(refill_amount_decimal)
-        context.user_data['state'] = 'awaiting_refill_crypto_choice' # State remains specific to refill
-        logger.info(f"User {user_id} entered refill EUR: {refill_amount_decimal:.2f}. State -> awaiting_refill_crypto_choice")
+        # Skip selection state and go straight to processing
+        # context.user_data['state'] = 'awaiting_refill_crypto_choice' 
+        logger.info(f"User {user_id} entered refill EUR: {refill_amount_decimal:.2f}. Auto-selecting SOL.")
 
-        # --- Generate buttons using SUPPORTED_CRYPTO with API validation ---
-        from utils import is_currency_supported
+        # Call payment handler directly
+        from payment import handle_select_refill_crypto
+        # We need to simulate the callback query structure if possible, but the handler takes (update, context, params)
+        # Since handle_select_refill_crypto usually expects a callback query in 'update', we might need to be careful.
+        # However, `handle_select_refill_crypto` uses `query = update.callback_query`.
+        # If we call it from a message handler, `update.callback_query` is None.
         
-        asset_buttons = []
-        row = []
-        supported_currencies = {}
+        # We need to patch the update or refactor handle_select_refill_crypto to handle message updates or create a mock query.
+        # A simpler way is to adapt handle_select_refill_crypto or create a wrapper.
         
-        # Validate each currency against NOWPayments API
-        for code, display_name in SUPPORTED_CRYPTO.items():
-            if is_currency_supported(code):
-                supported_currencies[code] = display_name
-            else:
-                logger.warning(f"Currency {code} is not supported by NOWPayments API, hiding from refill options")
+        # BETTER APPROACH: Since we are in a message handler, we can't easily use a callback handler that relies on `query.edit_message_text`.
+        # We should replicate the logic of handle_select_refill_crypto but for message context.
         
-        # If no currencies are supported, show error
-        if not supported_currencies:
-            logger.error("No supported currencies found from NOWPayments API for refill")
-            await send_message_with_retry(context.bot, chat_id, "❌ No payment methods available at the moment. Please try again later.", parse_mode=None)
-            context.user_data.pop('state', None)
+        # ... OR ... we create a new state `awaiting_refill_confirmation`? No, user just wants to pay.
+        
+        # Let's call create_nowpayments_payment directly here, similar to handle_select_refill_crypto logic.
+        
+        preparing_invoice_msg = lang_data.get("preparing_invoice", "⏳ Preparing your payment invoice...")
+        await send_message_with_retry(context.bot, chat_id, preparing_invoice_msg, parse_mode=None)
+        
+        from payment import create_nowpayments_payment, display_nowpayments_invoice
+        
+        # Call payment creation
+        payment_result = await create_nowpayments_payment(
+            user_id, refill_eur_amount_decimal, 'sol',
+            is_purchase=False # Explicitly False for refill
+        )
+        
+        if 'error' in payment_result:
+            # Error handling logic (simplified from payment.py)
+            error_code = payment_result['error']
+            failed_invoice_creation_msg = lang_data.get("failed_invoice_creation", "❌ Failed to create payment invoice. Please try again later or contact support.")
+            await send_message_with_retry(context.bot, chat_id, failed_invoice_creation_msg, parse_mode=None)
             context.user_data.pop('refill_eur_amount', None)
-            return
-        
-        # Build buttons for supported currencies
-        for code, display_name in supported_currencies.items():
-            # Use specific refill callback, passing the NOWPayments code
-            row.append(InlineKeyboardButton(display_name, callback_data=f"select_refill_crypto|{code}"))
-            if len(row) >= 3: # Adjust number per row if needed
-                asset_buttons.append(row)
-                row = []
-        if row:
-            asset_buttons.append(row)
-        # --- End Button Generation ---
-
-        asset_buttons.append([InlineKeyboardButton(f"❌ {cancel_top_up_button}", callback_data="profile")])
-
-        refill_amount_str = format_currency(refill_amount_decimal)
-        choose_crypto_msg = choose_crypto_prompt_template.format(amount=refill_amount_str)
-
-        await send_message_with_retry(context.bot, chat_id, choose_crypto_msg, reply_markup=InlineKeyboardMarkup(asset_buttons), parse_mode=None)
-
+        else:
+            logger.info(f"SOL refill invoice created successfully for user {user_id}. Payment ID: {payment_result.get('payment_id')}")
+            context.user_data.pop('refill_eur_amount', None)
+            context.user_data.pop('state', None)
+            
+            # We need to mock a query object for display_nowpayments_invoice because it uses query.message.chat_id
+            # But wait, display_nowpayments_invoice uses query.message.chat_id. 
+            # If update.callback_query is None, it might fail.
+            
+            # Let's modify display_nowpayments_invoice to be robust or handle it here.
+            # Actually display_nowpayments_invoice expects a callback update.
+            # We can just send the invoice message manually here or refactor display_nowpayments_invoice.
+            
+            # Let's use a hack: set `update.callback_query` on the update object if we can, or just copy the display logic.
+            # Copying display logic is safest to avoid breaking other things.
+            
+            # ...Actually, let's just try to pass a dummy query object or modify display_nowpayments_invoice to handle message updates.
+            # But since I can't easily modify payment.py display logic without risk, I will implement the display here for this specific case.
+            
+            # -- Display Logic for Message Context --
+            pay_address = payment_result.get('pay_address')
+            pay_amount = payment_result.get('pay_amount')
+            pay_currency = 'SOL'
+            
+            msg = f"💰 **Top Up: {format_currency(refill_eur_amount_decimal)} EUR**\n\n"
+            msg += f"Send **{pay_amount} SOL** to:\n`{pay_address}`\n\n"
+            msg += "⚠️ Send the **EXACT** amount.\n"
+            msg += "⏳ Valid for 1 hour."
+            
+            # QR Code
+            import qrcode
+            from io import BytesIO
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(pay_address)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            bio = BytesIO()
+            img.save(bio, 'PNG')
+            bio.seek(0)
+            
+            # Cancel button
+            keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="cancel_payment")]]
+            
+            await context.bot.send_photo(chat_id=chat_id, photo=bio, caption=msg, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+            
     except ValueError:
         await send_message_with_retry(context.bot, chat_id, f"❌ {invalid_amount_format_msg}", parse_mode=None)
         return
