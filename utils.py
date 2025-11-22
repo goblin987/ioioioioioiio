@@ -1693,6 +1693,26 @@ def init_db():
             
             logger.info(f"✅ All user_id columns converted to BIGINT")
 
+            # --- solana_wallets table ---
+            logger.info(f"🔧 Creating solana_wallets table...")
+            c.execute(f'''CREATE TABLE IF NOT EXISTS solana_wallets (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT,
+                order_id TEXT UNIQUE,
+                public_key TEXT NOT NULL,
+                private_key TEXT NOT NULL,
+                expected_amount DECIMAL(20, 9),
+                amount_received DECIMAL(20, 9) DEFAULT 0,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )''')
+            
+            c.execute("CREATE INDEX IF NOT EXISTS idx_solana_wallets_status ON solana_wallets(status)")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_solana_wallets_order_id ON solana_wallets(order_id)")
+            conn.commit()
+            logger.info(f"✅ solana_wallets table created successfully")
+
             logger.info(f"🔧 Committing all database changes...")
             conn.commit()
             logger.info(f"✅ PostgreSQL database schema initialized/verified successfully.")

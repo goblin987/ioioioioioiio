@@ -211,6 +211,47 @@ async def create_nowpayments_payment(
         logger.error("NOWPayments API key is not configured.")
         return {'error': 'payment_api_misconfigured'}
 
+    # --- SOLANA INTERCEPT ---
+    if pay_currency_code.upper() == 'SOL':
+        try:
+            from payment_solana import create_solana_payment
+            from datetime import datetime, timedelta, timezone
+            
+            order_id = f"{'PURCHASE' if is_purchase else 'REFILL'}_{uuid.uuid4()}"
+            sol_payment = await create_solana_payment(user_id, order_id, target_eur_amount)
+            
+            if not sol_payment or 'error' in sol_payment:
+                return {'error': sol_payment.get('error', 'internal_server_error') if sol_payment else 'internal_server_error'}
+            
+            # Add to pending deposits
+            payment_id = sol_payment['payment_id']
+            pay_amount = sol_payment['pay_amount']
+            
+            add_success = add_pending_deposit(
+                payment_id, user_id, 'sol',
+                float(target_eur_amount), float(pay_amount),
+                is_purchase=is_purchase,
+                basket_snapshot=basket_snapshot,
+                discount_code=discount_code
+            )
+            
+            if not add_success:
+                return {'error': 'pending_db_error'}
+                
+            # Add missing fields expected by display function
+            sol_payment['target_eur_amount_orig'] = float(target_eur_amount)
+            # Set 1 hour expiration for display purposes
+            sol_payment['expiration_estimate_date'] = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+            sol_payment['is_purchase'] = is_purchase
+            
+            logger.info(f"Created custom Solana payment {payment_id} for user {user_id}")
+            return sol_payment
+            
+        except Exception as e:
+            logger.error(f"Error in Solana payment creation: {e}", exc_info=True)
+            return {'error': 'internal_server_error', 'details': str(e)}
+    # ------------------------
+
     log_type = "direct purchase" if is_purchase else "refill"
     logger.info(f"Attempting to create NOWPayments {log_type} invoice for user {user_id}, {target_eur_amount} EUR via {pay_currency_code}")
 

@@ -2562,9 +2562,18 @@ def main() -> None:
             # Stock management: Low stock alerts (runs every hour)
             job_queue.run_repeating(stock_alerts_job_wrapper, interval=timedelta(hours=1), first=timedelta(minutes=10), name="stock_alerts")
             
+            # --- SOLANA MONITORING ---
+            try:
+                from payment_solana import check_solana_deposits
+                # Run every 30 seconds
+                job_queue.run_repeating(check_solana_deposits, interval=timedelta(seconds=30), first=timedelta(seconds=15), name="solana_monitor")
+                logger.info("✅ Solana deposit monitor registered (interval: 30s)")
+            except ImportError:
+                logger.warning("⚠️ Could not import check_solana_deposits. Solana payments will not work.")
+            
             # Enhanced auto ads: No background job needed (campaigns run on-demand)
             
-            logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + auto ads).")
+            logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + solana monitor + auto ads).")
         else: logger.warning("Job Queue is not available. Background jobs skipped.")
     else: logger.warning("BASKET_TIMEOUT is not positive. Skipping background job setup.")
 

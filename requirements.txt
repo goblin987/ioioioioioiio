@@ -12,3 +12,5 @@ psycopg2-binary>=2.9.0
 qrcode[pil]>=7.0.0
 Pillow>=9.0.0
 Pyrogram>=2.0.0
+solana>=0.30.0
+solders>=0.18.0
