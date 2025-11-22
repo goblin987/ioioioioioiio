@@ -9,7 +9,7 @@ from solana.rpc.api import Client
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import TransferParams, transfer
-from solana.transaction import Transaction
+from solders.transaction import Transaction
 from utils import get_db_connection, send_message_with_retry, format_currency
 
 # --- CONFIGURATION ---
@@ -201,22 +201,28 @@ async def sweep_wallet(wallet_data, current_lamports):
 
         logger.info(f"🧹 Sweeping {amount_to_send} lamports from {wallet_data['public_key']} to {ADMIN_WALLET}...")
 
-        # Create Transaction
-        transaction = Transaction()
-        transaction.add(
-            transfer(
-                TransferParams(
-                    from_pubkey=kp.pubkey(),
-                    to_pubkey=Pubkey.from_string(ADMIN_WALLET),
-                    lamports=int(amount_to_send)
-                )
+        # Create Transaction using solders
+        ix = transfer(
+            TransferParams(
+                from_pubkey=kp.pubkey(),
+                to_pubkey=Pubkey.from_string(ADMIN_WALLET),
+                lamports=int(amount_to_send)
             )
         )
         
-        # Send
-        # Recent blockhash is needed
+        # Get blockhash
         latest_blockhash = client.get_latest_blockhash().value.blockhash
-        txn_sig = client.send_transaction(transaction, kp, recent_blockhash=latest_blockhash)
+        
+        # Construct and sign transaction
+        transaction = Transaction.new_signed_with_payer(
+            [ix],
+            kp.pubkey(),
+            [kp],
+            latest_blockhash
+        )
+        
+        # Send
+        txn_sig = client.send_transaction(transaction)
         
         logger.info(f"✅ Swept funds. Sig: {txn_sig.value}")
         
