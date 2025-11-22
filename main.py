@@ -258,6 +258,7 @@ try:
         handle_scout_userbots,
         handle_scout_toggle_bot,
         handle_scout_triggers,
+        handle_scout_test_system,
         handle_scout_quick_start,
         handle_scout_bulk_enable,
         handle_scout_bulk_disable
@@ -1380,6 +1381,7 @@ def callback_query_router(func):
                     "scout_userbots": handle_scout_userbots,
                     "scout_toggle_bot": handle_scout_toggle_bot,
                     "scout_triggers": handle_scout_triggers,
+                    "scout_test_system": handle_scout_test_system,
                     "scout_quick_start": handle_scout_quick_start,
                     "scout_bulk_enable": handle_scout_bulk_enable,
                     "scout_bulk_disable": handle_scout_bulk_disable,

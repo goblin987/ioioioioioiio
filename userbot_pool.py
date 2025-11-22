@@ -644,7 +644,7 @@ class UserbotPool:
                     return
                 
                 # Check message for keywords
-                logger.debug(f"🔍 Checking message in chat {event.chat_id}: '{event.text[:50]}...'")
+                logger.info(f"🔍 Scout checking message in chat {event.chat_id}: '{event.text[:50]}...'")
                 matched_keyword = await scout_system.check_message(event.text)
                 
                 if matched_keyword:

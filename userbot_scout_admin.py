@@ -95,6 +95,7 @@ async def handle_scout_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         [InlineKeyboardButton("🔑 Manage Keywords", callback_data="scout_keywords|0")],
         [InlineKeyboardButton("🤖 Configure Userbots", callback_data="scout_userbots")],
         [InlineKeyboardButton("📊 View Triggers Log", callback_data="scout_triggers|0")],
+        [InlineKeyboardButton("🧪 Test Scout System", callback_data="scout_test_system")],
         [InlineKeyboardButton("📖 Quick Start Guide", callback_data="scout_quick_start")],
         [InlineKeyboardButton("⬅️ Back", callback_data=back_callback)]
     ]
@@ -1014,4 +1015,121 @@ async def handle_scout_bulk_disable(update: Update, context: ContextTypes.DEFAUL
     
     await query.answer(f"✅ Disabled {affected} keyword(s)", show_alert=True)
     await handle_scout_keywords(update, context, ['0'])
+
+
+async def handle_scout_test_system(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Test scout system configuration and status"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    # Check permissions
+    is_admin = is_primary_admin(user_id)
+    is_auth_worker = is_worker(user_id) and check_worker_permission(user_id, 'marketing')
+    
+    if not is_admin and not is_auth_worker:
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    await query.answer("🧪 Testing scout system...")
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get detailed stats
+    c.execute("SELECT COUNT(*) as count FROM scout_keywords WHERE is_active = TRUE")
+    active_keywords_count = c.fetchone()['count']
+    
+    c.execute("SELECT COUNT(*) as count FROM scout_keywords")
+    total_keywords = c.fetchone()['count']
+    
+    c.execute("SELECT COUNT(*) as count FROM userbots WHERE scout_mode_enabled = TRUE")
+    scout_enabled_count = c.fetchone()['count']
+    
+    c.execute("SELECT COUNT(*) as count FROM userbots WHERE scout_mode_enabled = TRUE AND is_connected = TRUE")
+    scout_connected_count = c.fetchone()['count']
+    
+    # Get list of keywords
+    c.execute("""
+        SELECT keyword, match_type, is_active 
+        FROM scout_keywords 
+        ORDER BY is_active DESC, id DESC 
+        LIMIT 10
+    """)
+    keywords = c.fetchall()
+    
+    # Get list of userbots
+    c.execute("""
+        SELECT name, scout_mode_enabled, is_connected 
+        FROM userbots 
+        ORDER BY scout_mode_enabled DESC, is_connected DESC
+    """)
+    userbots = c.fetchall()
+    
+    conn.close()
+    
+    # Build diagnostic message
+    msg = "🧪 **Scout System Diagnostics**\n\n"
+    
+    # Overall status
+    if scout_connected_count > 0 and active_keywords_count > 0:
+        msg += "✅ **Status:** System is operational\n\n"
+    elif scout_enabled_count == 0:
+        msg += "⚠️ **Status:** No userbots have scout mode enabled\n\n"
+    elif scout_connected_count == 0:
+        msg += "⚠️ **Status:** Scout userbots are not connected\n\n"
+    elif active_keywords_count == 0:
+        msg += "⚠️ **Status:** No active keywords configured\n\n"
+    else:
+        msg += "❌ **Status:** System has issues\n\n"
+    
+    # Keywords
+    msg += f"📊 **Keywords:** {active_keywords_count} active / {total_keywords} total\n"
+    if keywords:
+        msg += "```\n"
+        for kw in keywords[:5]:
+            status = "✅" if kw['is_active'] else "❌"
+            msg += f"{status} {kw['keyword']} ({kw['match_type']})\n"
+        if len(keywords) > 5:
+            msg += f"... and {len(keywords) - 5} more\n"
+        msg += "```\n"
+    msg += "\n"
+    
+    # Userbots
+    msg += f"🤖 **Userbots:** {scout_connected_count} active / {scout_enabled_count} enabled\n"
+    if userbots:
+        msg += "```\n"
+        for ub in userbots:
+            scout = "🔍" if ub['scout_mode_enabled'] else "  "
+            conn_status = "🟢" if ub['is_connected'] else "🔴"
+            msg += f"{scout} {conn_status} {ub['name']}\n"
+        msg += "```\n"
+    msg += "\n"
+    
+    # Troubleshooting tips
+    if scout_connected_count == 0:
+        msg += "**⚠️ Issue:** Scout userbots not connected\n"
+        msg += "**Solution:** Restart the bot or check userbot credentials\n\n"
+    
+    if active_keywords_count == 0:
+        msg += "**⚠️ Issue:** No active keywords\n"
+        msg += "**Solution:** Add keywords via 'Manage Keywords'\n\n"
+    
+    if scout_connected_count > 0 and active_keywords_count > 0:
+        msg += "**✅ System Ready!**\n"
+        msg += "**Test:** Type one of your keywords in a group where your scout userbot is a member.\n"
+        msg += "**Expected:** Userbot will reply after 3 seconds\n\n"
+        msg += "**Debug:** Check server logs for messages like:\n"
+        msg += "`🔍 Scout checking message...`\n"
+        msg += "`✅ KEYWORD MATCHED!`\n"
+    
+    keyboard = [[InlineKeyboardButton("⬅️ Back to Scout Menu", callback_data="scout_menu")]]
+    
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already showing test results")
+        else:
+            logger.error(f"Error showing test results: {e}")
+            raise
 

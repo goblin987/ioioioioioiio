@@ -64,7 +64,7 @@ class ScoutSystem:
         if not message_text:
             return None
         
-        logger.debug(f"🔍 Checking message against {len(self.keywords_cache)} keywords: '{message_text}'")
+        logger.info(f"🔍 Checking message against {len(self.keywords_cache)} active keywords: '{message_text[:100]}'")
         
         for kw in self.keywords_cache:
             keyword = kw['keyword']
@@ -92,8 +92,10 @@ class ScoutSystem:
                     continue
             
             if matched:
+                logger.info(f"✅ KEYWORD MATCHED! Keyword: '{keyword}' | Match type: {match_type} | Message: '{message_text[:100]}'")
                 return kw
         
+        logger.info(f"❌ No keyword matched in message: '{message_text[:100]}'")
         return None
     
     async def log_trigger(self, userbot_id: int, keyword_id: int, 
