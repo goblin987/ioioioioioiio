@@ -789,9 +789,16 @@ async def handle_scout_userbots(update: Update, context: ContextTypes.DEFAULT_TY
     keyboard = []
     for ub in userbots:
         action = "disable" if ub['scout_mode_enabled'] else "enable"
-        label = f"{'✅' if ub['scout_mode_enabled'] else '❌'} {ub['name']}"
-        keyboard.append([InlineKeyboardButton(label, callback_data=f"scout_toggle_bot|{ub['id']}")])
+        toggle_label = f"{'✅' if ub['scout_mode_enabled'] else '❌'} {ub['name']}"
+        manage_label = "⚙️ Manage"
+        
+        # Add two buttons per userbot: toggle scout mode + manage userbot
+        keyboard.append([
+            InlineKeyboardButton(toggle_label, callback_data=f"scout_toggle_bot|{ub['id']}"),
+            InlineKeyboardButton(manage_label, callback_data=f"userbot_manage:{ub['id']}")
+        ])
     
+    keyboard.append([InlineKeyboardButton("➕ Add New Userbot", callback_data="userbot_add_new")])
     keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="scout_menu")])
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
