@@ -21,17 +21,51 @@ logger = logging.getLogger(__name__)
 client = Client(SOLANA_RPC_URL)
 
 def get_sol_price_eur():
-    """Fetch current SOL price in EUR from CoinGecko"""
+    """Fetch current SOL price in EUR from CoinGecko with Binance fallback"""
+    # 1. Try CoinGecko
     try:
         response = requests.get(
             "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur", 
             timeout=5
         )
-        data = response.json()
-        return Decimal(str(data['solana']['eur']))
+        if response.status_code == 200:
+            data = response.json()
+            if 'solana' in data and 'eur' in data['solana']:
+                return Decimal(str(data['solana']['eur']))
+            else:
+                logger.error(f"CoinGecko unexpected response: {data}")
+        else:
+            logger.warning(f"CoinGecko returned status {response.status_code}")
     except Exception as e:
-        logger.error(f"Error fetching SOL price: {e}")
-        return None
+        logger.error(f"Error fetching SOL price from CoinGecko: {e}")
+
+    # 2. Try Binance Fallback
+    try:
+        response = requests.get(
+            "https://api.binance.com/api/v3/ticker/price?symbol=SOLEUR", 
+            timeout=5
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if 'price' in data:
+                return Decimal(str(data['price']))
+    except Exception as e:
+        logger.error(f"Error fetching SOL price from Binance: {e}")
+
+    # 3. Try CryptoCompare Fallback
+    try:
+        response = requests.get(
+            "https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=EUR",
+            timeout=5
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if 'EUR' in data:
+                return Decimal(str(data['EUR']))
+    except Exception as e:
+        logger.error(f"Error fetching SOL price from CryptoCompare: {e}")
+
+    return None
 
 async def create_solana_payment(user_id, order_id, eur_amount):
     """
