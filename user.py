@@ -2396,9 +2396,19 @@ async def handle_skip_discount_basket_pay(update: Update, context: ContextTypes.
 # <<< MODIFIED: Use SUPPORTED_CRYPTO dictionary >>>
 async def _show_crypto_choices_for_basket(update: Update, context: ContextTypes.DEFAULT_TYPE, edit_message: bool = False):
     """Auto-selects SOL for basket payment (skipping selection)."""
-    # Skip selection UI and proceed with 'sol'
+    
+    # 1. Ensure context is correctly mapped for single-item flows
+    is_single_item_flow = 'single_item_pay_final_eur' in context.user_data and 'single_item_pay_snapshot' in context.user_data
+    
+    if is_single_item_flow:
+        # Map single item context to basket_pay context so handle_select_basket_crypto can use it
+        context.user_data['basket_pay_snapshot'] = context.user_data['single_item_pay_snapshot']
+        context.user_data['basket_pay_total_eur'] = context.user_data['single_item_pay_final_eur']
+        context.user_data['basket_pay_discount_code'] = context.user_data.get('single_item_pay_discount_code')
+        # Store single item flag if needed, or rely on handle_select_basket_crypto handling
+    
+    # 2. Auto-select SOL
     from payment import handle_select_basket_crypto
-    # We need to fake the params as if user clicked "select_basket_crypto|sol"
     await handle_select_basket_crypto(update, context, params=['sol'])
 
 # --- END _show_crypto_choices_for_basket ---
