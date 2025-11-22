@@ -267,11 +267,11 @@ async def handle_userbot_connect_single(update: Update, context: ContextTypes.DE
             await query.answer("❌ Invalid userbot ID", show_alert=True)
             return
     
-    # Connect the userbot via userbot manager
-    from userbot_manager import userbot_manager
+    # Connect the userbot via userbot pool
+    from userbot_pool import userbot_pool
     
     try:
-        success = await userbot_manager.connect_userbot(userbot_id)
+        success = await userbot_pool.connect_single_userbot(userbot_id)
         if success:
             await query.answer("✅ Userbot connected!", show_alert=False)
         else:
@@ -301,11 +301,11 @@ async def handle_userbot_disconnect_single(update: Update, context: ContextTypes
             await query.answer("❌ Invalid userbot ID", show_alert=True)
             return
     
-    # Disconnect the userbot via userbot manager
-    from userbot_manager import userbot_manager
+    # Disconnect the userbot via userbot pool
+    from userbot_pool import userbot_pool
     
     try:
-        success = await userbot_manager.disconnect_userbot(userbot_id)
+        success = await userbot_pool.disconnect_single_userbot(userbot_id)
         if success:
             await query.answer("✅ Userbot disconnected!", show_alert=False)
         else:

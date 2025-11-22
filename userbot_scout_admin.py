@@ -188,7 +188,13 @@ async def handle_scout_keywords(update: Update, context: ContextTypes.DEFAULT_TY
         InlineKeyboardButton("⬅️ Back", callback_data="scout_menu")
     ])
     
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    try:
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    except Exception as e:
+        if "Message is not modified" in str(e):
+            await query.answer("✅ Already up to date", show_alert=False)
+        else:
+            raise
 
 
 async def handle_scout_add_keyword_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
