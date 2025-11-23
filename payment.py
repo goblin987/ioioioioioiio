@@ -1089,8 +1089,10 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
 
     # --- Post-Transaction Cleanup & Message Sending (If DB success) ---
     if db_update_successful:
-        context.user_data['basket'] = []
-        context.user_data.pop('applied_discount', None)
+        # Safely clear basket if context has user_data (might be missing in background jobs)
+        if getattr(context, 'user_data', None) is not None:
+            context.user_data['basket'] = []
+            context.user_data.pop('applied_discount', None)
 
         # Fetch Media BEFORE attempting delivery
         media_details = defaultdict(list)
