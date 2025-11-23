@@ -1033,7 +1033,7 @@ async def handle_toggle_secret_chat_delivery(update: Update, context: ContextTyp
         await query.answer(f"✅ Secret Chat Delivery {status}", show_alert=True)
         
         # Refresh system settings menu
-        await handle_admin_system_settings(update, context)
+        await handle_admin_system_menu(update, context)
         
     except Exception as e:
         logger.error(f"Error toggling secret chat delivery: {e}")
@@ -6384,29 +6384,31 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
     
     # Try to find user by username or user ID
     conn = None
-    user_info = None
+    users_found = []
     search_by_id = False
     
     try:
-        # Check if search term is a number (User ID)
-        try:
-            user_id_search = int(search_term)
-            search_by_id = True
-        except ValueError:
-            search_by_id = False
-        
         conn = get_db_connection()
         c = conn.cursor()
         
-        if search_by_id:
+        # Check if search term is a number (User ID)
+        if search_term.isdigit():
+            user_id_search = int(search_term)
+            search_by_id = True
             # Search by User ID
             c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE user_id = %s", (user_id_search,))
+            users_found = c.fetchall()
         else:
-            # Search by username (case insensitive)
-            c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE LOWER(username) = LOWER(%s)", (search_term,))
-        
-        user_info = c.fetchone()
-        
+            # Search by username (partial match)
+            search_pattern = f"%{search_term}%"
+            c.execute("""
+                SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
+                FROM users 
+                WHERE LOWER(username) LIKE LOWER(%s)
+                LIMIT 10
+            """, (search_pattern,))
+            users_found = c.fetchall()
+            
     except Exception as e:
         logger.error(f"DB error searching for user '{search_term}': {e}")
         await send_message_with_retry(context.bot, chat_id, "❌ Database error during search.", parse_mode=None)
@@ -6415,11 +6417,11 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         if conn: 
             conn.close()
     
-    if not user_info:
+    if not users_found:
         search_type = "User ID" if search_by_id else "username"
         await send_message_with_retry(
             context.bot, chat_id, 
-            f"❌ No user found with {search_type}: {search_term}\n\nPlease check the spelling or try a different search term.",
+            f"❌ No user found matching: {search_term}\n\nPlease check the spelling or try a different search term.",
             parse_mode=None
         )
         
@@ -6431,14 +6433,34 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         ]
         await send_message_with_retry(
             context.bot, chat_id, 
-            "What would you like to do%s", 
+            "What would you like to do?", 
             reply_markup=InlineKeyboardMarkup(keyboard), 
             parse_mode=None
         )
         return
             
-    # User found - display comprehensive information
-    await display_user_search_results(context.bot, chat_id, user_info)
+    if len(users_found) == 1:
+        # Single user found - display comprehensive information
+        await display_user_search_results(context.bot, chat_id, users_found[0])
+    else:
+        # Multiple users found
+        msg = f"🔍 Found {len(users_found)} users matching '{search_term}':\n\n"
+        keyboard = []
+        
+        for user in users_found:
+            u_name = user['username'] or f"User_{user['user_id']}"
+            u_id = user['user_id']
+            btn_text = f"{u_name} (ID: {u_id})"
+            keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"adm_user_overview|{u_id}")])
+            
+        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="admin_menu")])
+        
+        await send_message_with_retry(
+            context.bot, chat_id, 
+            msg, 
+            reply_markup=InlineKeyboardMarkup(keyboard), 
+            parse_mode=None
+        )
 
 # Detailed User Information Handlers
 async def handle_adm_user_deposits(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):

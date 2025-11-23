@@ -323,36 +323,6 @@ class UserbotPool:
                             temp_file.write(media_binary)
                             temp_path = temp_file.name
                         
-                        try:
-                            # MANUAL ENCRYPTION APPROACH (MTProto spec compliant!)
-                            # 1. Encrypt the file ourselves with AES-256-IGE
-                            # 2. Upload encrypted file to Telegram
-                            # 3. Send decryption key via secret chat
-                            
-                            # Send via secret chat with proper parameters
-                            logger.info(f"📤 Sending {media_type} via secret chat...")
-                            
-                            file_size = len(media_binary)
-                            
-                            if media_type == 'photo':
-                                # Send photo with required parameters
-                                await secret_chat_manager.send_secret_photo(
-            # 4. Send media files
-            sent_media_count = 0
-            if media_binary_items and len(media_binary_items) > 0:
-                logger.info(f"📂 Sending {len(media_binary_items)} media items...")
-                for idx, media_item in enumerate(media_binary_items, 1):
-                    media_type = media_item['media_type']
-                    media_binary = media_item['media_binary']
-                    filename = media_item['filename']
-                    
-                    try:
-                        logger.info(f"📤 Sending media {idx}/{len(media_binary_items)} ({len(media_binary)} bytes) type: {media_type}...")
-                        
-                        # Save to temp file
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
-                            temp_file.write(media_binary)
-                            temp_path = temp_file.name
                         
                         try:
                             if use_secret_chat and media_type == 'photo':
