@@ -338,7 +338,12 @@ async def handle_auto_ads_my_campaigns(update: Update, context: ContextTypes.DEF
 
     await query.answer()
     service = get_bump_service(bot_instance=context.bot)
-    campaigns = service.get_user_campaigns(user_id)
+    
+    # Admins and Workers see ALL campaigns
+    if is_admin or is_auth_worker:
+        campaigns = service.get_all_campaigns()
+    else:
+        campaigns = service.get_user_campaigns(user_id)
     
     if not campaigns:
         text = """

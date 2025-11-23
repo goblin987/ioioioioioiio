@@ -36,6 +36,10 @@ class AutoAdsBumpService:
         """Get all campaigns for a user"""
         return self.db.get_user_campaigns(user_id)
     
+    def get_all_campaigns(self) -> List[Dict]:
+        """Get all campaigns (for admins)"""
+        return self.db.get_all_campaigns()
+    
     def get_campaign(self, campaign_id: int) -> Optional[Dict]:
         """Get campaign by ID"""
         return self.db.get_campaign(campaign_id)

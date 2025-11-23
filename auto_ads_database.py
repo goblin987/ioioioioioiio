@@ -387,6 +387,50 @@ class AutoAdsDatabase:
         except Exception as e:
             logger.error(f"❌ Error getting user campaigns: {e}")
             return []
+            
+    def get_all_campaigns(self) -> List[Dict]:
+        """Get all campaigns (for admins)"""
+        try:
+            conn = self._get_conn()
+            cur = conn.cursor()
+            cur.execute('''
+                SELECT c.id, c.user_id, c.account_id, c.campaign_name, c.ad_content,
+                       c.target_chats, c.buttons, c.schedule_type, c.schedule_time,
+                       c.is_active, c.sent_count, c.last_sent, c.created_at,
+                       a.account_name, a.phone_number
+                FROM auto_ads_campaigns c
+                LEFT JOIN auto_ads_accounts a ON c.account_id = a.id
+                ORDER BY c.created_at DESC
+            ''')
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            
+            campaigns = []
+            for row in rows:
+                campaign = {
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'account_id': row['account_id'],
+                    'campaign_name': row['campaign_name'],
+                    'ad_content': self._parse_json(row['ad_content']),
+                    'target_chats': self._parse_json(row['target_chats']),
+                    'buttons': self._parse_json(row['buttons']),
+                    'schedule_type': row['schedule_type'],
+                    'schedule_time': row['schedule_time'],
+                    'is_active': row['is_active'],
+                    'sent_count': row['sent_count'] or 0,
+                    'last_sent': row['last_sent'],
+                    'created_at': row['created_at'],
+                    'account_name': row['account_name'],
+                    'phone_number': row['phone_number']
+                }
+                campaigns.append(campaign)
+            
+            return campaigns
+        except Exception as e:
+            logger.error(f"❌ Error getting all campaigns: {e}")
+            return []
     
     def get_campaign(self, campaign_id: int) -> Optional[Dict]:
         """Get a campaign by ID"""
