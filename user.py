@@ -859,6 +859,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn = get_db_connection()
             c = conn.cursor()
             
+            # Try to get actual username from Telegram if fallback was used
+            if username.startswith("User_"):
+                try:
+                    # Fetch full user info from Telegram to get real username
+                    chat = await context.bot.get_chat(user_id)
+                    if chat and chat.username:
+                        username = chat.username
+                        logger.info(f"✅ Updated username from Telegram API: @{username} for user {user_id}")
+                except Exception as e:
+                    logger.info(f"Could not fetch username from Telegram API for {user_id}: {e}")
+            
             # DEBUG: Check table structure and user_id value
             logger.info(f"🔧 DEBUG: user_id={user_id}, type={type(user_id)}, username={username}")
             try:

@@ -6460,8 +6460,29 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         return
             
     if len(users_found) == 1:
-        # Single user found - display comprehensive information
-        await display_user_search_results(context.bot, chat_id, users_found[0])
+        # Single user found - Try to update username if it's a fallback
+        user_info = users_found[0]
+        if user_info['username'] and user_info['username'].startswith("User_"):
+            try:
+                # Try to fetch real username from Telegram
+                chat = await context.bot.get_chat(user_info['user_id'])
+                if chat and chat.username:
+                    # Update database with real username
+                    try:
+                        conn = get_db_connection()
+                        c = conn.cursor()
+                        c.execute("UPDATE users SET username = %s WHERE user_id = %s", (chat.username, user_info['user_id']))
+                        conn.commit()
+                        user_info['username'] = chat.username
+                        logger.info(f"✅ Updated username to @{chat.username} for user {user_info['user_id']}")
+                        conn.close()
+                    except Exception as db_err:
+                        logger.error(f"Failed to update username in DB: {db_err}")
+            except Exception as api_err:
+                logger.info(f"Could not fetch username from Telegram for user {user_info['user_id']}: {api_err}")
+        
+        # Display comprehensive information
+        await display_user_search_results(context.bot, chat_id, user_info)
     else:
         # Multiple users found
         msg = f"🔍 Found {len(users_found)} users matching '{search_term}':\n\n"
