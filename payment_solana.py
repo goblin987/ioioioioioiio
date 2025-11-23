@@ -226,31 +226,35 @@ async def check_solana_deposits(context):
                         # Run sweep in background
                         asyncio.create_task(sweep_wallet(wallet, lamports))
                 
-                # 2. Check for Expiration / Underpayment
-                elif datetime.now(timezone.utc) - created_at > timedelta(minutes=60):
-                    if sol_balance > 0:
-                        # Expired but has funds (Underpayment) -> Refund to Balance
-                        logger.info(f"⚠️ Order {order_id} expired with partial payment {sol_balance} SOL. Refunding to balance.")
-                        try:
-                            price = get_sol_price_eur()
-                            if price:
-                                refund_eur = (sol_balance * price).quantize(Decimal("0.01"))
-                                if refund_eur > 0:
-                                    from payment import credit_user_balance
-                                    await credit_user_balance(user_id, refund_eur, f"Partial payment refund (Expired {order_id})", context)
-                                    
-                                    c.execute("UPDATE solana_wallets SET status = 'refunded', amount_received = %s, updated_at = NOW() WHERE id = %s", (float(sol_balance), wallet_id))
-                                    conn.commit()
-                                    
-                                    # Sweep the partial funds too!
-                                    if ENABLE_AUTO_SWEEP and ADMIN_WALLET:
-                                        asyncio.create_task(sweep_wallet(wallet, lamports))
-                        except Exception as refund_e:
-                            logger.error(f"Error refunding expired order {order_id}: {refund_e}")
-                    else:
-                        # Expired and empty
-                        c.execute("UPDATE solana_wallets SET status = 'expired', updated_at = NOW() WHERE id = %s", (wallet_id,))
-                        conn.commit()
+                # 2. Check for Underpayment (Partial amount received) - 5 minutes buffer
+                elif sol_balance > 0 and (datetime.now(timezone.utc) - created_at > timedelta(minutes=5)):
+                    logger.info(f"📉 Underpayment detected for {order_id} ({sol_balance} SOL). Refunding to balance.")
+                    try:
+                        price = get_sol_price_eur()
+                        if price:
+                            refund_eur = (sol_balance * price).quantize(Decimal("0.01"))
+                            if refund_eur > 0:
+                                from payment import credit_user_balance
+                                # Minimalistic message as requested
+                                msg = f"⚠️ Underpayment detected ({sol_balance} SOL). Refunded {refund_eur} EUR to balance. Please use Top Up."
+                                await send_message_with_retry(context.bot, user_id, msg, parse_mode=None)
+                                await credit_user_balance(user_id, refund_eur, f"Underpayment refund {order_id}", context)
+                                
+                                # Mark as refunded (cancelled)
+                                c.execute("UPDATE solana_wallets SET status = 'refunded', amount_received = %s, updated_at = NOW() WHERE id = %s", (float(sol_balance), wallet_id))
+                                conn.commit()
+                                
+                                # Sweep the partial funds
+                                if ENABLE_AUTO_SWEEP and ADMIN_WALLET:
+                                    asyncio.create_task(sweep_wallet(wallet, lamports))
+                    except Exception as refund_e:
+                        logger.error(f"Error refunding underpayment {order_id}: {refund_e}")
+
+                # 3. Check for Expiration (Empty) - 20 minutes
+                elif datetime.now(timezone.utc) - created_at > timedelta(minutes=20):
+                    # Expired and empty
+                    c.execute("UPDATE solana_wallets SET status = 'expired', updated_at = NOW() WHERE id = %s", (wallet_id,))
+                    conn.commit()
                         
             except Exception as e:
                 logger.error(f"Error checking wallet {wallet.get('public_key')}: {e}", exc_info=True)
