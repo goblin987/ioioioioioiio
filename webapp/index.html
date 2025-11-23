@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Los Santos Shop</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        @font-face {
+            font-family: 'Pricedown';
+            src: url('https://db.onlinewebfonts.com/t/5799b47862f27227c47c4827594d4068.woff2') format('woff2');
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            overflow: hidden;
+            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://gta-sanandreas.com/images/wallpapers/gtasa_wallpaper_1-1920x1080.jpg');
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .hud-header {
+            padding: 20px;
+            text-shadow: 2px 2px 0 #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .money {
+            color: #4d7e46; /* GTA Money Green */
+            font-size: 32px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .weapon-icon {
+            font-size: 40px;
+            margin-top: 10px;
+        }
+
+        .menu-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+
+        .menu-item {
+            padding: 15px 30px;
+            font-size: 36px;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            color: #f0f0f0;
+            background: rgba(255, 255, 255, 0.2);
+            padding-left: 50px;
+        }
+        
+        .stats-box {
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border: 2px solid #fff;
+            width: 150px;
+            margin-left: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .stat-bar {
+            height: 8px;
+            background: #333;
+            margin-top: 2px;
+            margin-bottom: 5px;
+            width: 100%;
+            border: 1px solid #555;
+        }
+        
+        .stat-fill {
+            height: 100%;
+            background: #fff;
+            width: 50%;
+        }
+
+        .character-container {
+            position: absolute;
+            bottom: 0;
+            right: 10%;
+            height: 70%;
+            width: 50%;
+            background-image: url('https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png'); 
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom right;
+            z-index: -1;
+            filter: drop-shadow(5px 5px 5px #000);
+        }
+        
+        .logo {
+            font-size: 48px;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="hud-header">
+        <div>
+            <div class="logo">BOT SHOP</div>
+            <div class="stats-box">
+                <div>RESPECT</div>
+                <div class="stat-bar"><div class="stat-fill" style="width: 20%; background: #3fa535;"></div></div>
+                <div>STAMINA</div>
+                <div class="stat-bar"><div class="stat-fill" style="width: 80%;"></div></div>
+                <div>MUSCLE</div>
+                <div class="stat-bar"><div class="stat-fill" style="width: 60%;"></div></div>
+            </div>
+        </div>
+        <div>
+            <div class="money">$00000350</div>
+            <div class="weapon-icon">🔫 👊</div>
+        </div>
+    </div>
+
+    <div class="character-container" id="cj"></div>
+
+    <div class="menu-container">
+        <div class="menu-item active" onclick="selectItem('shop')">SHOP</div>
+        <div class="menu-item" onclick="selectItem('map')">MAP</div>
+        <div class="menu-item" onclick="selectItem('stats')">STATS</div>
+        <div class="menu-item" onclick="selectItem('settings')">SETTINGS</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.MainButton.text = "ENTER SHOP";
+        tg.MainButton.textColor = "#000000";
+        tg.MainButton.color = "#3fa535"; // GTA Green
+        tg.MainButton.show();
+
+        function selectItem(item) {
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Play sound effect logic here (requires user interaction usually)
+            
+            if(item === 'shop') {
+                tg.MainButton.text = "ENTER SHOP";
+            } else if (item === 'map') {
+                tg.MainButton.text = "VIEW MAP";
+            } else {
+                tg.MainButton.text = "SELECT " + item.toUpperCase();
+            }
+        }
+
+        tg.MainButton.onClick(function() {
+            tg.sendData("Selected: " + document.querySelector('.menu-item.active').innerText);
+        });
+        
+        // Simple Parallax / Movement
+        document.addEventListener('mousemove', (e) => {
+            const cj = document.getElementById('cj');
+            const x = (window.innerWidth - e.pageX * 2) / 40;
+            const y = (window.innerHeight - e.pageY * 2) / 40;
+            cj.style.transform = `translateX(${x}px) translateY(${y}px)`;
+        });
+        
+        // Mobile orientation movement simulation
+        window.addEventListener('deviceorientation', (e) => {
+             const cj = document.getElementById('cj');
+             const x = e.gamma * 0.5; // tilt left-right
+             cj.style.transform = `translateX(${x}px)`;
+        });
+    </script>
+</body>
+</html>

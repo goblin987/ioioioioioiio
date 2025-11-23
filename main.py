@@ -24,7 +24,7 @@ from telegram.constants import ParseMode
 from telegram.error import Forbidden, BadRequest, NetworkError, RetryAfter, TelegramError
 
 # --- Flask Imports ---
-from flask import Flask, request, Response # Added for webhook server
+from flask import Flask, request, Response, send_from_directory # Added for webhook server
 import nest_asyncio # Added to allow nested asyncio loops
 
 # --- Local Imports ---
@@ -2373,6 +2373,11 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Headers: {dict(request.headers)}")
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
+
+@flask_app.route("/webapp", methods=['GET'])
+def webapp_index():
+    """Serve Telegram Web App"""
+    return send_from_directory('webapp', 'index.html')
 
 @flask_app.route("/", methods=['GET'])
 def root():

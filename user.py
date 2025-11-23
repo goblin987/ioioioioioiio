@@ -8,7 +8,7 @@ from collections import defaultdict, Counter
 from decimal import Decimal, ROUND_DOWN # <<< Added ROUND_DOWN
 
 # --- Telegram Imports ---
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 from telegram import helpers
@@ -18,6 +18,7 @@ import telegram.error as telegram_error
 # Import from utils
 from utils import (
     CITIES, DISTRICTS, PRODUCT_TYPES, THEMES, LANGUAGES, BOT_MEDIA, ADMIN_ID, BASKET_TIMEOUT, MIN_DEPOSIT_EUR,
+    WEBHOOK_URL, # <<< Added WEBHOOK_URL
     format_currency, get_progress_bar, send_message_with_retry, format_discount_value,
     clear_expired_basket, fetch_last_purchases, get_user_status, fetch_reviews,
     NOWPAYMENTS_API_KEY, # Check if NOWPayments is configured
@@ -214,7 +215,9 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     logger.info(f"🎁 Daily Rewards enabled check: {show_daily_rewards} for user {user_id}")
     
     # Default keyboard layout
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
     default_keyboard = [
+        [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))],
         [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],
     ]
     
