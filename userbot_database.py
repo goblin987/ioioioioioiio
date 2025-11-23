@@ -289,12 +289,12 @@ def reset_userbot_config() -> bool:
 
 def create_multi_userbot_schema():
     """Create all tables for multi-userbot system"""
-    print("🔍 YOLO: Creating multi-userbot schema...")
+    logger.info("🔍 Creating multi-userbot schema...")
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        print("🔍 YOLO: Got database connection and cursor")
+        logger.debug("✅ Database connection established")
         
         # Main userbot accounts table
         c.execute("""
