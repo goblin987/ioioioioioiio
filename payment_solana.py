@@ -98,7 +98,7 @@ async def create_solana_payment(user_id, order_id, eur_amount):
             logger.info(f"Found existing Solana wallet for order {order_id}")
             return {
                 'pay_address': existing['public_key'],
-                'pay_amount': float(existing['expected_amount']),
+                'pay_amount': str(existing['expected_amount']),
                 'pay_currency': 'SOL',
                 'exchange_rate': float(price),
                 'payment_id': order_id # Use order_id as payment_id
@@ -117,7 +117,7 @@ async def create_solana_payment(user_id, order_id, eur_amount):
 
     return {
         'pay_address': pubkey,
-        'pay_amount': float(sol_amount),
+        'pay_amount': str(sol_amount),
         'pay_currency': 'SOL',
         'exchange_rate': float(price),
         'payment_id': order_id
