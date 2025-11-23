@@ -78,8 +78,8 @@ async def create_solana_payment(user_id, order_id, eur_amount):
         return {'error': 'estimate_failed'}
 
     # Calculate SOL amount (add small buffer or just exact)
-    # Quantize to 9 decimal places (lamports)
-    sol_amount = (Decimal(eur_amount) / price).quantize(Decimal("0.000000001"))
+    # Quantize to 5 decimal places for easier reading/typing (approx 0.001 EUR precision)
+    sol_amount = (Decimal(eur_amount) / price).quantize(Decimal("0.00001"))
     
     # Generate new Keypair
     kp = Keypair()
