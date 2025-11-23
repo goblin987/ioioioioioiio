@@ -175,7 +175,7 @@ async def check_solana_deposits(context):
                     # Assuming order_id format like "PURCHASE_uuid" or "REFILL_uuid"
                     # If order_id isn't descriptive, we need to look up pending_deposits table using order_id as payment_id
                     
-                    c.execute("SELECT is_purchase, basket_snapshot, discount_code FROM pending_deposits WHERE payment_id = %s", (order_id,))
+                    c.execute("SELECT is_purchase, basket_snapshot_json as basket_snapshot, discount_code_used as discount_code FROM pending_deposits WHERE payment_id = %s", (order_id,))
                     deposit_info = c.fetchone()
                     
                     if deposit_info:
