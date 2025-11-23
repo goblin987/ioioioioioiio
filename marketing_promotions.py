@@ -1866,6 +1866,11 @@ def apply_custom_layout_to_keyboard(menu_name, default_keyboard, user_language='
             if keyboard_row:  # Only add non-empty rows
                 custom_keyboard.append(keyboard_row)
         
+        # Inject Web App Button for start menu (Always visible)
+        if menu_name == 'start_menu':
+             webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+             custom_keyboard.insert(0, [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
+        
         return custom_keyboard
         
     except Exception as e:
