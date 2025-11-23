@@ -1594,7 +1594,29 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
 async def process_successful_crypto_purchase(user_id: int, basket_snapshot: list, discount_code_used: str | None, payment_id: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Handles finalizing a purchase paid via crypto webhook."""
     chat_id = context._chat_id or context._user_id or user_id # Try to get chat_id
-    lang = context.user_data.get("lang", "en")
+    
+    # --- FIX: Handle background context missing user_data ---
+    if getattr(context, 'user_data', None) is None:
+        user_lang = 'en'
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+            res = c.fetchone()
+            if res: user_lang = res['language']
+            conn.close()
+        except: pass
+        
+        # Inject mock user_data for compatibility
+        try: context._user_data = {'lang': user_lang}
+        except: 
+            try: context.user_data = {'lang': user_lang}
+            except: pass
+
+    lang = "en"
+    if getattr(context, 'user_data', None):
+        lang = context.user_data.get("lang", "en")
+    
     lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
 
     logger.info(f"Processing successful crypto purchase for user {user_id}, payment {payment_id}. Basket items: {len(basket_snapshot) if basket_snapshot else 0}")
@@ -1621,7 +1643,7 @@ async def process_successful_crypto_purchase(user_id: int, basket_snapshot: list
             try:
                 await send_message_with_retry(context.bot, get_first_primary_admin_id(), f"⚠️ Critical Issue: Crypto payment {payment_id} success for user {user_id}, but finalization FAILED! Check logs! MANUAL INTERVENTION REQUIRED.", parse_mode=None)
             except Exception as admin_notify_e:
-                 logger.error(f"Failed to notify admin about critical finalization failure: {admin_notify_e}")
+                logger.error(f"Failed to notify admin about critical finalization failure: {admin_notify_e}")
         if chat_id:
             await send_message_with_retry(context.bot, chat_id, lang_data.get("error_processing_purchase_contact_support", "❌ Error processing purchase. Contact support."), parse_mode=None)
 

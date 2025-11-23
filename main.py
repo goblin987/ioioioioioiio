@@ -650,6 +650,8 @@ def callback_query_router(func):
                 "type": user.handle_type_selection, "product": user.handle_product_selection,
                 "add": user.handle_add_to_basket,
                 "pay_single_item": user.handle_pay_single_item,
+                "apply_discount_product": user.handle_apply_discount_product, # NEW
+                "apply_referral_product": user.handle_apply_referral_product, # NEW
                 "view_basket": user.handle_view_basket,
                 "clear_basket": user.handle_clear_basket, "remove": user.handle_remove_from_basket,
                 "profile": user.handle_profile, "language": user.handle_language_selection,
@@ -1478,6 +1480,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_refill_amount': user.handle_refill_amount_message,
         'awaiting_single_item_discount_code': user.handle_single_item_discount_code_message, # <<< ADDED
         'awaiting_referral_code_single_pay': user.handle_referral_code_message_single_pay, # <<< ADDED Referral
+        'awaiting_product_discount_code': user.handle_product_discount_code_message, # NEW
+        'awaiting_product_referral_code': user.handle_product_referral_code_message, # NEW
         'awaiting_refill_crypto_choice': None,
         'awaiting_basket_crypto_choice': None,
         

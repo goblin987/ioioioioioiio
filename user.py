@@ -1301,14 +1301,32 @@ async def handle_product_selection(update: Update, context: ContextTypes.DEFAULT
             add_callback = f"add|{city_id}|{dist_id}|{p_type}|{size}|{current_price_str}"
             back_callback = f"type|{city_id}|{dist_id}|{p_type}"
             pay_now_callback = f"pay_single_item|{city_id}|{dist_id}|{p_type}|{size}|{current_price_str}"
+            
+            # New callbacks for product view
+            apply_discount_callback = f"apply_discount_product|{city_id}|{dist_id}|{p_type}|{size}|{current_price_str}"
+            apply_referral_callback = f"apply_referral_product|{city_id}|{dist_id}|{p_type}|{size}|{current_price_str}"
+            
+            apply_discount_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount")
+            apply_referral_text = lang_data.get("apply_referral_button", "🎁 Apply Referral")
 
             keyboard = [
                 [
                     InlineKeyboardButton(f"{basket_emoji} {add_to_basket_button}", callback_data=add_callback),
                     InlineKeyboardButton(f"{EMOJI_PAY_NOW} {pay_now_button_text}", callback_data=pay_now_callback)
-                ],
-                [InlineKeyboardButton(f"{EMOJI_BACK} {back_options_button}", callback_data=back_callback), InlineKeyboardButton(f"{EMOJI_HOME} {home_button}", callback_data="back_start")]
+                ]
             ]
+            
+            # Add discount/referral buttons row
+            dr_row = [InlineKeyboardButton(apply_discount_text, callback_data=apply_discount_callback)]
+            
+            from referral_system import get_referral_settings
+            if get_referral_settings().get('program_enabled', False):
+                dr_row.append(InlineKeyboardButton(apply_referral_text, callback_data=apply_referral_callback))
+            
+            keyboard.append(dr_row)
+            
+            keyboard.append([InlineKeyboardButton(f"{EMOJI_BACK} {back_options_button}", callback_data=back_callback), InlineKeyboardButton(f"{EMOJI_HOME} {home_button}", callback_data="back_start")])
+
             await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
     except sqlite3.Error as e: logger.error(f"DB error checking availability {city}/{district}/{p_type}/{size}: {e}", exc_info=True); await query.edit_message_text(f"❌ {error_loading_details}", parse_mode=None)
     except Exception as e: logger.error(f"Unexpected error in handle_product_selection: {e}", exc_info=True); await query.edit_message_text(f"❌ {error_unexpected}", parse_mode=None)
@@ -2510,6 +2528,43 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
         from utils import track_reservation
         track_reservation(user_id, single_item_snapshot, "single")
 
+        # --- NEW: Check pre-applied discount ---
+        pre_applied_code = context.user_data.pop('pre_applied_discount_code', None)
+        if pre_applied_code:
+            code_valid, validation_message, discount_details = validate_and_apply_discount_atomic(pre_applied_code, float(price_after_reseller), user_id)
+            if code_valid and discount_details:
+                new_final = discount_details['final_total']
+                context.user_data['single_item_pay_final_eur'] = new_final
+                context.user_data['single_item_pay_discount_code'] = pre_applied_code
+                logger.info(f"Applied pre-entered discount code '{pre_applied_code}' for user {user_id}")
+                
+                # Check balance
+                conn_bal = None
+                try:
+                    conn_bal = get_db_connection()
+                    c_bal = conn_bal.cursor()
+                    c_bal.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+                    bal_res = c_bal.fetchone()
+                    user_balance = Decimal(str(bal_res['balance'])) if bal_res else Decimal('0.0')
+                except: user_balance = Decimal('0.0')
+                finally: 
+                    if conn_bal: conn_bal.close()
+                
+                if user_balance >= Decimal(str(new_final)):
+                    # Use balance
+                    await payment.process_purchase_with_balance(user_id, Decimal(str(new_final)), single_item_snapshot, pre_applied_code, context)
+                    # Clear context
+                    context.user_data.pop('single_item_pay_snapshot', None)
+                    context.user_data.pop('single_item_pay_final_eur', None)
+                    context.user_data.pop('single_item_pay_discount_code', None)
+                    context.user_data.pop('single_item_pay_back_params', None)
+                    return
+                else:
+                    # Use crypto
+                    await _show_crypto_choices_for_basket(update, context, edit_message=True)
+                    return
+        # ---------------------------------------
+
         item_name_display = f"{PRODUCT_TYPES.get(p_type, '')} {product_details_for_snapshot['name']} {product_details_for_snapshot['size']}"
         price_display_str = format_currency(price_after_reseller)
         
@@ -3344,3 +3399,98 @@ async def handle_cancel_referral_single_pay(update: Update, context: ContextType
         
         await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
         await query.answer("Cancelled.")
+
+# --- NEW: Direct Product View Discount/Referral Handlers ---
+
+async def handle_apply_discount_product(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handler for 'Apply Discount' button on product view"""
+    query = update.callback_query
+    lang, lang_data = _get_lang_data(context)
+    
+    if not params or len(params) < 5:
+        await query.answer("Error: Missing params.", show_alert=True)
+        return
+        
+    # Store params to return to product view
+    context.user_data['product_view_params'] = params
+    context.user_data['state'] = 'awaiting_product_discount_code'
+    
+    cancel_button_text = lang_data.get("cancel_button", "Cancel")
+    # Callback to return to product view
+    back_callback = f"product|{params[0]}|{params[1]}|{params[2]}|{params[3]}|{params[4]}"
+    keyboard = [[InlineKeyboardButton(f"❌ {cancel_button_text}", callback_data=back_callback)]]
+    
+    msg = lang_data.get("prompt_enter_discount_code", "Please enter your discount code:")
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    await query.answer()
+
+async def handle_apply_referral_product(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Handler for 'Apply Referral' button on product view"""
+    query = update.callback_query
+    lang, lang_data = _get_lang_data(context)
+    
+    if not params or len(params) < 5:
+        await query.answer("Error: Missing params.", show_alert=True)
+        return
+        
+    context.user_data['product_view_params'] = params
+    context.user_data['state'] = 'awaiting_product_referral_code'
+    
+    cancel_button_text = lang_data.get("cancel_button", "Cancel")
+    back_callback = f"product|{params[0]}|{params[1]}|{params[2]}|{params[3]}|{params[4]}"
+    keyboard = [[InlineKeyboardButton(f"❌ {cancel_button_text}", callback_data=back_callback)]]
+    
+    msg = lang_data.get("prompt_enter_referral_code", "Please enter the referral code:")
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+    await query.answer()
+
+async def handle_product_discount_code_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text message for product view discount code"""
+    if context.user_data.get('state') != 'awaiting_product_discount_code': return
+    
+    code = update.message.text.strip()
+    context.user_data.pop('state', None)
+    
+    # Verify code existence
+    from utils import get_db_connection
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT code, discount_percent FROM discount_codes WHERE code = %s AND (uses_left > 0 OR uses_left IS NULL) AND (expires_at IS NULL OR expires_at > NOW())", (code,))
+    discount = c.fetchone()
+    conn.close()
+    
+    msg = ""
+    if discount:
+        context.user_data['pre_applied_discount_code'] = code
+        msg = f"✅ Discount code '{code}' applied! ({discount['discount_percent']}%)"
+    else:
+        msg = f"❌ Invalid or expired discount code."
+    
+    params = context.user_data.get('product_view_params')
+    if params:
+        back_callback = f"product|{params[0]}|{params[1]}|{params[2]}|{params[3]}|{params[4]}"
+        back_btn = InlineKeyboardButton("⬅️ Back to Product", callback_data=back_callback)
+        await send_message_with_retry(context.bot, update.effective_chat.id, msg, reply_markup=InlineKeyboardMarkup([[back_btn]]), parse_mode=None)
+    else:
+        await send_message_with_retry(context.bot, update.effective_chat.id, msg, parse_mode=None)
+
+async def handle_product_referral_code_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text message for product view referral code"""
+    if context.user_data.get('state') != 'awaiting_product_referral_code': return
+    
+    code = update.message.text.strip()
+    context.user_data.pop('state', None)
+    user_id = update.effective_user.id
+    
+    from referral_system import apply_referral_code
+    success, message = apply_referral_code(user_id, code)
+    
+    msg = f"✅ {message}" if success else f"❌ {message}"
+    
+    params = context.user_data.get('product_view_params')
+    if params:
+        back_callback = f"product|{params[0]}|{params[1]}|{params[2]}|{params[3]}|{params[4]}"
+        back_btn = InlineKeyboardButton("⬅️ Back to Product", callback_data=back_callback)
+        await send_message_with_retry(context.bot, update.effective_chat.id, msg, reply_markup=InlineKeyboardMarkup([[back_btn]]), parse_mode=None)
+    else:
+        await send_message_with_retry(context.bot, update.effective_chat.id, msg, parse_mode=None)
