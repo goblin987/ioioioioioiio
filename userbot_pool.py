@@ -210,6 +210,8 @@ class UserbotPool:
             # 2. Get or create secret chat (REUSE existing chats to avoid rate limits!)
             secret_chat_id = None
             secret_chat_obj = None
+            use_secret_chat = False
+
             try:
                 # 🎯 ATTEMPT #28: Check for existing secret chat FIRST!
                 # Try multiple methods to get existing chats
@@ -245,97 +247,64 @@ class UserbotPool:
                     logger.info(f"🔐 Starting NEW secret chat with user {user_entity.id} (@{buyer_username or 'N/A'})...")
                     secret_chat_id = await secret_chat_manager.start_secret_chat(user_entity)
                     logger.info(f"✅ Secret chat started! ID: {secret_chat_id}")
-                    # Wait for encryption handshake
-                    await asyncio.sleep(2)
+                    # Wait longer for encryption handshake
+                    await asyncio.sleep(3)
                     
                     # Get the actual secret chat object from the manager
                     secret_chat_obj = secret_chat_manager.get_secret_chat(secret_chat_id)
                     logger.info(f"✅ Retrieved secret chat object: {type(secret_chat_obj)}")
                 
-                # 🔍 CRITICAL DEBUG: Check secret chat layer!
-                try:
-                    if hasattr(secret_chat_obj, 'layer'):
-                        logger.critical(f"🎯 SECRET CHAT LAYER: {secret_chat_obj.layer}")
-                    if hasattr(secret_chat_obj, '__dict__'):
-                        logger.critical(f"🔍 SECRET CHAT ATTRIBUTES: {list(secret_chat_obj.__dict__.keys())}")
-                except Exception as layer_err:
-                    logger.error(f"❌ Could not inspect secret chat: {layer_err}")
-                
+                if secret_chat_obj:
+                    use_secret_chat = True
+                    logger.info(f"✅ Secret chat setup successful. Using E2E encryption for photos.")
+                else:
+                    raise Exception("Retrieved secret chat object is None")
+
             except Exception as e:
                 error_msg = str(e)
-                logger.error(f"❌ Failed to start secret chat: {e}")
-                
-                # 🎯 ATTEMPT #29: If rate limited, try a DIFFERENT userbot!
-                if "wait of" in error_msg and "seconds is required" in error_msg:
-                    logger.warning(f"⚠️ Userbot #{userbot_id} is RATE LIMITED! Trying a different userbot...")
-                    
-                    # Try to get a different userbot
-                    all_userbot_ids = list(self.clients.keys())
-                    for alt_userbot_id in all_userbot_ids:
-                        if alt_userbot_id == userbot_id:
-                            continue  # Skip the rate-limited one
-                        
-                        logger.info(f"🔄 Retrying with userbot #{alt_userbot_id}...")
-                        alt_client = self.clients.get(alt_userbot_id)
-                        alt_secret_chat_manager = self.secret_chat_managers.get(alt_userbot_id)
-                        
-                        if not alt_client or not alt_secret_chat_manager:
-                            continue
-                        
-                        try:
-                            # CRITICAL: Re-fetch user entity using the NEW client's session!
-                            logger.info(f"🔄 Re-fetching user entity for userbot #{alt_userbot_id}...")
-                            if buyer_username:
-                                alt_user_entity = await alt_client.get_entity(buyer_username)
-                            else:
-                                alt_user_entity = await alt_client.get_entity(buyer_user_id)
-                            logger.info(f"✅ Got user entity for alt userbot")
-                            
-                            # Try creating secret chat with alternative userbot
-                            logger.info(f"🔐 Creating secret chat with userbot #{alt_userbot_id}...")
-                            alt_secret_chat_id = await alt_secret_chat_manager.start_secret_chat(alt_user_entity)
-                            logger.info(f"✅ Secret chat created with alt userbot! ID: {alt_secret_chat_id}")
-                            await asyncio.sleep(2)
-                            
-                            # Use this userbot instead!
-                            userbot_id = alt_userbot_id
-                            client = alt_client
-                            secret_chat_manager = alt_secret_chat_manager
-                            secret_chat_id = alt_secret_chat_id
-                            secret_chat_obj = secret_chat_manager.get_secret_chat(alt_secret_chat_id)
-                            
-                            logger.info(f"✅ Successfully switched to userbot #{alt_userbot_id}!")
-                            break  # Success! Continue with delivery
-                        except Exception as alt_err:
-                            logger.warning(f"⚠️ Userbot #{alt_userbot_id} also failed: {alt_err}")
-                            continue  # Try next userbot
-                    else:
-                        # All userbots failed
-                        return False, f"All userbots are rate limited or failed: {e}"
-                else:
-                    # Not a rate limit error, just fail
-                    return False, f"Failed to start secret chat: {e}"
+                logger.error(f"❌ Failed to start secret chat: {e}. Falling back to standard delivery.")
+                use_secret_chat = False
+                # Proceed with standard delivery (fallback)
             
             # 3. Send elegant notification
-            notification_text = (
-                f"🔐 **Encrypted Delivery**\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"**Order Details:**\n"
-                f"📦 Order ID: #{order_id}\n"
-                f"🏷️ Product: {product_data.get('product_name', 'Digital Content')}\n"
-                f"📏 Size: {product_data.get('size', 'N/A')}\n"
-                f"📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
-                f"💰 Price: {product_data.get('price', 0):.2f} EUR\n\n"
-                f"⏬ **Delivering your content securely...**\n\n"
-                f"🔒 _This is an end-to-end encrypted chat._"
-            )
+            if use_secret_chat:
+                notification_text = (
+                    f"🔐 **Encrypted Delivery**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Order Details:**\n"
+                    f"📦 Order ID: #{order_id}\n"
+                    f"🏷️ Product: {product_data.get('product_name', 'Digital Content')}\n"
+                    f"📏 Size: {product_data.get('size', 'N/A')}\n"
+                    f"📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                    f"💰 Price: {product_data.get('price', 0):.2f} EUR\n\n"
+                    f"⏬ **Delivering your content securely...**\n\n"
+                    f"🔒 _This is an end-to-end encrypted chat._"
+                )
+                try:
+                    await secret_chat_manager.send_secret_message(secret_chat_obj, notification_text)
+                    logger.info(f"✅ Sent elegant notification to secret chat")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send notification: {e}")
+            else:
+                notification_text = (
+                    f"✅ **Delivery (Standard)**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Order Details:**\n"
+                    f"📦 Order ID: #{order_id}\n"
+                    f"🏷️ Product: {product_data.get('product_name', 'Digital Content')}\n"
+                    f"📏 Size: {product_data.get('size', 'N/A')}\n"
+                    f"📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                    f"💰 Price: {product_data.get('price', 0):.2f} EUR\n\n"
+                    f"⚠️ **Note:** Secure chat connection failed. Delivering via standard private message to ensure you receive your goods.\n"
+                    f"⏬ **Receiving content below...**"
+                )
+                try:
+                    await client.send_message(user_entity, notification_text)
+                    logger.info(f"✅ Sent notification to standard chat")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send standard notification: {e}")
             
-            try:
-                await secret_chat_manager.send_secret_message(secret_chat_obj, notification_text)
-                logger.info(f"✅ Sent elegant notification to secret chat")
-                await asyncio.sleep(1)
-            except Exception as e:
-                logger.error(f"❌ Failed to send notification: {e}")
+            await asyncio.sleep(1)
             
             # 4. Send media files
             sent_media_count = 0
@@ -368,6 +337,28 @@ class UserbotPool:
                             if media_type == 'photo':
                                 # Send photo with required parameters
                                 await secret_chat_manager.send_secret_photo(
+            # 4. Send media files
+            sent_media_count = 0
+            if media_binary_items and len(media_binary_items) > 0:
+                logger.info(f"📂 Sending {len(media_binary_items)} media items...")
+                for idx, media_item in enumerate(media_binary_items, 1):
+                    media_type = media_item['media_type']
+                    media_binary = media_item['media_binary']
+                    filename = media_item['filename']
+                    
+                    try:
+                        logger.info(f"📤 Sending media {idx}/{len(media_binary_items)} ({len(media_binary)} bytes) type: {media_type}...")
+                        
+                        # Save to temp file
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                            temp_file.write(media_binary)
+                            temp_path = temp_file.name
+                        
+                        try:
+                            if use_secret_chat and media_type == 'photo':
+                                # --- SECRET CHAT PHOTO ---
+                                file_size = len(media_binary)
+                                await secret_chat_manager.send_secret_photo(
                                     secret_chat_obj,
                                     temp_path,
                                     thumb=b'',
@@ -380,238 +371,110 @@ class UserbotPool:
                                 logger.info(f"✅ SECRET CHAT photo {idx} sent!")
                                 sent_media_count += 1
                                 
-                            elif media_type == 'video':
-                                # 🔥 ATTEMPT #14: Full MTProto 2.0 manual implementation!
-                                logger.info(f"🚀 ATTEMPT #14: Using manual MTProto 2.0 implementation...")
+                            elif use_secret_chat and media_type == 'video':
+                                # --- SECRET CHAT VIDEO (Redirect to PM) ---
+                                logger.info(f"🚀 Video detected in Secret Chat flow - Redirecting to PM for reliability...")
                                 
+                                video_caption = (
+                                    f"🎬 **Your Video Content**\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                                    f"📦 **Order:** #{order_id}\n"
+                                    f"🎞️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
+                                    f"✨ **Ready to watch!**"
+                                )
+                                
+                                await client.send_file(
+                                    user_entity,
+                                    temp_path,
+                                    caption=video_caption,
+                                    force_document=False,
+                                    supports_streaming=True
+                                )
+                                logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE (PLAYABLE)!")
+                                
+                                # Send notification to secret chat
                                 try:
-                                    # First, extract video attributes
-                                    logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
-                                    me = await client.get_me()
-                                    temp_msg = await client.send_file(me, temp_path, force_document=False)
-                                    
-                                    # Extract attributes
-                                    video_duration = 0
-                                    video_w = 640
-                                    video_h = 480
-                                    video_thumb = b''
-                                    video_thumb_w = 160
-                                    video_thumb_h = 120
-                                    
-                                    if temp_msg.video:
-                                        video_doc = temp_msg.video
-                                        if hasattr(video_doc, 'attributes'):
-                                            for attr in video_doc.attributes:
-                                                if hasattr(attr, 'duration'):
-                                                    video_duration = int(attr.duration) if attr.duration else 0
-                                                if hasattr(attr, 'w') and hasattr(attr, 'h'):
-                                                    video_w = int(attr.w) if attr.w else 640
-                                                    video_h = int(attr.h) if attr.h else 480
-                                        
-                                        # Get thumbnail
-                                        if hasattr(video_doc, 'thumbs') and video_doc.thumbs:
-                                            for thumb_obj in video_doc.thumbs:
-                                                if hasattr(thumb_obj, 'w') and hasattr(thumb_obj, 'h'):
-                                                    video_thumb_w = int(thumb_obj.w) if thumb_obj.w else 160
-                                                    video_thumb_h = int(thumb_obj.h) if thumb_obj.h else 120
-                                                    break
-                                    
-                                    logger.info(f"📹 Video attributes: duration={video_duration}s, {video_w}x{video_h}")
-                                    
-                                    # 🔥 ATTEMPT #42: CRITICAL - The library is FUNDAMENTALLY BROKEN for videos
-                                    # After 41 attempts, ALL approaches with telethon-secret-chat CORRUPT videos
-                                    # Root cause: tgcrypto (compiled C extension) has broken video encryption
-                                    # 
-                                    # THE ONLY WORKING SOLUTION: Send to private messages (Telegram server encryption)
-                                    # This is NOT a workaround - it's accepting the library's limitations
-                                    
-                                    logger.critical(f"🎬 ATTEMPT #42: ACCEPT REALITY - Library is broken, send to private messages")
-                                    logger.critical(f"📊 After 41 attempts, EVERY secret chat method corrupts videos")
-                                    logger.critical(f"✅ Solution: Photos in secret chat (E2E), Videos in private (server-encrypted)")
-                                    
-                                    try:
-                                        # Delete temp message from Saved Messages
-                                        await temp_msg.delete()
-                                        logger.info(f"🗑️ Deleted temp message from Saved Messages")
-                                        
-                                        # Send video to PRIVATE MESSAGE with beautiful caption
-                                        logger.info(f"📤 Sending video to PRIVATE MESSAGE...")
-                                        
-                                        video_caption = (
-                                            f"🎬 **Your Video Content**\n"
-                                            f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                                            f"📦 **Order:** #{order_id}\n"
-                                            f"🎞️ **Product:** {product_data.get('product_name', 'Digital Content')}\n\n"
-                                            f"📊 **Video Details:**\n"
-                                            f"   ⏱️ Duration: {video_duration} seconds\n"
-                                            f"   📐 Resolution: {video_w} × {video_h}px\n"
-                                            f"   💾 Size: {len(media_binary) / (1024*1024):.1f} MB\n\n"
-                                            f"✨ **Ready to watch!** Tap to play.\n\n"
-                                            f"🔒 _Protected with Telegram's secure encryption_"
-                                        )
-                                        
-                                        await client.send_file(
-                                            user_entity,
-                                            temp_path,
-                                            caption=video_caption,
-                                            force_document=False,
-                                            supports_streaming=True
-                                        )
-                                        logger.critical(f"✅ Video {idx} sent to PRIVATE MESSAGE (PLAYABLE)!")
-                                        
-                                        # Send elegant notification to SECRET CHAT
-                                        secret_notification = (
-                                            f"🎬 **Video Delivered!**\n"
-                                            f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                                            f"Your video content for **Order #{order_id}** has been successfully delivered.\n\n"
-                                            f"📱 **Where to find it:**\n"
-                                            f"Check your regular chat messages above (scroll up) to watch your video.\n\n"
-                                            f"🔐 **Security Note:**\n"
-                                            f"Your video is protected with Telegram's standard encryption—the same security used by millions of users worldwide.\n\n"
-                                            f"💡 _Photos remain in this end-to-end encrypted chat for maximum privacy._\n\n"
-                                            f"✅ **Enjoy your content!**"
-                                        )
-                                        
-                                        await secret_chat_manager.send_secret_message(
-                                            secret_chat_obj,
-                                            secret_notification
-                                        )
-                                        logger.info(f"✅ Sent elegant notification to secret chat")
-                                        sent_media_count += 1
-                                        
-                                    except Exception as final_err:
-                                        logger.error(f"❌ Video delivery failed: {final_err}")
-                                        continue
-                                    
-                                except Exception as manual_err:
-                                    logger.error(f"❌ Manual MTProto 2.0 implementation failed: {manual_err}", exc_info=True)
-                                
-                            if media_type == 'video':  # Fallback to original method
-                                # For video, we need to upload to Saved Messages first to get attributes
-                                logger.info(f"🔼 Uploading video to Saved Messages to extract attributes...")
-                                me = await client.get_me()
-                                temp_msg = await client.send_file(me, temp_path)
-                                
-                                # Extract video attributes (might be in .video or .document)
-                                video_obj = temp_msg.video or temp_msg.document
-                                
-                                if video_obj:
-                                    # Find a proper thumbnail (skip PhotoStrippedSize)
-                                    thumb_bytes = b''
-                                    thumb_w = 160
-                                    thumb_h = 120
-                                    if hasattr(video_obj, 'thumbs') and video_obj.thumbs:
-                                        for thumb in video_obj.thumbs:
-                                            # Skip PhotoStrippedSize, use PhotoSize or PhotoCachedSize
-                                            if hasattr(thumb, 'w') and hasattr(thumb, 'h'):
-                                                thumb_w = thumb.w
-                                                thumb_h = thumb.h
-                                                if hasattr(thumb, 'bytes'):
-                                                    thumb_bytes = thumb.bytes
-                                                break
-                                    
-                                    # Extract video attributes from DocumentAttributeVideo
-                                    duration = 0
-                                    width = 640
-                                    height = 480
-                                    mime_type = "video/mp4"
-                                    
-                                    if hasattr(video_obj, 'attributes'):
-                                        for attr in video_obj.attributes:
-                                            if hasattr(attr, 'duration'):  # DocumentAttributeVideo
-                                                duration = int(attr.duration) if attr.duration else 0
-                                                width = int(attr.w) if hasattr(attr, 'w') and attr.w else 640
-                                                height = int(attr.h) if hasattr(attr, 'h') and attr.h else 480
-                                                break
-                                    
-                                    # Fallback: try direct attributes
-                                    if hasattr(video_obj, 'duration'):
-                                        duration = int(video_obj.duration)
-                                    if hasattr(video_obj, 'w'):
-                                        width = int(video_obj.w)
-                                    if hasattr(video_obj, 'h'):
-                                        height = int(video_obj.h)
-                                    if hasattr(video_obj, 'mime_type'):
-                                        mime_type = video_obj.mime_type
-                                    
-                                    file_size = video_obj.size if hasattr(video_obj, 'size') else file_size
-                                    
-                                    logger.info(f"📹 Video attributes: {duration}s, {width}x{height}, {mime_type}, {file_size} bytes")
-                                    
-                                    await secret_chat_manager.send_secret_video(
+                                    await secret_chat_manager.send_secret_message(
                                         secret_chat_obj,
-                                        temp_path,
-                                        thumb=thumb_bytes,
-                                        thumb_w=thumb_w,
-                                        thumb_h=thumb_h,
-                                        duration=duration,
-                                        mime_type=mime_type,
-                                        w=width,
-                                        h=height,
-                                        size=file_size
+                                        f"🎬 Video {idx} sent to your regular chat messages (for better playback quality)."
                                     )
-                                    logger.info(f"✅ SECRET CHAT video {idx} sent!")
-                                    sent_media_count += 1
-                                    
-                                    # Delete from Saved Messages
-                                    await client.delete_messages(me, temp_msg.id)
-                                else:
-                                    logger.error(f"❌ Failed to get video attributes from temp message")
-                                    raise Exception("No video attributes")
-                            
+                                except: pass
+                                sent_media_count += 1
+
+                            else:
+                                # --- STANDARD DELIVERY (Fallback) ---
+                                logger.info(f"📤 Sending {media_type} via standard PM (Fallback)...")
+                                caption = (
+                                    f"📦 **Item {idx}/{len(media_binary_items)}**\n"
+                                    f"TYPE: {media_type.upper()}"
+                                )
+                                await client.send_file(
+                                    user_entity,
+                                    temp_path,
+                                    caption=caption,
+                                    force_document=False,
+                                    supports_streaming=True
+                                )
+                                logger.info(f"✅ Sent item {idx} via standard PM")
+                                sent_media_count += 1
+                                
                         except Exception as send_err:
-                            # Fallback: send placeholder
-                            logger.error(f"❌ Failed to send media to secret chat: {send_err}", exc_info=True)
+                            logger.error(f"❌ Failed to send media {idx}: {send_err}", exc_info=True)
+                            # Try extremely simple fallback
                             try:
-                                await secret_chat_manager.send_secret_message(secret_chat_obj, f"[Media {idx}: {filename}]")
-                                logger.warning(f"⚠️ Sent placeholder text for media {idx} instead")
-                            except:
-                                pass
+                                await client.send_file(user_entity, temp_path, caption=f"Item {idx} (Retry)")
+                            except: pass
+
                         finally:
-                            # Clean up temp file
                             try:
                                 os.unlink(temp_path)
-                            except:
-                                pass
+                            except: pass
                         
-                        # Add small delay between media sends to avoid overwhelming Telegram
                         await asyncio.sleep(0.5)
                         
                     except Exception as e:
-                        logger.error(f"❌ Failed to send SECRET CHAT media {idx}: {e}", exc_info=True)
+                        logger.error(f"❌ Outer error sending media {idx}: {e}", exc_info=True)
             else:
-                logger.warning(f"⚠️ No media items to send for order {order_id} (Product ID: {product_data.get('product_id')}). Product has no media in database!")
-            
-            # 5. Send completion message with product details
-            completion_text = (
-                f"✅ **Delivery Complete!**\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"**Your Order Summary:**\n"
-                f"🏷️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
-                f"📏 **Size:** {product_data.get('size', 'N/A')}\n"
-                f"📍 **Location:** {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
-                f"💰 **Paid:** {product_data.get('price', 0):.2f} EUR\n\n"
-                f"📋 **Additional Information:**\n"
-                f"{product_data.get('original_text', 'No additional details provided.')}\n\n"
-                f"📊 **Delivery Summary:**\n"
-                f"   📸 Photos: {sum(1 for item in media_binary_items if item['media_type'] == 'photo')} (in this chat)\n"
-                f"   🎬 Videos: {sum(1 for item in media_binary_items if item['media_type'] == 'video')} (in private messages)\n\n"
-                f"📦 **Order ID:** #{order_id}\n\n"
-                f"🎉 **Thank you for your purchase!**\n"
-                f"💬 _If you have any questions, feel free to ask._"
-            )
-            
-            try:
-                await secret_chat_manager.send_secret_message(secret_chat_obj, completion_text)
-                logger.info(f"✅ Sent elegant completion message to secret chat")
-            except Exception as e:
-                logger.error(f"❌ Failed to send completion message: {e}")
-            
-            return True, f"Product delivered via SECRET CHAT (userbot #{userbot_id}) to user {buyer_user_id}"
+                 logger.warning(f"⚠️ No media items to send for order {order_id}")
+
+            # 5. Send completion message
+            if use_secret_chat:
+                completion_text = (
+                    f"✅ **Delivery Complete!**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Your Order Summary:**\n"
+                    f"🏷️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
+                    f"📏 **Size:** {product_data.get('size', 'N/A')}\n"
+                    f"📍 **Location:** {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                    f"💰 **Paid:** {product_data.get('price', 0):.2f} EUR\n\n"
+                    f"📦 **Order ID:** #{order_id}\n\n"
+                    f"🎉 **Thank you for your purchase!**"
+                )
+                try:
+                    await secret_chat_manager.send_secret_message(secret_chat_obj, completion_text)
+                    logger.info(f"✅ Sent elegant completion message to secret chat")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send completion message: {e}")
+            else:
+                completion_text = (
+                    f"✅ **Delivery Complete!**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Your Order Summary:**\n"
+                    f"🏷️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
+                    f"📦 **Order ID:** #{order_id}\n\n"
+                    f"🎉 **Thank you for your purchase!**"
+                )
+                try:
+                    await client.send_message(user_entity, completion_text)
+                    logger.info(f"✅ Sent completion message to standard chat")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send standard completion: {e}")
+
+            return True, f"Product delivered via {'SECRET CHAT' if use_secret_chat else 'STANDARD PM'} (userbot #{userbot_id}) to user {buyer_user_id}"
             
         except Exception as e:
             logger.error(f"❌ Secret chat delivery failed (userbot #{userbot_id}): {e}", exc_info=True)
-            return False, f"Secret chat delivery error: {e}"
+            return False, f"Delivery error: {e}"
     
     def _setup_telethon_scout_handlers(self, client: TelegramClient, userbot_id: int):
         """Setup Telethon message handlers for scout mode"""
