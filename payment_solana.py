@@ -226,9 +226,9 @@ async def check_solana_deposits(context):
                         # Run sweep in background
                         asyncio.create_task(sweep_wallet(wallet, lamports))
                 
-                # 2. Check for Underpayment (Partial amount received) - 5 minutes buffer
-                elif sol_balance > 0 and (datetime.now(timezone.utc) - created_at > timedelta(minutes=5)):
-                    logger.info(f"📉 Underpayment detected for {order_id} ({sol_balance} SOL). Refunding to balance.")
+                # 2. Check for Underpayment (Partial amount received) - IMMEDIATE
+                elif sol_balance > 0:
+                    logger.info(f"📉 Underpayment detected for {order_id} ({sol_balance} SOL). Refunding immediately.")
                     try:
                         price = get_sol_price_eur()
                         if price:
