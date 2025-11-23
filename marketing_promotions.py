@@ -4,9 +4,9 @@ Provides different bot interface themes and user experience flows
 """
 
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ContextTypes
-from utils import get_db_connection, send_message_with_retry, is_primary_admin, get_translation
+from utils import get_db_connection, send_message_with_retry, is_primary_admin, get_translation, WEBHOOK_URL
 from datetime import datetime, timezone
 
 # Import worker permissions
@@ -1001,6 +1001,10 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     if is_primary_admin(user_id):
         keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
     
+    # Add Web App Button
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+    keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
+    
     # Classic 6-button layout with translations
     shop_btn = get_translation('shop', user_language)
     profile_btn = get_translation('profile', user_language)
@@ -1051,6 +1055,10 @@ async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAUL
     # Add admin panel button for admins at the top
     if is_primary_admin(user_id):
         keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
+    
+    # Add Web App Button
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+    keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Add regular user buttons
     keyboard.extend([
@@ -2261,6 +2269,10 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
     # Add admin panel for primary admins
     if is_primary_admin(user_id):
         keyboard.append([InlineKeyboardButton("🔧 Admin Control Center", callback_data="admin_menu")])
+    
+    # Add Web App Button
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+    keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Modern premium button layout
     keyboard.extend([

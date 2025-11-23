@@ -246,7 +246,9 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
             logger.info(f"Preset theme '{active_theme.get('theme_name')}' is active - using default layout")
             # For classic theme, use the 6-button layout we defined
             if active_theme.get('theme_name') == 'classic':
+                webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
                 keyboard = [
+                    [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))],
                     [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
                 ]
                 
