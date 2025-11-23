@@ -6418,6 +6418,26 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
             conn.close()
     
     if not users_found:
+        # Fallback: Try to find user via Telegram API to confirm existence
+        try:
+            target = int(search_term) if search_by_id else f"@{search_term}"
+            tg_user = await context.bot.get_chat(target)
+            
+            if tg_user and tg_user.type == 'private':
+                msg = (
+                    f"⚠️ **User Found on Telegram!**\n\n"
+                    f"👤 Name: {tg_user.full_name}\n"
+                    f"🆔 ID: `{tg_user.id}`\n"
+                    f"🔖 Username: @{tg_user.username or 'None'}\n\n"
+                    f"❌ **Status:** Not in Database\n"
+                    f"This user exists on Telegram but has **never started this bot**.\n\n"
+                    f"👉 **Ask them to click /start** so you can manage their balance."
+                )
+                await send_message_with_retry(context.bot, chat_id, msg, parse_mode='Markdown')
+                return
+        except Exception as api_err:
+            logger.info(f"Telegram API search fallback failed for '{search_term}': {api_err}")
+
         search_type = "User ID" if search_by_id else "username"
         await send_message_with_retry(
             context.bot, chat_id, 
