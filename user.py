@@ -2576,39 +2576,9 @@ async def handle_pay_single_item(update: Update, context: ContextTypes.DEFAULT_T
                     return
         # ---------------------------------------
 
-        item_name_display = f"{PRODUCT_TYPES.get(p_type, '')} {product_details_for_snapshot['name']} {product_details_for_snapshot['size']}"
-        price_display_str = format_currency(price_after_reseller)
-        
-        # Check if referral system is enabled
-        from referral_system import get_referral_settings
-        referral_settings = get_referral_settings()
-        referral_enabled = referral_settings.get('program_enabled', False)
-        
-        prompt_msg = (f"You are about to pay for: {item_name_display} ({price_display_str} EUR).\n\n"
-                      f"{lang_data.get('prompt_discount_or_pay', 'Do you have a discount code to apply%s')}")
-        pay_now_direct_button_text = lang_data.get("pay_now_button", "Pay Now")
-        apply_discount_button_text = lang_data.get("apply_discount_pay_button", "🏷️ Apply Discount Code")
-        apply_referral_button_text = lang_data.get("apply_referral_button", "🎁 Apply Referral Code")
-        back_to_product_button_text = lang_data.get("back_options_button", "Back to Product")
-
-        keyboard = [
-             [InlineKeyboardButton(pay_now_direct_button_text, callback_data="skip_discount_single_pay")],
-             [InlineKeyboardButton(apply_discount_button_text, callback_data="apply_discount_single_pay")]
-        ]
-        
-        # Add referral button if enabled
-        if referral_enabled:
-            keyboard.append([InlineKeyboardButton(apply_referral_button_text, callback_data="apply_referral_single_pay")])
-        
-        keyboard.append([InlineKeyboardButton(f"⬅️ {back_to_product_button_text}", callback_data=f"product|{city_id}|{dist_id}|{p_type}|{size}|{price_str}")])
-        try:
-            await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-        except telegram_error.BadRequest as e:
-            if "message is not modified" not in str(e).lower():
-                logger.error(f"Error editing message for single item discount prompt: {e}")
-                await send_message_with_retry(context.bot, chat_id, prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-            else:
-                await query.answer()
+        # Skip intermediate menu since buttons are now on product view
+        # Directly proceed to payment options (which handle_skip_discount_single_pay handles)
+        await handle_skip_discount_single_pay(update, context)
     else:
         logger.error(f"Reached end of handle_pay_single_item without valid reservation for user {user_id}")
         try: await query.edit_message_text("❌ An internal error occurred during payment initiation.", parse_mode=None)
