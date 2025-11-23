@@ -13,10 +13,11 @@ import asyncio
 import os
 import tempfile
 from typing import Optional, Dict, List, Tuple, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import DocumentAttributeVideo
+from telethon.errors import PeerFloodError, FloodWaitError, UserPrivacyRestrictedError
 from telethon_secret_chat import SecretChatManager
 import io
 
@@ -28,6 +29,7 @@ class UserbotPool:
     def __init__(self):
         self.clients: Dict[int, TelegramClient] = {}  # userbot_id -> client
         self.secret_chat_managers: Dict[int, SecretChatManager] = {}  # userbot_id -> manager
+        self.flooded_until: Dict[int, datetime] = {}  # userbot_id -> cooldown end time
         self.is_initialized = False
         self._last_used_index = 0
         
@@ -145,24 +147,42 @@ class UserbotPool:
             conn.close()
     
     def get_available_userbot(self) -> Optional[Tuple[int, TelegramClient, SecretChatManager]]:
-        """Get next available userbot using round-robin selection"""
+        """Get next available userbot using round-robin selection, skipping flooded ones"""
         if not self.clients:
             logger.warning("⚠️ No userbots available in pool")
             return None
         
         userbot_ids = list(self.clients.keys())
+        start_index = self._last_used_index
         
-        # Round-robin selection
-        self._last_used_index = (self._last_used_index + 1) % len(userbot_ids)
-        userbot_id = userbot_ids[self._last_used_index]
+        # Try all userbots starting from last used
+        for _ in range(len(userbot_ids)):
+            self._last_used_index = (self._last_used_index + 1) % len(userbot_ids)
+            userbot_id = userbot_ids[self._last_used_index]
+            
+            # Check flood cooldown
+            if userbot_id in self.flooded_until:
+                if datetime.now(timezone.utc) < self.flooded_until[userbot_id]:
+                    logger.info(f"⏳ Userbot #{userbot_id} is in flood cooldown until {self.flooded_until[userbot_id]}")
+                    continue
+                else:
+                    # Cooldown expired
+                    del self.flooded_until[userbot_id]
+            
+            client = self.clients.get(userbot_id)
+            secret_chat_manager = self.secret_chat_managers.get(userbot_id)
+            
+            if client and secret_chat_manager:
+                # Check connection
+                if not client.is_connected:
+                    try:
+                        asyncio.create_task(client.connect())
+                    except: pass
+                
+                logger.info(f"🎯 Selected userbot #{userbot_id} for delivery (round-robin)")
+                return userbot_id, client, secret_chat_manager
         
-        client = self.clients.get(userbot_id)
-        secret_chat_manager = self.secret_chat_managers.get(userbot_id)
-        
-        if client and secret_chat_manager:
-            logger.info(f"🎯 Selected userbot #{userbot_id} for delivery (round-robin)")
-            return userbot_id, client, secret_chat_manager
-        
+        logger.warning("⚠️ All userbots are flooded or unavailable")
         return None
     
     async def deliver_via_secret_chat(
@@ -173,23 +193,45 @@ class UserbotPool:
         media_binary_items: List[Dict],
         order_id: str
     ) -> Tuple[bool, str]:
+        """Deliver media via secret chat with automatic failover and flood handling"""
+        attempt_errors = []
+        
+        for attempt in range(3):
+            userbot_info = self.get_available_userbot()
+            if not userbot_info:
+                return False, f"No available userbots. Errors: {attempt_errors}"
+            
+            userbot_id, client, secret_chat_manager = userbot_info
+            
+            try:
+                return await self._attempt_delivery(
+                    userbot_id, client, secret_chat_manager,
+                    buyer_user_id, buyer_username, product_data, media_binary_items, order_id
+                )
+            except PeerFloodError as e:
+                logger.error(f"❌ Userbot #{userbot_id} FLOODED: {e}")
+                self.flooded_until[userbot_id] = datetime.now(timezone.utc) + timedelta(minutes=30)
+                attempt_errors.append(f"UB#{userbot_id} Flood")
+            except Exception as e:
+                logger.error(f"❌ Userbot #{userbot_id} Failed: {e}")
+                attempt_errors.append(f"UB#{userbot_id} {type(e).__name__}")
+        
+        return False, f"All delivery attempts failed. Errors: {attempt_errors}"
+
+    async def _attempt_delivery(
+        self,
+        userbot_id: int,
+        client: TelegramClient,
+        secret_chat_manager: SecretChatManager,
+        buyer_user_id: int,
+        buyer_username: Optional[str],
+        product_data: dict,
+        media_binary_items: List[Dict],
+        order_id: str
+    ) -> Tuple[bool, str]:
         """
-        Deliver media via secret chat
-        
-        ATTEMPT #42 (FINAL SOLUTION):
-        - Photos → Secret Chat (E2E encrypted, working)
-        - Videos → Private Messages (playable, server-encrypted)
-        - Elegant notifications explain the approach
+        Internal delivery attempt with specific userbot
         """
-        
-        # Get available userbot
-        userbot_info = self.get_available_userbot()
-        
-        if not userbot_info:
-            return False, "No userbots available in pool"
-        
-        userbot_id, client, secret_chat_manager = userbot_info
-        
         try:
             logger.info(f"🔐 Starting SECRET CHAT delivery via userbot #{userbot_id} to user {buyer_user_id} (@{buyer_username or 'no_username'})")
             
@@ -260,6 +302,8 @@ class UserbotPool:
                 else:
                     raise Exception("Retrieved secret chat object is None")
 
+            except PeerFloodError:
+                raise  # Bubble up for rotation
             except Exception as e:
                 error_msg = str(e)
                 logger.error(f"❌ Failed to start secret chat: {e}. Falling back to standard delivery.")
@@ -301,6 +345,8 @@ class UserbotPool:
                 try:
                     await client.send_message(user_entity, notification_text)
                     logger.info(f"✅ Sent notification to standard chat")
+                except PeerFloodError:
+                    raise
                 except Exception as e:
                     logger.error(f"❌ Failed to send standard notification: {e}")
             
@@ -411,6 +457,8 @@ class UserbotPool:
                                 logger.info(f"✅ Sent item {idx} via standard PM")
                                 sent_media_count += 1
                                 
+                        except PeerFloodError:
+                            raise
                         except Exception as send_err:
                             logger.error(f"❌ Failed to send media {idx}: {send_err}", exc_info=True)
                             # Try extremely simple fallback

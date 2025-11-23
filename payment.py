@@ -1155,6 +1155,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                     await send_message_with_retry(context.bot, chat_id, success_title, parse_mode=None)
 
                 # 🚀 YOLO MODE: New delivery flow - userbot or bot fallback
+                fallback_to_bot = False
                 if use_userbot_delivery:
                     # Use userbot for secure delivery with Saved Messages forwarding
                     for prod_id in processed_product_ids:
@@ -1241,8 +1242,8 @@ To receive your products securely via encrypted chat, please:
                                 except Exception as msg_err:
                                     logger.error(f"❌ Failed to send instructions: {msg_err}")
                             
-                            media_delivery_successful = False
-                else:
+                            fallback_to_bot = True # Trigger fallback to main bot
+                if not use_userbot_delivery or fallback_to_bot:
                     # Fallback to bot delivery (old method)
                     for prod_id in processed_product_ids:
                         item_details_list = final_pickup_details.get(prod_id)
