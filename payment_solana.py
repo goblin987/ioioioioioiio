@@ -215,11 +215,42 @@ async def check_solana_deposits(context):
         logger.error(f"Error in check_solana_deposits loop: {e}", exc_info=True)
     finally:
         conn.close()
+        
+    # RECOVERY: Check for 'paid' wallets that haven't been marked 'swept' (e.g. due to crash)
+    if ENABLE_AUTO_SWEEP and ADMIN_WALLET:
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT * FROM solana_wallets WHERE status = 'paid'")
+            paid_wallets = c.fetchall()
+            conn.close()
+            
+            for wallet in paid_wallets:
+                # Attempt sweep (it will check balance first)
+                asyncio.create_task(sweep_wallet(wallet))
+        except Exception as e:
+            logger.error(f"Error in sweep recovery loop: {e}")
 
-async def sweep_wallet(wallet_data, current_lamports):
+async def sweep_wallet(wallet_data, current_lamports=0):
     """Moves funds from temp wallet to ADMIN_WALLET"""
     try:
+        # Fetch balance if not provided
+        if current_lamports == 0:
+            try:
+                balance_resp = client.get_balance(Pubkey.from_string(wallet_data['public_key']))
+                current_lamports = balance_resp.value
+            except Exception as e:
+                logger.error(f"Error fetching balance for sweep {wallet_data['public_key']}: {e}")
+                return
+
         if current_lamports < 5000: # Ignore dust (less than 0.000005 SOL)
+            # If it's 'paid' but empty, maybe it was already swept or emptied?
+            # Mark as swept to stop retrying if it's really empty
+            if wallet_data.get('status') == 'paid' and current_lamports < 5000:
+                 conn = get_db_connection()
+                 conn.cursor().execute("UPDATE solana_wallets SET status = 'swept' WHERE id = %s", (wallet_data['id'],))
+                 conn.commit()
+                 conn.close()
             return
 
         # Load Keypair
