@@ -372,34 +372,57 @@ class UserbotPool:
                                 sent_media_count += 1
                                 
                             elif use_secret_chat and media_type == 'video':
-                                # --- SECRET CHAT VIDEO (Redirect to PM) ---
-                                logger.info(f"🚀 Video detected in Secret Chat flow - Redirecting to PM for reliability...")
+                                # --- SECRET CHAT VIDEO (Attempt as Document to avoid corruption) ---
+                                logger.info(f"🚀 ATTEMPT: Sending video as Secret Document...")
                                 
-                                video_caption = (
-                                    f"🎬 **Your Video Content**\n"
-                                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                                    f"📦 **Order:** #{order_id}\n"
-                                    f"🎞️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
-                                    f"✨ **Ready to watch!**"
-                                )
-                                
-                                await client.send_file(
-                                    user_entity,
-                                    temp_path,
-                                    caption=video_caption,
-                                    force_document=False,
-                                    supports_streaming=True
-                                )
-                                logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE (PLAYABLE)!")
-                                
-                                # Send notification to secret chat
                                 try:
-                                    await secret_chat_manager.send_secret_message(
-                                        secret_chat_obj,
-                                        f"🎬 Video {idx} sent to your regular chat messages (for better playback quality)."
+                                    # Try to use send_secret_document if available (avoids re-encoding/corruption)
+                                    method = getattr(secret_chat_manager, 'send_secret_document', None) or getattr(secret_chat_manager, 'send_secret_file', None)
+                                    
+                                    if method:
+                                        await method(
+                                            secret_chat_obj,
+                                            temp_path,
+                                            caption=caption,
+                                            # We rely on file extension for detection
+                                        )
+                                        logger.info(f"✅ Sent video as secret document!")
+                                        sent_media_count += 1
+                                    else:
+                                        # Fallback to original send_secret_video if document method missing
+                                        # (This might corrupt, but we tried)
+                                        # Actually, let's fallback to PM if we can't do document
+                                        raise Exception("Library missing send_secret_document")
+                                        
+                                except Exception as e:
+                                    logger.error(f"Failed to send secret video as document: {e}")
+                                    
+                                    # Fallback to PM (Reliable)
+                                    video_caption = (
+                                        f"🎬 **Your Video Content**\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                                        f"📦 **Order:** #{order_id}\n"
+                                        f"🎞️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
+                                        f"✨ **Ready to watch!**"
                                     )
-                                except: pass
-                                sent_media_count += 1
+                                    
+                                    await client.send_file(
+                                        user_entity,
+                                        temp_path,
+                                        caption=video_caption,
+                                        force_document=False,
+                                        supports_streaming=True
+                                    )
+                                    logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE (Fallback)!")
+                                    
+                                    # Send notification to secret chat
+                                    try:
+                                        await secret_chat_manager.send_secret_message(
+                                            secret_chat_obj,
+                                            f"🎬 Video {idx} sent to your regular chat messages (Secure Delivery Fallback)."
+                                        )
+                                    except: pass
+                                    sent_media_count += 1
 
                             else:
                                 # --- STANDARD DELIVERY (Fallback) ---
