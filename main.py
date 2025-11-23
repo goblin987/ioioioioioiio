@@ -24,7 +24,7 @@ from telegram.constants import ParseMode
 from telegram.error import Forbidden, BadRequest, NetworkError, RetryAfter, TelegramError
 
 # --- Flask Imports ---
-from flask import Flask, request, Response, send_from_directory # Added for webhook server
+from flask import Flask, request, Response, send_from_directory, jsonify # Added for webhook server
 import nest_asyncio # Added to allow nested asyncio loops
 
 # --- Local Imports ---
@@ -2373,6 +2373,48 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Headers: {dict(request.headers)}")
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
+
+@flask_app.route("/webapp/api/products", methods=['GET'])
+def webapp_get_products():
+    """API endpoint to fetch available products for the Web App"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Fetch products grouped by city/district
+        # We want to show available products
+        c.execute("""
+            SELECT id, name, price, size, product_type, city, district, available
+            FROM products
+            WHERE available > 0
+            ORDER BY city, district, product_type, price
+        """)
+        
+        products = []
+        rows = c.fetchall()
+        
+        for row in rows:
+            products.append({
+                'id': row['id'],
+                'name': row['name'],
+                'price': float(row['price']),
+                'size': row['size'],
+                'type': row['product_type'],
+                'city': row['city'],
+                'district': row['district'],
+                'available': row['available']
+            })
+            
+        conn.close()
+        
+        # Add CORS headers manually since we are not using flask-cors
+        response = jsonify({'success': True, 'products': products})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error fetching products for webapp: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():

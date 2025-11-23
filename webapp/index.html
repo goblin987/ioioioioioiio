@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Los Santos Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -11,181 +11,440 @@
             src: url('https://db.onlinewebfonts.com/t/5799b47862f27227c47c4827594d4068.woff2') format('woff2');
         }
         
+        :root {
+            --gta-green: #3fa535;
+            --gta-gold: #cfa936;
+            --gta-black: #000000;
+            --gta-grey: #a0a0a0;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background-color: #000;
+            background-color: var(--gta-black);
             color: #fff;
-            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-family: 'Pricedown', sans-serif;
             overflow: hidden;
-            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://gta-sanandreas.com/images/wallpapers/gtasa_wallpaper_1-1920x1080.jpg');
-            background-size: cover;
-            background-position: center;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             user-select: none;
         }
 
-        .hud-header {
-            padding: 20px;
-            text-shadow: 2px 2px 0 #000;
+        /* Background */
+        .bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('https://gta-sanandreas.com/images/wallpapers/gtasa_wallpaper_1-1920x1080.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: -2;
+        }
+
+        /* Scanline Effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* Header */
+        .header {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 2px solid var(--gta-gold);
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 32px;
+            color: var(--gta-gold);
+            text-shadow: 2px 2px 0 #000;
         }
 
         .money {
-            color: #4d7e46; /* GTA Money Green */
-            font-size: 32px;
-            text-shadow: 2px 2px 0 #000;
+            color: var(--gta-green);
+            font-size: 28px;
+            text-shadow: 1px 1px 0 #000;
         }
 
-        .weapon-icon {
-            font-size: 40px;
-            margin-top: 10px;
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px 0;
+            border-top: 2px solid var(--gta-grey);
+            z-index: 10;
         }
 
-        .menu-container {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px 0;
-            margin-bottom: 20px;
-        }
-
-        .menu-item {
-            padding: 15px 30px;
-            font-size: 36px;
-            color: #a0a0a0;
+        .nav-item {
+            font-size: 24px;
+            color: var(--gta-grey);
             cursor: pointer;
-            transition: 0.1s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            transition: 0.2s;
         }
 
-        .menu-item:hover, .menu-item.active {
-            color: #f0f0f0;
-            background: rgba(255, 255, 255, 0.2);
-            padding-left: 50px;
+        .nav-item.active {
+            color: var(--gta-gold);
+            transform: scale(1.1);
+            text-shadow: 0 0 5px var(--gta-gold);
         }
-        
-        .stats-box {
-            font-family: 'Courier New', monospace;
-            background: rgba(0,0,0,0.6);
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Sections */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .product-card {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid var(--gta-grey);
+            border-radius: 0;
             padding: 10px;
-            border: 2px solid #fff;
-            width: 150px;
-            margin-left: 20px;
-            font-weight: bold;
-            font-size: 12px;
-        }
-        
-        .stat-bar {
-            height: 8px;
-            background: #333;
-            margin-top: 2px;
-            margin-bottom: 5px;
-            width: 100%;
-            border: 1px solid #555;
-        }
-        
-        .stat-fill {
-            height: 100%;
-            background: #fff;
-            width: 50%;
+            text-align: center;
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
         }
 
-        .character-container {
+        .product-card:hover {
+            border-color: var(--gta-green);
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(63, 165, 53, 0.3);
+        }
+
+        .product-card::before {
+            content: '';
             position: absolute;
-            bottom: 0;
-            right: 10%;
-            height: 70%;
-            width: 50%;
-            background-image: url('https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png'); 
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: bottom right;
-            z-index: -1;
-            filter: drop-shadow(5px 5px 5px #000);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--gta-gold);
+        }
+
+        .product-emoji {
+            font-size: 40px;
+            margin: 10px 0;
+        }
+
+        .product-name {
+            font-family: 'Impact', sans-serif;
+            font-size: 18px;
+            margin: 5px 0;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .product-details {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            font-size: 24px;
+            color: var(--gta-green);
+            margin: 10px 0;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .btn-buy {
+            background: var(--gta-green);
+            color: #000;
+            border: none;
+            padding: 5px 15px;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 20px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+        }
+
+        .btn-buy:active {
+            transform: scale(0.95);
+            background: #fff;
+        }
+
+        /* Map & Stats */
+        .placeholder-box {
+            background: rgba(0,0,0,0.6);
+            padding: 20px;
+            border: 2px solid var(--gta-gold);
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            margin: 10px 0;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .map-img {
+            width: 100%;
+            border: 2px solid #fff;
+            filter: sepia(0.5) hue-rotate(-30deg) saturate(1.2) contrast(1.2);
         }
         
-        .logo {
-            font-size: 48px;
-            color: #fff;
-            margin-bottom: 5px;
+        /* Loading */
+        .loading {
+            text-align: center;
+            font-size: 36px;
+            color: var(--gta-gold);
+            margin-top: 50px;
+            animation: blink 1s infinite;
         }
+        
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+        
+        /* Filters */
+        .filters {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            scrollbar-width: none;
+        }
+        
+        .filter-btn {
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--gta-grey);
+            color: #fff;
+            padding: 5px 15px;
+            font-family: 'Impact', sans-serif;
+            font-size: 14px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        
+        .filter-btn.active {
+            background: var(--gta-gold);
+            color: #000;
+            border-color: var(--gta-gold);
+        }
+
     </style>
 </head>
 <body>
-    <div class="hud-header">
-        <div>
-            <div class="logo">BOT SHOP</div>
-            <div class="stats-box">
-                <div>RESPECT</div>
-                <div class="stat-bar"><div class="stat-fill" style="width: 20%; background: #3fa535;"></div></div>
-                <div>STAMINA</div>
-                <div class="stat-bar"><div class="stat-fill" style="width: 80%;"></div></div>
-                <div>MUSCLE</div>
-                <div class="stat-bar"><div class="stat-fill" style="width: 60%;"></div></div>
+    <div class="bg"></div>
+    <div class="scanlines"></div>
+
+    <div class="header">
+        <div class="logo">LOS SANTOS</div>
+        <div class="money">$00000000</div>
+    </div>
+
+    <div class="content">
+        <!-- SHOP SECTION -->
+        <div id="shop" class="section active">
+            <div class="filters" id="city-filters">
+                <button class="filter-btn active" onclick="filterProducts('all')">ALL ZONES</button>
+                <!-- Cities injected here -->
+            </div>
+            <div class="product-grid" id="product-grid">
+                <div class="loading">LOADING STOCK...</div>
             </div>
         </div>
-        <div>
-            <div class="money">$00000350</div>
-            <div class="weapon-icon">🔫 👊</div>
+
+        <!-- MAP SECTION -->
+        <div id="map" class="section">
+            <div class="placeholder-box">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Los_Angeles_polluted_sunset.jpg/640px-Los_Angeles_polluted_sunset.jpg" class="map-img" alt="Map">
+                <p>TERRITORY CONTROL</p>
+            </div>
+        </div>
+
+        <!-- STATS SECTION -->
+        <div id="stats" class="section">
+            <div class="placeholder-box">
+                <div style="font-size: 32px; margin-bottom: 20px; color: var(--gta-gold);">PLAYER STATS</div>
+                <div class="stat-row"><span>RESPECT</span><span style="color: var(--gta-green);">MAX</span></div>
+                <div class="stat-row"><span>STAMINA</span><span>████████░░</span></div>
+                <div class="stat-row"><span>FAT</span><span>░░░░░░░░░░</span></div>
+                <div class="stat-row"><span>MUSCLE</span><span>██████░░░░</span></div>
+            </div>
         </div>
     </div>
 
-    <div class="character-container" id="cj"></div>
-
-    <div class="menu-container">
-        <div class="menu-item active" onclick="selectItem('shop')">SHOP</div>
-        <div class="menu-item" onclick="selectItem('map')">MAP</div>
-        <div class="menu-item" onclick="selectItem('stats')">STATS</div>
-        <div class="menu-item" onclick="selectItem('settings')">SETTINGS</div>
+    <div class="nav">
+        <div class="nav-item active" onclick="showSection('shop')">SHOP</div>
+        <div class="nav-item" onclick="showSection('map')">MAP</div>
+        <div class="nav-item" onclick="showSection('stats')">STATS</div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.MainButton.text = "ENTER SHOP";
-        tg.MainButton.textColor = "#000000";
-        tg.MainButton.color = "#3fa535"; // GTA Green
-        tg.MainButton.show();
+        tg.MainButton.hide(); // We use in-app buy buttons
 
-        function selectItem(item) {
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Play sound effect logic here (requires user interaction usually)
-            
-            if(item === 'shop') {
-                tg.MainButton.text = "ENTER SHOP";
-            } else if (item === 'map') {
-                tg.MainButton.text = "VIEW MAP";
-            } else {
-                tg.MainButton.text = "SELECT " + item.toUpperCase();
+        let allProducts = [];
+
+        // Load Products
+        async function loadProducts() {
+            try {
+                const response = await fetch('/webapp/api/products');
+                const data = await response.json();
+                
+                if(data.success) {
+                    allProducts = data.products;
+                    renderProducts(allProducts);
+                    renderFilters(allProducts);
+                } else {
+                    document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR LOADING</div>';
+                }
+            } catch (e) {
+                console.error(e);
+                // Use mock data if fetch fails (for testing without backend running properly)
+                // allProducts = mockProducts; renderProducts(allProducts);
+                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">CONNECTION LOST</div>';
             }
         }
 
-        tg.MainButton.onClick(function() {
-            tg.sendData("Selected: " + document.querySelector('.menu-item.active').innerText);
-        });
+        function renderProducts(products) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+            
+            if(products.length === 0) {
+                grid.innerHTML = '<div style="text-align:center; width:100%">NO STOCK AVAILABLE</div>';
+                return;
+            }
+
+            products.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-emoji">${getProductEmoji(p.type)}</div>
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-details">${p.size} | ${p.city}</div>
+                    <div class="product-price">$${p.price.toFixed(2)}</div>
+                    <button class="btn-buy" onclick="buyProduct(${p.id}, '${p.name}', ${p.price})">BUY NOW</button>
+                `;
+                grid.appendChild(card);
+            });
+        }
         
-        // Simple Parallax / Movement
-        document.addEventListener('mousemove', (e) => {
-            const cj = document.getElementById('cj');
-            const x = (window.innerWidth - e.pageX * 2) / 40;
-            const y = (window.innerHeight - e.pageY * 2) / 40;
-            cj.style.transform = `translateX(${x}px) translateY(${y}px)`;
-        });
+        function renderFilters(products) {
+            const cities = [...new Set(products.map(p => p.city))];
+            const container = document.getElementById('city-filters');
+            // Keep "All" button
+            container.innerHTML = '<button class="filter-btn active" onclick="filterProducts(\'all\')">ALL ZONES</button>';
+            
+            cities.forEach(city => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.innerText = city.toUpperCase();
+                btn.onclick = () => filterProducts(city);
+                container.appendChild(btn);
+            });
+        }
         
-        // Mobile orientation movement simulation
-        window.addEventListener('deviceorientation', (e) => {
-             const cj = document.getElementById('cj');
-             const x = e.gamma * 0.5; // tilt left-right
-             cj.style.transform = `translateX(${x}px)`;
-        });
+        function filterProducts(city) {
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if(city === 'all') {
+                renderProducts(allProducts);
+            } else {
+                const filtered = allProducts.filter(p => p.city === city);
+                renderProducts(filtered);
+            }
+        }
+
+        function showSection(sectionId) {
+            // Nav visual update
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+            
+            // Show selected
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        function buyProduct(id, name, price) {
+            tg.showPopup({
+                title: 'Confirm Purchase',
+                message: `Buy ${name} for $${price}?`,
+                buttons: [
+                    {id: 'buy', type: 'ok', text: 'PAY NOW'},
+                    {id: 'cancel', type: 'cancel'}
+                ]
+            }, function(btnId) {
+                if(btnId === 'buy') {
+                    // Send data back to bot to initiate purchase
+                    // We use a format the bot can parse or handle via generic "web_app_data" handler
+                    // For now, we'll just send text. To make it work for real, we need a handler in bot.
+                    // Let's send: "BUY_WEBAPP:{id}"
+                    tg.sendData(`BUY_WEBAPP:${id}`);
+                }
+            });
+        }
+        
+        function getProductEmoji(type) {
+            if(type.includes('weed') || type.includes('kush')) return '🌿';
+            if(type.includes('pill') || type.includes('xtc')) return '💊';
+            if(type.includes('powder') || type.includes('coc')) return '🍚';
+            return '📦';
+        }
+
+        // Init
+        loadProducts();
+        
+        // Set header money
+        // Ideally we fetch user balance too
     </script>
 </body>
 </html>
