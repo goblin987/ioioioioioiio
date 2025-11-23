@@ -4,6 +4,7 @@ import time
 import asyncio
 import requests
 import os
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from solana.rpc.api import Client
 from solders.keypair import Keypair
@@ -147,6 +148,11 @@ async def check_solana_deposits(context):
                 wallet_id = wallet['id']
                 order_id = wallet['order_id']
                 user_id = wallet['user_id']
+                created_at = wallet['created_at']
+                if created_at.tzinfo is None: created_at = created_at.replace(tzinfo=timezone.utc)
+                
+                # Rate limit RPC calls
+                await asyncio.sleep(0.2)
                 
                 # Check Balance (RPC call)
                 # Note: get_balance returns lamports (1 SOL = 10^9 lamports)
@@ -158,21 +164,33 @@ async def check_solana_deposits(context):
                     logger.warning(f"RPC Error checking wallet {pubkey_str}: {rpc_e}")
                     continue
                 
-                # Check if Paid (allowing very small tolerance, e.g. 99.5%)
-                # Or check if received > 0.99 * expected
+                # 1. Check if Paid (allowing very small tolerance, e.g. 99.5%)
                 if sol_balance > 0 and sol_balance >= (expected * Decimal("0.99")):
                     logger.info(f"✅ Payment detected for Order {order_id}: {sol_balance} SOL")
                     
-                    # 1. Mark as Paid in DB
+                    # Mark as Paid in DB first
                     c.execute("UPDATE solana_wallets SET status = 'paid', amount_received = %s, updated_at = NOW() WHERE id = %s", (float(sol_balance), wallet_id))
                     conn.commit()
+                    
+                    # Handle Overpayment (Surplus > 0.0005 SOL ~ 0.10 EUR)
+                    surplus = sol_balance - expected
+                    if surplus > Decimal("0.0005"):
+                        try:
+                            price = get_sol_price_eur()
+                            if price:
+                                surplus_eur = (surplus * price).quantize(Decimal("0.01"))
+                                if surplus_eur > 0:
+                                    logger.info(f"💰 Overpayment of {surplus} SOL ({surplus_eur} EUR) detected for {order_id}. Crediting user.")
+                                    from payment import credit_user_balance
+                                    await credit_user_balance(user_id, surplus_eur, f"Overpayment bonus for order {order_id}", context)
+                        except Exception as over_e:
+                            logger.error(f"Error processing overpayment: {over_e}")
                     
                     # 2. Trigger Payment Success Logic
                     # Import here to avoid circular dependency
                     from payment import process_successful_crypto_purchase, process_successful_refill
                     
                     # Determine if it's a purchase or refill based on order_id prefix
-                    # Assuming order_id format like "PURCHASE_uuid" or "REFILL_uuid"
                     # If order_id isn't descriptive, we need to look up pending_deposits table using order_id as payment_id
                     
                     c.execute("SELECT is_purchase, basket_snapshot_json as basket_snapshot, discount_code_used as discount_code FROM pending_deposits WHERE payment_id = %s", (order_id,))
@@ -207,6 +225,32 @@ async def check_solana_deposits(context):
                     if ENABLE_AUTO_SWEEP and ADMIN_WALLET:
                         # Run sweep in background
                         asyncio.create_task(sweep_wallet(wallet, lamports))
+                
+                # 2. Check for Expiration / Underpayment
+                elif datetime.now(timezone.utc) - created_at > timedelta(minutes=60):
+                    if sol_balance > 0:
+                        # Expired but has funds (Underpayment) -> Refund to Balance
+                        logger.info(f"⚠️ Order {order_id} expired with partial payment {sol_balance} SOL. Refunding to balance.")
+                        try:
+                            price = get_sol_price_eur()
+                            if price:
+                                refund_eur = (sol_balance * price).quantize(Decimal("0.01"))
+                                if refund_eur > 0:
+                                    from payment import credit_user_balance
+                                    await credit_user_balance(user_id, refund_eur, f"Partial payment refund (Expired {order_id})", context)
+                                    
+                                    c.execute("UPDATE solana_wallets SET status = 'refunded', amount_received = %s, updated_at = NOW() WHERE id = %s", (float(sol_balance), wallet_id))
+                                    conn.commit()
+                                    
+                                    # Sweep the partial funds too!
+                                    if ENABLE_AUTO_SWEEP and ADMIN_WALLET:
+                                        asyncio.create_task(sweep_wallet(wallet, lamports))
+                        except Exception as refund_e:
+                            logger.error(f"Error refunding expired order {order_id}: {refund_e}")
+                    else:
+                        # Expired and empty
+                        c.execute("UPDATE solana_wallets SET status = 'expired', updated_at = NOW() WHERE id = %s", (wallet_id,))
+                        conn.commit()
                         
             except Exception as e:
                 logger.error(f"Error checking wallet {wallet.get('public_key')}: {e}", exc_info=True)
