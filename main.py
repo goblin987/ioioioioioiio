@@ -9,6 +9,8 @@ from functools import wraps
 from datetime import timedelta
 import threading # Added for Flask thread
 import json # Added for webhook processing
+import time # Added for timestamp
+import uuid # Added for order IDs
 from decimal import Decimal, ROUND_DOWN, ROUND_UP, ROUND_HALF_UP
 import hmac # For webhook signature verification
 import hashlib # For webhook signature verification
@@ -45,6 +47,7 @@ from utils import (
     get_first_primary_admin_id, # Admin helper for notifications
     is_user_banned  # Import ban check helper
 )
+from payment_solana import create_solana_payment # Import for Web App
 
 # Import auto ads system initialization
 try:
@@ -578,7 +581,7 @@ except ImportError:
     async def handle_reseller_delete_discount_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None): pass
 
 import payment
-from payment import credit_user_balance, create_nowpayments_payment
+from payment import credit_user_balance
 from stock import handle_view_stock
 
 # --- Logging Setup ---
@@ -1464,62 +1467,6 @@ async def admin_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TY
     await admin.handle_admin_menu(update, context)
 
 # --- Central Message Handler (for states) ---
-
-async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles data received from the Web App (Mini App)."""
-    if update.message and update.message.web_app_data:
-        data = update.message.web_app_data.data
-        logger.info(f"Web App data received: {data}")
-        
-        if data.startswith("TOPUP:"):
-            try:
-                # Format: TOPUP:BTC:10
-                parts = data.split(":")
-                if len(parts) != 3:
-                    await update.message.reply_text("❌ Invalid data format.")
-                    return
-                
-                crypto = parts[1]
-                amount_eur_str = parts[2]
-                user_id = update.effective_user.id
-                
-                try:
-                    amount_eur = float(amount_eur_str)
-                    if amount_eur <= 0: raise ValueError
-                except ValueError:
-                     await update.message.reply_text("❌ Invalid amount.")
-                     return
-
-                # Notify user
-                msg = await update.message.reply_text(f"⏳ Generating {crypto.upper()} invoice for {amount_eur} EUR...")
-                
-                # Create Invoice
-                from decimal import Decimal
-                
-                payment_result = await create_nowpayments_payment(
-                    user_id, Decimal(str(amount_eur)), crypto, is_purchase=False
-                )
-                
-                if 'error' in payment_result:
-                    await msg.edit_text(f"❌ Error creating invoice: {payment_result.get('error')}")
-                    return
-                
-                # Display Invoice
-                pay_address = payment_result.get('pay_address')
-                pay_amount = payment_result.get('pay_amount')
-                
-                response = f"💰 **Top Up: {amount_eur} EUR**\n\n"
-                response += f"Send **{pay_amount} {crypto.upper()}** to:\n`{pay_address}`\n\n"
-                response += "⚠️ Send the **EXACT** amount.\n"
-                response += "⏳ Valid for 20 minutes."
-                
-                await msg.edit_text(response, parse_mode='Markdown')
-                
-            except Exception as e:
-                logger.error(f"Web App TopUp Error: {e}", exc_info=True)
-                await update.message.reply_text("❌ An error occurred processing your request.")
-
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user: return
 
@@ -2472,6 +2419,95 @@ def webapp_get_products():
         logger.error(f"Error fetching products for webapp: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@flask_app.route("/webapp/api/create_invoice", methods=['POST'])
+def webapp_create_invoice():
+    """Create a Solana invoice for Web App items"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        items = data.get('items', [])
+        
+        if not user_id or not items:
+            return jsonify({'error': 'Invalid data'}), 400
+
+        conn = get_db_connection()
+        c = conn.cursor()
+        total_eur = Decimal('0.0')
+        
+        # Validate items and calculate total
+        for item in items:
+            p_id = item.get('id')
+            c.execute("SELECT price FROM products WHERE id = %s", (p_id,))
+            row = c.fetchone()
+            if row:
+                total_eur += Decimal(str(row['price']))
+        
+        conn.close()
+        
+        if total_eur == 0:
+             return jsonify({'error': 'Empty basket'}), 400
+
+        # Create unique order ID
+        order_id = f"WEBAPP_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
+        
+        # Create Solana Payment
+        # Use main_loop if available, else new loop
+        loop = main_loop if main_loop else asyncio.new_event_loop()
+        payment_res = asyncio.run_coroutine_threadsafe(
+            create_solana_payment(user_id, order_id, total_eur), 
+            loop
+        ).result()
+        
+        if 'error' in payment_res:
+            return jsonify(payment_res), 500
+
+        # Insert into pending_deposits so check_solana_deposits can pick it up
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Store basket snapshot
+        c.execute("""
+            INSERT INTO pending_deposits 
+            (user_id, payment_id, amount_eur, pay_currency, pay_amount_crypto, 
+             pay_address, status, created_at, is_purchase, basket_snapshot_json)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending', NOW(), 1, %s)
+        """, (user_id, order_id, float(total_eur), 'SOL', float(payment_res['pay_amount']), 
+              payment_res['pay_address'], json.dumps(items)))
+        
+        conn.commit()
+        conn.close()
+        
+        response = jsonify({
+            'success': True,
+            'payment_id': order_id,
+            'pay_address': payment_res['pay_address'],
+            'pay_amount': payment_res['pay_amount'],
+            'amount_eur': float(total_eur)
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+
+    except Exception as e:
+        logger.error(f"Error creating invoice: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
+def webapp_check_payment(payment_id):
+    """Check payment status"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT status FROM solana_wallets WHERE order_id = %s", (payment_id,))
+        res = c.fetchone()
+        conn.close()
+        
+        status = res['status'] if res else 'unknown'
+        response = jsonify({'status': status})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App"""
@@ -2650,7 +2686,6 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command_wrapper)) # Use wrapped start with ban check
     application.add_handler(CommandHandler("admin", admin_command_wrapper)) # Use wrapped admin with ban check
     application.add_handler(CallbackQueryHandler(handle_callback_query))
-    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     application.add_handler(MessageHandler(
         (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Document.ALL,
         handle_message

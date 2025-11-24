@@ -508,6 +508,49 @@
     </div>
 
 
+    <!-- Basket Modal -->
+    <div id="basket-modal" class="modal-3d" style="display:none; background:rgba(0,0,0,0.95); align-items:flex-start; padding:20px; overflow-y:auto; z-index:250;">
+        <div class="header" style="width:100%; background:transparent; border:none; padding:0; height:auto; margin-bottom:20px;">
+            <div class="logo">BASKET</div>
+            <button class="btn-buy" style="width:auto;" onclick="closeBasket()">CLOSE</button>
+        </div>
+        <div id="basket-items" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
+        <div style="margin-top:auto; width:100%; border-top:2px solid var(--gta-gold); padding-top:20px; margin-top:20px;">
+            <div class="stat-row"><span>TOTAL</span><span id="basket-total" style="color:var(--gta-green);">$0.00</span></div>
+            <button class="btn-buy" onclick="initCheckout()" style="margin-top:20px;">CHECKOUT (SOL)</button>
+        </div>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div id="invoice-modal" class="modal-3d" style="display:none; background:#000; align-items:center; justify-content:center; z-index:300;">
+        <div style="text-align:center; padding:20px; border:2px solid var(--gta-green); max-width:90%; width:350px;">
+            <div style="color:var(--gta-gold); font-size:24px; margin-bottom:10px;">PAYMENT REQUIRED</div>
+            <div style="color:#fff; font-family:'Courier New'; font-size:14px; margin-bottom:10px;">SEND EXACTLY:</div>
+            <div id="invoice-amount" style="font-size:32px; color:var(--gta-green); margin-bottom:20px;">0.00 SOL</div>
+            <div style="color:#fff; font-family:'Courier New'; font-size:14px; margin-bottom:10px;">TO ADDRESS:</div>
+            <div id="invoice-address" style="font-family:'Courier New'; font-size:12px; word-break:break-all; background:#222; padding:10px; user-select:text; color:#fff; border:1px solid #555;">...</div>
+            <div class="loading" style="font-size:16px; margin-top:20px;">WAITING FOR FUNDS...</div>
+            <button class="btn-buy" style="margin-top:20px; background:#900;" onclick="closeInvoice()">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="modal-3d" style="display:none; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; z-index:400;">
+        <div style="text-align:center; width:90%;">
+            <div style="font-size:32px; color:var(--gta-gold);">LEAVE REVIEW</div>
+            <div style="margin:20px 0; font-size:30px; cursor:pointer;" id="review-stars">
+                <span onclick="setReview(1)">★</span>
+                <span onclick="setReview(2)">★</span>
+                <span onclick="setReview(3)">★</span>
+                <span onclick="setReview(4)">★</span>
+                <span onclick="setReview(5)">★</span>
+            </div>
+            <textarea id="review-text" placeholder="MESSAGE..." style="width:100%; height:100px; background:#000; color:var(--gta-green); border:2px solid var(--gta-green); font-family:'Courier New'; padding:10px; box-sizing:border-box; outline:none;"></textarea>
+            <button class="btn-buy" onclick="submitReview()" style="margin-top:20px;">SEND REVIEW</button>
+            <button class="btn-buy" onclick="closeApp()" style="margin-top:10px; background:#333;">SKIP</button>
+        </div>
+    </div>
+
     <div class="content">
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
@@ -679,6 +722,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         <div class="nav-item active" id="nav-shop" onclick="showSection('shop')">SHOP</div>
         <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
         <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
+        <div class="nav-item" id="nav-basket" onclick="openBasket()">CART (<span id="basket-count">0</span>)</div>
     </div>
 
     <script>
@@ -763,7 +807,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div class="product-name">${p.display_name}</div>
                     <div class="product-details">${p.size} | ${p.city}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
-                    <button class="btn-buy" onclick="buyProduct(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
+                        <button class="btn-buy" style="flex:2;" onclick="buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
+                    </div>
                 `;
                 grid.appendChild(card);
             });
@@ -892,26 +939,173 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
 
-        // Mission Passed
-        function buyProduct(id, name, price) {
-            tg.showPopup({
-                title: 'CONFIRM DEAL',
-                message: `Purchase ${name} for $${price}?`,
-                buttons: [{id: 'buy', type: 'ok', text: 'DEAL'}, {id: 'cancel', type: 'cancel'}]
-            }, function(btnId) {
-                if(btnId === 'buy') {
-                    // Trigger animation
-                    const overlay = document.getElementById('mp-overlay');
-                    overlay.style.display = 'flex';
-                    setTimeout(() => {
-                        overlay.classList.add('mp-active');
-                    }, 10);
-
-                    setTimeout(() => {
-                        tg.sendData(`BUY_WEBAPP:${id}`);
-                    }, 3000);
-                }
+        // --- Basket Logic ---
+        let basket = [];
+        
+        function addToBasket(id, name, price) {
+            basket.push({id, name, price});
+            updateBasketUI();
+            // Flash nav item
+            const nav = document.getElementById('nav-basket');
+            nav.style.color = '#fff';
+            setTimeout(() => nav.style.color = '', 200);
+        }
+        
+        function updateBasketUI() {
+            document.getElementById('basket-count').innerText = basket.length;
+        }
+        
+        function openBasket() {
+            const modal = document.getElementById('basket-modal');
+            const list = document.getElementById('basket-items');
+            const totalEl = document.getElementById('basket-total');
+            
+            list.innerHTML = '';
+            let total = 0;
+            
+            basket.forEach((item, index) => {
+                total += item.price;
+                const row = document.createElement('div');
+                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.1); padding:10px; border:1px solid #555;";
+                row.innerHTML = `
+                    <div>${item.name}</div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div style="color:var(--gta-green);">$${item.price.toFixed(2)}</div>
+                        <button style="background:#900; border:none; color:#fff; cursor:pointer; padding:2px 5px;" onclick="removeFromBasket(${index})">X</button>
+                    </div>
+                `;
+                list.appendChild(row);
             });
+            
+            totalEl.innerText = `$${total.toFixed(2)}`;
+            modal.style.display = 'flex';
+        }
+        
+        function closeBasket() {
+            document.getElementById('basket-modal').style.display = 'none';
+        }
+        
+        function removeFromBasket(index) {
+            basket.splice(index, 1);
+            openBasket(); // Re-render
+            updateBasketUI();
+        }
+        
+        function buyNow(id, name, price) {
+            addToBasket(id, name, price);
+            openBasket();
+        }
+
+        // --- Checkout & Payment ---
+        let activePaymentId = null;
+        let pollInterval = null;
+
+        async function initCheckout() {
+            if(basket.length === 0) return;
+            
+            const btn = document.querySelector('#basket-modal .btn-buy:last-child');
+            const originalText = btn.innerText;
+            btn.innerText = "CALCULATING...";
+            btn.disabled = true;
+            
+            try {
+                const user = tg.initDataUnsafe?.user;
+                const userId = user ? user.id : 0; // Fallback
+                
+                const response = await fetch('/webapp/api/create_invoice', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_id: userId, items: basket })
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    // Show Invoice
+                    document.getElementById('basket-modal').style.display = 'none';
+                    const invModal = document.getElementById('invoice-modal');
+                    
+                    document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
+                    document.getElementById('invoice-address').innerText = data.pay_address;
+                    
+                    invModal.style.display = 'flex';
+                    activePaymentId = data.payment_id;
+                    
+                    // Start Polling
+                    if(pollInterval) clearInterval(pollInterval);
+                    pollInterval = setInterval(() => pollPayment(data.payment_id), 3000);
+                } else {
+                    tg.showAlert("Error: " + (data.error || "Unknown"));
+                }
+            } catch(e) {
+                tg.showAlert("Network Error: " + e.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function pollPayment(paymentId) {
+            try {
+                const response = await fetch(`/webapp/api/check_payment/${paymentId}`);
+                const data = await response.json();
+                
+                if(data.status === 'paid') {
+                    clearInterval(pollInterval);
+                    onPaymentSuccess();
+                } else if (data.status === 'expired' || data.status === 'refunded') {
+                    clearInterval(pollInterval);
+                    closeInvoice();
+                    tg.showAlert("Payment Expired or Refunded");
+                }
+            } catch(e) {
+                console.log("Poll error", e);
+            }
+        }
+        
+        function closeInvoice() {
+            document.getElementById('invoice-modal').style.display = 'none';
+            if(pollInterval) clearInterval(pollInterval);
+        }
+        
+        function onPaymentSuccess() {
+            closeInvoice();
+            basket = []; // Clear basket
+            updateBasketUI();
+            
+            // Play Mission Passed Logic
+            const overlay = document.getElementById('mp-overlay');
+            overlay.style.display = 'flex';
+            // Force reflow
+            void overlay.offsetWidth;
+            overlay.classList.add('mp-active');
+            
+            // Show Review after 4 seconds
+            setTimeout(() => {
+                document.getElementById('review-modal').style.display = 'flex';
+            }, 4000);
+        }
+
+        // --- Review Logic ---
+        let currentRating = 5;
+        function setReview(n) {
+            currentRating = n;
+            const stars = document.querySelectorAll('#review-stars span');
+            stars.forEach((s, i) => {
+                s.style.color = i < n ? '#fff' : '#333';
+                s.style.textShadow = i < n ? '0 0 5px #fff' : 'none';
+            });
+        }
+        // Init stars
+        setReview(5); 
+        
+        function submitReview() {
+            const text = document.getElementById('review-text').value;
+            tg.sendData(`REVIEW:${currentRating}:${text}`);
+        }
+        
+        function closeApp() {
+            tg.close();
         }
 
         // Skins
