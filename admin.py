@@ -6482,7 +6482,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                 logger.info(f"Could not fetch username from Telegram for user {user_info['user_id']}: {api_err}")
         
         # Display comprehensive information
-    await display_user_search_results(context.bot, chat_id, user_info)
+        await display_user_search_results(context.bot, chat_id, user_info)
     else:
         # Multiple users found
         msg = f"🔍 Found {len(users_found)} users matching '{search_term}':\n\n"
