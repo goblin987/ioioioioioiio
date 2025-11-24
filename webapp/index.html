@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v6.1</title>
+    <title>Los Santos Shop v8.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -530,6 +530,40 @@
             text-shadow: 2px 2px 0 #000;
         }
 
+
+        /* Classic Theme Overrides */
+        :root {
+            --gta-tan: #D4CCB9;
+            --gta-blue: #739AC5;
+        }
+        
+        #map.section {
+            background-color: var(--gta-blue) !important;
+        }
+        
+        /* Header Fix */
+        .header {
+            background: rgba(0,0,0,0.8) !important;
+            border-bottom: 2px solid #cfa936 !important;
+            z-index: 9999 !important;
+        }
+        
+        /* Back Button */
+        #map-back-btn {
+            font-family: 'Pricedown', sans-serif;
+            background: #000;
+            color: #cfa936;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+        }
+
 </style>
 
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
@@ -578,6 +612,40 @@
         .graffiti-text {
             font-family: 'Permanent Marker', cursive !important;
             text-shadow: 2px 2px 0 #000;
+        }
+
+
+        /* Classic Theme Overrides */
+        :root {
+            --gta-tan: #D4CCB9;
+            --gta-blue: #739AC5;
+        }
+        
+        #map.section {
+            background-color: var(--gta-blue) !important;
+        }
+        
+        /* Header Fix */
+        .header {
+            background: rgba(0,0,0,0.8) !important;
+            border-bottom: 2px solid #cfa936 !important;
+            z-index: 9999 !important;
+        }
+        
+        /* Back Button */
+        #map-back-btn {
+            font-family: 'Pricedown', sans-serif;
+            background: #000;
+            color: #cfa936;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
         }
 
 </style>
@@ -665,24 +733,12 @@
                                         <!-- DIGITAL CRT MAP v7.0 -->
                                         <!-- GROVE STREET GRAFFITI MAP -->
                                         <!-- GROVE STREET GRAFFITI MAP v2 (FIXED) -->
-                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #2a2a2a;">
+                                        <!-- CLASSIC GPS MAP v8.0 -->
+                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #739AC5;">
                         <defs>
-                            <!-- Simple Wall Pattern -->
-                            <pattern id="wall-pattern" width="100" height="100" patternUnits="userSpaceOnUse">
-                                <rect width="100" height="100" fill="#2a2a2a"/>
-                                <path d="M0 0h100v100h-100z" fill="none" stroke="#333" stroke-width="2"/>
-                                <circle cx="50" cy="50" r="1" fill="#444"/>
-                            </pattern>
-                        </defs>
-
-                        <!-- WALL BACKGROUND -->
-                        <rect width="100%" height="100%" fill="url(#wall-pattern)" />
-                        
-                        <!-- MAP STENCIL -->
-                        <!-- Green Shape with "Drips" -->
-                        <g transform="translate(0,1024) scale(0.1,-0.1)">
-                             <!-- Main Shape -->
-                             <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
+                            <!-- Clip Path -->
+                            <clipPath id="land-clip">
+                                <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
 -51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
 c-44 22 -100 43 -124 46 -39 6 -50 2 -122 -43 -43 -27 -105 -59 -137 -72 l-57
@@ -755,48 +811,150 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="#3fa535" stroke="none" opacity="0.9" />
-                             
-                             <!-- Stylized Drips (Simple Rects/Paths) -->
-                             <path d="M 3000 2000 L 3000 1000" stroke="#3fa535" stroke-width="60" stroke-linecap="round" opacity="0.8"/>
-                             <path d="M 7000 2000 L 7000 800" stroke="#3fa535" stroke-width="50" stroke-linecap="round" opacity="0.8"/>
-                        </g>
+1 -25 -7 -42 -18z" transform="translate(0,1024) scale(0.1,-0.1)" />
+                            </clipPath>
+                        </defs>
 
-                        <!-- ROADS (Chalk Style) -->
-                        <g>
-                            <path d="M 730 600 L 515 660 L 110 630" stroke="#ddd" stroke-width="6" fill="none" stroke-dasharray="15,10" stroke-linecap="round" opacity="0.7" />
-                        </g>
-
-                        <!-- CITIES (Hand-Drawn Tags) -->
-                        
-                        <!-- VILNIUS -->
-                        <g id="city-vilnius" transform="translate(730, 600)" style="cursor: pointer;" onclick="selectCity('Vilnius', 42, 71)">
-                            <!-- Hitbox (Invisible but clickable) -->
-                            <circle r="80" fill="transparent" pointer-events="all" />
+                        <!-- 1. GLOBAL MAP LAYER -->
+                        <g id="layer-global">
+                            <!-- Land -->
+                            <g clip-path="url(#land-clip)">
+                                <rect width="100%" height="100%" fill="#D4CCB9" />
+                                <!-- Grid -->
+                                <path d="M0 0 L1024 1024 M1024 0 L0 1024" stroke="rgba(0,0,0,0.05)" stroke-width="2"/>
+                                <!-- Rivers -->
+                                <path d="M 600 1100 Q 550 800 520 660 T 100 620" stroke="#739AC5" stroke-width="20" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+                                <path d="M 1100 500 Q 800 550 720 600 T 520 660" stroke="#739AC5" stroke-width="15" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+                                <!-- Roads -->
+                                <path d="M 730 600 L 515 660 L 110 630" stroke="#555" stroke-width="8" fill="none" vector-effect="non-scaling-stroke" />
+                                <path d="M 730 600 L 515 660 L 110 630" stroke="#D9CD84" stroke-width="2" fill="none" stroke-dasharray="10,5" vector-effect="non-scaling-stroke" />
+                            </g>
                             
-                            <!-- Visuals -->
-                            <path d="M -25 -25 L 25 25 M 25 -25 L -25 25" stroke="#000" stroke-width="10" stroke-linecap="round" />
-                            <path d="M -25 -25 L 25 25 M 25 -25 L -25 25" stroke="#fff" stroke-width="5" stroke-linecap="round" />
-                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="3" font-size="36" style="font-family: 'Permanent Marker', cursive;">VILNIUS</text>
+                            <!-- Border -->
+                            <g transform="translate(0,1024) scale(0.1,-0.1)" pointer-events="none">
+                                <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
+-16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
+-51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
+c-44 22 -100 43 -124 46 -39 6 -50 2 -122 -43 -43 -27 -105 -59 -137 -72 l-57
+-23 -83 26 c-61 19 -105 43 -172 91 -49 36 -106 76 -125 90 -33 23 -48 25
+-183 31 l-147 7 0 27 0 28 -65 -6 c-50 -3 -75 -1 -104 13 l-38 17 -64 -47
+c-45 -33 -69 -45 -83 -40 -12 3 -59 12 -106 20 -47 7 -141 33 -210 58 -121 42
+-127 43 -180 32 -30 -6 -79 -20 -108 -30 -47 -17 -52 -22 -52 -49 0 -27 -9
+-37 -72 -78 -84 -54 -88 -54 -148 26 -32 43 -40 61 -40 96 0 38 -5 48 -49 89
+-85 80 -104 92 -140 81 -33 -9 -98 -56 -143 -102 -17 -18 -36 -28 -55 -28 -17
+0 -56 -9 -89 -20 -73 -26 -104 -20 -152 30 -25 25 -63 48 -120 70 l-82 32 -98
+-12 c-57 -7 -158 -11 -247 -8 -135 4 -160 8 -246 36 -121 40 -245 45 -294 11
+-62 -42 -207 -110 -258 -120 -38 -8 -63 -21 -92 -49 -22 -21 -53 -42 -70 -46
+-16 -4 -55 -19 -85 -34 -50 -24 -62 -26 -132 -21 -82 6 -140 -1 -146 -18 -11
+-32 -51 -76 -77 -84 -16 -5 -65 -36 -108 -69 l-79 -60 -76 11 c-85 13 -87 12
+-96 -54 -6 -38 -13 -45 -85 -94 l-79 -53 -12 -77 c-25 -171 -33 -194 -65 -203
+-17 -4 -66 -3 -113 4 -73 11 -86 10 -110 -4 -24 -15 -28 -25 -33 -85 -4 -37
+-7 -113 -8 -168 -1 -73 -8 -125 -27 -195 -24 -88 -25 -104 -18 -215 4 -66 6
+-179 5 -250 -3 -119 -1 -135 22 -185 13 -30 34 -64 46 -74 35 -32 71 -125 96
+-251 13 -67 38 -151 55 -188 21 -48 38 -112 55 -210 30 -183 26 -268 -17 -346
+-28 -51 -61 -141 -52 -141 2 0 23 12 46 26 40 25 42 26 55 8 7 -10 13 -32 13
+-49 0 -18 9 -58 20 -90 26 -74 26 -101 0 -108 -16 -4 -20 -14 -20 -47 0 -38 2
+-41 23 -34 12 4 38 17 57 30 47 33 118 33 146 2 41 -47 73 -106 79 -149 7 -44
+7 -45 68 -67 34 -12 81 -22 104 -22 24 0 64 -8 91 -18 66 -25 197 -116 218
+-151 19 -31 91 -71 130 -71 16 0 35 -11 52 -32 15 -17 58 -46 100 -65 61 -28
+85 -33 146 -33 42 0 79 -5 89 -13 10 -7 21 -35 26 -66 10 -60 33 -85 89 -96
+39 -7 63 9 82 56 7 16 22 32 35 35 21 5 244 0 502 -12 128 -5 132 -5 170 19
+61 40 97 43 142 14 l38 -26 5 -88 c3 -48 11 -112 18 -141 10 -46 16 -55 52
+-73 32 -16 50 -19 89 -14 47 7 48 6 55 -21 4 -16 17 -36 28 -45 17 -14 18 -19
+7 -33 -19 -23 -6 -34 98 -85 l90 -44 3 -86 c2 -47 0 -121 -6 -165 l-9 -78 -41
+-18 c-26 -11 -53 -34 -74 -64 -18 -25 -39 -46 -47 -46 -8 0 -26 -4 -40 -10
+-26 -10 -26 -10 -9 -39 17 -29 17 -30 -14 -56 -30 -25 -32 -32 -32 -88 0 -34
+-5 -100 -11 -147 -6 -47 -12 -121 -14 -165 -1 -44 -10 -109 -19 -145 -25 -104
+-21 -160 17 -238 19 -37 50 -110 70 -162 51 -130 50 -130 81 -101 13 13 30 35
+36 51 9 21 20 29 48 34 63 10 101 7 140 -13 20 -10 63 -26 94 -35 49 -14 57
+-20 63 -46 8 -36 24 -46 88 -55 53 -8 56 -14 26 -41 -45 -41 -43 -50 20 -88
+40 -25 71 -36 97 -36 22 0 48 -7 58 -15 11 -8 28 -15 37 -15 11 0 29 -20 46
+-52 24 -44 34 -53 73 -64 25 -8 70 -14 101 -14 65 0 74 -6 125 -85 21 -33 65
+-87 97 -120 l58 -60 52 -207 c48 -194 50 -208 35 -225 -10 -10 -26 -47 -37
+-81 l-19 -63 24 -16 c18 -12 24 -24 24 -53 l0 -37 74 -21 c56 -17 88 -33 127
+-67 48 -41 57 -44 88 -39 20 4 58 18 84 31 41 20 53 22 85 13 54 -15 59 -13
+71 20 12 35 16 36 59 10 37 -23 66 -19 167 20 49 19 52 19 110 2 46 -13 80
+-16 146 -12 85 5 86 5 139 53 36 32 58 46 69 41 9 -3 43 -16 76 -27 75 -26 82
+-31 91 -70 7 -31 51 -107 63 -107 3 0 23 5 43 10 31 9 42 8 63 -6 14 -9 43
+-20 65 -24 39 -7 39 -7 157 104 65 62 136 123 158 135 22 13 52 37 66 54 25
+29 30 30 90 28 41 -1 74 4 91 13 26 14 29 13 43 -7 8 -12 15 -34 15 -49 0 -33
+5 -34 65 -8 26 11 66 20 90 20 41 0 44 2 59 40 10 26 16 70 16 122 0 76 -3 88
+-40 159 l-40 77 28 10 c18 6 34 23 46 51 18 38 22 41 58 41 22 0 73 14 113 31
+l74 31 57 -46 c62 -51 59 -50 118 -35 36 9 56 26 135 115 94 106 119 152 136
+252 6 37 10 42 34 42 15 0 50 -7 77 -15 44 -13 58 -13 132 2 70 13 86 20 100
+42 43 68 85 111 109 111 26 0 71 -44 145 -142 l36 -49 -39 -36 -40 -36 22 -23
+22 -23 -26 -10 c-31 -12 -44 -50 -27 -82 7 -12 17 -42 24 -66 6 -25 14 -44 19
+-44 4 1 60 1 126 1 116 0 119 0 156 30 21 16 47 30 58 30 11 0 39 11 63 25 48
+28 48 31 60 198 l6 99 -37 54 c-21 30 -50 63 -65 74 -18 13 -31 35 -39 65
+l-11 45 -79 -41 c-83 -44 -130 -51 -183 -30 -27 10 -28 14 -28 76 0 62 4 74
+71 203 57 112 70 143 66 172 -5 40 16 173 33 210 7 15 31 34 60 46 66 30 120
+108 120 175 0 61 -23 123 -60 165 -42 48 -42 109 1 187 l31 57 -21 62 c-34
+100 -23 178 23 178 7 0 26 10 41 22 25 20 27 25 21 72 -3 28 -9 78 -11 111
+l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
+53 99 59 2 6 27 45 56 87 34 50 54 91 59 120 4 25 11 68 16 95 5 28 9 73 9
+101 1 47 5 55 36 83 39 34 81 40 145 21 19 -6 64 -14 99 -19 63 -8 63 -8 73
+20 14 42 39 44 115 8 74 -34 137 -50 168 -43 11 3 31 21 44 41 20 32 23 45 19
+103 -4 55 -1 74 16 107 30 58 92 123 129 135 41 14 100 57 128 92 l22 28 -20
+26 c-30 40 -60 52 -136 52 -54 0 -75 4 -94 20 -33 26 -88 26 -148 0 l-47 -20
+-90 25 c-80 22 -117 43 -118 68 0 4 20 44 44 90 24 45 50 107 56 137 16 69 44
+131 68 154 19 16 19 18 -4 74 -38 92 -30 137 31 194 46 42 54 79 55 245 l0
+131 -27 6 c-16 3 -57 11 -93 17 -36 7 -85 23 -109 37 -34 20 -61 27 -113 29
+-66 2 -70 4 -136 57 -98 78 -222 254 -222 317 0 8 -18 39 -39 68 -29 39 -61
+65 -123 100 -66 38 -93 60 -131 111 -30 40 -65 74 -95 90 -106 60 -290 195
+-345 256 -33 35 -95 92 -139 126 -82 63 -118 116 -118 172 0 34 -40 48 -115
+40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
+-205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
+-21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
+1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="20" vector-effect="non-scaling-stroke" opacity="0.5"/>
+                            </g>
                         </g>
 
-                        <!-- KAUNAS -->
-                        <g id="city-kaunas" transform="translate(515, 660)" style="cursor: pointer;" onclick="selectCity('Kaunas', 36, 50)">
-                            <circle r="80" fill="transparent" pointer-events="all" />
+                        <!-- 2. CITY LAYERS (Hidden until zoomed) -->
+                        <!-- VILNIUS (730, 600) -->
+                        <g id="city-vilnius" transform="translate(730, 600)">
+                            <!-- Zoom Level 0 Marker -->
+                            <g class="city-marker" onclick="zoomToCity('vilnius', 730, 600)" style="cursor: pointer;">
+                                <circle r="40" fill="rgba(255,255,255,0.01)" stroke="none" /> <!-- Hitbox -->
+                                <rect x="-10" y="-10" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(45)" vector-effect="non-scaling-stroke"/>
+                                <text x="0" y="-25" text-anchor="middle" font-family="Pricedown" font-size="24" fill="#000" stroke="#fff" stroke-width="2" paint-order="stroke" vector-effect="non-scaling-stroke">VILNIUS</text>
+                            </g>
                             
-                            <circle r="25" fill="none" stroke="#000" stroke-width="10" />
-                            <circle r="25" fill="none" stroke="#fff" stroke-width="5" />
-                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="3" font-size="32" style="font-family: 'Permanent Marker', cursive;">KAUNAS</text>
+                            <!-- Zoom Level 1 Districts -->
+                            <g class="districts" opacity="0" pointer-events="none">
+                                <!-- Old Town -->
+                                <path d="M -20 -20 L 20 -20 L 20 20 L -20 20 Z" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Vilnius Old Town')"/>
+                                <text x="0" y="0" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">OLD TOWN</text>
+                                
+                                <!-- Center -->
+                                <path d="M -20 -50 L 20 -50 L 20 -20 L -20 -20 Z" fill="rgba(150, 50, 255, 0.6)" stroke="#800080" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Vilnius Center')"/>
+                                <text x="0" y="-35" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">CENTER</text>
+                            </g>
                         </g>
 
-                        <!-- KLAIPEDA -->
-                        <g id="city-klaipeda" transform="translate(110, 630)" style="cursor: pointer;" onclick="selectCity('Klaipeda', 39, 11)">
-                            <circle r="80" fill="transparent" pointer-events="all" />
-                            
-                            <path d="M -25 0 L 25 0 M 0 -25 L 0 25" stroke="#000" stroke-width="10" stroke-linecap="round" />
-                            <path d="M -25 0 L 25 0 M 0 -25 L 0 25" stroke="#fff" stroke-width="5" stroke-linecap="round" />
-                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="3" font-size="32" style="font-family: 'Permanent Marker', cursive;">KLAIPEDA</text>
+                        <!-- KAUNAS (515, 660) -->
+                        <g id="city-kaunas" transform="translate(515, 660)">
+                            <g class="city-marker" onclick="zoomToCity('kaunas', 515, 660)" style="cursor: pointer;">
+                                <rect x="-10" y="-10" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(45)" vector-effect="non-scaling-stroke"/>
+                                <text x="0" y="-25" text-anchor="middle" font-family="Pricedown" font-size="24" fill="#000" stroke="#fff" stroke-width="2" paint-order="stroke" vector-effect="non-scaling-stroke">KAUNAS</text>
+                            </g>
+                            <g class="districts" opacity="0" pointer-events="none">
+                                <path d="M -25 -25 L 25 -25 L 25 25 L -25 25 Z" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Kaunas Center')"/>
+                                <text x="0" y="0" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">CENTER</text>
+                            </g>
                         </g>
+
+                        <!-- KLAIPEDA (110, 630) -->
+                        <g id="city-klaipeda" transform="translate(110, 630)">
+                            <g class="city-marker" onclick="zoomToCity('klaipeda', 110, 630)" style="cursor: pointer;">
+                                <rect x="-10" y="-10" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(45)" vector-effect="non-scaling-stroke"/>
+                                <text x="0" y="-25" text-anchor="middle" font-family="Pricedown" font-size="24" fill="#000" stroke="#fff" stroke-width="2" paint-order="stroke" vector-effect="non-scaling-stroke">KLAIPEDA</text>
+                            </g>
+                            <g class="districts" opacity="0" pointer-events="none">
+                                <path d="M -20 -40 L 20 -40 L 20 40 L -20 40 Z" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Klaipeda Port')"/>
+                                <text x="0" y="0" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">PORT</text>
+                            </g>
+                        </g>
+
                     </svg>
                     
                     <!-- Blips -->
@@ -1151,21 +1309,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             updateMapTransform();
         }
 
-                        function mapReset() {
-            currentZoomCity = null;
-            fitMapToScreen();
-            const layer = document.getElementById('map-layer');
-            layer.style.transform = `translate(${mapState.x}px, ${mapState.y}px) scale(${mapState.scale})`;
-            document.getElementById('map-back-btn').style.display = 'none';
-            document.getElementById('city-sheet').classList.remove('active');
-            
-            // Layers
-            document.querySelectorAll('.city-icon').forEach(el => el.style.opacity = '1'); // Actually we removed city-icon class from use, but ok.
-            document.querySelectorAll('.districts-group').forEach(el => {
-                el.style.opacity = '0';
-                el.setAttribute('pointer-events', 'none');
-            });
-        }
+                        
         
         function closeSheet() {
             const sheet = document.getElementById('city-sheet');
@@ -1260,6 +1404,75 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(t.includes('pill') || t.includes('xtc')) return '💊';
             if(t.includes('powder') || t.includes('coke')) return '🍚';
             return '📦';
+        }
+
+        
+        let currentViewBox = "0 0 1024 1024";
+        
+        function zoomToCity(cityId, x, y) {
+            // Calculate new ViewBox (Zoom Factor 10x approx)
+            const width = 150; 
+            const height = 150;
+            const newX = x - (width/2);
+            const newY = y - (height/2);
+            const targetViewBox = `${newX} ${newY} ${width} ${height}`;
+            
+            animateViewBox(targetViewBox);
+            
+            // Show Districts
+            document.querySelectorAll('.city-marker').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.districts').forEach(el => {
+                el.style.opacity = '1';
+                el.setAttribute('pointer-events', 'all');
+            });
+            
+            document.getElementById('map-back-btn').style.display = 'flex';
+        }
+        
+        function animateViewBox(targetVal) {
+            const svg = document.getElementById('map-img');
+            // Safe parsing fallback
+            let startStr = svg.getAttribute('viewBox');
+            if(!startStr) startStr = "0 0 1024 1024";
+            
+            const start = startStr.split(' ').map(Number);
+            const end = targetVal.split(' ').map(Number);
+            
+            let startT = performance.now();
+            const duration = 1000; // 1s
+            
+            function step(t) {
+                const progress = Math.min((t - startT) / duration, 1);
+                // Ease Out Cubic
+                const ease = 1 - Math.pow(1 - progress, 3);
+                
+                const current = start.map((s, i) => s + (end[i] - s) * ease);
+                svg.setAttribute('viewBox', current.join(' '));
+                
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+        
+        function mapReset() {
+            animateViewBox("0 0 1024 1024");
+            document.getElementById('map-back-btn').style.display = 'none';
+            
+            // Reset Layers
+            setTimeout(() => {
+                document.querySelectorAll('.city-marker').forEach(el => el.style.display = 'block');
+                document.querySelectorAll('.districts').forEach(el => {
+                    el.style.opacity = '0';
+                    el.setAttribute('pointer-events', 'none');
+                });
+            }, 500);
+        }
+        
+        function selectDistrict(name) {
+            tg.showAlert(`Selected: ${name}`);
+            // Filter products by district logic
+            // For now just show the shop
+            showSection('shop');
         }
 
         // Init
