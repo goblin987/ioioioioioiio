@@ -527,6 +527,45 @@
             background: rgba(0,0,0,0.5);
         }
 
+        /* Full Screen Modals */
+        .modal-3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 99999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Terminal Style */
+        .terminal-box {
+            border: 2px solid var(--gta-green);
+            padding: 20px;
+            background: rgba(0, 20, 0, 0.95);
+            width: 90%;
+            max-width: 400px;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 20px rgba(63, 165, 53, 0.2);
+            text-align: center;
+        }
+        
+        .stat-bar-container {
+            background: #333;
+            height: 15px;
+            width: 150px;
+            border: 2px solid #000;
+            margin-left: auto;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            background: var(--gta-green);
+        }
+
         /* Character Overlay */
         .char-overlay {
             position: fixed;
@@ -675,8 +714,31 @@
     </div>
 
     <div class="content">
+        <!-- HOME SECTION -->
+        <div id="home" class="section active" style="text-align:center; padding-top:50px;">
+            <div class="logo" style="font-size:48px; margin-bottom:40px; color:var(--gta-gold); text-shadow:2px 2px 0 #000;">LOS SANTOS</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:400px; margin:0 auto;">
+                <div class="product-card" onclick="showSection('shop')" style="cursor:pointer; padding:30px;">
+                    <div style="font-size:40px;">🛍️</div>
+                    <div class="product-name">SHOP</div>
+                </div>
+                <div class="product-card" onclick="showSection('map')" style="cursor:pointer; padding:30px;">
+                    <div style="font-size:40px;">🗺️</div>
+                    <div class="product-name">MAP</div>
+                </div>
+                <div class="product-card" onclick="showSection('stats')" style="cursor:pointer; padding:30px;">
+                    <div style="font-size:40px;">📊</div>
+                    <div class="product-name">STATS</div>
+                </div>
+                <div class="product-card" onclick="openBasket()" style="cursor:pointer; padding:30px;">
+                    <div style="font-size:40px;">🛒</div>
+                    <div class="product-name">CART</div>
+                </div>
+            </div>
+        </div>
+
         <!-- SHOP SECTION -->
-        <div id="shop" class="section active">
+        <div id="shop" class="section">
             <!-- LSPD Search -->
             <div class="search-container">
                 <span class="search-label">LSPD DATABASE > SEARCH:</span>
@@ -848,7 +910,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
     <!-- Navigation -->
     <div class="nav">
-        <div class="nav-item active" id="nav-shop" onclick="showSection('shop')">SHOP</div>
+        <div class="nav-item active" id="nav-home" onclick="showSection('home')">HOME</div>
+        <div class="nav-item" id="nav-shop" onclick="showSection('shop')">SHOP</div>
         <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
         <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
         <div class="nav-item" id="nav-basket" onclick="openBasket()">CART (<span id="basket-count">0</span>)</div>
