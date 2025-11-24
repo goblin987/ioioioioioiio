@@ -295,7 +295,7 @@
             font-weight: bold;
         }
 
-        /* --- GTA SA "WORLD MAP" THEME (REMASTERED) --- */
+        /* --- GTA SA PAUSE MENU MAP (RETRO STYLE) --- */
         #map.section {
             position: fixed;
             top: 0;
@@ -303,175 +303,182 @@
             width: 100%;
             height: 100%;
             z-index: 200;
-            background-color: #88B0D6; /* GTA SA Water Blue */
-            background-image: radial-gradient(#8ebbe6 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-color: #000;
             padding: 0;
             overflow: hidden;
         }
 
-        .map-viewport {
+        .pause-map-container {
             width: 100%;
             height: 100%;
-            overflow: hidden;
-            touch-action: none;
             position: relative;
-            cursor: grab;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 99px,
-                rgba(255, 255, 255, 0.05) 100px
-            ),
-            repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 99px,
-                rgba(255, 255, 255, 0.05) 100px
-            );
-        }
-        
-        .map-viewport:active {
-            cursor: grabbing;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image:
+                linear-gradient(#111 2px, transparent 2px),
+                linear-gradient(90deg, #111 2px, transparent 2px);
+            background-size: 40px 40px;
         }
 
-        .map-transform-layer {
+        .map-title-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.9);
+            border-bottom: 4px solid var(--gta-gold);
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .map-legend {
+            position: absolute;
+            right: 20px;
+            top: 100px;
+            width: 220px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--gta-gold);
+            padding: 15px;
+            font-family: 'Pricedown', sans-serif;
+            z-index: 10;
+        }
+
+        @media (max-width: 600px) {
+            .map-legend {
+                bottom: 20px;
+                top: auto;
+                right: 20px;
+                left: 20px;
+                width: auto;
+            }
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .legend-item:hover {
+            transform: translateX(5px);
+            color: var(--gta-gold);
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            margin-right: 10px;
+            border: 1px solid #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        /* Abstract Map Blocks */
+        .map-blocks-layer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            max-height: 600px;
+        }
+
+        .city-block {
+            position: absolute;
+            width: 100px;
+            height: 80px;
+            border: 4px solid #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 20px;
+            color: #000;
+            text-shadow: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+
+        .city-block span {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .city-block:hover {
+            transform: scale(1.15);
+            z-index: 20;
+            border-color: #fff;
+        }
+        
+        .city-block:active {
+            transform: scale(0.95);
+        }
+
+        .city-vilnius { 
+            background: #3fa535; 
+            bottom: 25%; 
+            right: 15%; 
+        } 
+        
+        .city-kaunas { 
+            background: #b030b0; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+        }
+        
+        .city-kaunas:hover {
+             transform: translate(-50%, -50%) scale(1.15);
+        }
+        
+        .city-klaipeda { 
+            background: #f0c330; 
+            top: 25%; 
+            left: 15%; 
+        } 
+
+        /* Connecting Lines (Highways) */
+        .map-connection {
+            position: absolute;
+            background: #333;
+            z-index: 1;
+            border: 2px solid #444;
+        }
+
+        .you-are-here {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 0;
-            height: 0;
-            transform-origin: 0 0;
-            will-change: transform;
-        }
-
-        /* SVG Styles - Remastered */
-        .map-img-interactive {
-            width: 3072px; /* High Res Canvas */
-            height: 3072px;
-            transform: translate(-1536px, -1536px);
-            overflow: visible;
-        }
-        
-        /* The Landmass */
-        .map-land {
-            fill: #A9A9A9; /* Urban Grey */
-            stroke: #000;
-            stroke-width: 4;
-            filter: drop-shadow(0px 4px 0px rgba(0,0,0,0.2));
-        }
-        
-        /* City Grid Pattern inside Land */
-        .city-grid-pattern {
-            stroke: rgba(255, 255, 255, 0.1);
-            stroke-width: 1;
-        }
-
-        /* Zones/Territories */
-        .zone-grove { fill: rgba(63, 165, 53, 0.3); stroke: #3fa535; stroke-width: 2; }
-        .zone-ballas { fill: rgba(186, 0, 255, 0.3); stroke: #ba00ff; stroke-width: 2; }
-        .zone-vagos { fill: rgba(255, 215, 0, 0.3); stroke: #ffd700; stroke-width: 2; }
-
-        /* Markers & Blips */
-        .blip-container {
-            cursor: pointer;
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .blip-container:hover {
-            transform: scale(1.2);
-            z-index: 100;
-        }
-
-        .blip-square {
-            width: 24px;
-            height: 24px;
-            border: 2px solid #000;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
-        }
-
-        .blip-icon {
-            font-size: 16px;
-            line-height: 24px;
-            text-align: center;
-            color: #000;
-            font-weight: bold;
-        }
-
-        /* Blip Types */
-        .blip-shop { background: #ffd700; } /* Gold for shop */
-        .blip-mission { background: #ff0000; } /* Red for mission */
-        .blip-save { background: #fff; } /* White for save */
-        .blip-player { background: #3fa535; border-radius: 50%; } /* Green for player */
-
-        .blip-label {
-            font-family: 'Pricedown', sans-serif;
-            font-size: 28px;
-            fill: #fff;
-            stroke: #000;
-            stroke-width: 1px;
-            text-shadow: 2px 2px 0 #000;
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 30px solid #fff;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 0 5px var(--gta-gold));
+            animation: pulseArrow 2s infinite ease-in-out;
+            z-index: 30;
             pointer-events: none;
-            opacity: 0; /* Hidden until zoomed */
-            transition: opacity 0.3s;
-        }
-        
-        /* Visible labels on zoom */
-        .map-viewport.zoomed .blip-label {
-            opacity: 1;
         }
 
-        /* HUD Elements */
-        .map-hud-bottom {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            pointer-events: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+        @keyframes pulseArrow {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
-
-        .map-legend-box {
-            background: rgba(0,0,0,0.85);
-            padding: 10px 15px;
-            border: 2px solid #666;
-            pointer-events: auto;
-            font-family: 'Courier New', monospace;
-            color: #ddd;
-            font-size: 12px;
-        }
-        
-        .legend-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 4px;
-        }
-        
-        .legend-color { width: 12px; height: 12px; border: 1px solid #fff; }
-
-        .btn-map-action {
-            background: #000;
-            color: #ffd700;
-            border: 2px solid #ffd700;
-            padding: 10px 20px;
-            font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
-            cursor: pointer;
-            pointer-events: auto;
-            text-shadow: 1px 1px 0 #000;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.5);
-        }
-        
-        .btn-map-action:active {
-            transform: translateY(4px);
-            box-shadow: none;
-        }
-
-
-        /* Bottom Sheet */
         .bottom-sheet {
             position: absolute;
             bottom: 0;
@@ -815,291 +822,59 @@
             </div>
         </div>
 
-        <!-- MAP SECTION -->
-                <!-- MAP SECTION (FULLSCREEN MOBILE) -->
+        <!-- MAP SECTION (PAUSE MENU STYLE) -->
         <div id="map" class="section">
-        <!-- Map Controls -->
-        <div id="map-back-btn" onclick="mapReset()" style="
-            position: absolute; 
-            bottom: 80px; 
-            right: 20px; 
-            background: #000; 
-            color: #fff; 
-            border: 2px solid var(--gta-green); 
-            padding: 10px 20px; 
-            font-family: 'Pricedown', sans-serif; 
-            font-size: 24px; 
-            display: none; 
-            z-index: 1000;
-            box-shadow: 0 0 10px var(--gta-green);
-        ">
-            BACK
-        </div>
-
-            <div class="map-viewport" id="map-viewport">
-                <div class="map-transform-layer" id="map-layer">
-                                        <!-- GTA SA COLORFUL MAP LAYERS -->
-                                        <!-- GTA SA WORLD MAP (HARDCODED COLORS) -->
-                                        <!-- GTA SA HIGH FIDELITY MAP -->
-                                        <!-- GTA SA MAP FINAL FIX -->
-                                        <!-- GTA SA REDESIGNED MAP v3.0 -->
-                                        <!-- GTA SA MAP v4.0 (PROFESSIONAL POLISH) -->
-                                        <!-- GTA SA DARK MAP v5.0 (Black/Grey Theme) -->
-                                        <!-- ULTIMATE GTA MAP v6.0 -->
-                                        <!-- DIGITAL CRT MAP v7.0 -->
-                                        <!-- GROVE STREET GRAFFITI MAP -->
-                                        <!-- GROVE STREET GRAFFITI MAP v2 (FIXED) -->
-                                        <!-- CLASSIC GPS MAP v8.0 -->
-                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #739AC5;">
-                        <defs>
-                            <!-- Clip Path -->
-                            <clipPath id="land-clip">
-                                <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
--16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
--51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
-c-44 22 -100 43 -124 46 -39 6 -50 2 -122 -43 -43 -27 -105 -59 -137 -72 l-57
--23 -83 26 c-61 19 -105 43 -172 91 -49 36 -106 76 -125 90 -33 23 -48 25
--183 31 l-147 7 0 27 0 28 -65 -6 c-50 -3 -75 -1 -104 13 l-38 17 -64 -47
-c-45 -33 -69 -45 -83 -40 -12 3 -59 12 -106 20 -47 7 -141 33 -210 58 -121 42
--127 43 -180 32 -30 -6 -79 -20 -108 -30 -47 -17 -52 -22 -52 -49 0 -27 -9
--37 -72 -78 -84 -54 -88 -54 -148 26 -32 43 -40 61 -40 96 0 38 -5 48 -49 89
--85 80 -104 92 -140 81 -33 -9 -98 -56 -143 -102 -17 -18 -36 -28 -55 -28 -17
-0 -56 -9 -89 -20 -73 -26 -104 -20 -152 30 -25 25 -63 48 -120 70 l-82 32 -98
--12 c-57 -7 -158 -11 -247 -8 -135 4 -160 8 -246 36 -121 40 -245 45 -294 11
--62 -42 -207 -110 -258 -120 -38 -8 -63 -21 -92 -49 -22 -21 -53 -42 -70 -46
--16 -4 -55 -19 -85 -34 -50 -24 -62 -26 -132 -21 -82 6 -140 -1 -146 -18 -11
--32 -51 -76 -77 -84 -16 -5 -65 -36 -108 -69 l-79 -60 -76 11 c-85 13 -87 12
--96 -54 -6 -38 -13 -45 -85 -94 l-79 -53 -12 -77 c-25 -171 -33 -194 -65 -203
--17 -4 -66 -3 -113 4 -73 11 -86 10 -110 -4 -24 -15 -28 -25 -33 -85 -4 -37
--7 -113 -8 -168 -1 -73 -8 -125 -27 -195 -24 -88 -25 -104 -18 -215 4 -66 6
--179 5 -250 -3 -119 -1 -135 22 -185 13 -30 34 -64 46 -74 35 -32 71 -125 96
--251 13 -67 38 -151 55 -188 21 -48 38 -112 55 -210 30 -183 26 -268 -17 -346
--28 -51 -61 -141 -52 -141 2 0 23 12 46 26 40 25 42 26 55 8 7 -10 13 -32 13
--49 0 -18 9 -58 20 -90 26 -74 26 -101 0 -108 -16 -4 -20 -14 -20 -47 0 -38 2
--41 23 -34 12 4 38 17 57 30 47 33 118 33 146 2 41 -47 73 -106 79 -149 7 -44
-7 -45 68 -67 34 -12 81 -22 104 -22 24 0 64 -8 91 -18 66 -25 197 -116 218
--151 19 -31 91 -71 130 -71 16 0 35 -11 52 -32 15 -17 58 -46 100 -65 61 -28
-85 -33 146 -33 42 0 79 -5 89 -13 10 -7 21 -35 26 -66 10 -60 33 -85 89 -96
-39 -7 63 9 82 56 7 16 22 32 35 35 21 5 244 0 502 -12 128 -5 132 -5 170 19
-61 40 97 43 142 14 l38 -26 5 -88 c3 -48 11 -112 18 -141 10 -46 16 -55 52
--73 32 -16 50 -19 89 -14 47 7 48 6 55 -21 4 -16 17 -36 28 -45 17 -14 18 -19
-7 -33 -19 -23 -6 -34 98 -85 l90 -44 3 -86 c2 -47 0 -121 -6 -165 l-9 -78 -41
--18 c-26 -11 -53 -34 -74 -64 -18 -25 -39 -46 -47 -46 -8 0 -26 -4 -40 -10
--26 -10 -26 -10 -9 -39 17 -29 17 -30 -14 -56 -30 -25 -32 -32 -32 -88 0 -34
--5 -100 -11 -147 -6 -47 -12 -121 -14 -165 -1 -44 -10 -109 -19 -145 -25 -104
--21 -160 17 -238 19 -37 50 -110 70 -162 51 -130 50 -130 81 -101 13 13 30 35
-36 51 9 21 20 29 48 34 63 10 101 7 140 -13 20 -10 63 -26 94 -35 49 -14 57
--20 63 -46 8 -36 24 -46 88 -55 53 -8 56 -14 26 -41 -45 -41 -43 -50 20 -88
-40 -25 71 -36 97 -36 22 0 48 -7 58 -15 11 -8 28 -15 37 -15 11 0 29 -20 46
--52 24 -44 34 -53 73 -64 25 -8 70 -14 101 -14 65 0 74 -6 125 -85 21 -33 65
--87 97 -120 l58 -60 52 -207 c48 -194 50 -208 35 -225 -10 -10 -26 -47 -37
--81 l-19 -63 24 -16 c18 -12 24 -24 24 -53 l0 -37 74 -21 c56 -17 88 -33 127
--67 48 -41 57 -44 88 -39 20 4 58 18 84 31 41 20 53 22 85 13 54 -15 59 -13
-71 20 12 35 16 36 59 10 37 -23 66 -19 167 20 49 19 52 19 110 2 46 -13 80
--16 146 -12 85 5 86 5 139 53 36 32 58 46 69 41 9 -3 43 -16 76 -27 75 -26 82
--31 91 -70 7 -31 51 -107 63 -107 3 0 23 5 43 10 31 9 42 8 63 -6 14 -9 43
--20 65 -24 39 -7 39 -7 157 104 65 62 136 123 158 135 22 13 52 37 66 54 25
-29 30 30 90 28 41 -1 74 4 91 13 26 14 29 13 43 -7 8 -12 15 -34 15 -49 0 -33
-5 -34 65 -8 26 11 66 20 90 20 41 0 44 2 59 40 10 26 16 70 16 122 0 76 -3 88
--40 159 l-40 77 28 10 c18 6 34 23 46 51 18 38 22 41 58 41 22 0 73 14 113 31
-l74 31 57 -46 c62 -51 59 -50 118 -35 36 9 56 26 135 115 94 106 119 152 136
-252 6 37 10 42 34 42 15 0 50 -7 77 -15 44 -13 58 -13 132 2 70 13 86 20 100
-42 43 68 85 111 109 111 26 0 71 -44 145 -142 l36 -49 -39 -36 -40 -36 22 -23
-22 -23 -26 -10 c-31 -12 -44 -50 -27 -82 7 -12 17 -42 24 -66 6 -25 14 -44 19
--44 4 1 60 1 126 1 116 0 119 0 156 30 21 16 47 30 58 30 11 0 39 11 63 25 48
-28 48 31 60 198 l6 99 -37 54 c-21 30 -50 63 -65 74 -18 13 -31 35 -39 65
-l-11 45 -79 -41 c-83 -44 -130 -51 -183 -30 -27 10 -28 14 -28 76 0 62 4 74
-71 203 57 112 70 143 66 172 -5 40 16 173 33 210 7 15 31 34 60 46 66 30 120
-108 120 175 0 61 -23 123 -60 165 -42 48 -42 109 1 187 l31 57 -21 62 c-34
-100 -23 178 23 178 7 0 26 10 41 22 25 20 27 25 21 72 -3 28 -9 78 -11 111
-l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
-53 99 59 2 6 27 45 56 87 34 50 54 91 59 120 4 25 11 68 16 95 5 28 9 73 9
-101 1 47 5 55 36 83 39 34 81 40 145 21 19 -6 64 -14 99 -19 63 -8 63 -8 73
-20 14 42 39 44 115 8 74 -34 137 -50 168 -43 11 3 31 21 44 41 20 32 23 45 19
-103 -4 55 -1 74 16 107 30 58 92 123 129 135 41 14 100 57 128 92 l22 28 -20
-26 c-30 40 -60 52 -136 52 -54 0 -75 4 -94 20 -33 26 -88 26 -148 0 l-47 -20
--90 25 c-80 22 -117 43 -118 68 0 4 20 44 44 90 24 45 50 107 56 137 16 69 44
-131 68 154 19 16 19 18 -4 74 -38 92 -30 137 31 194 46 42 54 79 55 245 l0
-131 -27 6 c-16 3 -57 11 -93 17 -36 7 -85 23 -109 37 -34 20 -61 27 -113 29
--66 2 -70 4 -136 57 -98 78 -222 254 -222 317 0 8 -18 39 -39 68 -29 39 -61
-65 -123 100 -66 38 -93 60 -131 111 -30 40 -65 74 -95 90 -106 60 -290 195
--345 256 -33 35 -95 92 -139 126 -82 63 -118 116 -118 172 0 34 -40 48 -115
-40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
--205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
--21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" transform="translate(0,1024) scale(0.1,-0.1)" />
-                            </clipPath>
-                        </defs>
-
-                        <!-- 1. GLOBAL MAP LAYER -->
-                        <g id="layer-global">
-                            <!-- Land -->
-                            <g clip-path="url(#land-clip)">
-                                <rect width="100%" height="100%" fill="#D4CCB9" />
-                                <!-- Grid -->
-                                <path d="M0 0 L1024 1024 M1024 0 L0 1024" stroke="rgba(0,0,0,0.05)" stroke-width="2"/>
-                                <!-- Rivers -->
-                                <path d="M 600 1100 Q 550 800 520 660 T 100 620" stroke="#739AC5" stroke-width="20" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-                                <path d="M 1100 500 Q 800 550 720 600 T 520 660" stroke="#739AC5" stroke-width="15" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-                                <!-- Roads -->
-                                <path d="M 730 600 L 515 660 L 110 630" stroke="#555" stroke-width="8" fill="none" vector-effect="non-scaling-stroke" />
-                                <path d="M 730 600 L 515 660 L 110 630" stroke="#D9CD84" stroke-width="2" fill="none" stroke-dasharray="10,5" vector-effect="non-scaling-stroke" />
-                            </g>
-                            
-                            <!-- Border -->
-                            <g transform="translate(0,1024) scale(0.1,-0.1)" pointer-events="none">
-                                <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
--16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
--51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
-c-44 22 -100 43 -124 46 -39 6 -50 2 -122 -43 -43 -27 -105 -59 -137 -72 l-57
--23 -83 26 c-61 19 -105 43 -172 91 -49 36 -106 76 -125 90 -33 23 -48 25
--183 31 l-147 7 0 27 0 28 -65 -6 c-50 -3 -75 -1 -104 13 l-38 17 -64 -47
-c-45 -33 -69 -45 -83 -40 -12 3 -59 12 -106 20 -47 7 -141 33 -210 58 -121 42
--127 43 -180 32 -30 -6 -79 -20 -108 -30 -47 -17 -52 -22 -52 -49 0 -27 -9
--37 -72 -78 -84 -54 -88 -54 -148 26 -32 43 -40 61 -40 96 0 38 -5 48 -49 89
--85 80 -104 92 -140 81 -33 -9 -98 -56 -143 -102 -17 -18 -36 -28 -55 -28 -17
-0 -56 -9 -89 -20 -73 -26 -104 -20 -152 30 -25 25 -63 48 -120 70 l-82 32 -98
--12 c-57 -7 -158 -11 -247 -8 -135 4 -160 8 -246 36 -121 40 -245 45 -294 11
--62 -42 -207 -110 -258 -120 -38 -8 -63 -21 -92 -49 -22 -21 -53 -42 -70 -46
--16 -4 -55 -19 -85 -34 -50 -24 -62 -26 -132 -21 -82 6 -140 -1 -146 -18 -11
--32 -51 -76 -77 -84 -16 -5 -65 -36 -108 -69 l-79 -60 -76 11 c-85 13 -87 12
--96 -54 -6 -38 -13 -45 -85 -94 l-79 -53 -12 -77 c-25 -171 -33 -194 -65 -203
--17 -4 -66 -3 -113 4 -73 11 -86 10 -110 -4 -24 -15 -28 -25 -33 -85 -4 -37
--7 -113 -8 -168 -1 -73 -8 -125 -27 -195 -24 -88 -25 -104 -18 -215 4 -66 6
--179 5 -250 -3 -119 -1 -135 22 -185 13 -30 34 -64 46 -74 35 -32 71 -125 96
--251 13 -67 38 -151 55 -188 21 -48 38 -112 55 -210 30 -183 26 -268 -17 -346
--28 -51 -61 -141 -52 -141 2 0 23 12 46 26 40 25 42 26 55 8 7 -10 13 -32 13
--49 0 -18 9 -58 20 -90 26 -74 26 -101 0 -108 -16 -4 -20 -14 -20 -47 0 -38 2
--41 23 -34 12 4 38 17 57 30 47 33 118 33 146 2 41 -47 73 -106 79 -149 7 -44
-7 -45 68 -67 34 -12 81 -22 104 -22 24 0 64 -8 91 -18 66 -25 197 -116 218
--151 19 -31 91 -71 130 -71 16 0 35 -11 52 -32 15 -17 58 -46 100 -65 61 -28
-85 -33 146 -33 42 0 79 -5 89 -13 10 -7 21 -35 26 -66 10 -60 33 -85 89 -96
-39 -7 63 9 82 56 7 16 22 32 35 35 21 5 244 0 502 -12 128 -5 132 -5 170 19
-61 40 97 43 142 14 l38 -26 5 -88 c3 -48 11 -112 18 -141 10 -46 16 -55 52
--73 32 -16 50 -19 89 -14 47 7 48 6 55 -21 4 -16 17 -36 28 -45 17 -14 18 -19
-7 -33 -19 -23 -6 -34 98 -85 l90 -44 3 -86 c2 -47 0 -121 -6 -165 l-9 -78 -41
--18 c-26 -11 -53 -34 -74 -64 -18 -25 -39 -46 -47 -46 -8 0 -26 -4 -40 -10
--26 -10 -26 -10 -9 -39 17 -29 17 -30 -14 -56 -30 -25 -32 -32 -32 -88 0 -34
--5 -100 -11 -147 -6 -47 -12 -121 -14 -165 -1 -44 -10 -109 -19 -145 -25 -104
--21 -160 17 -238 19 -37 50 -110 70 -162 51 -130 50 -130 81 -101 13 13 30 35
-36 51 9 21 20 29 48 34 63 10 101 7 140 -13 20 -10 63 -26 94 -35 49 -14 57
--20 63 -46 8 -36 24 -46 88 -55 53 -8 56 -14 26 -41 -45 -41 -43 -50 20 -88
-40 -25 71 -36 97 -36 22 0 48 -7 58 -15 11 -8 28 -15 37 -15 11 0 29 -20 46
--52 24 -44 34 -53 73 -64 25 -8 70 -14 101 -14 65 0 74 -6 125 -85 21 -33 65
--87 97 -120 l58 -60 52 -207 c48 -194 50 -208 35 -225 -10 -10 -26 -47 -37
--81 l-19 -63 24 -16 c18 -12 24 -24 24 -53 l0 -37 74 -21 c56 -17 88 -33 127
--67 48 -41 57 -44 88 -39 20 4 58 18 84 31 41 20 53 22 85 13 54 -15 59 -13
-71 20 12 35 16 36 59 10 37 -23 66 -19 167 20 49 19 52 19 110 2 46 -13 80
--16 146 -12 85 5 86 5 139 53 36 32 58 46 69 41 9 -3 43 -16 76 -27 75 -26 82
--31 91 -70 7 -31 51 -107 63 -107 3 0 23 5 43 10 31 9 42 8 63 -6 14 -9 43
--20 65 -24 39 -7 39 -7 157 104 65 62 136 123 158 135 22 13 52 37 66 54 25
-29 30 30 90 28 41 -1 74 4 91 13 26 14 29 13 43 -7 8 -12 15 -34 15 -49 0 -33
-5 -34 65 -8 26 11 66 20 90 20 41 0 44 2 59 40 10 26 16 70 16 122 0 76 -3 88
--40 159 l-40 77 28 10 c18 6 34 23 46 51 18 38 22 41 58 41 22 0 73 14 113 31
-l74 31 57 -46 c62 -51 59 -50 118 -35 36 9 56 26 135 115 94 106 119 152 136
-252 6 37 10 42 34 42 15 0 50 -7 77 -15 44 -13 58 -13 132 2 70 13 86 20 100
-42 43 68 85 111 109 111 26 0 71 -44 145 -142 l36 -49 -39 -36 -40 -36 22 -23
-22 -23 -26 -10 c-31 -12 -44 -50 -27 -82 7 -12 17 -42 24 -66 6 -25 14 -44 19
--44 4 1 60 1 126 1 116 0 119 0 156 30 21 16 47 30 58 30 11 0 39 11 63 25 48
-28 48 31 60 198 l6 99 -37 54 c-21 30 -50 63 -65 74 -18 13 -31 35 -39 65
-l-11 45 -79 -41 c-83 -44 -130 -51 -183 -30 -27 10 -28 14 -28 76 0 62 4 74
-71 203 57 112 70 143 66 172 -5 40 16 173 33 210 7 15 31 34 60 46 66 30 120
-108 120 175 0 61 -23 123 -60 165 -42 48 -42 109 1 187 l31 57 -21 62 c-34
-100 -23 178 23 178 7 0 26 10 41 22 25 20 27 25 21 72 -3 28 -9 78 -11 111
-l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
-53 99 59 2 6 27 45 56 87 34 50 54 91 59 120 4 25 11 68 16 95 5 28 9 73 9
-101 1 47 5 55 36 83 39 34 81 40 145 21 19 -6 64 -14 99 -19 63 -8 63 -8 73
-20 14 42 39 44 115 8 74 -34 137 -50 168 -43 11 3 31 21 44 41 20 32 23 45 19
-103 -4 55 -1 74 16 107 30 58 92 123 129 135 41 14 100 57 128 92 l22 28 -20
-26 c-30 40 -60 52 -136 52 -54 0 -75 4 -94 20 -33 26 -88 26 -148 0 l-47 -20
--90 25 c-80 22 -117 43 -118 68 0 4 20 44 44 90 24 45 50 107 56 137 16 69 44
-131 68 154 19 16 19 18 -4 74 -38 92 -30 137 31 194 46 42 54 79 55 245 l0
-131 -27 6 c-16 3 -57 11 -93 17 -36 7 -85 23 -109 37 -34 20 -61 27 -113 29
--66 2 -70 4 -136 57 -98 78 -222 254 -222 317 0 8 -18 39 -39 68 -29 39 -61
-65 -123 100 -66 38 -93 60 -131 111 -30 40 -65 74 -95 90 -106 60 -290 195
--345 256 -33 35 -95 92 -139 126 -82 63 -118 116 -118 172 0 34 -40 48 -115
-40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
--205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
--21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="20" vector-effect="non-scaling-stroke" opacity="0.5"/>
-                            </g>
-                        </g>
-
-                        <!-- 2. CITY LAYERS (Hidden until zoomed) -->
-                        <!-- VILNIUS (730, 600) -->
-                        <g id="city-vilnius" transform="translate(730, 600)">
-                            <!-- Zoom Level 0 Marker -->
-                            <g class="city-marker" onclick="zoomToCity('vilnius', 730, 600)" style="cursor: pointer;">
-                                <circle r="40" fill="rgba(255,255,255,0.01)" stroke="none" /> <!-- Hitbox -->
-                                <rect x="-10" y="-10" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(45)" vector-effect="non-scaling-stroke"/>
-                                <text x="0" y="-25" text-anchor="middle" font-family="Pricedown" font-size="24" fill="#000" stroke="#fff" stroke-width="2" paint-order="stroke" vector-effect="non-scaling-stroke">VILNIUS</text>
-                            </g>
-                            
-                            <!-- Zoom Level 1 Districts -->
-                            <g class="districts" opacity="0" pointer-events="none">
-                                <!-- Old Town -->
-                                <path d="M -20 -20 L 20 -20 L 20 20 L -20 20 Z" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Vilnius Old Town')"/>
-                                <text x="0" y="0" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">OLD TOWN</text>
-                                
-                                <!-- Center -->
-                                <path d="M -20 -50 L 20 -50 L 20 -20 L -20 -20 Z" fill="rgba(150, 50, 255, 0.6)" stroke="#800080" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Vilnius Center')"/>
-                                <text x="0" y="-35" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">CENTER</text>
-                            </g>
-                        </g>
-
-                        <!-- KAUNAS (515, 660) -->
-                        <g id="city-kaunas" transform="translate(515, 660)">
-                            <g class="city-marker" onclick="zoomToCity('kaunas', 515, 660)" style="cursor: pointer;">
-                                <rect x="-10" y="-10" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(45)" vector-effect="non-scaling-stroke"/>
-                                <text x="0" y="-25" text-anchor="middle" font-family="Pricedown" font-size="24" fill="#000" stroke="#fff" stroke-width="2" paint-order="stroke" vector-effect="non-scaling-stroke">KAUNAS</text>
-                            </g>
-                            <g class="districts" opacity="0" pointer-events="none">
-                                <path d="M -25 -25 L 25 -25 L 25 25 L -25 25 Z" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Kaunas Center')"/>
-                                <text x="0" y="0" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">CENTER</text>
-                            </g>
-                        </g>
-
-                        <!-- KLAIPEDA (110, 630) -->
-                        <g id="city-klaipeda" transform="translate(110, 630)">
-                            <g class="city-marker" onclick="zoomToCity('klaipeda', 110, 630)" style="cursor: pointer;">
-                                <rect x="-10" y="-10" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(45)" vector-effect="non-scaling-stroke"/>
-                                <text x="0" y="-25" text-anchor="middle" font-family="Pricedown" font-size="24" fill="#000" stroke="#fff" stroke-width="2" paint-order="stroke" vector-effect="non-scaling-stroke">KLAIPEDA</text>
-                            </g>
-                            <g class="districts" opacity="0" pointer-events="none">
-                                <path d="M -20 -40 L 20 -40 L 20 40 L -20 40 Z" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="1" vector-effect="non-scaling-stroke" class="district-poly" onclick="selectDistrict('Klaipeda Port')"/>
-                                <text x="0" y="0" text-anchor="middle" font-size="4" font-family="Arial" font-weight="bold" fill="#fff" pointer-events="none" vector-effect="non-scaling-stroke">PORT</text>
-                            </g>
-                        </g>
-
-                    </svg>
-                    
-                    <!-- Blips -->
-                    
-<div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none; cursor:pointer;">VILNIUS</div>
-</div>
-                    
-                    
-<div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none; cursor:pointer;">KAUNAS</div>
-</div>
-                    
-                    
-<div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none; cursor:pointer;">KLAIPEDA</div>
-</div>
+            <div class="pause-map-container">
+                <!-- Title Bar -->
+                <div class="map-title-bar">
+                    <div style="font-family: 'Pricedown', sans-serif; font-size: 32px; color: var(--gta-gold);">MAP</div>
+                    <div style="font-family: 'Pricedown', sans-serif; font-size: 24px; color: #fff; cursor: pointer; border: 1px solid #fff; padding: 0 10px;" onclick="showSection('shop')">BACK</div>
                 </div>
-            </div>
 
-            <!-- HUD -->
-            <div class="map-hud-top">
-                <div class="map-title">MAP</div>
-                <div class="btn-close-map" onclick="showSection('shop')">CLOSE</div>
-            </div>
+                <!-- Legend -->
+                <div class="map-legend">
+                    <div style="font-size: 28px; color: var(--gta-gold); margin-bottom: 15px; border-bottom: 2px solid #555;">TERRITORIES</div>
+                    
+                    <div class="legend-item" onclick="selectCityBlock('Klaipeda')">
+                        <div class="legend-color" style="background: #f0c330;"></div>
+                        <span>KLAIPEDA (VAGOS)</span>
+                    </div>
+                    
+                    <div class="legend-item" onclick="selectCityBlock('Kaunas')">
+                        <div class="legend-color" style="background: #b030b0;"></div>
+                        <span>KAUNAS (BALLAS)</span>
+                    </div>
 
+                    <div class="legend-item" onclick="selectCityBlock('Vilnius')">
+                        <div class="legend-color" style="background: #3fa535;"></div>
+                        <span>VILNIUS (GROVE)</span>
+                    </div>
+                </div>
 
-            <!-- Bottom Sheet -->
-            <div class="bottom-sheet" id="city-sheet">
-                <div class="bs-title" id="sheet-title">CITY</div>
-                <div class="bs-info" id="sheet-info">NO INTEL</div>
-                <button class="btn-buy" onclick="openCityShop()">VISIT SHOP</button>
+                <!-- Abstract Map Layer -->
+                <div class="map-blocks-layer">
+                    <!-- Connections -->
+                    <!-- KLAIPEDA -> KAUNAS -->
+                    <div class="map-connection" style="width: 200px; height: 15px; top: 35%; left: 20%; transform: rotate(35deg);"></div>
+                    <!-- KAUNAS -> VILNIUS -->
+                    <div class="map-connection" style="width: 200px; height: 15px; bottom: 35%; right: 20%; transform: rotate(35deg);"></div>
+
+                    <!-- Cities -->
+                    <div class="city-block city-klaipeda" onclick="selectCityBlock('Klaipeda')">
+                        <span>KLAIPEDA</span>
+                    </div>
+
+                    <div class="city-block city-kaunas" onclick="selectCityBlock('Kaunas')">
+                        <span>KAUNAS</span>
+                    </div>
+
+                    <div class="city-block city-vilnius" onclick="selectCityBlock('Vilnius')">
+                        <span>VILNIUS</span>
+                    </div>
+
+                    <!-- Player Marker (Center) -->
+                    <div class="you-are-here"></div>
+                </div>
             </div>
         </div>
 
@@ -1340,334 +1115,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
-        // Map Logic (Pinch Zoom & Inertia)
-        let mapState = { 
-            scale: 1, 
-            x: 0, 
-            y: 0, 
-            isDragging: false, 
-            startX: 0, 
-            startY: 0,
-            momentumX: 0,
-            momentumY: 0,
-            initialPinchDist: null,
-            initialScale: 1
-        };
-        
-        let animationFrameId = null;
-
-        function updateMapTransform() {
-            const layer = document.getElementById('map-layer');
-            const viewport = document.getElementById('map-viewport');
-            if(layer && viewport) {
-                // Apply Transform
-                layer.style.transform = `translate(${mapState.x}px, ${mapState.y}px) scale(${mapState.scale})`;
-                
-                // Toggle class for labels based on zoom
-                if(mapState.scale > 2.5) viewport.classList.add('zoomed');
-                else viewport.classList.remove('zoomed');
-            }
-        }
-
-        function initMapEvents() {
-            const viewport = document.getElementById('map-viewport');
-            if(!viewport) return;
+        // --- Pause Menu Map Logic ---
+        function selectCityBlock(city) {
+            // Highlight effect
+            const buttons = document.querySelectorAll('.city-block');
+            buttons.forEach(b => b.style.borderColor = '#000');
             
-            // TOUCH EVENTS
-            viewport.addEventListener('touchstart', e => {
-                if(e.touches.length === 2) {
-                    // Pinch Start
-                    mapState.isDragging = false;
-                    mapState.initialPinchDist = Math.hypot(
-                        e.touches[0].pageX - e.touches[1].pageX,
-                        e.touches[0].pageY - e.touches[1].pageY
-                    );
-                    mapState.initialScale = mapState.scale;
-                } else if(e.touches.length === 1) {
-                    // Drag Start
-                    mapState.isDragging = true;
-                    mapState.startX = e.touches[0].clientX - mapState.x;
-                    mapState.startY = e.touches[0].clientY - mapState.y;
-                    mapState.momentumX = 0;
-                    mapState.momentumY = 0;
-                    cancelAnimationFrame(animationFrameId);
-                }
-            });
+            // Find specific block
+            const block = document.querySelector(`.city-${city.toLowerCase()}`);
+            if(block) block.style.borderColor = '#fff';
             
-            viewport.addEventListener('touchmove', e => {
-                if(e.touches.length === 2 && mapState.initialPinchDist) {
-                    // Pinch Zoom
-                    e.preventDefault();
-                    const dist = Math.hypot(
-                        e.touches[0].pageX - e.touches[1].pageX,
-                        e.touches[0].pageY - e.touches[1].pageY
-                    );
-                    const delta = dist / mapState.initialPinchDist;
-                    mapState.scale = Math.min(Math.max(mapState.initialScale * delta, 0.5), 6);
-                    updateMapTransform();
-                } else if(mapState.isDragging && e.touches.length === 1) {
-                    // Drag
-                    e.preventDefault(); 
-                    const newX = e.touches[0].clientX - mapState.startX;
-                    const newY = e.touches[0].clientY - mapState.startY;
-                    
-                    // Momentum calc
-                    mapState.momentumX = newX - mapState.x;
-                    mapState.momentumY = newY - mapState.y;
-                    
-                    mapState.x = newX;
-                    mapState.y = newY;
-                    updateMapTransform();
-                }
-            });
-            
-            viewport.addEventListener('touchend', e => {
-                if(e.touches.length < 2) mapState.initialPinchDist = null;
-                if(e.touches.length === 0) {
-                    mapState.isDragging = false;
-                    applyInertia();
-                }
-            });
-
-            // MOUSE EVENTS (Desktop testing)
-            viewport.addEventListener('mousedown', e => {
-                mapState.isDragging = true;
-                mapState.startX = e.clientX - mapState.x;
-                mapState.startY = e.clientY - mapState.y;
-                mapState.momentumX = 0;
-                mapState.momentumY = 0;
-                cancelAnimationFrame(animationFrameId);
-            });
-            
-            viewport.addEventListener('mousemove', e => {
-                if(mapState.isDragging) {
-                    const newX = e.clientX - mapState.startX;
-                    const newY = e.clientY - mapState.startY;
-                    
-                    mapState.momentumX = newX - mapState.x;
-                    mapState.momentumY = newY - mapState.y;
-                    
-                    mapState.x = newX;
-                    mapState.y = newY;
-                    updateMapTransform();
-                }
-            });
-            
-            viewport.addEventListener('mouseup', () => {
-                mapState.isDragging = false;
-                applyInertia();
-            });
-            
-            viewport.addEventListener('wheel', e => {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                mapState.scale = Math.min(Math.max(mapState.scale * delta, 0.5), 6);
-                updateMapTransform();
-            });
-        }
-
-        function applyInertia() {
-            if(Math.abs(mapState.momentumX) > 0.1 || Math.abs(mapState.momentumY) > 0.1) {
-                mapState.x += mapState.momentumX;
-                mapState.y += mapState.momentumY;
-                mapState.momentumX *= 0.92; // Friction
-                mapState.momentumY *= 0.92;
-                updateMapTransform();
-                animationFrameId = requestAnimationFrame(applyInertia);
-            }
-        }
-
-        function zoomToCity(name) {
-            let targetX = 0, targetY = 0;
-            
-            // Coordinates match the SVG translation (730, 600) etc. relative to center
-            // The map is 3072x3072 centered.
-            // Coordinate system: SVG is 1024x1024. We need to map SVG coords to pixels.
-            // We can just hardcode nice values for now as we know the cities.
-            
-            if(name === 'Vilnius') { targetX = -700; targetY = -400; }
-            if(name === 'Kaunas') { targetX = 0; targetY = -500; }
-            if(name === 'Klaipeda') { targetX = 1000; targetY = -400; }
-            
-            // Animate
-            const startScale = mapState.scale;
-            const endScale = 4;
-            const startX = mapState.x;
-            const startY = mapState.y;
-            
-            let startTime = performance.now();
-            
-            function animate(t) {
-                let p = Math.min((t - startTime) / 600, 1);
-                let ease = 1 - Math.pow(1 - p, 3); // Cubic Ease Out
-                
-                mapState.scale = startScale + (endScale - startScale) * ease;
-                mapState.x = startX + (targetX - startX) * ease;
-                mapState.y = startY + (targetY - startY) * ease;
-                
-                updateMapTransform();
-                
-                if(p < 1) requestAnimationFrame(animate);
-                else {
-                    selectedCity = name;
-                    document.getElementById('sheet-title').innerText = name.toUpperCase();
-                    document.getElementById('sheet-info').innerText = "TERRITORY CONTROLLED";
-                    document.getElementById('city-sheet').classList.add('active');
-                }
-            }
-            requestAnimationFrame(animate);
-        }
-        
-        function openCityShop() {
-             document.getElementById('city-sheet').classList.remove('active');
-             showSection('shop');
-             filterProducts(selectedCity);
-        }
-
-        // Init
-        initMapEvents();
-
-
-
-        // Mission Passed
-        function buyProduct(id, name, price) {
+            // Show confirmation or just go
             tg.showPopup({
-                title: 'CONFIRM DEAL',
-                message: `Purchase ${name} for $${price}?`,
-                buttons: [{id: 'buy', type: 'ok', text: 'DEAL'}, {id: 'cancel', type: 'cancel'}]
+                title: 'SET WAYPOINT',
+                message: `Fast travel to ${city}?`,
+                buttons: [
+                    {id: 'go', type: 'ok', text: 'TRAVEL'},
+                    {id: 'cancel', type: 'cancel'}
+                ]
             }, function(btnId) {
-                if(btnId === 'buy') {
-                    // Trigger animation
-                    const overlay = document.getElementById('mp-overlay');
-                    overlay.style.display = 'flex';
-                    setTimeout(() => {
-                        overlay.classList.add('mp-active');
-                    }, 10);
-
-                    setTimeout(() => {
-                        tg.sendData(`BUY_WEBAPP:${id}`);
-                    }, 3000);
+                if(btnId === 'go') {
+                    showSection('shop');
+                    filterProducts(city);
+                    tg.HapticFeedback.notificationOccurred('success');
                 }
             });
-        }
-
-        // Skins
-        function changeSkin(skin) {
-            const img = document.getElementById('char-img');
-            if(skin === 'cj') img.src = "https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png";
-            if(skin === 'ryder') img.src = "https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png";
-            if(skin === 'sweet') img.src = "https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png";
-        }
-
-                        let selectedCryptoForTopUp = '';
-
-        function initTopUp(crypto) {
-            selectedCryptoForTopUp = crypto;
-            const modal = document.getElementById('amount-modal');
-            modal.style.display = 'flex';
-            setTimeout(() => document.getElementById('amount-input').focus(), 100);
-        }
-
-        function closeAmountModal() {
-            document.getElementById('amount-modal').style.display = 'none';
-        }
-
-        function confirmAmount() {
-            const amt = document.getElementById('amount-input').value;
-            if(!amt || amt <= 0) {
-                tg.showAlert('Please enter a valid amount.');
-                return;
-            }
-            closeAmountModal();
-            tg.sendData(`TOPUP:${selectedCryptoForTopUp}:${amt}`);
-            tg.close();
-        }
-
-
-        // Navigation
-        function showSection(id) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`nav-${id}`).classList.add('active');
-        }
-        
-        function getProductEmoji(type) {
-            if(!type) return '📦';
-            const t = type.toLowerCase();
-            if(t.includes('weed') || t.includes('cannabis')) return '🌿';
-            if(t.includes('pill') || t.includes('xtc')) return '💊';
-            if(t.includes('powder') || t.includes('coke')) return '🍚';
-            return '📦';
-        }
-
-        
-        let currentViewBox = "0 0 1024 1024";
-        
-        function zoomToCity(cityId, x, y) {
-            // Calculate new ViewBox (Zoom Factor 10x approx)
-            const width = 150; 
-            const height = 150;
-            const newX = x - (width/2);
-            const newY = y - (height/2);
-            const targetViewBox = `${newX} ${newY} ${width} ${height}`;
-            
-            animateViewBox(targetViewBox);
-            
-            // Show Districts
-            document.querySelectorAll('.city-marker').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.districts').forEach(el => {
-                el.style.opacity = '1';
-                el.setAttribute('pointer-events', 'all');
-            });
-            
-            document.getElementById('map-back-btn').style.display = 'flex';
-        }
-        
-        function animateViewBox(targetVal) {
-            const svg = document.getElementById('map-img');
-            // Safe parsing fallback
-            let startStr = svg.getAttribute('viewBox');
-            if(!startStr) startStr = "0 0 1024 1024";
-            
-            const start = startStr.split(' ').map(Number);
-            const end = targetVal.split(' ').map(Number);
-            
-            let startT = performance.now();
-            const duration = 1000; // 1s
-            
-            function step(t) {
-                const progress = Math.min((t - startT) / duration, 1);
-                // Ease Out Cubic
-                const ease = 1 - Math.pow(1 - progress, 3);
-                
-                const current = start.map((s, i) => s + (end[i] - s) * ease);
-                svg.setAttribute('viewBox', current.join(' '));
-                
-                if (progress < 1) requestAnimationFrame(step);
-            }
-            requestAnimationFrame(step);
-        }
-        
-        function mapReset() {
-            animateViewBox("0 0 1024 1024");
-            document.getElementById('map-back-btn').style.display = 'none';
-            
-            // Reset Layers
-            setTimeout(() => {
-                document.querySelectorAll('.city-marker').forEach(el => el.style.display = 'block');
-                document.querySelectorAll('.districts').forEach(el => {
-                    el.style.opacity = '0';
-                    el.setAttribute('pointer-events', 'none');
-                });
-            }, 500);
-        }
-        
-        function selectDistrict(name) {
-            tg.showAlert(`Selected: ${name}`);
-            // Filter products by district logic
-            // For now just show the shop
-            showSection('shop');
         }
 
         // Init
