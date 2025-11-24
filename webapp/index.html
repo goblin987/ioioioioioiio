@@ -12,16 +12,23 @@
         }
         
         :root {
-            --gta-green: #3fa535;
-            --gta-gold: #cfa936;
-            --gta-black: #000000;
-            --gta-grey: #a0a0a0;
+            /* GTA SA Map Palette */
+            --gta-water: #7597BD; /* The classic blue water */
+            --gta-land: #A6A6A6;  /* Urban grey */
+            --gta-grass: #546D44; /* Park green */
+            --gta-road: #D8D8D8;  /* Light roads */
+            --gta-highway: #E6C86E; /* Yellow highways */
+            
+            /* UI Colors */
+            --gta-green: #2F612F; /* Money Green */
+            --gta-gold: #BD9B37;  /* HUD Gold */
+            --gta-hud-bg: rgba(0, 0, 0, 0.85);
         }
 
         body {
             margin: 0;
             padding: 0;
-            background-color: var(--gta-black);
+            background-color: #000;
             color: #fff;
             font-family: 'Pricedown', sans-serif;
             overflow: hidden;
@@ -288,7 +295,7 @@
             font-weight: bold;
         }
 
-        /* --- GTA SA "WORLD MAP" THEME (Colorful) --- */
+        /* --- GTA SA "WORLD MAP" THEME (REMASTERED) --- */
         #map.section {
             position: fixed;
             top: 0;
@@ -296,7 +303,9 @@
             width: 100%;
             height: 100%;
             z-index: 200;
-            background: #000; /* GTA Water Blue */
+            background-color: #88B0D6; /* GTA SA Water Blue */
+            background-image: radial-gradient(#8ebbe6 1px, transparent 1px);
+            background-size: 20px 20px;
             padding: 0;
             overflow: hidden;
         }
@@ -307,51 +316,158 @@
             overflow: hidden;
             touch-action: none;
             position: relative;
-            /* Water Texture */
-            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
+            cursor: grab;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 99px,
+                rgba(255, 255, 255, 0.05) 100px
+            ),
+            repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 99px,
+                rgba(255, 255, 255, 0.05) 100px
+            );
+        }
+        
+        .map-viewport:active {
+            cursor: grabbing;
         }
 
         .map-transform-layer {
-            width: 1024px; /* Base SVG size */
-            height: 1024px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
             transform-origin: 0 0;
             will-change: transform;
-            position: absolute;
-            top: 0;
-            left: 0;
         }
 
-        /* HUD */
-        .map-hud-top {
+        /* SVG Styles - Remastered */
+        .map-img-interactive {
+            width: 3072px; /* High Res Canvas */
+            height: 3072px;
+            transform: translate(-1536px, -1536px);
+            overflow: visible;
+        }
+        
+        /* The Landmass */
+        .map-land {
+            fill: #A9A9A9; /* Urban Grey */
+            stroke: #000;
+            stroke-width: 4;
+            filter: drop-shadow(0px 4px 0px rgba(0,0,0,0.2));
+        }
+        
+        /* City Grid Pattern inside Land */
+        .city-grid-pattern {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1;
+        }
+
+        /* Zones/Territories */
+        .zone-grove { fill: rgba(63, 165, 53, 0.3); stroke: #3fa535; stroke-width: 2; }
+        .zone-ballas { fill: rgba(186, 0, 255, 0.3); stroke: #ba00ff; stroke-width: 2; }
+        .zone-vagos { fill: rgba(255, 215, 0, 0.3); stroke: #ffd700; stroke-width: 2; }
+
+        /* Markers & Blips */
+        .blip-container {
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .blip-container:hover {
+            transform: scale(1.2);
+            z-index: 100;
+        }
+
+        .blip-square {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+        }
+
+        .blip-icon {
+            font-size: 16px;
+            line-height: 24px;
+            text-align: center;
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Blip Types */
+        .blip-shop { background: #ffd700; } /* Gold for shop */
+        .blip-mission { background: #ff0000; } /* Red for mission */
+        .blip-save { background: #fff; } /* White for save */
+        .blip-player { background: #3fa535; border-radius: 50%; } /* Green for player */
+
+        .blip-label {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 28px;
+            fill: #fff;
+            stroke: #000;
+            stroke-width: 1px;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            opacity: 0; /* Hidden until zoomed */
+            transition: opacity 0.3s;
+        }
+        
+        /* Visible labels on zoom */
+        .map-viewport.zoomed .blip-label {
+            opacity: 1;
+        }
+
+        /* HUD Elements */
+        .map-hud-bottom {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 60px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            pointer-events: none;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            box-sizing: border-box;
-            pointer-events: none;
-            z-index: 9999;
+            align-items: flex-end;
         }
-        
-        .map-title {
-            font-size: 32px;
-            color: var(--gta-gold);
-            text-shadow: 2px 2px 0 #000;
-        }
-        
-        .btn-close-map {
-            font-size: 24px;
-            color: #fff;
+
+        .map-legend-box {
+            background: rgba(0,0,0,0.85);
+            padding: 10px 15px;
+            border: 2px solid #666;
             pointer-events: auto;
+            font-family: 'Courier New', monospace;
+            color: #ddd;
+            font-size: 12px;
+        }
+        
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        
+        .legend-color { width: 12px; height: 12px; border: 1px solid #fff; }
+
+        .btn-map-action {
+            background: #000;
+            color: #ffd700;
+            border: 2px solid #ffd700;
+            padding: 10px 20px;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 24px;
             cursor: pointer;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border: 1px solid #fff;
+            pointer-events: auto;
+            text-shadow: 1px 1px 0 #000;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+        }
+        
+        .btn-map-action:active {
+            transform: translateY(4px);
+            box-shadow: none;
         }
 
 
@@ -1044,13 +1160,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
     </div>
 
     <!-- Navigation -->
-        <div class="nav">
+    <div class="nav">
         <div class="nav-item active" id="nav-shop" onclick="showSection('shop')">SHOP</div>
         <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
         <div class="nav-item" id="nav-wallet" onclick="showSection('wallet')">WALLET</div>
-        <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
-    </div>
-        <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
         <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
     </div>
 
@@ -1060,6 +1173,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         tg.MainButton.hide();
 
         let allProducts = [];
+        let selectedCity = null;
         let currentStation = 0;
         // SomaFM Streams (Reliable HTTPS)
         const stations = [
@@ -1226,112 +1340,193 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
-                // Map Logic (Mobile Pan/Zoom)
-        let mapState = { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
-        let selectedCity = null;
+        // Map Logic (Pinch Zoom & Inertia)
+        let mapState = { 
+            scale: 1, 
+            x: 0, 
+            y: 0, 
+            isDragging: false, 
+            startX: 0, 
+            startY: 0,
+            momentumX: 0,
+            momentumY: 0,
+            initialPinchDist: null,
+            initialScale: 1
+        };
+        
+        let animationFrameId = null;
 
-                function fitMapToScreen() {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            const mapSize = 1024;
-            
-            // Calculate scale to fit (contain)
-            const scaleX = w / mapSize;
-            const scaleY = h / mapSize;
-            let scale = Math.min(scaleX, scaleY);
-            
-            // Center it
-            const x = (w - (mapSize * scale)) / 2;
-            const y = (h - (mapSize * scale)) / 2;
-            
-            mapState.scale = scale;
-            mapState.x = x;
-            mapState.y = y;
-            updateMapTransform();
+        function updateMapTransform() {
+            const layer = document.getElementById('map-layer');
+            const viewport = document.getElementById('map-viewport');
+            if(layer && viewport) {
+                // Apply Transform
+                layer.style.transform = `translate(${mapState.x}px, ${mapState.y}px) scale(${mapState.scale})`;
+                
+                // Toggle class for labels based on zoom
+                if(mapState.scale > 2.5) viewport.classList.add('zoomed');
+                else viewport.classList.remove('zoomed');
+            }
         }
 
         function initMapEvents() {
-            fitMapToScreen();
-            window.addEventListener('resize', fitMapToScreen);
             const viewport = document.getElementById('map-viewport');
             if(!viewport) return;
             
-            // Touch
+            // TOUCH EVENTS
             viewport.addEventListener('touchstart', e => {
-                if(e.touches.length === 1) {
+                if(e.touches.length === 2) {
+                    // Pinch Start
+                    mapState.isDragging = false;
+                    mapState.initialPinchDist = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    mapState.initialScale = mapState.scale;
+                } else if(e.touches.length === 1) {
+                    // Drag Start
                     mapState.isDragging = true;
                     mapState.startX = e.touches[0].clientX - mapState.x;
                     mapState.startY = e.touches[0].clientY - mapState.y;
+                    mapState.momentumX = 0;
+                    mapState.momentumY = 0;
+                    cancelAnimationFrame(animationFrameId);
                 }
             });
             
             viewport.addEventListener('touchmove', e => {
-                if(mapState.isDragging && e.touches.length === 1) {
-                    e.preventDefault(); // Stop scroll
-                    mapState.x = e.touches[0].clientX - mapState.startX;
-                    mapState.y = e.touches[0].clientY - mapState.startY;
+                if(e.touches.length === 2 && mapState.initialPinchDist) {
+                    // Pinch Zoom
+                    e.preventDefault();
+                    const dist = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    const delta = dist / mapState.initialPinchDist;
+                    mapState.scale = Math.min(Math.max(mapState.initialScale * delta, 0.5), 6);
+                    updateMapTransform();
+                } else if(mapState.isDragging && e.touches.length === 1) {
+                    // Drag
+                    e.preventDefault(); 
+                    const newX = e.touches[0].clientX - mapState.startX;
+                    const newY = e.touches[0].clientY - mapState.startY;
+                    
+                    // Momentum calc
+                    mapState.momentumX = newX - mapState.x;
+                    mapState.momentumY = newY - mapState.y;
+                    
+                    mapState.x = newX;
+                    mapState.y = newY;
                     updateMapTransform();
                 }
             });
             
-            viewport.addEventListener('touchend', () => mapState.isDragging = false);
+            viewport.addEventListener('touchend', e => {
+                if(e.touches.length < 2) mapState.initialPinchDist = null;
+                if(e.touches.length === 0) {
+                    mapState.isDragging = false;
+                    applyInertia();
+                }
+            });
 
-            // Mouse (Testing)
+            // MOUSE EVENTS (Desktop testing)
             viewport.addEventListener('mousedown', e => {
                 mapState.isDragging = true;
                 mapState.startX = e.clientX - mapState.x;
                 mapState.startY = e.clientY - mapState.y;
+                mapState.momentumX = 0;
+                mapState.momentumY = 0;
+                cancelAnimationFrame(animationFrameId);
             });
+            
             viewport.addEventListener('mousemove', e => {
                 if(mapState.isDragging) {
-                    mapState.x = e.clientX - mapState.startX;
-                    mapState.y = e.clientY - mapState.startY;
+                    const newX = e.clientX - mapState.startX;
+                    const newY = e.clientY - mapState.startY;
+                    
+                    mapState.momentumX = newX - mapState.x;
+                    mapState.momentumY = newY - mapState.y;
+                    
+                    mapState.x = newX;
+                    mapState.y = newY;
                     updateMapTransform();
                 }
             });
-            viewport.addEventListener('mouseup', () => mapState.isDragging = false);
-            viewport.addEventListener('mouseleave', () => mapState.isDragging = false);
+            
+            viewport.addEventListener('mouseup', () => {
+                mapState.isDragging = false;
+                applyInertia();
+            });
+            
+            viewport.addEventListener('wheel', e => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                mapState.scale = Math.min(Math.max(mapState.scale * delta, 0.5), 6);
+                updateMapTransform();
+            });
         }
 
-        function updateMapTransform() {
-            const layer = document.getElementById('map-layer');
-            if(layer) layer.style.transform = `translate(${mapState.x}px, ${mapState.y}px) scale(${mapState.scale})`;
-        }
-
-        function mapZoomIn() {
-            mapState.scale = Math.min(mapState.scale * 1.2, 5);
-            updateMapTransform();
-        }
-
-        function mapZoomOut() {
-            mapState.scale = Math.max(mapState.scale / 1.2, 1);
-            if(mapState.scale === 1) { mapState.x = 0; mapState.y = 0; }
-            updateMapTransform();
-        }
-
-                        
-        
-        function closeSheet() {
-            const sheet = document.getElementById('city-sheet');
-            if(sheet) sheet.classList.remove('active');
-        }
-
-        function openCityShop() {
-            if(selectedCity) {
-                showSection('shop');
-                filterProducts(selectedCity);
-                const btns = document.querySelectorAll('.filter-btn');
-                for(let btn of btns) {
-                    if(btn.innerText === selectedCity.toUpperCase()) {
-                        btn.click();
-                        break;
-                    }
-                }
+        function applyInertia() {
+            if(Math.abs(mapState.momentumX) > 0.1 || Math.abs(mapState.momentumY) > 0.1) {
+                mapState.x += mapState.momentumX;
+                mapState.y += mapState.momentumY;
+                mapState.momentumX *= 0.92; // Friction
+                mapState.momentumY *= 0.92;
+                updateMapTransform();
+                animationFrameId = requestAnimationFrame(applyInertia);
             }
         }
+
+        function zoomToCity(name) {
+            let targetX = 0, targetY = 0;
+            
+            // Coordinates match the SVG translation (730, 600) etc. relative to center
+            // The map is 3072x3072 centered.
+            // Coordinate system: SVG is 1024x1024. We need to map SVG coords to pixels.
+            // We can just hardcode nice values for now as we know the cities.
+            
+            if(name === 'Vilnius') { targetX = -700; targetY = -400; }
+            if(name === 'Kaunas') { targetX = 0; targetY = -500; }
+            if(name === 'Klaipeda') { targetX = 1000; targetY = -400; }
+            
+            // Animate
+            const startScale = mapState.scale;
+            const endScale = 4;
+            const startX = mapState.x;
+            const startY = mapState.y;
+            
+            let startTime = performance.now();
+            
+            function animate(t) {
+                let p = Math.min((t - startTime) / 600, 1);
+                let ease = 1 - Math.pow(1 - p, 3); // Cubic Ease Out
+                
+                mapState.scale = startScale + (endScale - startScale) * ease;
+                mapState.x = startX + (targetX - startX) * ease;
+                mapState.y = startY + (targetY - startY) * ease;
+                
+                updateMapTransform();
+                
+                if(p < 1) requestAnimationFrame(animate);
+                else {
+                    selectedCity = name;
+                    document.getElementById('sheet-title').innerText = name.toUpperCase();
+                    document.getElementById('sheet-info').innerText = "TERRITORY CONTROLLED";
+                    document.getElementById('city-sheet').classList.add('active');
+                }
+            }
+            requestAnimationFrame(animate);
+        }
         
-        // Call init
+        function openCityShop() {
+             document.getElementById('city-sheet').classList.remove('active');
+             showSection('shop');
+             filterProducts(selectedCity);
+        }
+
+        // Init
         initMapEvents();
+
 
 
         // Mission Passed

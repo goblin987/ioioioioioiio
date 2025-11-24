@@ -2145,7 +2145,7 @@ async def handle_adm_bulk_city(update: Update, context: ContextTypes.DEFAULT_TYP
     if not available_cities:
          if is_auth_worker:
              return await query.answer("No allowed cities assigned to you.", show_alert=True)
-         return await query.edit_message_text("No cities configured. Please add a city first via 'Manage Cities'.", parse_mode=None)
+        return await query.edit_message_text("No cities configured. Please add a city first via 'Manage Cities'.", parse_mode=None)
 
     sorted_city_ids = sorted(available_cities.keys(), key=lambda city_id: available_cities.get(city_id, ''))
     keyboard = [[InlineKeyboardButton(f"🏙️ {available_cities.get(c,'N/A')}", callback_data=f"adm_bulk_dist|{c}")] for c in sorted_city_ids]
@@ -2154,7 +2154,7 @@ async def handle_adm_bulk_city(update: Update, context: ContextTypes.DEFAULT_TYP
     if is_auth_worker and not is_admin:
          keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="worker_dashboard")])
     else:
-         keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")])
+    keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")])
 
     select_city_text = lang_data.get("admin_select_city", "Select City to Add Bulk Products:")
     await query.edit_message_text(f"📦 Bulk Add Products\n\n{select_city_text}", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
@@ -2568,7 +2568,7 @@ async def show_bulk_messages_status(update: Update, context: ContextTypes.DEFAUL
             media_info = f" [{media_count} media]" if media_count > 0 else ""
             
             msg += f"{i}. {text_preview}{media_info}\n"
-        
+    
         msg += f"\n💡 You can add {10 - len(bulk_messages)} more message(s)"
     
     keyboard = []
@@ -6408,7 +6408,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                 LIMIT 10
             """, (search_pattern,))
             users_found = c.fetchall()
-            
+        
     except Exception as e:
         logger.error(f"DB error searching for user '{search_term}': {e}")
         await send_message_with_retry(context.bot, chat_id, "❌ Database error during search.", parse_mode=None)
@@ -6482,7 +6482,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                 logger.info(f"Could not fetch username from Telegram for user {user_info['user_id']}: {api_err}")
         
         # Display comprehensive information
-        await display_user_search_results(context.bot, chat_id, user_info)
+    await display_user_search_results(context.bot, chat_id, user_info)
     else:
         # Multiple users found
         msg = f"🔍 Found {len(users_found)} users matching '{search_term}':\n\n"
