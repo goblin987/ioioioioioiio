@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.3</title>
+    <title>Los Santos Shop v2.4</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -288,7 +288,7 @@
             font-weight: bold;
         }
 
-        /* --- GTA SA MOBILE MAP THEME --- */
+        /* --- GTA SA "WORLD MAP" THEME (Colorful) --- */
         #map.section {
             position: fixed;
             top: 0;
@@ -296,7 +296,7 @@
             width: 100%;
             height: 100%;
             z-index: 200;
-            background: #0e131a;
+            background: #6fa8dc; /* GTA Water Blue */
             padding: 0;
             overflow: hidden;
         }
@@ -305,10 +305,10 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            touch-action: none; /* Prevent browser scrolling */
+            touch-action: none;
             position: relative;
-            background-image: radial-gradient(#151b24 2px, transparent 2px);
-            background-size: 30px 30px;
+            /* Water Texture */
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
         }
 
         .map-transform-layer {
@@ -573,16 +573,23 @@
         <div id="map" class="section">
             <div class="map-viewport" id="map-viewport">
                 <div class="map-transform-layer" id="map-layer">
-                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
+                                        <!-- GTA SA COLORFUL MAP LAYERS -->
+                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%;">
                         <defs>
-                            <!-- 1. Land Texture (Paper Map Grid) -->
+                            <!-- 1. Grass Land Texture -->
                             <pattern id="land-texture" width="100" height="100" patternUnits="userSpaceOnUse">
-                                <rect width="100" height="100" fill="#3e4348"/> <!-- Base Grey -->
-                                <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#4a5056" stroke-width="1"/> <!-- Grid -->
-                                <rect x="0" y="0" width="100" height="100" fill="#000" opacity="0.1"/> <!-- Noise -->
+                                <rect width="100" height="100" fill="#567d46"/> <!-- GTA Grass Green -->
+                                <!-- Subtle noise/texture -->
+                                <path d="M0 100 L50 0 L100 100" fill="rgba(0,0,0,0.1)" />
                             </pattern>
                             
-                            <!-- 2. Clipping Mask (The Country Shape) -->
+                            <!-- 2. City Concrete Texture -->
+                            <pattern id="city-texture" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <rect width="20" height="20" fill="#d9d9d9"/> <!-- Concrete -->
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#999" stroke-width="1"/> <!-- Grid -->
+                            </pattern>
+
+                            <!-- 3. Clipping Mask -->
                             <clipPath id="land-clip">
                                 <g transform="translate(0,1024) scale(0.1,-0.1)">
                                     <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
@@ -665,33 +672,27 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
                         <!-- LAYER 1: Land Mass (Clipped) -->
                         <g clip-path="url(#land-clip)">
-                            <!-- Base Texture -->
+                            <!-- Base Grass -->
                             <rect width="1024" height="1024" fill="url(#land-texture)" />
                             
-                            <!-- LAYER 2: Rivers (Dark Blue) -->
-                            <!-- Stylized Nemunas -->
-                            <path d="M 600 1000 Q 450 800 512 665 T 150 358" stroke="#1c242e" stroke-width="20" fill="none" stroke-linecap="round"/>
-                            <!-- Stylized Neris -->
-                            <path d="M 1024 700 Q 800 750 716 768 T 512 665" stroke="#1c242e" stroke-width="15" fill="none" stroke-linecap="round"/>
+                            <!-- LAYER 2: Rivers (Ocean Blue) -->
+                            <path d="M 600 1000 Q 450 800 512 665 T 150 358" stroke="#6fa8dc" stroke-width="25" fill="none" stroke-linecap="round"/>
+                            <path d="M 1024 700 Q 800 750 716 768 T 512 665" stroke="#6fa8dc" stroke-width="20" fill="none" stroke-linecap="round"/>
 
-                            <!-- LAYER 3: Highways (Light Grey + Yellow) -->
-                            <!-- A1 (Vilnius-Kaunas-Klaipeda) -->
-                            <path d="M 716 768 L 512 665 L 150 358" stroke="#5a5f66" stroke-width="10" fill="none" stroke-linejoin="round"/>
-                            <path d="M 716 768 L 512 665 L 150 358" stroke="#f0c330" stroke-width="2" fill="none" stroke-dasharray="15,10"/> 
-
-                            <!-- A2 (Vilnius-Panevezys) -->
-                            <path d="M 716 768 Q 600 500 512 300" stroke="#5a5f66" stroke-width="10" fill="none"/>
-
-                            <!-- LAYER 4: Urban Areas (Darker Blobs) -->
+                            <!-- LAYER 3: Urban Areas (Concrete Grid) -->
                             <!-- Vilnius -->
-                            <path d="M 690 740 L 740 730 L 760 780 L 710 800 Z" fill="#252a30" />
+                            <path d="M 690 740 L 740 730 L 760 780 L 710 800 Z" fill="url(#city-texture)" stroke="#999" stroke-width="2"/>
                             <!-- Kaunas -->
-                            <path d="M 490 640 L 540 640 L 530 690 L 480 680 Z" fill="#252a30" />
+                            <path d="M 490 640 L 540 640 L 530 690 L 480 680 Z" fill="url(#city-texture)" stroke="#999" stroke-width="2"/>
                             <!-- Klaipeda -->
-                            <path d="M 130 330 L 170 330 L 170 380 L 130 380 Z" fill="#252a30" />
+                            <path d="M 130 330 L 170 330 L 170 380 L 130 380 Z" fill="url(#city-texture)" stroke="#999" stroke-width="2"/>
+
+                            <!-- LAYER 4: Highways (Dark Grey Roads) -->
+                            <path d="M 716 768 L 512 665 L 150 358" stroke="#2a2a2a" stroke-width="12" fill="none" stroke-linecap="round"/>
+                            <path d="M 716 768 Q 600 500 512 300" stroke="#2a2a2a" stroke-width="12" fill="none" stroke-linecap="round"/>
                         </g>
                         
-                        <!-- LAYER 5: Coastline Outline (Thick Black) -->
+                        <!-- LAYER 5: Coastline Outline (Black) -->
                         <g transform="translate(0,1024) scale(0.1,-0.1)">
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
@@ -766,25 +767,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="25"/>
+1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="20"/>
                         </g>
                     </svg>
                     
                     <!-- Blips -->
-                    <div class="district-marker" style="top: 75%; left: 70%;">
-                        <div class="blip-icon" onclick="selectCity('Vilnius', 75, 70)"></div>
-                        <div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none;">VILNIUS</div>
-                    </div>
+                    <div class="district-marker" style="top: 75%; left: 70%;" onclick="selectCity('Vilnius', 75, 70)">
+<div class="blip-icon"></div>
+<div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none; cursor:pointer;">VILNIUS</div>
+</div>
                     
-                    <div class="district-marker" style="top: 65%; left: 50%;">
-                        <div class="blip-icon" onclick="selectCity('Kaunas', 65, 50)"></div>
-                        <div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none;">KAUNAS</div>
-                    </div>
+                    <div class="district-marker" style="top: 65%; left: 50%;" onclick="selectCity('Kaunas', 65, 50)">
+<div class="blip-icon"></div>
+<div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none; cursor:pointer;">KAUNAS</div>
+</div>
                     
-                    <div class="district-marker" style="top: 35%; left: 15%;">
-                        <div class="blip-icon" onclick="selectCity('Klaipeda', 35, 15)"></div>
-                        <div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none;">KLAIPEDA</div>
-                    </div>
+                    <div class="district-marker" style="top: 35%; left: 15%;" onclick="selectCity('Klaipeda', 35, 15)">
+<div class="blip-icon"></div>
+<div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none; cursor:pointer;">KLAIPEDA</div>
+</div>
                 </div>
             </div>
 
