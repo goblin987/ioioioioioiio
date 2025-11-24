@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.8</title>
+    <title>Los Santos Shop v2.9</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -571,19 +571,20 @@
                                         <!-- GTA SA COLORFUL MAP LAYERS -->
                                         <!-- GTA SA WORLD MAP (HARDCODED COLORS) -->
                                         <!-- GTA SA HIGH FIDELITY MAP -->
+                                        <!-- GTA SA MAP FINAL FIX -->
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #97c2e2;">
                         <defs>
-                            <!-- Texture Filter for Paper/Gritty Look -->
-                            <filter id="noise">
-                                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/>
-                                <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.1 0"/>
-                                <feBlend in="SourceGraphic" mode="multiply"/>
-                            </filter>
+                            <pattern id="grid-pattern" width="50" height="50" patternUnits="userSpaceOnUse">
+                                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
+                            </pattern>
+                        </defs>
 
-                            <!-- Country Outline Clip -->
-                            <clipPath id="clip-land">
-                                <g transform="translate(0,1024) scale(0.1,-0.1)">
-                                    <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
+                        <!-- 1. LAND BASE (Direct Fill - Guaranteed Visibility) -->
+                        <!-- The path coordinates are in ~10000 range, so we scale down by 0.1 -->
+                        <!-- Y-flip is needed because SVG y-down vs map y-up often differs, or original data was flipped -->
+                        <g transform="translate(0,1024) scale(0.1,-0.1)">
+                            <!-- Main Land Mass: Beige #dcb891 -->
+                            <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
 -51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
 c-44 22 -100 43 -124 46 -39 6 -50 2 -122 -43 -43 -27 -105 -59 -137 -72 l-57
@@ -656,55 +657,38 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" />
-                                </g>
-                            </clipPath>
-                        </defs>
-
-                        <!-- MAP CONTENT GROUP (Clipped to Lithuania Shape) -->
-                        <g clip-path="url(#clip-land)">
-                            <!-- 1. Base Land (Sand/Beige) -->
-                            <rect width="1024" height="1024" fill="#dcb891" filter="url(#noise)" />
+1 -25 -7 -42 -18z" fill="#dcb891" stroke="none" />
                             
-                            <!-- 2. Grasslands (Light Green Coverage) -->
-                            <path d="M0 0 H1024 V1024 H0 Z" fill="#768e61" opacity="0.8" filter="url(#noise)" />
-                            
-                            <!-- 3. Forests (Darker Green Organic Shapes) -->
-                            <!-- Dzūkija (South) -->
-                            <path d="M 600 200 Q 500 100 700 50 T 800 250 Z" fill="#586c48" opacity="0.9" filter="url(#noise)" />
-                            <!-- Aukštaitija (North East) -->
-                            <path d="M 700 800 Q 800 900 900 850 T 800 700 Z" fill="#586c48" opacity="0.9" filter="url(#noise)" />
-                            <!-- Zemaitija (North West) -->
-                            <path d="M 200 700 Q 300 800 400 750 T 300 600 Z" fill="#586c48" opacity="0.9" filter="url(#noise)" />
-
-                            <!-- 4. Rivers (GTA Water Blue) -->
-                            <!-- Nemunas (From South East -> Kaunas -> Curonian Lagoon) -->
-                            <path d="M 600 0 C 620 100 650 200 600 300 S 500 500 520 660 S 300 600 100 620" 
-                                  stroke="#97c2e2" stroke-width="25" fill="none" stroke-linecap="round" />
-                            <!-- Neris (From East -> Vilnius -> Kaunas) -->
-                            <path d="M 1024 500 C 900 520 800 550 720 600 S 600 620 520 660" 
-                                  stroke="#97c2e2" stroke-width="20" fill="none" stroke-linecap="round" />
-
-                            <!-- 5. Cities (Concrete/Grey Zones) -->
-                            <!-- Vilnius -->
-                            <path d="M 690 560 L 760 550 L 770 620 L 700 630 Z" fill="#9ba0a3" stroke="none" />
-                            <!-- Kaunas -->
-                            <path d="M 480 630 L 550 630 L 540 690 L 470 690 Z" fill="#9ba0a3" stroke="none" />
-                            <!-- Klaipeda -->
-                            <path d="M 80 600 L 140 600 L 140 660 L 80 660 Z" fill="#9ba0a3" stroke="none" />
-
-                            <!-- 6. Major Roads (Dark Grey + Yellow Line) -->
-                            <!-- A1 (Vilnius - Kaunas - Klaipeda) -->
-                            <path d="M 730 590 L 515 660 L 110 630" stroke="#424242" stroke-width="12" fill="none" stroke-linecap="round" />
-                            <path d="M 730 590 L 515 660 L 110 630" stroke="#d9cd84" stroke-width="2" fill="none" stroke-dasharray="15,10" />
-                            
-                            <!-- A2 (Vilnius - Panevezys) -->
-                            <path d="M 730 590 Q 700 750 650 850" stroke="#424242" stroke-width="10" fill="none" stroke-linecap="round" />
-                            <path d="M 730 590 Q 700 750 650 850" stroke="#d9cd84" stroke-width="2" fill="none" stroke-dasharray="15,10" />
+                            <!-- Green Zones (Approximated by reusing path with gradient or just overlay? 
+                                 For now, let's just keep it simple beige to fix "blue screen" issue. 
+                                 We can add a green overlay with opacity if needed, but let's ensure basic shape first. -->
                         </g>
-                        
-                        <!-- 7. Border Outline (Thick Black) -->
-                        <g transform="translate(0,1024) scale(0.1,-0.1)">
+
+                        <!-- 2. TEXTURE OVERLAY (Grid) -->
+                        <rect width="1024" height="1024" fill="url(#grid-pattern)" pointer-events="none" />
+
+                        <!-- 3. RIVERS & ROADS (Drawn in 1024x1024 space) -->
+                        <g pointer-events="none">
+                            <!-- Rivers (Blue #97c2e2 matching sea) -->
+                            <!-- Nemunas -->
+                            <path d="M 600 1024 Q 550 800 520 660 T 100 620" stroke="#97c2e2" stroke-width="20" fill="none" stroke-linecap="round" />
+                            <!-- Neris -->
+                            <path d="M 1024 500 Q 800 550 720 600 T 520 660" stroke="#97c2e2" stroke-width="15" fill="none" stroke-linecap="round" />
+
+                            <!-- A1 Highway (Vilnius-Kaunas-Klaipeda) -->
+                            <path d="M 730 590 L 515 660 L 110 630" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round" />
+                            <path d="M 730 590 L 515 660 L 110 630" stroke="#d9cd84" stroke-width="2" fill="none" stroke-dasharray="10,10" />
+                        </g>
+
+                        <!-- 4. FORESTS (Decorative Green Patches) -->
+                        <g pointer-events="none" opacity="0.6">
+                             <circle cx="300" cy="700" r="60" fill="#586c48" filter="blur(10px)" />
+                             <circle cx="800" cy="800" r="80" fill="#586c48" filter="blur(10px)" />
+                             <circle cx="600" cy="200" r="70" fill="#586c48" filter="blur(10px)" />
+                        </g>
+
+                        <!-- 5. BORDER OUTLINE -->
+                        <g transform="translate(0,1024) scale(0.1,-0.1)" pointer-events="none">
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
 -51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
@@ -778,25 +762,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="40" opacity="0.8"/>
+1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="30" />
                         </g>
 
-                        <!-- 8. Interactive City Markers (Golden Boxes) -->
+                        <!-- 6. INTERACTIVE CITIES -->
+                        <!-- Added explicit onclick and pointer-events -->
+                        
                         <!-- Vilnius -->
-                        <g class="city-marker" onclick="selectCity('Vilnius', 40, 72)" style="cursor: pointer;">
-                            <rect x="690" y="560" width="80" height="80" fill="rgba(255, 215, 0, 0.3)" stroke="#ffd700" stroke-width="4" rx="5" />
-                            <rect x="700" y="570" width="60" height="60" fill="none" stroke="#ffd700" stroke-width="2" stroke-dasharray="5,5" />
+                        <g class="city-marker" onclick="selectCity('Vilnius', 40, 72)" style="cursor: pointer; pointer-events: all;">
+                            <rect x="690" y="560" width="80" height="80" fill="rgba(255, 215, 0, 0.4)" stroke="#ffd700" stroke-width="4" />
+                            <text x="730" y="600" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="14" stroke="black" stroke-width="3" paint-order="stroke">VILNIUS</text>
+                            <text x="730" y="600" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="14">VILNIUS</text>
                         </g>
 
                         <!-- Kaunas -->
-                        <g class="city-marker" onclick="selectCity('Kaunas', 35, 50)" style="cursor: pointer;">
-                            <rect x="480" y="630" width="70" height="70" fill="rgba(255, 215, 0, 0.3)" stroke="#ffd700" stroke-width="4" rx="5" />
-                            <rect x="490" y="640" width="50" height="50" fill="none" stroke="#ffd700" stroke-width="2" stroke-dasharray="5,5" />
+                        <g class="city-marker" onclick="selectCity('Kaunas', 35, 50)" style="cursor: pointer; pointer-events: all;">
+                            <rect x="480" y="630" width="70" height="70" fill="rgba(255, 215, 0, 0.4)" stroke="#ffd700" stroke-width="4" />
+                             <text x="515" y="670" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="14" stroke="black" stroke-width="3" paint-order="stroke">KAUNAS</text>
+                             <text x="515" y="670" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="14">KAUNAS</text>
                         </g>
 
                         <!-- Klaipeda -->
-                        <g class="city-marker" onclick="selectCity('Klaipeda', 38, 12)" style="cursor: pointer;">
-                             <rect x="80" y="600" width="60" height="60" fill="rgba(255, 215, 0, 0.3)" stroke="#ffd700" stroke-width="4" rx="5" />
+                        <g class="city-marker" onclick="selectCity('Klaipeda', 38, 12)" style="cursor: pointer; pointer-events: all;">
+                             <rect x="80" y="600" width="60" height="60" fill="rgba(255, 215, 0, 0.4)" stroke="#ffd700" stroke-width="4" />
+                             <text x="110" y="635" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="14" stroke="black" stroke-width="3" paint-order="stroke">KLAIPEDA</text>
+                             <text x="110" y="635" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="14">KLAIPEDA</text>
                         </g>
                     </svg>
                     
