@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Los Santos Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
     <style>
         @font-face {
             font-family: 'Pricedown';
@@ -79,6 +81,32 @@
             color: var(--gta-green);
             font-size: 28px;
             text-shadow: 1px 1px 0 #000;
+        }
+
+        /* Wanted Level */
+        .wanted-stars {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .star {
+            font-size: 20px;
+            color: #333; /* Inactive */
+        }
+        
+        .star.active {
+            color: #fff;
+            text-shadow: 0 0 5px #fff;
+        }
+        
+        .star.flashing {
+            animation: starFlash 0.5s infinite alternate;
+        }
+        
+        @keyframes starFlash {
+            from { color: #fff; opacity: 1; }
+            to { color: #cfa936; opacity: 0.8; }
         }
 
         /* Navigation */
@@ -165,6 +193,7 @@
         .product-emoji {
             font-size: 40px;
             margin: 10px 0;
+            cursor: pointer;
         }
 
         .product-name {
@@ -207,6 +236,149 @@
             background: #fff;
         }
 
+        /* Radio */
+        .radio-widget {
+            position: fixed;
+            top: 80px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid var(--gta-grey);
+            padding: 5px 10px;
+            z-index: 99;
+            text-align: right;
+            transition: 0.3s;
+            transform: translateX(90%); /* Hidden by default */
+            cursor: pointer;
+        }
+        
+        .radio-widget:hover, .radio-widget.active {
+            transform: translateX(0);
+        }
+        
+        .radio-text {
+            font-size: 14px;
+            color: var(--gta-gold);
+            white-space: nowrap;
+        }
+
+        /* Search Bar (LSPD) */
+        .search-container {
+            margin-bottom: 15px;
+            border: 2px solid #fff;
+            background: #000;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-input {
+            background: transparent;
+            border: none;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            width: 100%;
+            outline: none;
+            text-transform: uppercase;
+        }
+        
+        .search-label {
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        /* Map Zoom */
+        .map-container {
+            overflow: hidden;
+            position: relative;
+            height: 400px;
+            border: 2px solid var(--gta-gold);
+        }
+        
+        .map-img-interactive {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 1s ease-in-out;
+            filter: sepia(0.4) hue-rotate(-20deg);
+        }
+        
+        .district-marker {
+            position: absolute;
+            background: rgba(63, 165, 53, 0.4);
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            transform: scale(1);
+            transition: 0.2s;
+        }
+        
+        .district-marker:hover {
+            background: rgba(207, 169, 54, 0.6);
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        /* 3D Modal */
+        .modal-3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .canvas-container {
+            width: 300px;
+            height: 300px;
+            border: 2px solid var(--gta-green);
+            background: #111;
+        }
+        
+        /* Mission Passed Overlay */
+        .mission-passed-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 300;
+            pointer-events: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .mp-text {
+            font-size: 64px;
+            color: var(--gta-gold);
+            text-shadow: 3px 3px 0 #000;
+            transform: scale(0);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .mp-sub {
+            font-size: 32px;
+            color: #fff;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.5s delay 0.5s;
+        }
+        
+        .mp-active .mp-text { transform: scale(1); }
+        .mp-active .mp-sub { opacity: 1; }
+        
         /* Map & Stats */
         .placeholder-box {
             background: rgba(0,0,0,0.6);
@@ -224,25 +396,6 @@
             margin: 10px 0;
             border-bottom: 1px solid #333;
             padding-bottom: 5px;
-        }
-
-        .map-img {
-            width: 100%;
-            border: 2px solid #fff;
-            filter: sepia(0.5) hue-rotate(-30deg) saturate(1.2) contrast(1.2);
-        }
-        
-        /* Loading */
-        .loading {
-            text-align: center;
-            font-size: 36px;
-            color: var(--gta-gold);
-            margin-top: 50px;
-            animation: blink 1s infinite;
-        }
-        
-        @keyframes blink {
-            50% { opacity: 0.5; }
         }
         
         /* Filters */
@@ -271,24 +424,63 @@
             color: #000;
             border-color: var(--gta-gold);
         }
+        
+        .loading {
+            text-align: center;
+            font-size: 36px;
+            color: var(--gta-gold);
+            margin-top: 50px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink { 50% { opacity: 0.5; } }
 
     </style>
 </head>
 <body>
+    <!-- Audio Elements -->
+    <div class="radio-widget" onclick="toggleRadio()">
+        <div class="radio-text">📻 RADIO OFF</div>
+    </div>
+
     <div class="bg"></div>
     <div class="scanlines"></div>
 
+    <!-- Header with Stars -->
     <div class="header">
-        <div class="logo">LOS SANTOS</div>
-        <div class="money">$00000000</div>
+        <div>
+            <div class="logo">LOS SANTOS</div>
+            <div class="wanted-stars" id="stars">
+                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+            </div>
+        </div>
+        <div class="money" id="money">$00000000</div>
+    </div>
+
+    <!-- Mission Passed Overlay -->
+    <div class="mission-passed-overlay" id="mp-overlay">
+        <div class="mp-text">MISSION PASSED!</div>
+        <div class="mp-sub">RESPECT +</div>
+    </div>
+
+    <!-- 3D Viewer Modal -->
+    <div class="modal-3d" id="modal3d">
+        <div style="color: var(--gta-gold); margin-bottom: 10px; font-size: 24px;">INSPECT ITEM</div>
+        <div class="canvas-container" id="canvas3d"></div>
+        <button class="btn-buy" style="width: 200px; margin-top: 20px;" onclick="close3D()">CLOSE</button>
     </div>
 
     <div class="content">
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
+            <!-- LSPD Search -->
+            <div class="search-container">
+                <span class="search-label">LSPD DATABASE > SEARCH:</span>
+                <input type="text" class="search-input" placeholder="ENTER ITEM NAME..." oninput="filterSearch(this.value)">
+            </div>
+
             <div class="filters" id="city-filters">
                 <button class="filter-btn active" onclick="filterProducts('all')">ALL ZONES</button>
-                <!-- Cities injected here -->
             </div>
             <div class="product-grid" id="product-grid">
                 <div class="loading">LOADING STOCK...</div>
@@ -297,87 +489,115 @@
 
         <!-- MAP SECTION -->
         <div id="map" class="section">
-            <div class="placeholder-box">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Los_Angeles_polluted_sunset.jpg/640px-Los_Angeles_polluted_sunset.jpg" class="map-img" alt="Map">
-                <p>TERRITORY CONTROL</p>
+            <div class="placeholder-box" style="padding: 0; border: none;">
+                <div class="map-container" id="map-container">
+                    <img src="https://gta-sanandreas.com/images/wallpapers/gtasa_wallpaper_1-1920x1080.jpg" class="map-img-interactive" id="map-img">
+                    <!-- Mock Districts: Dynamic markers should be injected here ideally -->
+                    <div class="district-marker" style="top: 30%; left: 40%;" onclick="zoomMap('Vilnius', 30, 40)">VILNIUS</div>
+                    <div class="district-marker" style="top: 60%; left: 70%;" onclick="zoomMap('Kaunas', 60, 70)">KAUNAS</div>
+                    <div class="district-marker" style="top: 20%; left: 80%;" onclick="zoomMap('Klaipeda', 20, 80)">KLAIPEDA</div>
+                </div>
+                <button class="btn-buy" onclick="resetMap()" style="margin-top: 10px;">RESET VIEW</button>
             </div>
         </div>
 
-        <!-- STATS SECTION -->
+        <!-- STATS SECTION with Character Selection -->
         <div id="stats" class="section">
             <div class="placeholder-box">
                 <div style="font-size: 32px; margin-bottom: 20px; color: var(--gta-gold);">PLAYER STATS</div>
+                <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <img src="https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png" id="char-img" style="height: 150px; filter: drop-shadow(2px 2px 0 #fff);">
+                    <div>
+                        <button class="filter-btn" onclick="changeSkin('cj')">CJ</button>
+                        <button class="filter-btn" onclick="changeSkin('sweet')">SWEET</button>
+                        <button class="filter-btn" onclick="changeSkin('ryder')">RYDER</button>
+                    </div>
+                </div>
                 <div class="stat-row"><span>RESPECT</span><span style="color: var(--gta-green);">MAX</span></div>
                 <div class="stat-row"><span>STAMINA</span><span>████████░░</span></div>
-                <div class="stat-row"><span>FAT</span><span>░░░░░░░░░░</span></div>
-                <div class="stat-row"><span>MUSCLE</span><span>██████░░░░</span></div>
             </div>
         </div>
     </div>
 
+    <!-- Navigation -->
     <div class="nav">
-        <div class="nav-item active" onclick="showSection('shop')">SHOP</div>
-        <div class="nav-item" onclick="showSection('map')">MAP</div>
-        <div class="nav-item" onclick="showSection('stats')">STATS</div>
+        <div class="nav-item active" id="nav-shop" onclick="showSection('shop')">SHOP</div>
+        <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
+        <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.MainButton.hide(); // We use in-app buy buttons
+        tg.MainButton.hide();
 
         let allProducts = [];
+        let currentStation = 0;
+        const stations = [
+            { name: "RADIO OFF", src: null },
+            { name: "K-JAH", src: "https://stream.zeno.fm/dbk27k0q0nruv" }, // Placeholder
+            { name: "PLAYBACK FM", src: "https://stream.zeno.fm/dbk27k0q0nruv" } // Placeholder
+        ];
+        let audioPlayer = null;
 
-        // Load Products
+        // --- Logic ---
+
         async function loadProducts() {
             try {
                 const response = await fetch('/webapp/api/products');
                 const data = await response.json();
-                
                 if(data.success) {
                     allProducts = data.products;
                     renderProducts(allProducts);
                     renderFilters(allProducts);
+                    updateStars(Math.floor(Math.random() * 6)); // Mock stars for now
                 } else {
-                    document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR LOADING</div>';
+                    document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR</div>';
                 }
             } catch (e) {
-                console.error(e);
-                // Use mock data if fetch fails (for testing without backend running properly)
-                // allProducts = mockProducts; renderProducts(allProducts);
-                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">CONNECTION LOST</div>';
+                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">OFFLINE</div>';
             }
         }
 
         function renderProducts(products) {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
-            
             if(products.length === 0) {
-                grid.innerHTML = '<div style="text-align:center; width:100%">NO STOCK AVAILABLE</div>';
+                grid.innerHTML = '<div style="text-align:center; width:100%">NO ITEMS FOUND</div>';
                 return;
             }
-
             products.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.innerHTML = `
-                    <div class="product-emoji">${getProductEmoji(p.type)}</div>
+                    <div class="product-emoji" onclick="inspectItem('${p.name}')">${getProductEmoji(p.type)}</div>
                     <div class="product-name">${p.name}</div>
                     <div class="product-details">${p.size} | ${p.city}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
-                    <button class="btn-buy" onclick="buyProduct(${p.id}, '${p.name}', ${p.price})">BUY NOW</button>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="inspectItem('${p.name}')">👁️</button>
+                        <button class="btn-buy" style="flex:2;" onclick="buyProduct(${p.id}, '${p.name}', ${p.price})">BUY</button>
+                    </div>
                 `;
                 grid.appendChild(card);
             });
         }
-        
+
+        // LSPD Search
+        function filterSearch(query) {
+            const term = query.toLowerCase();
+            const filtered = allProducts.filter(p => 
+                p.name.toLowerCase().includes(term) || 
+                p.city.toLowerCase().includes(term)
+            );
+            renderProducts(filtered);
+        }
+
+        // Filters
         function renderFilters(products) {
             const cities = [...new Set(products.map(p => p.city))];
             const container = document.getElementById('city-filters');
-            // Keep "All" button
             container.innerHTML = '<button class="filter-btn active" onclick="filterProducts(\'all\')">ALL ZONES</button>';
-            
             cities.forEach(city => {
                 const btn = document.createElement('button');
                 btn.className = 'filter-btn';
@@ -386,65 +606,155 @@
                 container.appendChild(btn);
             });
         }
-        
+
         function filterProducts(city) {
-            // Update buttons
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+            if(city === 'all') renderProducts(allProducts);
+            else renderProducts(allProducts.filter(p => p.city === city));
+        }
+
+        // Stars
+        function updateStars(count) {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((s, i) => {
+                s.classList.remove('active', 'flashing');
+                if (i < count) s.classList.add('active');
+                if (count === 5) s.classList.add('flashing');
+            });
+        }
+
+        // Radio
+        function toggleRadio() {
+            currentStation = (currentStation + 1) % stations.length;
+            const station = stations[currentStation];
+            const widget = document.querySelector('.radio-widget');
             
-            if(city === 'all') {
-                renderProducts(allProducts);
-            } else {
-                const filtered = allProducts.filter(p => p.city === city);
-                renderProducts(filtered);
+            document.querySelector('.radio-text').innerText = "📻 " + station.name;
+            widget.classList.add('active');
+            setTimeout(() => widget.classList.remove('active'), 3000);
+
+            if(audioPlayer) audioPlayer.stop();
+            if(station.src) {
+                audioPlayer = new Howl({ src: [station.src], html5: true, volume: 0.5 });
+                audioPlayer.play();
             }
         }
 
-        function showSection(sectionId) {
-            // Nav visual update
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            event.target.classList.add('active');
+        // Map Zoom
+        function zoomMap(cityName, topPerc, leftPerc) {
+            const map = document.getElementById('map-img');
+            // Calculate transform origin
+            map.style.transformOrigin = `${leftPerc}% ${topPerc}%`;
+            map.style.transform = "scale(3)";
             
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(sec => {
-                sec.classList.remove('active');
-            });
-            
-            // Show selected
-            document.getElementById(sectionId).classList.add('active');
+            // Auto filter shop
+            setTimeout(() => {
+                showSection('shop');
+                // Simulate clicking the city filter
+                const btns = document.querySelectorAll('.filter-btn');
+                for(let btn of btns) {
+                    if(btn.innerText === cityName.toUpperCase()) {
+                        btn.click();
+                        break;
+                    }
+                }
+            }, 1000);
         }
 
+        function resetMap() {
+            document.getElementById('map-img').style.transform = "scale(1)";
+        }
+
+        // 3D Viewer (Three.js)
+        let renderer, scene, camera, cube;
+        function inspectItem(name) {
+            document.getElementById('modal3d').style.display = 'flex';
+            if(!renderer) init3D();
+            // Ideally update color/texture here
+        }
+
+        function init3D() {
+            const container = document.getElementById('canvas3d');
+            if(container.hasChildNodes()) return; 
+            
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(300, 300);
+            container.appendChild(renderer.domElement);
+
+            const geometry = new THREE.BoxGeometry();
+            const material = new THREE.MeshBasicMaterial({ color: 0x3fa535, wireframe: true });
+            cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+            camera.position.z = 2;
+
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            if(document.getElementById('modal3d').style.display === 'flex') {
+                cube.rotation.x += 0.01;
+                cube.rotation.y += 0.01;
+                renderer.render(scene, camera);
+            }
+        }
+
+        function close3D() {
+            document.getElementById('modal3d').style.display = 'none';
+        }
+
+        // Mission Passed
         function buyProduct(id, name, price) {
             tg.showPopup({
-                title: 'Confirm Purchase',
-                message: `Buy ${name} for $${price}?`,
-                buttons: [
-                    {id: 'buy', type: 'ok', text: 'PAY NOW'},
-                    {id: 'cancel', type: 'cancel'}
-                ]
+                title: 'CONFIRM DEAL',
+                message: `Purchase ${name} for $${price}?`,
+                buttons: [{id: 'buy', type: 'ok', text: 'DEAL'}, {id: 'cancel', type: 'cancel'}]
             }, function(btnId) {
                 if(btnId === 'buy') {
-                    // Send data back to bot to initiate purchase
-                    // We use a format the bot can parse or handle via generic "web_app_data" handler
-                    // For now, we'll just send text. To make it work for real, we need a handler in bot.
-                    // Let's send: "BUY_WEBAPP:{id}"
-                    tg.sendData(`BUY_WEBAPP:${id}`);
+                    // Trigger animation
+                    const overlay = document.getElementById('mp-overlay');
+                    overlay.style.display = 'flex';
+                    setTimeout(() => {
+                        overlay.classList.add('mp-active');
+                    }, 10);
+
+                    setTimeout(() => {
+                        tg.sendData(`BUY_WEBAPP:${id}`);
+                    }, 3000);
                 }
             });
         }
+
+        // Skins
+        function changeSkin(skin) {
+            const img = document.getElementById('char-img');
+            if(skin === 'cj') img.src = "https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png";
+            if(skin === 'ryder') img.src = "https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png";
+            if(skin === 'sweet') img.src = "https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png";
+        }
+
+        // Navigation
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`nav-${id}`).classList.add('active');
+        }
         
         function getProductEmoji(type) {
-            if(type.includes('weed') || type.includes('kush')) return '🌿';
-            if(type.includes('pill') || type.includes('xtc')) return '💊';
-            if(type.includes('powder') || type.includes('coc')) return '🍚';
+            if(!type) return '📦';
+            const t = type.toLowerCase();
+            if(t.includes('weed') || t.includes('cannabis')) return '🌿';
+            if(t.includes('pill') || t.includes('xtc')) return '💊';
+            if(t.includes('powder') || t.includes('coke')) return '🍚';
             return '📦';
         }
 
         // Init
         loadProducts();
-        
-        // Set header money
-        // Ideally we fetch user balance too
     </script>
 </body>
 </html>
