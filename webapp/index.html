@@ -506,8 +506,9 @@
         <div id="map" class="section">
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
-                    <!-- Lithuania Map Outline (Solid Shape for styling) -->
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Lithuania_stub.svg/800px-Lithuania_stub.svg.png" class="map-img-interactive" id="map-img" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Map_of_Lithuania_2.svg/800px-Map_of_Lithuania_2.svg.png'">
+                    <!-- Lithuania Map Outline (Local SVG) -->
+                    <img src="map_lt.svg" class="map-img-interactive" id="map-img" onerror="this.style.display='none'; document.getElementById('map-fallback').style.display='block';">
+                    <div id="map-fallback" style="display:none; color:var(--gta-green); text-align:center; padding-top:150px; font-size:24px;">MAP LOAD ERROR</div>
                     
                     <!-- City Markers (Approximate positions on the SVG) -->
                     <!-- Vilnius: South-East (Top: 75%, Left: 70%) -->

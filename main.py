@@ -2421,6 +2421,11 @@ def webapp_index():
     """Serve Telegram Web App"""
     return send_from_directory('webapp', 'index.html')
 
+@flask_app.route("/webapp/<path:filename>", methods=['GET'])
+def webapp_static(filename):
+    """Serve static files for Web App"""
+    return send_from_directory('webapp', filename)
+
 @flask_app.route("/", methods=['GET'])
 def root():
     """Root endpoint to verify server is running"""
