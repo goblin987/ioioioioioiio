@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop</title>
+    <title>Los Santos Shop v2.1</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -530,14 +530,19 @@
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="filter: drop-shadow(0 0 5px #3fa535);">
                         <defs>
                             <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                                <!-- Base Grid -->
+                                <!-- DENSE CITY GRID v2.1 -->
+                                <rect width="50" height="50" fill="#051a05"/> <!-- Darker base -->
                                 <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1a4d1a" stroke-width="1"/>
-                                <!-- Random City Blocks Texture -->
-                                <rect x="5" y="5" width="15" height="10" fill="#1a4d1a" opacity="0.6"/>
-                                <rect x="25" y="5" width="20" height="20" fill="#1a4d1a" opacity="0.4"/>
-                                <rect x="5" y="20" width="10" height="25" fill="#1a4d1a" opacity="0.5"/>
-                                <rect x="20" y="30" width="25" height="10" fill="#1a4d1a" opacity="0.7"/>
-                                <rect x="35" y="35" width="10" height="10" fill="#3fa535" opacity="0.3"/>
+                                <!-- Random City Blocks -->
+                                <rect x="2" y="2" width="10" height="10" fill="#2a662a" opacity="0.8"/>
+                                <rect x="15" y="5" width="20" height="15" fill="#2a662a" opacity="0.6"/>
+                                <rect x="40" y="2" width="8" height="20" fill="#2a662a" opacity="0.7"/>
+                                <rect x="5" y="25" width="25" height="8" fill="#2a662a" opacity="0.5"/>
+                                <rect x="35" y="25" width="12" height="12" fill="#2a662a" opacity="0.8"/>
+                                <rect x="10" y="38" width="30" height="10" fill="#2a662a" opacity="0.6"/>
+                                <!-- Highlights -->
+                                <rect x="18" y="8" width="2" height="2" fill="#3fa535"/>
+                                <rect x="42" y="30" width="2" height="2" fill="#3fa535"/>
                             </pattern>
                         </defs>
                         <g transform="translate(0,1024) scale(0.1,-0.1)">
@@ -699,16 +704,29 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function renderProducts(products) {
-            console.log("Render Products v2.0 - ID Hidden");
+            console.log("Render Products v2.1 - Strict Cleaning");
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
             
-            // Group products by Name + Type + City + Size + Price (Case Insensitive)
+            // Group products by Cleaned Name + Type + City + Size + Price
             const groups = {};
             products.forEach(p => {
-                const key = `${p.name.trim().toLowerCase()}|${p.type}|${p.city}|${p.size}|${p.price}`;
+                // CLEAN NAME: Remove any sequence of 6+ digits/underscores (IDs)
+                // This handles cases where ID is stuck to the name in DB
+                let cleanName = p.name.replace(/[\d_]{6,}.*/g, '').trim();
+                
+                // Also remove trailing numbers if they look like IDs
+                cleanName = cleanName.replace(/\s\d+$/, '').trim();
+
+                const key = `${cleanName.toLowerCase()}|${p.type}|${p.city}|${p.size}|${p.price}`;
+                
                 if(!groups[key]) {
-                    groups[key] = { ...p, count: 0, ids: [] };
+                    groups[key] = { 
+                        ...p, 
+                        display_name: cleanName, // Store cleaned name for display
+                        count: 0, 
+                        ids: [] 
+                    };
                 }
                 groups[key].count++;
                 groups[key].ids.push(p.id);
@@ -724,19 +742,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             uniqueProducts.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'product-card';
-                // Badge for multiples
                 const countBadge = p.count > 1 ? `<div style="position:absolute; top:5px; right:5px; background:var(--gta-gold); color:#000; padding:2px 6px; font-size:12px; border-radius:4px; font-weight:bold;">x${p.count}</div>` : '';
                 
-                // STRICT HTML: Name, Details, Price. NO ID.
                 card.innerHTML = `
                     ${countBadge}
-                    <div class="product-emoji" onclick="inspectItem('${p.name}')">${getProductEmoji(p.type)}</div>
-                    <div class="product-name">${p.name}</div>
+                    <div class="product-emoji" onclick="inspectItem('${p.display_name}')">${getProductEmoji(p.type)}</div>
+                    <div class="product-name">${p.display_name}</div>
                     <div class="product-details">${p.size} | ${p.city}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="inspectItem('${p.name}')">👁️</button>
-                        <button class="btn-buy" style="flex:2;" onclick="buyProduct(${p.ids[0]}, '${p.name}', ${p.price})">BUY</button>
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="inspectItem('${p.display_name}')">👁️</button>
+                        <button class="btn-buy" style="flex:2;" onclick="buyProduct(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
                     </div>
                 `;
                 grid.appendChild(card);
