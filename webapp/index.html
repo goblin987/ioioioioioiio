@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.6</title>
+    <title>Los Santos Shop v2.7</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -523,6 +523,11 @@
         <div class="mp-sub">RESPECT +</div>
     </div>
 
+        <!-- Welcome Overlay -->
+    <div id="welcome-overlay" class="mission-passed-overlay">
+        <div id="welcome-text" class="mp-text" style="color: #fff; -webkit-text-stroke: 2px #000;">WELCOME</div>
+    </div>
+
     <div class="content">
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
@@ -546,23 +551,21 @@
             <div class="map-viewport" id="map-viewport">
                 <div class="map-transform-layer" id="map-layer">
                                         <!-- GTA SA COLORFUL MAP LAYERS -->
-                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%;">
+                                        <!-- GTA SA WORLD MAP (HARDCODED COLORS) -->
+                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #6fa8dc;">
                         <defs>
-                            <!-- 1. Grass Land Texture -->
-                            <pattern id="land-texture" width="100" height="100" patternUnits="userSpaceOnUse">
-                                <rect width="100" height="100" fill="#567d46"/> <!-- GTA Grass Green -->
-                                <!-- Subtle noise/texture -->
-                                <path d="M0 100 L50 0 L100 100" fill="rgba(0,0,0,0.1)" />
+                            <!-- Patterns -->
+                            <pattern id="land-pattern" width="100" height="100" patternUnits="userSpaceOnUse">
+                                <rect width="100" height="100" fill="#567d46" /> <!-- GREEN -->
+                                <path d="M0 100 L50 0 L100 100" fill="rgba(0,0,0,0.05)" />
                             </pattern>
                             
-                            <!-- 2. City Concrete Texture -->
-                            <pattern id="city-texture" width="20" height="20" patternUnits="userSpaceOnUse">
-                                <rect width="20" height="20" fill="#d9d9d9"/> <!-- Concrete -->
-                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#999" stroke-width="1"/> <!-- Grid -->
+                            <pattern id="city-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <rect width="20" height="20" fill="#d9d9d9" /> <!-- GREY -->
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#999" stroke-width="1" />
                             </pattern>
 
-                            <!-- 3. Clipping Mask -->
-                            <clipPath id="land-clip">
+                            <clipPath id="clip-land">
                                 <g transform="translate(0,1024) scale(0.1,-0.1)">
                                     <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
@@ -642,29 +645,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                             </clipPath>
                         </defs>
 
-                        <!-- LAYER 1: Land Mass (Clipped) -->
-                        <g clip-path="url(#land-clip)">
-                            <!-- Base Grass -->
-                            <rect width="1024" height="1024" fill="url(#land-texture)" />
+                        <!-- GROUP: Everything inside country outline -->
+                        <g clip-path="url(#clip-land)">
+                            <!-- 1. Green Land Base -->
+                            <rect width="1024" height="1024" fill="url(#land-pattern)" />
                             
-                            <!-- LAYER 2: Rivers (Ocean Blue) -->
-                            <path d="M 600 1000 Q 450 800 512 665 T 150 358" stroke="#6fa8dc" stroke-width="25" fill="none" stroke-linecap="round"/>
-                            <path d="M 1024 700 Q 800 750 716 768 T 512 665" stroke="#6fa8dc" stroke-width="20" fill="none" stroke-linecap="round"/>
+                            <!-- 2. Blue Rivers -->
+                            <path d="M 600 1000 Q 450 800 512 665 T 150 358" stroke="#6fa8dc" stroke-width="35" fill="none" stroke-linecap="round"/>
+                            <path d="M 1024 700 Q 800 750 716 768 T 512 665" stroke="#6fa8dc" stroke-width="30" fill="none" stroke-linecap="round"/>
 
-                            <!-- LAYER 3: Urban Areas (Concrete Grid) -->
+                            <!-- 3. Grey City Zones -->
                             <!-- Vilnius -->
-                            <path d="M 690 740 L 740 730 L 760 780 L 710 800 Z" fill="url(#city-texture)" stroke="#999" stroke-width="2"/>
+                            <path d="M 690 740 L 740 730 L 760 780 L 710 800 Z" fill="url(#city-pattern)" stroke="#999" stroke-width="2"/>
                             <!-- Kaunas -->
-                            <path d="M 490 640 L 540 640 L 530 690 L 480 680 Z" fill="url(#city-texture)" stroke="#999" stroke-width="2"/>
+                            <path d="M 490 640 L 540 640 L 530 690 L 480 680 Z" fill="url(#city-pattern)" stroke="#999" stroke-width="2"/>
                             <!-- Klaipeda -->
-                            <path d="M 130 330 L 170 330 L 170 380 L 130 380 Z" fill="url(#city-texture)" stroke="#999" stroke-width="2"/>
+                            <path d="M 130 330 L 170 330 L 170 380 L 130 380 Z" fill="url(#city-pattern)" stroke="#999" stroke-width="2"/>
 
-                            <!-- LAYER 4: Highways (Dark Grey Roads) -->
-                            <path d="M 716 768 L 512 665 L 150 358" stroke="#2a2a2a" stroke-width="12" fill="none" stroke-linecap="round"/>
-                            <path d="M 716 768 Q 600 500 512 300" stroke="#2a2a2a" stroke-width="12" fill="none" stroke-linecap="round"/>
+                            <!-- 4. Dark Roads -->
+                            <path d="M 716 768 L 512 665 L 150 358" stroke="#222" stroke-width="15" fill="none" stroke-linecap="round"/>
+                            <path d="M 716 768 Q 600 500 512 300" stroke="#222" stroke-width="15" fill="none" stroke-linecap="round"/>
+                            <!-- Yellow Dashes -->
+                            <path d="M 716 768 L 512 665 L 150 358" stroke="#f0c330" stroke-width="2" fill="none" stroke-dasharray="10,10"/>
                         </g>
                         
-                        <!-- LAYER 5: Coastline Outline (Black) -->
+                        <!-- 5. Black Outline (Coastline) -->
                         <g transform="translate(0,1024) scale(0.1,-0.1)">
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
@@ -739,7 +744,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="20"/>
+1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="25"/>
                         </g>
                     </svg>
                     
@@ -777,7 +782,30 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         </div>
 
 <!-- STATS SECTION -->
-        <div id="stats" class="section">
+                <!-- WALLET SECTION -->
+        <div id="wallet" class="section">
+            <div class="placeholder-box">
+                <div style="font-size: 24px; color: #ccc;">CURRENT BALANCE</div>
+                <div style="font-size: 48px; color: var(--gta-green); margin: 10px 0;">$0.00</div>
+                
+                <div style="margin-top: 30px;">
+                    <div style="font-size: 20px; color: var(--gta-gold); margin-bottom: 15px;">TOP UP BALANCE</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button class="btn-buy" onclick="initTopUp('BTC')">BTC</button>
+                        <button class="btn-buy" onclick="initTopUp('LTC')">LTC</button>
+                        <button class="btn-buy" onclick="initTopUp('USDT')">USDT</button>
+                        <button class="btn-buy" onclick="initTopUp('ETH')">ETH</button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <div style="font-size: 20px; color: var(--gta-gold); margin-bottom: 15px;">TRANSACTIONS</div>
+                    <div class="stat-row"><span>INITIAL GRANT</span><span style="color: var(--gta-green);">+$0.00</span></div>
+                </div>
+            </div>
+        </div>
+
+<div id="stats" class="section">
             <div class="placeholder-box" style="text-align: left;">
                 <div style="font-size: 32px; margin-bottom: 20px; color: var(--gta-gold); text-align:center;">STATS</div>
                 
@@ -810,8 +838,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
     </div>
 
     <!-- Navigation -->
-    <div class="nav">
+        <div class="nav">
         <div class="nav-item active" id="nav-shop" onclick="showSection('shop')">SHOP</div>
+        <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
+        <div class="nav-item" id="nav-wallet" onclick="showSection('wallet')">WALLET</div>
+        <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
+    </div>
         <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
         <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
     </div>
@@ -1073,11 +1105,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         function mapReset() { fitMapToScreen(); closeSheet(); }
 
-        function selectCity(name, topPerc, leftPerc) {
+                function selectCity(name, topPerc, leftPerc) {
             selectedCity = name;
-            mapState.scale = 2.5;
             
-            // Center logic for 1024x1024 base
+            // 1. Zoom In
+            mapState.scale = 4.0; 
+            
             const mapW = 1024 * mapState.scale;
             const mapH = 1024 * mapState.scale;
             const targetX = (leftPerc / 100) * mapW;
@@ -1091,11 +1124,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             updateMapTransform();
             
-            // Sheet
+            // 2. Welcome Overlay
+            const welcome = document.getElementById('welcome-overlay');
+            const welcomeText = document.getElementById('welcome-text');
+            if(welcome && welcomeText) {
+                welcomeText.innerText = `WELCOME TO ${name.toUpperCase()}`;
+                welcome.style.display = 'flex';
+                setTimeout(() => welcome.classList.add('active'), 10);
+                
+                setTimeout(() => {
+                    welcome.classList.remove('active');
+                    setTimeout(() => welcome.style.display = 'none', 500);
+                }, 2000);
+            }
+            
+            // 3. Bottom Sheet
             const sheet = document.getElementById('city-sheet');
             document.getElementById('sheet-title').innerText = name;
             const count = allProducts.filter(p => p.city.toLowerCase() === name.toLowerCase()).length;
-            document.getElementById('sheet-info').innerText = `INTELLIGENCE: ${count} ITEMS DETECTED`;
+            document.getElementById('sheet-info').innerText = `FOUND ${count} ITEMS`;
             sheet.classList.add('active');
         }
         
@@ -1152,6 +1199,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(skin === 'sweet') img.src = "https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png";
         }
 
+                        let selectedCryptoForTopUp = '';
+
+        function initTopUp(crypto) {
+            selectedCryptoForTopUp = crypto;
+            const modal = document.getElementById('amount-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('amount-input').focus(), 100);
+        }
+
+        function closeAmountModal() {
+            document.getElementById('amount-modal').style.display = 'none';
+        }
+
+        function confirmAmount() {
+            const amt = document.getElementById('amount-input').value;
+            if(!amt || amt <= 0) {
+                tg.showAlert('Please enter a valid amount.');
+                return;
+            }
+            closeAmountModal();
+            tg.sendData(`TOPUP:${selectedCryptoForTopUp}:${amt}`);
+            tg.close();
+        }
+
+
         // Navigation
         function showSection(id) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1172,5 +1244,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Init
         loadProducts();
     </script>
+
+    <!-- Amount Input Modal -->
+    <div id="amount-modal" class="mission-passed-overlay" style="display: none; background: rgba(0,0,0,0.9); flex-direction: column; z-index: 2000;">
+        <div style="font-family: 'Pricedown', sans-serif; font-size: 40px; color: #fff; margin-bottom: 20px;">ENTER AMOUNT (EUR)</div>
+        <input type="number" id="amount-input" placeholder="10" style="font-family: 'Diplomata', cursive; font-size: 30px; padding: 10px; width: 150px; text-align: center; background: #000; color: var(--gta-green); border: 2px solid var(--gta-green); margin-bottom: 20px; outline: none;">
+        <div style="display: flex; gap: 20px;">
+            <button class="btn-buy" onclick="confirmAmount()">CONFIRM</button>
+            <button class="btn-buy" style="background: #900;" onclick="closeAmountModal()">CANCEL</button>
+        </div>
+    </div>
+
 </body>
 </html>

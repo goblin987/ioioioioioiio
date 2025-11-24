@@ -578,7 +578,7 @@ except ImportError:
     async def handle_reseller_delete_discount_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None): pass
 
 import payment
-from payment import credit_user_balance
+from payment import credit_user_balance, create_nowpayments_payment
 from stock import handle_view_stock
 
 # --- Logging Setup ---
@@ -1464,6 +1464,62 @@ async def admin_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TY
     await admin.handle_admin_menu(update, context)
 
 # --- Central Message Handler (for states) ---
+
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles data received from the Web App (Mini App)."""
+    if update.message and update.message.web_app_data:
+        data = update.message.web_app_data.data
+        logger.info(f"Web App data received: {data}")
+        
+        if data.startswith("TOPUP:"):
+            try:
+                # Format: TOPUP:BTC:10
+                parts = data.split(":")
+                if len(parts) != 3:
+                    await update.message.reply_text("❌ Invalid data format.")
+                    return
+                
+                crypto = parts[1]
+                amount_eur_str = parts[2]
+                user_id = update.effective_user.id
+                
+                try:
+                    amount_eur = float(amount_eur_str)
+                    if amount_eur <= 0: raise ValueError
+                except ValueError:
+                     await update.message.reply_text("❌ Invalid amount.")
+                     return
+
+                # Notify user
+                msg = await update.message.reply_text(f"⏳ Generating {crypto.upper()} invoice for {amount_eur} EUR...")
+                
+                # Create Invoice
+                from decimal import Decimal
+                
+                payment_result = await create_nowpayments_payment(
+                    user_id, Decimal(str(amount_eur)), crypto, is_purchase=False
+                )
+                
+                if 'error' in payment_result:
+                    await msg.edit_text(f"❌ Error creating invoice: {payment_result.get('error')}")
+                    return
+                
+                # Display Invoice
+                pay_address = payment_result.get('pay_address')
+                pay_amount = payment_result.get('pay_amount')
+                
+                response = f"💰 **Top Up: {amount_eur} EUR**\n\n"
+                response += f"Send **{pay_amount} {crypto.upper()}** to:\n`{pay_address}`\n\n"
+                response += "⚠️ Send the **EXACT** amount.\n"
+                response += "⏳ Valid for 20 minutes."
+                
+                await msg.edit_text(response, parse_mode='Markdown')
+                
+            except Exception as e:
+                logger.error(f"Web App TopUp Error: {e}", exc_info=True)
+                await update.message.reply_text("❌ An error occurred processing your request.")
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user: return
 
@@ -2594,6 +2650,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command_wrapper)) # Use wrapped start with ban check
     application.add_handler(CommandHandler("admin", admin_command_wrapper)) # Use wrapped admin with ban check
     application.add_handler(CallbackQueryHandler(handle_callback_query))
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     application.add_handler(MessageHandler(
         (filters.TEXT & ~filters.COMMAND) | filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Document.ALL,
         handle_message
