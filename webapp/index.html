@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.4</title>
+    <title>Los Santos Shop v2.5</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -354,34 +354,6 @@
             border: 1px solid #fff;
         }
 
-        /* Floating Controls */
-        .map-controls {
-            position: absolute;
-            bottom: 40px; /* Above nav if visible, or bottom of screen */
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 10;
-        }
-        
-        .fab {
-            width: 50px;
-            height: 50px;
-            background: rgba(0,0,0,0.9);
-            border: 2px solid var(--gta-grey);
-            border-radius: 50%;
-            color: var(--gta-gold);
-            font-size: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            pointer-events: auto;
-        }
-        
-        .fab:active { transform: scale(0.9); background: #fff; color: #000; }
 
         /* Bottom Sheet */
         .bottom-sheet {
@@ -795,12 +767,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 <div class="btn-close-map" onclick="showSection('shop')">CLOSE</div>
             </div>
 
-            <!-- Controls -->
-            <div class="map-controls">
-                <div class="fab" onclick="mapZoomIn()">+</div>
-                <div class="fab" onclick="mapZoomOut()">-</div>
-                <div class="fab" onclick="mapReset()">⌖</div>
-            </div>
 
             <!-- Bottom Sheet -->
             <div class="bottom-sheet" id="city-sheet">
