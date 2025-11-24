@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v6.0</title>
+    <title>Los Santos Shop v6.1</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -518,7 +518,19 @@
             letter-spacing: 2px;
         }
 
-    </style>
+    
+        /* Fix Interactions */
+        #map.section {
+            z-index: 50 !important;
+            pointer-events: auto !important;
+        }
+        
+        .graffiti-text {
+            font-family: 'Permanent Marker', cursive !important;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+</style>
 
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
@@ -556,7 +568,19 @@
         /* Remove CRT Overlay if present from previous version */
         body::after { display: none !important; }
         body::before { display: none !important; }
-    </style>
+    
+        /* Fix Interactions */
+        #map.section {
+            z-index: 50 !important;
+            pointer-events: auto !important;
+        }
+        
+        .graffiti-text {
+            font-family: 'Permanent Marker', cursive !important;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+</style>
 
 </head>
 <body>
@@ -640,32 +664,24 @@
                                         <!-- ULTIMATE GTA MAP v6.0 -->
                                         <!-- DIGITAL CRT MAP v7.0 -->
                                         <!-- GROVE STREET GRAFFITI MAP -->
+                                        <!-- GROVE STREET GRAFFITI MAP v2 (FIXED) -->
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #2a2a2a;">
                         <defs>
-                            <!-- Concrete Texture Filter -->
-                            <filter id="concrete-texture">
-                                <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="4" stitchTiles="stitch" result="noise"/>
-                                <feDiffuseLighting in="noise" lighting-color="#888" surfaceScale="2">
-                                    <feDistantLight azimuth="45" elevation="60"/>
-                                </feDiffuseLighting>
-                                <feComposite operator="in" in2="SourceGraphic"/>
-                            </filter>
-
-                            <!-- Spray Paint Filter (Fuzzy Edges) -->
-                            <filter id="spray-paint" x="-20%" y="-20%" width="140%" height="140%">
-                                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" result="noise"/>
-                                <feDisplacementMap in="SourceGraphic" in2="noise" scale="15" xChannelSelector="R" yChannelSelector="G"/>
-                                <feGaussianBlur stdDeviation="2"/>
-                            </filter>
+                            <!-- Simple Wall Pattern -->
+                            <pattern id="wall-pattern" width="100" height="100" patternUnits="userSpaceOnUse">
+                                <rect width="100" height="100" fill="#2a2a2a"/>
+                                <path d="M0 0h100v100h-100z" fill="none" stroke="#333" stroke-width="2"/>
+                                <circle cx="50" cy="50" r="1" fill="#444"/>
+                            </pattern>
                         </defs>
 
-                        <!-- BACKGROUND: Concrete Wall -->
-                        <rect width="100%" height="100%" fill="#2a2a2a" />
-                        <rect width="100%" height="100%" filter="url(#concrete-texture)" opacity="0.5"/>
-
-                        <!-- MAP STENCIL (Green Spray) -->
+                        <!-- WALL BACKGROUND -->
+                        <rect width="100%" height="100%" fill="url(#wall-pattern)" />
+                        
+                        <!-- MAP STENCIL -->
+                        <!-- Green Shape with "Drips" -->
                         <g transform="translate(0,1024) scale(0.1,-0.1)">
-                             <!-- Base Spray -->
+                             <!-- Main Shape -->
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
 -51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
@@ -739,45 +755,47 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="#3fa535" stroke="none" filter="url(#spray-paint)" opacity="0.9"/>
-                             <!-- Drips (Stylized) -->
-                             <path d="M 3000 2000 L 3000 1500" stroke="#3fa535" stroke-width="50" stroke-linecap="round" filter="url(#spray-paint)"/>
-                             <path d="M 7000 2000 L 7000 1200" stroke="#3fa535" stroke-width="40" stroke-linecap="round" filter="url(#spray-paint)"/>
+1 -25 -7 -42 -18z" fill="#3fa535" stroke="none" opacity="0.9" />
+                             
+                             <!-- Stylized Drips (Simple Rects/Paths) -->
+                             <path d="M 3000 2000 L 3000 1000" stroke="#3fa535" stroke-width="60" stroke-linecap="round" opacity="0.8"/>
+                             <path d="M 7000 2000 L 7000 800" stroke="#3fa535" stroke-width="50" stroke-linecap="round" opacity="0.8"/>
                         </g>
 
-                        <!-- ROADS (Chalk Lines) -->
-                        <g filter="url(#spray-paint)">
-                            <path d="M 730 600 L 515 660 L 110 630" stroke="#ddd" stroke-width="8" fill="none" stroke-dasharray="20,5" opacity="0.8" />
+                        <!-- ROADS (Chalk Style) -->
+                        <g>
+                            <path d="M 730 600 L 515 660 L 110 630" stroke="#ddd" stroke-width="6" fill="none" stroke-dasharray="15,10" stroke-linecap="round" opacity="0.7" />
                         </g>
 
-                        <!-- CITIES (Graffiti Tags) -->
+                        <!-- CITIES (Hand-Drawn Tags) -->
                         
                         <!-- VILNIUS -->
                         <g id="city-vilnius" transform="translate(730, 600)" style="cursor: pointer;" onclick="selectCity('Vilnius', 42, 71)">
-                            <!-- X Marker -->
-                            <path d="M -20 -20 L 20 20 M 20 -20 L -20 20" stroke="#000" stroke-width="8" stroke-linecap="round" />
-                            <path d="M -20 -20 L 20 20 M 20 -20 L -20 20" stroke="#fff" stroke-width="4" stroke-linecap="round" />
+                            <!-- Hitbox (Invisible but clickable) -->
+                            <circle r="80" fill="transparent" pointer-events="all" />
                             
-                            <!-- Label (Graffiti Font via CSS) -->
-                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="2" font-size="32">VILNIUS</text>
-                            
-                            <rect x="-60" y="-60" width="120" height="120" fill="transparent" />
+                            <!-- Visuals -->
+                            <path d="M -25 -25 L 25 25 M 25 -25 L -25 25" stroke="#000" stroke-width="10" stroke-linecap="round" />
+                            <path d="M -25 -25 L 25 25 M 25 -25 L -25 25" stroke="#fff" stroke-width="5" stroke-linecap="round" />
+                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="3" font-size="36" style="font-family: 'Permanent Marker', cursive;">VILNIUS</text>
                         </g>
 
                         <!-- KAUNAS -->
                         <g id="city-kaunas" transform="translate(515, 660)" style="cursor: pointer;" onclick="selectCity('Kaunas', 36, 50)">
-                            <circle r="20" fill="none" stroke="#000" stroke-width="8" />
-                            <circle r="20" fill="none" stroke="#fff" stroke-width="4" />
-                            <text x="0" y="-35" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="2" font-size="28">KAUNAS</text>
-                            <rect x="-50" y="-50" width="100" height="100" fill="transparent" />
+                            <circle r="80" fill="transparent" pointer-events="all" />
+                            
+                            <circle r="25" fill="none" stroke="#000" stroke-width="10" />
+                            <circle r="25" fill="none" stroke="#fff" stroke-width="5" />
+                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="3" font-size="32" style="font-family: 'Permanent Marker', cursive;">KAUNAS</text>
                         </g>
 
                         <!-- KLAIPEDA -->
                         <g id="city-klaipeda" transform="translate(110, 630)" style="cursor: pointer;" onclick="selectCity('Klaipeda', 39, 11)">
-                            <path d="M -20 0 L 20 0 M 0 -20 L 0 20" stroke="#000" stroke-width="8" stroke-linecap="round" />
-                            <path d="M -20 0 L 20 0 M 0 -20 L 0 20" stroke="#fff" stroke-width="4" stroke-linecap="round" />
-                            <text x="0" y="-35" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="2" font-size="28">KLAIPEDA</text>
-                            <rect x="-50" y="-50" width="100" height="100" fill="transparent" />
+                            <circle r="80" fill="transparent" pointer-events="all" />
+                            
+                            <path d="M -25 0 L 25 0 M 0 -25 L 0 25" stroke="#000" stroke-width="10" stroke-linecap="round" />
+                            <path d="M -25 0 L 25 0 M 0 -25 L 0 25" stroke="#fff" stroke-width="5" stroke-linecap="round" />
+                            <text x="0" y="-40" text-anchor="middle" class="graffiti-text" fill="#fff" stroke="#000" stroke-width="3" font-size="32" style="font-family: 'Permanent Marker', cursive;">KLAIPEDA</text>
                         </g>
                     </svg>
                     
