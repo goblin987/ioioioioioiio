@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Los Santos Shop v2.1</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @font-face {
             font-family: 'Pricedown';
@@ -509,45 +510,66 @@
 
 
     <!-- Basket Modal -->
-    <div id="basket-modal" class="modal-3d" style="display:none; background:rgba(0,0,0,0.95); align-items:flex-start; padding:20px; overflow-y:auto; z-index:250;">
-        <div class="header" style="width:100%; background:transparent; border:none; padding:0; height:auto; margin-bottom:20px;">
-            <div class="logo">BASKET</div>
-            <button class="btn-buy" style="width:auto;" onclick="closeBasket()">CLOSE</button>
-        </div>
-        <div id="basket-items" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
-        <div style="margin-top:auto; width:100%; border-top:2px solid var(--gta-gold); padding-top:20px; margin-top:20px;">
-            <div class="stat-row"><span>TOTAL</span><span id="basket-total" style="color:var(--gta-green);">$0.00</span></div>
-            <button class="btn-buy" onclick="initCheckout()" style="margin-top:20px;">CHECKOUT (SOL)</button>
+    <div id="basket-modal" class="modal-3d">
+        <div class="terminal-box" style="height: 80vh; display:flex; flex-direction:column; text-align:left;">
+            <div style="border-bottom: 2px solid var(--gta-green); padding-bottom:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:24px; color:var(--gta-gold);">AMMUNATION CART</span>
+                <button style="background:#900; color:#fff; border:1px solid #fff; font-family:'Courier New'; cursor:pointer;" onclick="closeBasket()">[X]</button>
+            </div>
+            <div id="basket-items" style="flex:1; overflow-y:auto; border:1px solid #333; padding:10px; margin-bottom:10px;">
+                <!-- Items go here -->
+            </div>
+            <div style="border-top: 2px solid var(--gta-green); padding-top:10px;">
+                <div style="display:flex; justify-content:space-between; font-size:20px; margin-bottom:15px;">
+                    <span>TOTAL:</span>
+                    <span id="basket-total" style="color:var(--gta-green);">$0.00</span>
+                </div>
+                <button class="btn-buy" onclick="initCheckout()" style="width:100%;">INITIATE TRANSFER (SOL)</button>
+            </div>
         </div>
     </div>
 
     <!-- Invoice Modal -->
-    <div id="invoice-modal" class="modal-3d" style="display:none; background:#000; align-items:center; justify-content:center; z-index:300;">
-        <div style="text-align:center; padding:20px; border:2px solid var(--gta-green); max-width:90%; width:350px;">
-            <div style="color:var(--gta-gold); font-size:24px; margin-bottom:10px;">PAYMENT REQUIRED</div>
-            <div style="color:#fff; font-family:'Courier New'; font-size:14px; margin-bottom:10px;">SEND EXACTLY:</div>
-            <div id="invoice-amount" style="font-size:32px; color:var(--gta-green); margin-bottom:20px;">0.00 SOL</div>
-            <div style="color:#fff; font-family:'Courier New'; font-size:14px; margin-bottom:10px;">TO ADDRESS:</div>
-            <div id="invoice-address" style="font-family:'Courier New'; font-size:12px; word-break:break-all; background:#222; padding:10px; user-select:text; color:#fff; border:1px solid #555;">...</div>
-            <div class="loading" style="font-size:16px; margin-top:20px;">WAITING FOR FUNDS...</div>
-            <button class="btn-buy" style="margin-top:20px; background:#900;" onclick="closeInvoice()">CANCEL</button>
+    <div id="invoice-modal" class="modal-3d">
+        <div class="terminal-box">
+            <div style="color:var(--gta-gold); font-size:20px; border-bottom:1px dashed var(--gta-green); padding-bottom:10px; margin-bottom:20px;">
+                SECURE TRANSACTION TERMINAL
+            </div>
+            
+            <div style="margin-bottom:20px;">
+                <div style="font-size:12px; color:#aaa;">AMOUNT DUE:</div>
+                <div id="invoice-amount" style="font-size:32px; color:var(--gta-green); margin:5px 0; cursor:pointer;" onclick="copyText('invoice-amount')">0.00 SOL</div>
+                <div style="font-size:10px; color:#555;">(CLICK TO COPY)</div>
+            </div>
+            
+            <div id="qrcode" style="background:#fff; padding:10px; display:inline-block; margin-bottom:20px; border:2px solid var(--gta-green);"></div>
+            
+            <div style="margin-bottom:20px; text-align:left;">
+                <div style="font-size:12px; color:#aaa;">DESTINATION ADDRESS:</div>
+                <div id="invoice-address" style="font-size:12px; word-break:break-all; background:#111; padding:10px; border:1px solid #333; color:#fff; margin-top:5px; cursor:pointer;" onclick="copyText('invoice-address')">...</div>
+                <div style="font-size:10px; color:#555; text-align:center;">(CLICK TO COPY)</div>
+            </div>
+            
+            <div class="loading" style="font-size:14px;">AWAITING CONFIRMATION<span class="blink">...</span></div>
+            
+            <button class="btn-buy" style="margin-top:20px; background:#300; border-color:#900;" onclick="closeInvoice()">CANCEL OPERATION</button>
         </div>
     </div>
 
     <!-- Review Modal -->
-    <div id="review-modal" class="modal-3d" style="display:none; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; z-index:400;">
-        <div style="text-align:center; width:90%;">
-            <div style="font-size:32px; color:var(--gta-gold);">LEAVE REVIEW</div>
-            <div style="margin:20px 0; font-size:30px; cursor:pointer;" id="review-stars">
+    <div id="review-modal" class="modal-3d">
+        <div class="terminal-box" style="max-width:350px;">
+            <div style="font-size:24px; color:var(--gta-gold); margin-bottom:20px;">TRANSACTION COMPLETE</div>
+            <div style="margin-bottom:20px;">RATE SERVICE:</div>
+            <div style="margin-bottom:20px; font-size:32px; cursor:pointer;" id="review-stars">
                 <span onclick="setReview(1)">★</span>
                 <span onclick="setReview(2)">★</span>
                 <span onclick="setReview(3)">★</span>
                 <span onclick="setReview(4)">★</span>
                 <span onclick="setReview(5)">★</span>
             </div>
-            <textarea id="review-text" placeholder="MESSAGE..." style="width:100%; height:100px; background:#000; color:var(--gta-green); border:2px solid var(--gta-green); font-family:'Courier New'; padding:10px; box-sizing:border-box; outline:none;"></textarea>
-            <button class="btn-buy" onclick="submitReview()" style="margin-top:20px;">SEND REVIEW</button>
-            <button class="btn-buy" onclick="closeApp()" style="margin-top:10px; background:#333;">SKIP</button>
+            <textarea id="review-text" placeholder="FEEDBACK (OPTIONAL)..." style="width:100%; height:80px; background:#111; color:var(--gta-green); border:1px solid var(--gta-green); font-family:'Courier New'; padding:10px; margin-bottom:20px; box-sizing:border-box; outline:none;"></textarea>
+            <button class="btn-buy" onclick="submitReview()">SUBMIT & CLOSE</button>
         </div>
     </div>
 
@@ -704,15 +726,21 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             <div class="placeholder-box">
                 <div style="font-size: 32px; margin-bottom: 20px; color: var(--gta-gold);">PLAYER STATS</div>
                 <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-bottom: 20px;">
-                    <img src="https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png" id="char-img" style="height: 150px; filter: drop-shadow(2px 2px 0 #fff);">
+                    <img src="https://placehold.co/150x200/000000/3fa535?text=CJ" id="char-img" style="height: 150px; border: 2px solid #fff;">
                     <div>
                         <button class="filter-btn" onclick="changeSkin('cj')">CJ</button>
                         <button class="filter-btn" onclick="changeSkin('sweet')">SWEET</button>
                         <button class="filter-btn" onclick="changeSkin('ryder')">RYDER</button>
                     </div>
                 </div>
-                <div class="stat-row"><span>RESPECT</span><span style="color: var(--gta-green);">MAX</span></div>
-                <div class="stat-row"><span>STAMINA</span><span>████████░░</span></div>
+                <div class="stat-row" style="align-items:center;">
+                    <span>RESPECT</span>
+                    <div class="stat-bar-container"><div class="stat-bar-fill" style="width:100%"></div></div>
+                </div>
+                <div class="stat-row" style="align-items:center;">
+                    <span>STAMINA</span>
+                    <div class="stat-bar-container"><div class="stat-bar-fill" style="width:70%"></div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1000,17 +1028,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let activePaymentId = null;
         let pollInterval = null;
 
+        function copyText(elementId) {
+            const el = document.getElementById(elementId);
+            const text = el.innerText.replace(' SOL', '');
+            navigator.clipboard.writeText(text).then(() => {
+                const original = el.style.color;
+                el.style.color = '#fff';
+                setTimeout(() => el.style.color = original, 200);
+                tg.showAlert("COPIED TO CLIPBOARD");
+            });
+        }
+
         async function initCheckout() {
             if(basket.length === 0) return;
             
-            const btn = document.querySelector('#basket-modal .btn-buy:last-child');
-            const originalText = btn.innerText;
-            btn.innerText = "CALCULATING...";
-            btn.disabled = true;
+            // Find the checkout button (last button in basket modal)
+            const btn = document.querySelector('#basket-modal .btn-buy:last-of-type');
+            const originalText = btn ? btn.innerText : "CHECKOUT";
+            if(btn) {
+                btn.innerText = "CONNECTING...";
+                btn.disabled = true;
+            }
             
             try {
                 const user = tg.initDataUnsafe?.user;
-                const userId = user ? user.id : 0; // Fallback
+                const userId = user ? user.id : 0; 
                 
                 const response = await fetch('/webapp/api/create_invoice', {
                     method: 'POST',
@@ -1021,12 +1063,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const data = await response.json();
                 
                 if(data.success) {
-                    // Show Invoice
                     document.getElementById('basket-modal').style.display = 'none';
                     const invModal = document.getElementById('invoice-modal');
                     
                     document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
                     document.getElementById('invoice-address').innerText = data.pay_address;
+                    
+                    // Generate QR
+                    const qrContainer = document.getElementById('qrcode');
+                    qrContainer.innerHTML = "";
+                    new QRCode(qrContainer, {
+                        text: data.pay_address,
+                        width: 150,
+                        height: 150,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L
+                    });
                     
                     invModal.style.display = 'flex';
                     activePaymentId = data.payment_id;
