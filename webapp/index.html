@@ -480,9 +480,110 @@
         
         @keyframes blink { 50% { opacity: 0.5; } }
 
+        /* Intro Screen */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            transition: opacity 1s ease-out;
+        }
+        
+        .intro-logo {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 64px;
+            color: var(--gta-gold);
+            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeIn 2s forwards 0.5s;
+        }
+        
+        .intro-text {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .start-btn {
+            margin-top: 50px;
+            font-size: 24px;
+            animation: blink 1s infinite;
+            cursor: pointer;
+            color: var(--gta-green);
+            display: none; /* Hidden until loaded */
+            border: 2px solid var(--gta-green);
+            padding: 10px 20px;
+            background: rgba(0,0,0,0.5);
+        }
+
+        /* Character Overlay */
+        .char-overlay {
+            position: fixed;
+            bottom: 0; 
+            right: 0; 
+            width: 300px;
+            height: 400px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom right;
+            z-index: 9000;
+            transform: translateX(100%); /* Start hidden off-screen right */
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            filter: drop-shadow(-5px 0 10px rgba(0,0,0,0.5));
+        }
+        
+        .char-visible {
+            transform: translateX(0); /* Slide in */
+        }
+        
+        .char-bubble {
+            position: absolute;
+            top: 100px;
+            left: 20px; /* Relative to the container */
+            width: 180px;
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #fff;
+            color: var(--gta-gold);
+            padding: 15px;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 24px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.3s 0.3s; /* Delay to show after slide */
+            pointer-events: auto;
+        }
+        
+        .char-visible .char-bubble {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body>
+    <!-- Intro Screen -->
+    <div id="intro-screen">
+        <div class="intro-logo">LOS SANTOS</div>
+        <div class="intro-text" id="intro-logs">INITIALIZING...</div>
+        <div class="start-btn" onclick="startApp()">> PRESS START &lt;</div>
+    </div>
+
+    <!-- Character Layer -->
+    <div id="char-layer" class="char-overlay">
+        <div id="char-text" class="char-bubble">WELCOME!</div>
+    </div>
+
     <!-- Audio Elements -->
     <div class="radio-widget" onclick="toggleRadio()">
         <div class="radio-text">📻 RADIO OFF</div>
@@ -758,6 +859,64 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         tg.expand();
         tg.MainButton.hide();
 
+        // --- Character System ---
+        const charSystem = {
+            el: null,
+            text: null,
+            timer: null,
+            
+            init: function() {
+                this.el = document.getElementById('char-layer');
+                this.text = document.getElementById('char-text');
+            },
+            
+            show: function(charName, message, duration=4000) {
+                if(!this.el) this.init();
+                
+                let url = "https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson_GTA_SA.png"; 
+                if(charName === 'ryder') url = "https://upload.wikimedia.org/wikipedia/en/3/3f/Ryder_GTA_SA.png"; 
+                if(charName === 'smoke') url = "https://upload.wikimedia.org/wikipedia/en/1/17/Big_Smoke_GTA_SA.png";
+                
+                this.el.style.backgroundImage = `url('${url}')`;
+                this.text.innerText = message;
+                
+                this.el.classList.add('char-visible');
+                
+                if(this.timer) clearTimeout(this.timer);
+                this.timer = setTimeout(() => {
+                    this.el.classList.remove('char-visible');
+                }, duration);
+            }
+        };
+
+        // --- Intro Logic ---
+        function startApp() {
+            document.getElementById('intro-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('intro-screen').style.display = 'none';
+                charSystem.show('cj', "WELCOME HOMIE!");
+            }, 1000);
+        }
+
+        // Simulate BIOS
+        window.onload = () => {
+            const logs = document.getElementById('intro-logs');
+            const msgs = ["LOADING TEXTURES...", "CONNECTING TO TOR...", "DECRYPTING WALLETS...", "LOAD COMPLETE."];
+            let i = 0;
+            const interval = setInterval(() => {
+                if(i < msgs.length) {
+                    logs.innerText = msgs[i];
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    document.querySelector('.start-btn').style.display = 'block';
+                }
+            }, 500);
+            
+            // Also init map
+            initMapEvents();
+        };
+
         let allProducts = [];
         let currentStation = 0;
         // SomaFM Streams (Reliable HTTPS)
@@ -973,6 +1132,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function addToBasket(id, name, price) {
             basket.push({id, name, price});
             updateBasketUI();
+            charSystem.show('cj', 'NICE CHOICE!');
             // Flash nav item
             const nav = document.getElementById('nav-basket');
             nav.style.color = '#fff';
@@ -1125,6 +1285,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             closeInvoice();
             basket = []; // Clear basket
             updateBasketUI();
+            charSystem.show('smoke', 'RESPECT +');
             
             // Play Mission Passed Logic
             const overlay = document.getElementById('mp-overlay');
