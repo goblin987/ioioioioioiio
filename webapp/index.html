@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.7</title>
+    <title>Los Santos Shop v2.8</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -548,23 +548,39 @@
         <!-- MAP SECTION -->
                 <!-- MAP SECTION (FULLSCREEN MOBILE) -->
         <div id="map" class="section">
+        <!-- Map Controls -->
+        <div id="map-back-btn" onclick="mapReset()" style="
+            position: absolute; 
+            bottom: 80px; 
+            right: 20px; 
+            background: #000; 
+            color: #fff; 
+            border: 2px solid var(--gta-green); 
+            padding: 10px 20px; 
+            font-family: 'Pricedown', sans-serif; 
+            font-size: 24px; 
+            display: none; 
+            z-index: 1000;
+            box-shadow: 0 0 10px var(--gta-green);
+        ">
+            BACK
+        </div>
+
             <div class="map-viewport" id="map-viewport">
                 <div class="map-transform-layer" id="map-layer">
                                         <!-- GTA SA COLORFUL MAP LAYERS -->
                                         <!-- GTA SA WORLD MAP (HARDCODED COLORS) -->
-                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #6fa8dc;">
+                                        <!-- GTA SA HIGH FIDELITY MAP -->
+                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #97c2e2;">
                         <defs>
-                            <!-- Patterns -->
-                            <pattern id="land-pattern" width="100" height="100" patternUnits="userSpaceOnUse">
-                                <rect width="100" height="100" fill="#567d46" /> <!-- GREEN -->
-                                <path d="M0 100 L50 0 L100 100" fill="rgba(0,0,0,0.05)" />
-                            </pattern>
-                            
-                            <pattern id="city-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
-                                <rect width="20" height="20" fill="#d9d9d9" /> <!-- GREY -->
-                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#999" stroke-width="1" />
-                            </pattern>
+                            <!-- Texture Filter for Paper/Gritty Look -->
+                            <filter id="noise">
+                                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/>
+                                <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.1 0"/>
+                                <feBlend in="SourceGraphic" mode="multiply"/>
+                            </filter>
 
+                            <!-- Country Outline Clip -->
                             <clipPath id="clip-land">
                                 <g transform="translate(0,1024) scale(0.1,-0.1)">
                                     <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
@@ -645,31 +661,49 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                             </clipPath>
                         </defs>
 
-                        <!-- GROUP: Everything inside country outline -->
+                        <!-- MAP CONTENT GROUP (Clipped to Lithuania Shape) -->
                         <g clip-path="url(#clip-land)">
-                            <!-- 1. Green Land Base -->
-                            <rect width="1024" height="1024" fill="url(#land-pattern)" />
+                            <!-- 1. Base Land (Sand/Beige) -->
+                            <rect width="1024" height="1024" fill="#dcb891" filter="url(#noise)" />
                             
-                            <!-- 2. Blue Rivers -->
-                            <path d="M 600 1000 Q 450 800 512 665 T 150 358" stroke="#6fa8dc" stroke-width="35" fill="none" stroke-linecap="round"/>
-                            <path d="M 1024 700 Q 800 750 716 768 T 512 665" stroke="#6fa8dc" stroke-width="30" fill="none" stroke-linecap="round"/>
+                            <!-- 2. Grasslands (Light Green Coverage) -->
+                            <path d="M0 0 H1024 V1024 H0 Z" fill="#768e61" opacity="0.8" filter="url(#noise)" />
+                            
+                            <!-- 3. Forests (Darker Green Organic Shapes) -->
+                            <!-- Dzūkija (South) -->
+                            <path d="M 600 200 Q 500 100 700 50 T 800 250 Z" fill="#586c48" opacity="0.9" filter="url(#noise)" />
+                            <!-- Aukštaitija (North East) -->
+                            <path d="M 700 800 Q 800 900 900 850 T 800 700 Z" fill="#586c48" opacity="0.9" filter="url(#noise)" />
+                            <!-- Zemaitija (North West) -->
+                            <path d="M 200 700 Q 300 800 400 750 T 300 600 Z" fill="#586c48" opacity="0.9" filter="url(#noise)" />
 
-                            <!-- 3. Grey City Zones -->
+                            <!-- 4. Rivers (GTA Water Blue) -->
+                            <!-- Nemunas (From South East -> Kaunas -> Curonian Lagoon) -->
+                            <path d="M 600 0 C 620 100 650 200 600 300 S 500 500 520 660 S 300 600 100 620" 
+                                  stroke="#97c2e2" stroke-width="25" fill="none" stroke-linecap="round" />
+                            <!-- Neris (From East -> Vilnius -> Kaunas) -->
+                            <path d="M 1024 500 C 900 520 800 550 720 600 S 600 620 520 660" 
+                                  stroke="#97c2e2" stroke-width="20" fill="none" stroke-linecap="round" />
+
+                            <!-- 5. Cities (Concrete/Grey Zones) -->
                             <!-- Vilnius -->
-                            <path d="M 690 740 L 740 730 L 760 780 L 710 800 Z" fill="url(#city-pattern)" stroke="#999" stroke-width="2"/>
+                            <path d="M 690 560 L 760 550 L 770 620 L 700 630 Z" fill="#9ba0a3" stroke="none" />
                             <!-- Kaunas -->
-                            <path d="M 490 640 L 540 640 L 530 690 L 480 680 Z" fill="url(#city-pattern)" stroke="#999" stroke-width="2"/>
+                            <path d="M 480 630 L 550 630 L 540 690 L 470 690 Z" fill="#9ba0a3" stroke="none" />
                             <!-- Klaipeda -->
-                            <path d="M 130 330 L 170 330 L 170 380 L 130 380 Z" fill="url(#city-pattern)" stroke="#999" stroke-width="2"/>
+                            <path d="M 80 600 L 140 600 L 140 660 L 80 660 Z" fill="#9ba0a3" stroke="none" />
 
-                            <!-- 4. Dark Roads -->
-                            <path d="M 716 768 L 512 665 L 150 358" stroke="#222" stroke-width="15" fill="none" stroke-linecap="round"/>
-                            <path d="M 716 768 Q 600 500 512 300" stroke="#222" stroke-width="15" fill="none" stroke-linecap="round"/>
-                            <!-- Yellow Dashes -->
-                            <path d="M 716 768 L 512 665 L 150 358" stroke="#f0c330" stroke-width="2" fill="none" stroke-dasharray="10,10"/>
+                            <!-- 6. Major Roads (Dark Grey + Yellow Line) -->
+                            <!-- A1 (Vilnius - Kaunas - Klaipeda) -->
+                            <path d="M 730 590 L 515 660 L 110 630" stroke="#424242" stroke-width="12" fill="none" stroke-linecap="round" />
+                            <path d="M 730 590 L 515 660 L 110 630" stroke="#d9cd84" stroke-width="2" fill="none" stroke-dasharray="15,10" />
+                            
+                            <!-- A2 (Vilnius - Panevezys) -->
+                            <path d="M 730 590 Q 700 750 650 850" stroke="#424242" stroke-width="10" fill="none" stroke-linecap="round" />
+                            <path d="M 730 590 Q 700 750 650 850" stroke="#d9cd84" stroke-width="2" fill="none" stroke-dasharray="15,10" />
                         </g>
                         
-                        <!-- 5. Black Outline (Coastline) -->
+                        <!-- 7. Border Outline (Thick Black) -->
                         <g transform="translate(0,1024) scale(0.1,-0.1)">
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
@@ -744,7 +778,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="25"/>
+1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="40" opacity="0.8"/>
+                        </g>
+
+                        <!-- 8. Interactive City Markers (Golden Boxes) -->
+                        <!-- Vilnius -->
+                        <g class="city-marker" onclick="selectCity('Vilnius', 40, 72)" style="cursor: pointer;">
+                            <rect x="690" y="560" width="80" height="80" fill="rgba(255, 215, 0, 0.3)" stroke="#ffd700" stroke-width="4" rx="5" />
+                            <rect x="700" y="570" width="60" height="60" fill="none" stroke="#ffd700" stroke-width="2" stroke-dasharray="5,5" />
+                        </g>
+
+                        <!-- Kaunas -->
+                        <g class="city-marker" onclick="selectCity('Kaunas', 35, 50)" style="cursor: pointer;">
+                            <rect x="480" y="630" width="70" height="70" fill="rgba(255, 215, 0, 0.3)" stroke="#ffd700" stroke-width="4" rx="5" />
+                            <rect x="490" y="640" width="50" height="50" fill="none" stroke="#ffd700" stroke-width="2" stroke-dasharray="5,5" />
+                        </g>
+
+                        <!-- Klaipeda -->
+                        <g class="city-marker" onclick="selectCity('Klaipeda', 38, 12)" style="cursor: pointer;">
+                             <rect x="80" y="600" width="60" height="60" fill="rgba(255, 215, 0, 0.3)" stroke="#ffd700" stroke-width="4" rx="5" />
                         </g>
                     </svg>
                     
@@ -1103,47 +1155,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             updateMapTransform();
         }
 
-        function mapReset() { fitMapToScreen(); closeSheet(); }
-
-                function selectCity(name, topPerc, leftPerc) {
-            selectedCity = name;
-            
-            // 1. Zoom In
-            mapState.scale = 4.0; 
-            
-            const mapW = 1024 * mapState.scale;
-            const mapH = 1024 * mapState.scale;
-            const targetX = (leftPerc / 100) * mapW;
-            const targetY = (topPerc / 100) * mapH;
-            
-            const screenW = window.innerWidth;
-            const screenH = window.innerHeight;
-            
-            mapState.x = (screenW / 2) - targetX;
-            mapState.y = (screenH / 2) - targetY;
-            
-            updateMapTransform();
-            
-            // 2. Welcome Overlay
-            const welcome = document.getElementById('welcome-overlay');
-            const welcomeText = document.getElementById('welcome-text');
-            if(welcome && welcomeText) {
-                welcomeText.innerText = `WELCOME TO ${name.toUpperCase()}`;
-                welcome.style.display = 'flex';
-                setTimeout(() => welcome.classList.add('active'), 10);
-                
-                setTimeout(() => {
-                    welcome.classList.remove('active');
-                    setTimeout(() => welcome.style.display = 'none', 500);
-                }, 2000);
-            }
-            
-            // 3. Bottom Sheet
-            const sheet = document.getElementById('city-sheet');
-            document.getElementById('sheet-title').innerText = name;
-            const count = allProducts.filter(p => p.city.toLowerCase() === name.toLowerCase()).length;
-            document.getElementById('sheet-info').innerText = `FOUND ${count} ITEMS`;
-            sheet.classList.add('active');
+                function mapReset() {
+            fitMapToScreen();
+            document.getElementById('map-back-btn').style.display = 'none';
+            document.getElementById('city-sheet').classList.remove('active');
         }
         
         function closeSheet() {
