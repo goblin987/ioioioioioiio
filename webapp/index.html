@@ -6,7 +6,6 @@
     <title>Los Santos Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
     <style>
         @font-face {
             font-family: 'Pricedown';
@@ -40,7 +39,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('https://gta-sanandreas.com/images/wallpapers/gtasa_wallpaper_1-1920x1080.jpg');
+            /* Reliable Wikimedia Image */
+            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Los_Angeles_from_Griffith_Observatory.jpg/1280px-Los_Angeles_from_Griffith_Observatory.jpg');
             background-size: cover;
             background-position: center;
             z-index: -2;
@@ -295,6 +295,7 @@
             position: relative;
             height: 400px;
             border: 2px solid var(--gta-gold);
+            background: #000;
         }
         
         .map-img-interactive {
@@ -491,7 +492,8 @@
         <div id="map" class="section">
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
-                    <img src="https://gta-sanandreas.com/images/wallpapers/gtasa_wallpaper_1-1920x1080.jpg" class="map-img-interactive" id="map-img">
+                    <!-- Reliable Vintage LA Map Image -->
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Los_Angeles_map_1928.jpg/1280px-Los_Angeles_map_1928.jpg" class="map-img-interactive" id="map-img" onerror="this.src='https://placehold.co/800x600/000000/cfa936?text=MAP+OFFLINE'">
                     <!-- Mock Districts: Dynamic markers should be injected here ideally -->
                     <div class="district-marker" style="top: 30%; left: 40%;" onclick="zoomMap('Vilnius', 30, 40)">VILNIUS</div>
                     <div class="district-marker" style="top: 60%; left: 70%;" onclick="zoomMap('Kaunas', 60, 70)">KAUNAS</div>
@@ -533,10 +535,12 @@
 
         let allProducts = [];
         let currentStation = 0;
+        // SomaFM Streams (Reliable HTTPS)
         const stations = [
             { name: "RADIO OFF", src: null },
-            { name: "K-JAH", src: "https://stream.zeno.fm/dbk27k0q0nruv" }, // Placeholder
-            { name: "PLAYBACK FM", src: "https://stream.zeno.fm/dbk27k0q0nruv" } // Placeholder
+            { name: "GROOVE SALAD", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, // Downtempo
+            { name: "SECRET AGENT", src: "https://ice2.somafm.com/secretagent-128-mp3" }, // Spy/Lounge
+            { name: "DEF CON", src: "https://ice2.somafm.com/defcon-128-mp3" } // Electronic
         ];
         let audioPlayer = null;
 
@@ -624,8 +628,15 @@
             });
         }
 
-        // Radio
+        // Radio - Native HTML5 Audio
         function toggleRadio() {
+            // Stop previous
+            if(audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.src = "";
+                audioPlayer = null;
+            }
+
             currentStation = (currentStation + 1) % stations.length;
             const station = stations[currentStation];
             const widget = document.querySelector('.radio-widget');
@@ -634,10 +645,29 @@
             widget.classList.add('active');
             setTimeout(() => widget.classList.remove('active'), 3000);
 
-            if(audioPlayer) audioPlayer.stop();
             if(station.src) {
-                audioPlayer = new Howl({ src: [station.src], html5: true, volume: 0.5 });
-                audioPlayer.play();
+                try {
+                    audioPlayer = new Audio(station.src);
+                    audioPlayer.crossOrigin = "anonymous";
+                    audioPlayer.volume = 0.5;
+                    
+                    const playPromise = audioPlayer.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(_ => {
+                            // Autoplay started!
+                        }).catch(error => {
+                            console.log("Radio Play Blocked: " + error);
+                            document.querySelector('.radio-text').innerText = "❌ SIGNAL BLOCKED";
+                        });
+                    }
+                    
+                    audioPlayer.onerror = function() {
+                        console.log("Stream Error");
+                        document.querySelector('.radio-text').innerText = "❌ SIGNAL LOST";
+                    };
+                } catch(e) {
+                    console.log("Audio Error: " + e);
+                }
             }
         }
 
