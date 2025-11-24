@@ -303,7 +303,8 @@
             height: 100%;
             object-fit: contain;
             transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            filter: grayscale(100%) invert(100%) contrast(1.5) drop-shadow(0 0 5px #000);
+            /* Turn opaque pixels to GTA Green */
+            filter: brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(80deg) drop-shadow(0 0 5px #3fa535);
         }
         
         .district-marker {
@@ -505,8 +506,8 @@
         <div id="map" class="section">
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
-                    <!-- Lithuania Map Outline -->
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Lithuania_location_map.svg/1024px-Lithuania_location_map.svg.png" class="map-img-interactive" id="map-img">
+                    <!-- Lithuania Map Outline (Solid Shape for styling) -->
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Lithuania_stub.svg/800px-Lithuania_stub.svg.png" class="map-img-interactive" id="map-img" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Map_of_Lithuania_2.svg/800px-Map_of_Lithuania_2.svg.png'">
                     
                     <!-- City Markers (Approximate positions on the SVG) -->
                     <!-- Vilnius: South-East (Top: 75%, Left: 70%) -->
