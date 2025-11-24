@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v3.2</title>
+    <title>Los Santos Shop v4.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -67,7 +67,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 300;
+            z-index: 9999;
         }
 
         .logo {
@@ -115,7 +115,7 @@
             background: rgba(0, 0, 0, 0.9);
             padding: 10px 0;
             border-top: 2px solid var(--gta-grey);
-            z-index: 300;
+            z-index: 9999;
         }
 
         .nav-item {
@@ -296,7 +296,7 @@
             width: 100%;
             height: 100%;
             z-index: 200;
-            background: #0f1216; /* GTA Water Blue */
+            background: #000; /* GTA Water Blue */
             padding: 0;
             overflow: hidden;
         }
@@ -335,7 +335,7 @@
             padding: 0 20px;
             box-sizing: border-box;
             pointer-events: none;
-            z-index: 300;
+            z-index: 9999;
         }
         
         .map-title {
@@ -367,7 +367,7 @@
             box-sizing: border-box;
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            z-index: 300;
+            z-index: 9999;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -575,12 +575,22 @@
                                         <!-- GTA SA REDESIGNED MAP v3.0 -->
                                         <!-- GTA SA MAP v4.0 (PROFESSIONAL POLISH) -->
                                         <!-- GTA SA DARK MAP v5.0 (Black/Grey Theme) -->
-                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #0f1216;">
+                                        <!-- ULTIMATE GTA MAP v6.0 -->
+                    <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background: radial-gradient(circle, #1c2333 0%, #0b0e14 100%);">
                         <defs>
-                            <!-- Radar Grid Texture -->
-                            <pattern id="radar-grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#333" stroke-width="1"/>
+                            <!-- Tech Grid Pattern -->
+                            <pattern id="tech-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
                             </pattern>
+                            
+                            <!-- Land Glow Filter -->
+                            <filter id="land-glow">
+                                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
 
                             <clipPath id="land-clip">
                                 <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
@@ -658,38 +668,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
 1 -25 -7 -42 -18z" transform="translate(0,1024) scale(0.1,-0.1)" />
                             </clipPath>
-
-                            <symbol id="icon-blip" viewBox="0 0 24 24">
-                                <rect x="2" y="2" width="20" height="20" fill="#fff" stroke="#000" stroke-width="2"/>
-                            </symbol>
                         </defs>
 
-                        <!-- CLIPPED GROUP -->
-                        <g clip-path="url(#land-clip)">
-                            <!-- Land: Dark Grey -->
-                            <rect width="100%" height="100%" fill="#1e2329" />
-                            
-                            <!-- Grid Overlay -->
-                            <rect width="100%" height="100%" fill="url(#radar-grid)" pointer-events="none" opacity="0.3"/>
+                        <!-- 1. GRID BACKGROUND (Behind Land) -->
+                        <rect width="100%" height="100%" fill="url(#tech-grid)" />
 
-                            <!-- Rivers: Black/Darker Blue -->
-                            <path d="M 600 1100 Q 550 800 520 660 T 100 620" stroke="#0f1216" stroke-width="25" fill="none" stroke-linecap="round" />
-                            <path d="M 1100 500 Q 800 550 720 600 T 520 660" stroke="#0f1216" stroke-width="20" fill="none" stroke-linecap="round" />
-
-                            <!-- CITIES (Darker Grey Blocks) -->
-                            <!-- Vilnius -->
-                            <path d="M 700 550 Q 750 540 780 580 T 740 650 Q 700 660 680 620 T 700 550" fill="#2a323b" stroke="none" />
-                            <!-- Kaunas -->
-                            <path d="M 480 630 Q 520 620 550 650 T 530 700 Q 490 710 470 680 T 480 630" fill="#2a323b" stroke="none" />
-                            <!-- Klaipeda -->
-                            <path d="M 80 580 L 120 580 L 130 680 L 90 680 Z" fill="#2a323b" stroke="none" />
-
-                            <!-- Roads: Lighter Grey -->
-                            <path d="M 730 590 L 515 660 L 110 630" stroke="#3e4b57" stroke-width="8" fill="none" stroke-linecap="round" />
-                        </g>
-
-                        <!-- OUTLINE (Green/Grey Radar Style) -->
-                        <g transform="translate(0,1024) scale(0.1,-0.1)" pointer-events="none">
+                        <!-- 2. LANDMASS (Glowing) -->
+                        <g transform="translate(0,1024) scale(0.1,-0.1)" filter="url(#land-glow)">
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
 -51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
@@ -763,36 +748,77 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#333" stroke-width="30" />
+1 -25 -7 -42 -18z" fill="#161b22" stroke="#3fa535" stroke-width="15" />
                         </g>
 
-                        <!-- UI ICONS -->
-                        <!-- Vilnius -->
+                        <!-- 3. RIVERS (Clipped) -->
+                        <g clip-path="url(#land-clip)">
+                            <path d="M 600 1100 Q 550 800 520 660 T 100 620" stroke="#0b0e14" stroke-width="30" fill="none" stroke-linecap="round" />
+                            <path d="M 1100 500 Q 800 550 720 600 T 520 660" stroke="#0b0e14" stroke-width="20" fill="none" stroke-linecap="round" />
+                        </g>
+
+                        <!-- 4. HIGHWAY NETWORK (Stylized Neon) -->
+                        <!-- A1: Vilnius -> Kaunas -> Klaipeda -->
+                        <path d="M 730 600 L 515 660 L 110 630" stroke="#333" stroke-width="12" fill="none" stroke-linecap="round" />
+                        <path d="M 730 600 L 515 660 L 110 630" stroke="#cfa936" stroke-width="4" fill="none" stroke-dasharray="10,10" opacity="0.8" />
+                        
+                        <!-- A2: Vilnius -> North -->
+                        <path d="M 730 600 L 680 850" stroke="#333" stroke-width="10" fill="none" stroke-linecap="round" />
+                        <path d="M 730 600 L 680 850" stroke="#cfa936" stroke-width="3" fill="none" stroke-dasharray="10,10" opacity="0.6" />
+
+                        <!-- 5. INTERACTIVE CITIES (Top Layer) -->
+                        
+                        <!-- VILNIUS -->
                         <g id="city-vilnius" transform="translate(730, 600)" style="cursor: pointer;" onclick="selectCity('Vilnius', 42, 71)">
-                            <text x="0" y="-30" text-anchor="middle" font-family="Pricedown" font-size="28" fill="#fff" stroke="#000" stroke-width="3" paint-order="stroke">VILNIUS</text>
-                            <use href="#icon-blip" x="-12" y="-12" width="24" height="24" class="city-icon" />
+                            <!-- Hitbox -->
+                            <circle r="60" fill="transparent" />
+                            
+                            <!-- Pulse Effect -->
+                            <circle r="30" fill="rgba(207, 169, 54, 0.2)">
+                                <animate attributeName="r" values="20;40" dur="1.5s" repeatCount="indefinite" />
+                                <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" />
+                            </circle>
+                            
+                            <!-- Core Marker -->
+                            <rect x="-15" y="-15" width="30" height="30" fill="#cfa936" stroke="#000" stroke-width="2" transform="rotate(45)" />
+                            
+                            <!-- Label -->
+                            <text x="0" y="-40" text-anchor="middle" font-family="Pricedown" font-size="32" fill="#fff" stroke="#000" stroke-width="4" paint-order="stroke" font-weight="bold" letter-spacing="2">VILNIUS</text>
+                            
+                             <!-- Districts (Hidden) -->
                             <g class="districts-group" opacity="0" pointer-events="none">
-                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(63, 165, 53, 0.4)" stroke="#3fa535" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
+                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
                             </g>
                         </g>
 
-                        <!-- Kaunas -->
+                        <!-- KAUNAS -->
                         <g id="city-kaunas" transform="translate(515, 660)" style="cursor: pointer;" onclick="selectCity('Kaunas', 36, 50)">
-                            <text x="0" y="-30" text-anchor="middle" font-family="Pricedown" font-size="28" fill="#fff" stroke="#000" stroke-width="3" paint-order="stroke">KAUNAS</text>
-                            <use href="#icon-blip" x="-12" y="-12" width="24" height="24" class="city-icon" />
+                             <circle r="50" fill="transparent" />
+                             <circle r="25" fill="rgba(207, 169, 54, 0.2)">
+                                <animate attributeName="r" values="15;35" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+                                <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+                            </circle>
+                            <rect x="-12" y="-12" width="24" height="24" fill="#cfa936" stroke="#000" stroke-width="2" transform="rotate(45)" />
+                            <text x="0" y="-35" text-anchor="middle" font-family="Pricedown" font-size="28" fill="#fff" stroke="#000" stroke-width="4" paint-order="stroke" font-weight="bold" letter-spacing="1">KAUNAS</text>
                              <g class="districts-group" opacity="0" pointer-events="none">
-                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(63, 165, 53, 0.4)" stroke="#3fa535" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
+                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
                             </g>
                         </g>
 
-                        <!-- Klaipeda -->
+                        <!-- KLAIPEDA -->
                         <g id="city-klaipeda" transform="translate(110, 630)" style="cursor: pointer;" onclick="selectCity('Klaipeda', 39, 11)">
-                            <text x="0" y="-30" text-anchor="middle" font-family="Pricedown" font-size="28" fill="#fff" stroke="#000" stroke-width="3" paint-order="stroke">KLAIPEDA</text>
-                            <use href="#icon-blip" x="-12" y="-12" width="24" height="24" class="city-icon" />
+                             <circle r="50" fill="transparent" />
+                             <circle r="25" fill="rgba(207, 169, 54, 0.2)">
+                                <animate attributeName="r" values="15;35" dur="1.5s" repeatCount="indefinite" begin="1s"/>
+                                <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" begin="1s"/>
+                            </circle>
+                            <rect x="-12" y="-12" width="24" height="24" fill="#cfa936" stroke="#000" stroke-width="2" transform="rotate(45)" />
+                            <text x="0" y="-35" text-anchor="middle" font-family="Pricedown" font-size="28" fill="#fff" stroke="#000" stroke-width="4" paint-order="stroke" font-weight="bold" letter-spacing="1">KLAIPEDA</text>
                              <g class="districts-group" opacity="0" pointer-events="none">
-                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(63, 165, 53, 0.4)" stroke="#3fa535" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
+                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(63, 165, 53, 0.6)" stroke="#3fa535" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
                             </g>
                         </g>
+                        
                     </svg>
                     
                     <!-- Blips -->
@@ -1147,10 +1173,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             updateMapTransform();
         }
 
-                function mapReset() {
+                        function mapReset() {
+            currentZoomCity = null;
             fitMapToScreen();
+            const layer = document.getElementById('map-layer');
+            layer.style.transform = `translate(${mapState.x}px, ${mapState.y}px) scale(${mapState.scale})`;
             document.getElementById('map-back-btn').style.display = 'none';
             document.getElementById('city-sheet').classList.remove('active');
+            
+            // Layers
+            document.querySelectorAll('.city-icon').forEach(el => el.style.opacity = '1'); // Actually we removed city-icon class from use, but ok.
+            document.querySelectorAll('.districts-group').forEach(el => {
+                el.style.opacity = '0';
+                el.setAttribute('pointer-events', 'none');
+            });
         }
         
         function closeSheet() {
