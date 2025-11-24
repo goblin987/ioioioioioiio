@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.2</title>
+    <title>Los Santos Shop v2.3</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -288,28 +288,141 @@
             font-weight: bold;
         }
 
-        /* Map Zoom */
-        /* --- GTA SA MAP THEME --- */
-        .map-container {
+        /* --- GTA SA MOBILE MAP THEME --- */
+        #map.section {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 200;
+            background: #0e131a;
+            padding: 0;
             overflow: hidden;
-            position: relative;
-            height: 400px;
-            /* Deep Ocean Blue Background */
-            background-color: #0e131a; 
-            /* Water Texture Effect */
-            background-image: radial-gradient(#151b24 2px, transparent 2px);
-            background-size: 30px 30px;
-            border: 4px solid #000;
-            box-shadow: inset 0 0 150px #000; /* Heavy Vignette */
         }
 
-        /* The Land Mass (Lithuania) */
+        .map-viewport {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none; /* Prevent browser scrolling */
+            position: relative;
+            background-image: radial-gradient(#151b24 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+
+        .map-transform-layer {
+            width: 1024px; /* Base SVG size */
+            height: 1024px;
+            transform-origin: 0 0;
+            will-change: transform;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* HUD */
+        .map-hud-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .map-title {
+            font-size: 32px;
+            color: var(--gta-gold);
+            text-shadow: 2px 2px 0 #000;
+        }
+        
+        .btn-close-map {
+            font-size: 24px;
+            color: #fff;
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border: 1px solid #fff;
+        }
+
+        /* Floating Controls */
+        .map-controls {
+            position: absolute;
+            bottom: 40px; /* Above nav if visible, or bottom of screen */
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+        
+        .fab {
+            width: 50px;
+            height: 50px;
+            background: rgba(0,0,0,0.9);
+            border: 2px solid var(--gta-grey);
+            border-radius: 50%;
+            color: var(--gta-gold);
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            pointer-events: auto;
+        }
+        
+        .fab:active { transform: scale(0.9); background: #fff; color: #000; }
+
+        /* Bottom Sheet */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.95);
+            border-top: 4px solid var(--gta-gold);
+            padding: 20px;
+            box-sizing: border-box;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        
+        .bottom-sheet.active {
+            transform: translateY(0);
+        }
+        
+        .bs-title {
+            font-size: 36px;
+            color: var(--gta-gold);
+        }
+        
+        .bs-info {
+            font-family: 'Courier New', monospace;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        /* SVG Styles */
         .map-img-interactive g {
-            /* Drop shadow to separate land from water */
             filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
         }
 
-        /* City Markers -> "Blips" */
+        /* Updated Blips (Bigger for Touch) */
         .district-marker {
             display: flex;
             flex-direction: column;
@@ -317,65 +430,33 @@
             background: transparent;
             border: none;
             color: #e0e0e0;
-            font-family: Arial, Helvetica, sans-serif; /* GTA Menu Font */
+            font-family: Arial, Helvetica, sans-serif;
             font-weight: 900;
             text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
             font-size: 14px;
             letter-spacing: 1px;
             text-transform: uppercase;
-            pointer-events: none; /* Let clicks pass to the blip */
+            pointer-events: none;
             transform: translate(-50%, -50%);
             position: absolute;
             transition: 0.2s;
         }
-
-        /* The Yellow Square Blip (Shop/Objective) */
+        
         .blip-icon {
-            width: 16px;
-            height: 16px;
-            background-color: #f0c330; /* GTA Gold */
-            border: 2px solid #000;
+            width: 32px;
+            height: 32px;
+            background-color: #f0c330;
+            border: 3px solid #000;
             margin-bottom: 5px;
-            box-shadow: 0 0 8px rgba(240, 195, 48, 0.6);
+            box-shadow: 0 0 10px rgba(240, 195, 48, 0.8);
             transition: transform 0.2s;
             cursor: pointer;
             pointer-events: auto;
         }
 
-        .blip-icon:hover {
-            transform: scale(1.5) rotate(90deg);
+        .blip-icon:active {
+            transform: scale(1.2);
             background-color: #fff;
-        }
-
-        /* Fake "Crosshair" Cursor in center */
-        .map-cursor {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 40px;
-            height: 40px;
-            border: 2px solid rgba(255,255,255,0.5);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 20;
-        }
-        .map-cursor::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 4px;
-            height: 4px;
-            background: #fff;
-            transform: translate(-50%, -50%);
-        }
-
-        .map-img-interactive {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         
         .zone-poly {
@@ -386,62 +467,6 @@
             pointer-events: none;
         }
 
-        /* 3D Modal */
-        .modal-3d {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 200;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .canvas-container {
-            width: 300px;
-            height: 300px;
-            border: 2px solid var(--gta-green);
-            background: #111;
-        }
-        
-        /* Mission Passed Overlay */
-        .mission-passed-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            z-index: 300;
-            pointer-events: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-        
-        .mp-text {
-            font-size: 64px;
-            color: var(--gta-gold);
-            text-shadow: 3px 3px 0 #000;
-            transform: scale(0);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .mp-sub {
-            font-size: 32px;
-            color: #fff;
-            margin-top: 10px;
-            opacity: 0;
-            transition: opacity 0.5s delay 0.5s;
-        }
-        
-        .mp-active .mp-text { transform: scale(1); }
-        .mp-active .mp-sub { opacity: 1; }
-        
         /* Map & Stats */
         .placeholder-box {
             background: rgba(0,0,0,0.6);
@@ -544,14 +569,10 @@
         </div>
 
         <!-- MAP SECTION -->
+                <!-- MAP SECTION (FULLSCREEN MOBILE) -->
         <div id="map" class="section">
-            <div class="placeholder-box" style="padding: 0; border: none;">
-                <div class="map-container" id="map-container">
-                    <!-- Crosshair UI -->
-                    <div class="map-cursor"></div>
-
-                    <!-- Map SVG -->
-                                        <!-- PREMIUM GTA MAP LAYERS -->
+            <div class="map-viewport" id="map-viewport">
+                <div class="map-transform-layer" id="map-layer">
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
                         <defs>
                             <!-- 1. Land Texture (Paper Map Grid) -->
@@ -749,32 +770,46 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         </g>
                     </svg>
                     
-                    <!-- Styled Blips -->
+                    <!-- Blips -->
                     <div class="district-marker" style="top: 75%; left: 70%;">
-                        <div class="blip-icon" onclick="zoomMap('Vilnius', 75, 70)"></div>
-                        VILNIUS
+                        <div class="blip-icon" onclick="selectCity('Vilnius', 75, 70)"></div>
+                        <div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none;">VILNIUS</div>
                     </div>
                     
                     <div class="district-marker" style="top: 65%; left: 50%;">
-                        <div class="blip-icon" onclick="zoomMap('Kaunas', 65, 50)"></div>
-                        KAUNAS
+                        <div class="blip-icon" onclick="selectCity('Kaunas', 65, 50)"></div>
+                        <div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none;">KAUNAS</div>
                     </div>
                     
                     <div class="district-marker" style="top: 35%; left: 15%;">
-                        <div class="blip-icon" onclick="zoomMap('Klaipeda', 35, 15)"></div>
-                        KLAIPEDA
+                        <div class="blip-icon" onclick="selectCity('Klaipeda', 35, 15)"></div>
+                        <div style="margin-top:5px; background:#000; padding:2px; font-size:10px; text-shadow:none;">KLAIPEDA</div>
                     </div>
-                    
-                    <!-- Mock District Zones (Visible on Zoom) -->
-                    <div id="zone-vilnius" class="zone-poly" style="top: 70%; left: 65%; width: 10%; height: 10%; border-radius: 50%;"></div>
-                    <div id="zone-kaunas" class="zone-poly" style="top: 60%; left: 45%; width: 10%; height: 10%; border-radius: 50%;"></div>
-                    <div id="zone-klaipeda" class="zone-poly" style="top: 30%; left: 10%; width: 10%; height: 10%; border-radius: 50%;"></div>
                 </div>
-                <button class="btn-buy" onclick="resetMap()" style="margin-top: 10px;">RESET VIEW</button>
+            </div>
+
+            <!-- HUD -->
+            <div class="map-hud-top">
+                <div class="map-title">MAP</div>
+                <div class="btn-close-map" onclick="showSection('shop')">CLOSE</div>
+            </div>
+
+            <!-- Controls -->
+            <div class="map-controls">
+                <div class="fab" onclick="mapZoomIn()">+</div>
+                <div class="fab" onclick="mapZoomOut()">-</div>
+                <div class="fab" onclick="mapReset()">⌖</div>
+            </div>
+
+            <!-- Bottom Sheet -->
+            <div class="bottom-sheet" id="city-sheet">
+                <div class="bs-title" id="sheet-title">CITY</div>
+                <div class="bs-info" id="sheet-info">NO INTEL</div>
+                <button class="btn-buy" onclick="openCityShop()">VISIT SHOP</button>
             </div>
         </div>
 
-        <!-- STATS SECTION -->
+<!-- STATS SECTION -->
         <div id="stats" class="section">
             <div class="placeholder-box" style="text-align: left;">
                 <div style="font-size: 32px; margin-bottom: 20px; color: var(--gta-gold); text-align:center;">STATS</div>
@@ -986,43 +1021,120 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
-        // Map Zoom
-        function zoomMap(cityName, topPerc, leftPerc) {
-            const map = document.getElementById('map-img');
-            
-            // Hide all markers
-            document.querySelectorAll('.district-marker').forEach(el => el.style.opacity = '0');
-            
-            // Show specific zone overlay
-            document.querySelectorAll('.zone-poly').forEach(el => el.style.display = 'none');
-            const zone = document.getElementById(`zone-${cityName.toLowerCase()}`);
-            if(zone) zone.style.display = 'block';
+                // Map Logic (Mobile Pan/Zoom)
+        let mapState = { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
+        let selectedCity = null;
 
-            // Zoom
-            map.style.transformOrigin = `${leftPerc}% ${topPerc}%`;
-            map.style.transform = "scale(5)"; // High zoom
+        function initMapEvents() {
+            const viewport = document.getElementById('map-viewport');
+            if(!viewport) return;
             
-            // Auto filter shop
-            setTimeout(() => {
+            // Touch
+            viewport.addEventListener('touchstart', e => {
+                if(e.touches.length === 1) {
+                    mapState.isDragging = true;
+                    mapState.startX = e.touches[0].clientX - mapState.x;
+                    mapState.startY = e.touches[0].clientY - mapState.y;
+                }
+            });
+            
+            viewport.addEventListener('touchmove', e => {
+                if(mapState.isDragging && e.touches.length === 1) {
+                    e.preventDefault(); // Stop scroll
+                    mapState.x = e.touches[0].clientX - mapState.startX;
+                    mapState.y = e.touches[0].clientY - mapState.startY;
+                    updateMapTransform();
+                }
+            });
+            
+            viewport.addEventListener('touchend', () => mapState.isDragging = false);
+
+            // Mouse (Testing)
+            viewport.addEventListener('mousedown', e => {
+                mapState.isDragging = true;
+                mapState.startX = e.clientX - mapState.x;
+                mapState.startY = e.clientY - mapState.y;
+            });
+            viewport.addEventListener('mousemove', e => {
+                if(mapState.isDragging) {
+                    mapState.x = e.clientX - mapState.startX;
+                    mapState.y = e.clientY - mapState.startY;
+                    updateMapTransform();
+                }
+            });
+            viewport.addEventListener('mouseup', () => mapState.isDragging = false);
+            viewport.addEventListener('mouseleave', () => mapState.isDragging = false);
+        }
+
+        function updateMapTransform() {
+            const layer = document.getElementById('map-layer');
+            if(layer) layer.style.transform = `translate(${mapState.x}px, ${mapState.y}px) scale(${mapState.scale})`;
+        }
+
+        function mapZoomIn() {
+            mapState.scale = Math.min(mapState.scale * 1.2, 5);
+            updateMapTransform();
+        }
+
+        function mapZoomOut() {
+            mapState.scale = Math.max(mapState.scale / 1.2, 1);
+            if(mapState.scale === 1) { mapState.x = 0; mapState.y = 0; }
+            updateMapTransform();
+        }
+
+        function mapReset() {
+            mapState = { scale: 1, x: 0, y: 0, isDragging: false };
+            updateMapTransform();
+            closeSheet();
+        }
+
+        function selectCity(name, topPerc, leftPerc) {
+            selectedCity = name;
+            mapState.scale = 2.5;
+            
+            // Center logic for 1024x1024 base
+            const mapW = 1024 * mapState.scale;
+            const mapH = 1024 * mapState.scale;
+            const targetX = (leftPerc / 100) * mapW;
+            const targetY = (topPerc / 100) * mapH;
+            
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
+            
+            mapState.x = (screenW / 2) - targetX;
+            mapState.y = (screenH / 2) - targetY;
+            
+            updateMapTransform();
+            
+            // Sheet
+            const sheet = document.getElementById('city-sheet');
+            document.getElementById('sheet-title').innerText = name;
+            const count = allProducts.filter(p => p.city.toLowerCase() === name.toLowerCase()).length;
+            document.getElementById('sheet-info').innerText = `INTELLIGENCE: ${count} ITEMS DETECTED`;
+            sheet.classList.add('active');
+        }
+        
+        function closeSheet() {
+            const sheet = document.getElementById('city-sheet');
+            if(sheet) sheet.classList.remove('active');
+        }
+
+        function openCityShop() {
+            if(selectedCity) {
                 showSection('shop');
-                // Filter products
-                filterProducts(cityName);
-                // Update filter UI
+                filterProducts(selectedCity);
                 const btns = document.querySelectorAll('.filter-btn');
                 for(let btn of btns) {
-                    if(btn.innerText === cityName.toUpperCase()) {
+                    if(btn.innerText === selectedCity.toUpperCase()) {
                         btn.click();
                         break;
                     }
                 }
-            }, 1500);
+            }
         }
-
-        function resetMap() {
-            document.getElementById('map-img').style.transform = "scale(1)";
-            document.querySelectorAll('.district-marker').forEach(el => el.style.opacity = '1');
-            document.querySelectorAll('.zone-poly').forEach(el => el.style.display = 'none');
-        }
+        
+        // Call init
+        initMapEvents();
 
 
         // Mission Passed
