@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v2.5</title>
+    <title>Los Santos Shop v2.6</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -992,7 +992,29 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let mapState = { scale: 1, x: 0, y: 0, isDragging: false, startX: 0, startY: 0 };
         let selectedCity = null;
 
+                function fitMapToScreen() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const mapSize = 1024;
+            
+            // Calculate scale to fit (contain)
+            const scaleX = w / mapSize;
+            const scaleY = h / mapSize;
+            let scale = Math.min(scaleX, scaleY);
+            
+            // Center it
+            const x = (w - (mapSize * scale)) / 2;
+            const y = (h - (mapSize * scale)) / 2;
+            
+            mapState.scale = scale;
+            mapState.x = x;
+            mapState.y = y;
+            updateMapTransform();
+        }
+
         function initMapEvents() {
+            fitMapToScreen();
+            window.addEventListener('resize', fitMapToScreen);
             const viewport = document.getElementById('map-viewport');
             if(!viewport) return;
             
@@ -1049,11 +1071,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             updateMapTransform();
         }
 
-        function mapReset() {
-            mapState = { scale: 1, x: 0, y: 0, isDragging: false };
-            updateMapTransform();
-            closeSheet();
-        }
+        function mapReset() { fitMapToScreen(); closeSheet(); }
 
         function selectCity(name, topPerc, leftPerc) {
             selectedCity = name;
