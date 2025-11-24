@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Los Santos Shop v3.0</title>
+    <title>Los Santos Shop v3.1</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @font-face {
@@ -573,15 +573,17 @@
                                         <!-- GTA SA HIGH FIDELITY MAP -->
                                         <!-- GTA SA MAP FINAL FIX -->
                                         <!-- GTA SA REDESIGNED MAP v3.0 -->
+                                        <!-- GTA SA MAP v4.0 (PROFESSIONAL POLISH) -->
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; background-color: #739AC5;">
                         <defs>
+                            <!-- Paper Texture -->
                             <filter id="paper-grain">
-                                <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/>
+                                <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch"/>
                                 <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
                                 <feBlend in="SourceGraphic" mode="multiply"/>
                             </filter>
 
-                            <!-- The Cookie Cutter (Lithuania Shape) -->
+                            <!-- Land Clip -->
                             <clipPath id="land-clip">
                                 <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
@@ -658,29 +660,53 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
 1 -25 -7 -42 -18z" transform="translate(0,1024) scale(0.1,-0.1)" />
                             </clipPath>
-                            
-                            <!-- Icons -->
+
+                            <!-- T-Shirt Icon Symbol (Square Blip) -->
                             <symbol id="icon-tshirt" viewBox="0 0 24 24">
-                                <path d="M12 2l-5 3v5h2v10h6v-10h2v-5l-5-3zm0 2.5c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5z" fill="#fff" stroke="#000" stroke-width="2"/>
+                                <rect x="0" y="0" width="24" height="24" fill="#fff" stroke="#000" stroke-width="2"/>
+                                <path d="M12 4l-4 2v4h2v8h4v-8h2v-4l-4-2z" fill="#000" />
                             </symbol>
                         </defs>
 
-                        <!-- CLIPPED GROUP: Land, Rivers, Roads -->
+                        <!-- MAIN MAP GROUP (Clipped) -->
                         <g clip-path="url(#land-clip)">
-                            <!-- Base Land -->
+                            <!-- 1. LAND BASE -->
                             <rect width="100%" height="100%" fill="#D4CCB9" filter="url(#paper-grain)" />
                             
-                            <!-- Rivers (Cleanly Cut) -->
-                            <path d="M 600 1100 Q 550 800 520 660 T 100 620" stroke="#739AC5" stroke-width="25" fill="none" stroke-linecap="round" />
-                            <path d="M 1100 500 Q 800 550 720 600 T 520 660" stroke="#739AC5" stroke-width="20" fill="none" stroke-linecap="round" />
+                            <!-- 2. CITIES (Concrete Footprints - Now UNDER roads) -->
+                            <!-- Vilnius (East) -->
+                            <path d="M 700 550 Q 750 540 780 580 T 740 650 Q 700 660 680 620 T 700 550" fill="#AFAFAF" stroke="none" />
+                            
+                            <!-- Kaunas (Center) -->
+                            <path d="M 480 630 Q 520 620 550 650 T 530 700 Q 490 710 470 680 T 480 630" fill="#AFAFAF" stroke="none" />
+                            
+                            <!-- Klaipeda (West Coast) -->
+                            <path d="M 80 580 L 120 580 L 130 680 L 90 680 Z" fill="#AFAFAF" stroke="none" />
 
-                            <!-- Roads -->
-                            <path d="M 730 590 L 515 660 L 110 630" stroke="#333" stroke-width="12" fill="none" stroke-linecap="round" />
-                            <path d="M 730 590 L 515 660 L 110 630" stroke="#D9CD84" stroke-width="3" fill="none" stroke-dasharray="15,15" />
+                            <!-- 3. NATURAL FEATURES -->
+                            <!-- Rivers -->
+                            <path d="M 600 1100 Q 550 800 520 660 T 100 620" stroke="#739AC5" stroke-width="20" fill="none" stroke-linecap="round" />
+                            <path d="M 1100 500 Q 800 550 720 600 T 520 660" stroke="#739AC5" stroke-width="15" fill="none" stroke-linecap="round" />
+                            
+                            <!-- Forests (Soft Green Patches) -->
+                            <circle cx="300" cy="750" r="50" fill="#BCC4B1" opacity="0.6" filter="blur(5px)"/>
+                            <circle cx="800" cy="200" r="60" fill="#BCC4B1" opacity="0.6" filter="blur(5px)"/>
+
+                            <!-- 4. INFRASTRUCTURE (Roads ON TOP) -->
+                            <path d="M 730 590 L 515 660 L 110 630" stroke="#444" stroke-width="10" fill="none" stroke-linecap="round" />
+                            <path d="M 730 590 L 515 660 L 110 630" stroke="#D9CD84" stroke-width="2" fill="none" stroke-dasharray="20,10" />
+                            
+                            <!-- Grid Lines -->
+                            <defs>
+                                <pattern id="map-grid" width="100" height="100" patternUnits="userSpaceOnUse">
+                                    <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#000" stroke-width="1" opacity="0.1"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#map-grid)" pointer-events="none"/>
                         </g>
-                        
+
                         <!-- BORDER OUTLINE -->
-                         <g transform="translate(0,1024) scale(0.1,-0.1)" pointer-events="none">
+                        <g transform="translate(0,1024) scale(0.1,-0.1)" pointer-events="none">
                              <path d="M6713 9109 c-27 -17 -33 -27 -33 -57 0 -33 -1 -34 -14 -17 -13 19
 -16 18 -66 -13 -28 -18 -63 -32 -78 -32 -50 0 -67 -11 -96 -60 -17 -28 -39
 -51 -52 -54 -46 -12 -105 -75 -143 -151 l-36 -76 -102 -35 -102 -35 -81 41
@@ -754,47 +780,39 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 40 -61 -6 -64 -6 -111 30 l-48 37 -30 -29 -31 -29 -155 9 c-121 6 -166 13
 -205 29 -33 14 -86 25 -155 30 -58 5 -116 11 -130 15 -47 13 -89 52 -101 97
 -21 78 -70 172 -113 217 -39 41 -45 55 -70 158 -29 116 -114 343 -131 349 -6
-1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="30" opacity="0.8"/>
+1 -25 -7 -42 -18z" fill="none" stroke="#000" stroke-width="25" opacity="0.7"/>
                         </g>
 
-                        <!-- CITIES LAYER (Unclipped) -->
-                        <!-- Vilnius Group -->
+                        <!-- INTERACTIVE LAYER (Icons/Blips) -->
+                        <!-- Vilnius -->
                         <g id="city-vilnius" transform="translate(730, 600)" style="cursor: pointer;" onclick="selectCity('Vilnius', 42, 71)">
-                            <!-- Zoom Level 0: Concrete Blob -->
-                            <path d="M -40 -40 L 40 -30 L 50 40 L -30 50 Z" fill="#AFAFAF" stroke="#555" stroke-width="2" class="city-blob" />
+                            <!-- Label -->
+                            <text x="0" y="-35" text-anchor="middle" font-family="Pricedown" font-size="24" fill="black" stroke="white" stroke-width="3" paint-order="stroke">VILNIUS</text>
                             
-                            <!-- Icon -->
-                            <use href="#icon-tshirt" x="-15" y="-15" width="30" height="30" class="city-icon" />
+                            <!-- Blip Icon -->
+                            <use href="#icon-tshirt" x="-12" y="-12" width="24" height="24" class="city-icon" />
                             
-                            <!-- Zoom Level 1: DISTRICTS (Hidden by default, shown via JS/CSS class) -->
+                            <!-- Districts (Hidden) -->
                             <g class="districts-group" opacity="0" pointer-events="none">
-                                <!-- Old Town (Center) -->
-                                <polygon points="-20,-20 20,-20 20,20 -20,20" fill="rgba(0,255,0,0.4)" stroke="#0f0" stroke-width="2" class="district-poly" onclick="openCityShop()" />
-                                <!-- North Ind -->
-                                <polygon points="-20,-50 20,-50 20,-20 -20,-20" fill="rgba(255,0,0,0.4)" stroke="#f00" stroke-width="2" class="district-poly" onclick="openCityShop()" />
-                                <!-- South Res -->
-                                <polygon points="-30,20 30,20 10,60 -30,50" fill="rgba(255,255,0,0.4)" stroke="#ff0" stroke-width="2" class="district-poly" onclick="openCityShop()" />
+                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(0,255,0,0.5)" stroke="#006400" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
                             </g>
                         </g>
 
-                        <!-- Kaunas Group -->
+                        <!-- Kaunas -->
                         <g id="city-kaunas" transform="translate(515, 660)" style="cursor: pointer;" onclick="selectCity('Kaunas', 36, 50)">
-                            <path d="M -35 -35 L 35 -35 L 35 35 L -35 35 Z" fill="#AFAFAF" stroke="#555" stroke-width="2" class="city-blob" />
-                            <use href="#icon-tshirt" x="-15" y="-15" width="30" height="30" class="city-icon" />
-                            
-                            <g class="districts-group" opacity="0" pointer-events="none">
-                                <polygon points="-35,-35 35,-35 35,0 -35,0" fill="rgba(0,255,0,0.4)" stroke="#0f0" stroke-width="2" class="district-poly" onclick="openCityShop()" />
-                                <polygon points="-35,0 35,0 35,35 -35,35" fill="rgba(255,255,0,0.4)" stroke="#ff0" stroke-width="2" class="district-poly" onclick="openCityShop()" />
+                            <text x="0" y="-35" text-anchor="middle" font-family="Pricedown" font-size="24" fill="black" stroke="white" stroke-width="3" paint-order="stroke">KAUNAS</text>
+                            <use href="#icon-tshirt" x="-12" y="-12" width="24" height="24" class="city-icon" />
+                             <g class="districts-group" opacity="0" pointer-events="none">
+                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(0,255,0,0.5)" stroke="#006400" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
                             </g>
                         </g>
 
-                        <!-- Klaipeda Group -->
+                        <!-- Klaipeda -->
                         <g id="city-klaipeda" transform="translate(110, 630)" style="cursor: pointer;" onclick="selectCity('Klaipeda', 39, 11)">
-                            <path d="M -30 -50 L 30 -50 L 30 50 L -30 50 Z" fill="#AFAFAF" stroke="#555" stroke-width="2" class="city-blob" />
-                            <use href="#icon-tshirt" x="-15" y="-15" width="30" height="30" class="city-icon" />
-                            
-                            <g class="districts-group" opacity="0" pointer-events="none">
-                                <polygon points="-30,-50 30,-50 30,50 -30,50" fill="rgba(0,255,0,0.4)" stroke="#0f0" stroke-width="2" class="district-poly" onclick="openCityShop()" />
+                            <text x="0" y="-35" text-anchor="middle" font-family="Pricedown" font-size="24" fill="black" stroke="white" stroke-width="3" paint-order="stroke">KLAIPEDA</text>
+                            <use href="#icon-tshirt" x="-12" y="-12" width="24" height="24" class="city-icon" />
+                             <g class="districts-group" opacity="0" pointer-events="none">
+                                <polygon points="-30,-30 30,-30 30,30 -30,30" fill="rgba(0,255,0,0.5)" stroke="#006400" stroke-width="2" class="district-poly" onclick="openCityShop()"/>
                             </g>
                         </g>
 
