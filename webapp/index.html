@@ -593,13 +593,15 @@
             position: absolute;
             top: -10%; left: 0;
             width: 150%; height: 120%;
-            /* Classic Cloud Texture */
-            background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') repeat-x;
+            /* Fallback white + Texture */
+            background-color: #fff; 
+            background-image: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png');
+            background-repeat: repeat-x;
             background-size: contain;
             opacity: 0.9;
             transform: translateX(-100%);
             will-change: transform;
-            image-rendering: pixelated; /* Retro Feel */
+            image-rendering: pixelated;
         }
 
         @keyframes retroWipeIn {
@@ -966,7 +968,11 @@
                 <button class="filter-btn active" onclick="filterProducts('all')">ALL ZONES</button>
             </div>
             <div class="product-grid" id="product-grid">
-                <div class="loading">LOADING STOCK...</div>
+                <div class="loading" id="stock-loader">
+                    LOADING STOCK...
+                    <br><br>
+                    <button onclick="loadProducts()" style="font-size:16px; background:#333; color:#fff; border:1px solid #fff; padding:5px 10px; cursor:pointer;">[ FORCE RELOAD ]</button>
+                </div>
             </div>
         </div>
 
@@ -1453,24 +1459,42 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         async function loadProducts() {
             log("loadProducts started");
+            const loader = document.getElementById('stock-loader');
+            if(loader) loader.innerHTML = "CONNECTING TO DATABASE...";
+            
             try {
-                const response = await fetch('/webapp/api/products');
+                // 5s Timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('/webapp/api/products', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
                 log("fetch response: " + response.status);
+                
+                if(loader) loader.innerHTML = "PARSING DATA...";
+                
                 const data = await response.json();
                 log("data success: " + data.success);
+                
                 if(data.success) {
                     allProducts = data.products;
                     log("Products count: " + allProducts.length);
-                    renderProducts(allProducts);
-                    renderFilters(allProducts);
-                    updateStars(Math.floor(Math.random() * 6)); 
+                    
+                    if(allProducts.length === 0) {
+                         document.getElementById('product-grid').innerHTML = '<div class="loading">STOCK EMPTY</div>';
+                    } else {
+                         renderProducts(allProducts);
+                         renderFilters(allProducts);
+                         updateStars(Math.floor(Math.random() * 6)); 
+                    }
                 } else {
                     log("API Error: " + (data.error || "Unknown"));
                     document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR: ' + (data.error || "Unknown") + '</div>';
                 }
             } catch (e) {
                 log("Fetch Error: " + e);
-                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">OFFLINE: ' + e + '</div>';
+                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">CONNECTION FAILED<br><small>' + e + '</small><br><button onclick="loadProducts()">RETRY</button></div>';
             }
         }
 
