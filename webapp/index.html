@@ -1290,12 +1290,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Failsafe: Force hide loader after 3 seconds max
         setTimeout(hideLoader, 3000);
 
-        // Global Asset Preload
-        const audioFx = new Audio('/webapp/ah_shit.mp3');
-        audioFx.preload = 'auto';
-
+        // Global Asset Preload (Removed to fix RefError)
+        
         function startApp() {
             log("startApp called");
+            
+            // Init Audio Locally
+            const audioFx = new Audio('/webapp/ah_shit.mp3');
+            audioFx.preload = 'auto';
+            
             try {
                 const btn = document.querySelector('.start-btn');
                 if(btn) {
