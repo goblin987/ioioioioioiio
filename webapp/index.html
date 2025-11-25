@@ -7,6 +7,7 @@
     <link rel="preload" href="/webapp/intro.mp4" as="video" type="video/mp4">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap" rel="stylesheet">
     <style>
         @font-face {
             font-family: 'Pricedown';
@@ -483,50 +484,94 @@
         @keyframes blink { 50% { opacity: 0.5; } }
 
         /* Intro Screen */
+        /* Main Menu (GTA SA Style) */
         #intro-screen {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000;
+            background: linear-gradient(135deg, #000 0%, #111 100%);
             z-index: 100000;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-            color: #fff;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: 'UnifrakturMaguntia', cursive;
+            overflow: hidden;
             transition: opacity 1s ease-out;
         }
         
-        .intro-logo {
-            font-family: 'Pricedown', sans-serif;
-            font-size: 64px;
-            color: var(--gta-gold);
-            text-shadow: 2px 2px 0 #000;
-            margin-bottom: 20px;
-            opacity: 0;
-            animation: fadeIn 2s forwards 0.5s;
+        /* Vinewood Sign */
+        .vinewood-bg {
+            position: absolute;
+            top: 20px;
+            right: -50px;
+            width: 400px;
+            height: 200px;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Vinewood_Sign_GTAV.png/640px-Vinewood_Sign_GTAV.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            transform: rotate(-10deg);
+            opacity: 0.6;
+            pointer-events: none;
         }
-        
-        .intro-text {
-            font-size: 14px;
-            color: #aaa;
-            margin-top: 10px;
-            letter-spacing: 2px;
+
+        .menu-header {
+            font-size: 50px;
+            color: #fff;
+            text-shadow: 3px 3px 0 #000;
+            z-index: 2;
+            margin-top: 20px;
+            margin-left: 20px;
         }
-        
+
+        .menu-options {
+            margin-bottom: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            z-index: 2;
+        }
+
         .start-btn {
-            margin-top: 50px;
-            font-size: 24px;
-            animation: blink 1s infinite;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 42px;
+            color: #a0a0a0; /* Classic Grey */
+            background: none;
+            border: none;
             cursor: pointer;
-            color: var(--gta-green);
-            display: none; /* Hidden until loaded */
-            border: 2px solid var(--gta-green);
-            padding: 10px 20px;
-            background: rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 0 #000;
+            transition: all 0.3s;
+            display: block; /* Always show */
+            letter-spacing: 2px;
+            margin-top: 0;
+            animation: none;
+            padding: 0;
+        }
+        
+        .start-btn:hover {
+            color: #fff;
+            text-shadow: 0 0 10px #fff;
+            transform: scale(1.1);
+        }
+
+        /* Smoke Transition */
+        .smoke-overlay {
+            position: fixed;
+            top: 50%; left: 50%;
+            width: 100vmax; height: 100vmax;
+            background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 30%, rgba(255,255,255,0) 70%);
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100001;
+            transition: transform 2.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 2s ease-in;
+        }
+        
+        .smoke-in {
+            transform: translate(-50%, -50%) scale(3);
+            opacity: 1;
         }
 
         /* Full Screen Modals */
@@ -699,11 +744,19 @@
         <div class="wasted-text">WASTED</div>
     </div>
 
-    <!-- Intro Screen -->
+    <!-- Smoke Transition Overlay -->
+    <div id="smoke-overlay" class="smoke-overlay"></div>
+
+    <!-- Intro Screen (Main Menu) -->
     <div id="intro-screen">
-        <div class="intro-logo">LOS SANTOS</div>
-        <div class="intro-text" id="intro-logs">INITIALIZING...</div>
-        <div class="start-btn" onclick="startApp()">> PRESS START &lt;</div>
+        <div class="vinewood-bg"></div>
+        <div class="menu-header">Main Menu</div>
+        
+        <div class="menu-options">
+            <button class="start-btn" onclick="startApp()">START GAME</button>
+            <div style="font-family:'Pricedown'; font-size:24px; color:#444; margin-top:15px; text-shadow: 1px 1px 0 #000;">OPTIONS</div>
+            <div style="font-family:'Pricedown'; font-size:24px; color:#444; margin-top:15px; text-shadow: 1px 1px 0 #000;">QUIT GAME</div>
+        </div>
     </div>
 
     <!-- Character Layer -->
@@ -1117,50 +1170,61 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         // --- Intro Logic ---
         function startApp() {
-            // 1. Fade out BIOS UI
-            document.getElementById('intro-screen').style.opacity = '0';
-            
-            // 2. Play "Ah Shit" Sound
+            // 1. Play "Ah Shit" Sound
             const cjVoice = new Audio('/webapp/ah_shit.mp3');
             cjVoice.volume = 1.0;
             cjVoice.play().catch(e => console.log("Voice blocked", e));
             
-            // 3. Start Video IMMEDIATELY
-            const vidContainer = document.getElementById('video-intro');
-            const vid = document.getElementById('intro-vid');
+            // 2. Trigger Smoke Transition
+            const smoke = document.getElementById('smoke-overlay');
+            smoke.classList.add('smoke-active');
             
-            // Check if error already occurred
-            if(vid.error) {
-                skipIntro(true);
-                return;
-            }
-
-            vidContainer.style.display = 'flex'; 
-            // Try unmuted first
-            vid.muted = false;
-            vid.volume = 1.0;
-            
-            vid.play().then(() => {
-                document.getElementById('video-loading').style.display = 'none';
-            }).catch(e => {
-                vid.muted = true;
-                vid.play().then(() => {
-                     document.getElementById('video-loading').style.display = 'none';
-                }).catch(e2 => {
-                    document.getElementById('video-loading').style.display = 'none';
-                    document.getElementById('play-overlay').style.display = 'block';
-                });
-            });
-            
-            // 4. Cleanup BIOS after fade
+            // 3. Wait for smoke to cover screen (1.5s) then swap
             setTimeout(() => {
-                document.getElementById('intro-screen').style.display = 'none';
-            }, 1000);
-            
-            // 5. End Listener -> Start Radio
-            vid.onended = () => {
-                skipIntro();
-            };
+                // Hide Menu
+                document.getElementById('intro-screen').style.opacity = '0';
+                
+                // Start Video
+                const vidContainer = document.getElementById('video-intro');
+                const vid = document.getElementById('intro-vid');
+                
+                if(vid.error) {
+                    skipIntro(true);
+                    return;
+                }
+
+                vidContainer.style.display = 'flex'; 
+                vid.muted = false;
+                vid.volume = 1.0;
+                
+                vid.play().then(() => {
+                    document.getElementById('video-loading').style.display = 'none';
+                    // Fade out smoke to reveal video
+                    setTimeout(() => {
+                         document.getElementById('intro-screen').style.display = 'none';
+                         smoke.classList.remove('smoke-active');
+                    }, 500);
+                }).catch(e => {
+                    // Fallback muted
+                    vid.muted = true;
+                    vid.play().then(() => {
+                        document.getElementById('video-loading').style.display = 'none';
+                        setTimeout(() => {
+                             document.getElementById('intro-screen').style.display = 'none';
+                             smoke.classList.remove('smoke-active');
+                        }, 500);
+                    }).catch(e2 => {
+                         document.getElementById('play-overlay').style.display = 'block';
+                         smoke.classList.remove('smoke-active');
+                    });
+                });
+                
+                // 5. End Listener -> Start Radio
+                vid.onended = () => {
+                    skipIntro();
+                };
+
+            }, 1500);
         }
 
         function forcePlayVideo() {
@@ -1203,21 +1267,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }, 1000);
         }
 
-        // Simulate BIOS
+        // Init
         window.onload = () => {
-            const logs = document.getElementById('intro-logs');
-            const msgs = ["LOADING TEXTURES...", "CONNECTING TO TOR...", "DECRYPTING WALLETS...", "LOAD COMPLETE."];
-            let i = 0;
-            const interval = setInterval(() => {
-                if(i < msgs.length) {
-                    logs.innerText = msgs[i];
-                    i++;
-                } else {
-                    clearInterval(interval);
-                    document.querySelector('.start-btn').style.display = 'block';
-                    // Auto-click start if user already tapped (optional, but stick to manual for now)
-                }
-            }, 100); // Faster BIOS
+           // No BIOS, just show menu
         };
 
         let allProducts = [];
