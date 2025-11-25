@@ -851,13 +851,6 @@
         </div>
     </div>
 
-    <!-- Emoji Intro Container -->
-    <div id="emoji-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:100001; align-items:center; justify-content:center; transition: opacity 1s;">
-        <div style="font-size: 150px; animation: pulse 2s infinite; filter: drop-shadow(0 0 20px #fff);">💨</div>
-    </div>
-    <style>
-        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
-    </style>
 
     <!-- Character Layer -->
     <div id="char-layer" class="char-overlay">
@@ -1382,13 +1375,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const menu = document.getElementById('intro-screen');
                 if(menu) menu.style.opacity = '0'; // Hide menu
 
-                // Show Emoji Intro
-                const emoji = document.getElementById('emoji-intro');
-                if(emoji) {
-                    emoji.style.display = 'flex';
-                    emoji.style.opacity = '1';
-                    log("Emoji intro active");
-                }
+                // DIRECT TO SHOP (No Emoji)
+                showSection('shop');
+                charSystem.show('cj', "WELCOME TO THE SHOP!");
+                log("Switched to Shop");
 
                 // 2. Trigger Wipe OUT (Reveal)
                 const smoke = document.getElementById('smoke-overlay');
@@ -1406,21 +1396,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         smoke.classList.remove('smoke-dissipate');
                         if(menu) menu.style.display = 'none';
                         
-                        // 3. Move to Shop after Emoji (2s delay)
-                        if(emoji) {
-                            setTimeout(() => {
-                                emoji.style.opacity = '0';
-                                setTimeout(() => {
-                                    emoji.style.display = 'none';
-                                    skipIntro();
-                                }, 1000);
-                            }, 2000);
-                        } else {
-                            skipIntro();
-                        }
+                        // Final Cleanup
+                        skipIntro();
                     }, 1500); // Match CSS animation duration
                 } else {
-                    // Fallback if smoke missing
+                    // Fallback
                     skipIntro();
                 }
 
@@ -1446,17 +1426,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         function skipIntro(immediate = false) {
             log(`skipIntro called (immediate=${immediate})`);
-            const emoji = document.getElementById('emoji-intro');
-            
             document.body.classList.remove('video-mode');
             toggleRadio(true); 
 
-            if(immediate) {
-                 if(emoji) emoji.style.display = 'none';
-                 showSection('shop');
-                 charSystem.show('cj', "WELCOME TO THE SHOP!");
-                 return;
-            }
+            // Ensure Emoji is gone just in case
+            const emoji = document.getElementById('emoji-intro');
+            if(emoji) emoji.style.display = 'none';
 
             showSection('shop'); 
             charSystem.show('cj', "WELCOME TO THE SHOP!");
