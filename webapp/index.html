@@ -1220,67 +1220,89 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         // --- Intro Logic ---
         function startApp() {
-            // 1. Play "Ah Shit" Sound
-            const cjVoice = new Audio('/webapp/ah_shit.mp3');
-            cjVoice.volume = 1.0;
-            cjVoice.play().catch(e => console.log("Voice blocked", e));
-            
-            // 2. Trigger Smoke (Fill Screen)
-            const smoke = document.getElementById('smoke-overlay');
-            smoke.style.display = 'block';
-            requestAnimationFrame(() => {
-                smoke.classList.add('smoke-active');
-            });
-            
-            // 3. Wait for Audio (2.5s)
-            setTimeout(() => {
-                // Audio Finished. Now Transition.
-                
-                // Start Radio
-                toggleRadio(true);
-
-                // Hide Menu
-                document.getElementById('intro-screen').style.opacity = '0';
-                
-                const vidContainer = document.getElementById('video-intro');
-                const vid = document.getElementById('intro-vid');
-                
-                if(vid.error) {
-                    skipIntro(true);
-                    return;
+            try {
+                // Visual Feedback
+                const btn = document.querySelector('.start-btn');
+                if(btn) {
+                    btn.innerText = "INITIALIZING...";
+                    btn.style.color = "#fff";
+                    btn.style.cursor = "wait";
+                    // Don't disable immediately to ensure clicks aren't eaten, but visually indicate state
                 }
 
-                vidContainer.style.display = 'flex'; 
-                vid.muted = true; // Force Mute
+                // 1. Play "Ah Shit" Sound
+                const cjVoice = new Audio('/webapp/ah_shit.mp3');
+                cjVoice.volume = 1.0;
+                cjVoice.play().catch(e => console.log("Voice blocked", e));
                 
-                // Cinematic Bars
-                document.body.classList.add('video-mode');
-                
-                vid.play().then(() => {
-                    document.getElementById('video-loading').style.display = 'none';
-                    
-                    // FADE OUT SMOKE
-                    smoke.style.transition = "opacity 2s ease-out";
-                    smoke.style.opacity = "0"; 
-                    
+                // 2. Trigger Smoke (Fill Screen)
+                const smoke = document.getElementById('smoke-overlay');
+                if(smoke) {
+                    smoke.style.display = 'block';
                     setTimeout(() => {
-                         document.getElementById('intro-screen').style.display = 'none';
-                         smoke.classList.remove('smoke-active');
-                         smoke.style.display = 'none'; 
-                         smoke.style.opacity = "";
-                    }, 2000);
-                }).catch(e => {
-                    console.log("Video Play Error", e);
-                    document.getElementById('intro-screen').style.display = 'none';
-                    smoke.style.display = 'none';
-                    document.getElementById('play-overlay').style.display = 'block';
-                });
+                        smoke.classList.add('smoke-active');
+                    }, 50);
+                }
                 
-                vid.onended = () => {
-                    skipIntro();
-                };
+                // 3. Wait for Audio (2.5s)
+                setTimeout(() => {
+                    // Start Radio
+                    toggleRadio(true);
 
-            }, 2500); // Wait for audio
+                    // Hide Menu
+                    const menu = document.getElementById('intro-screen');
+                    if(menu) menu.style.opacity = '0';
+                    
+                    const vidContainer = document.getElementById('video-intro');
+                    const vid = document.getElementById('intro-vid');
+                    
+                    if(!vid || vid.error) {
+                        skipIntro(true);
+                        return;
+                    }
+
+                    vidContainer.style.display = 'flex'; 
+                    vid.muted = true; // Force Mute
+                    
+                    // Cinematic Bars
+                    document.body.classList.add('video-mode');
+                    
+                    vid.play().then(() => {
+                        const loader = document.getElementById('video-loading');
+                        if(loader) loader.style.display = 'none';
+                        
+                        // FADE OUT SMOKE
+                        if(smoke) {
+                            smoke.style.transition = "opacity 2s ease-out";
+                            smoke.style.opacity = "0"; 
+                        }
+                        
+                        setTimeout(() => {
+                             if(menu) menu.style.display = 'none';
+                             if(smoke) {
+                                 smoke.classList.remove('smoke-active');
+                                 smoke.style.display = 'none'; 
+                                 smoke.style.opacity = "";
+                             }
+                        }, 2000);
+                    }).catch(e => {
+                        console.log("Video Play Error", e);
+                        if(menu) menu.style.display = 'none';
+                        if(smoke) smoke.style.display = 'none';
+                        const playOverlay = document.getElementById('play-overlay');
+                        if(playOverlay) playOverlay.style.display = 'block';
+                    });
+                    
+                    vid.onended = () => {
+                        skipIntro();
+                    };
+
+                }, 2500); // Wait for audio
+            } catch (err) {
+                console.error("StartApp Error:", err);
+                // Fallback if everything crashes
+                skipIntro(true);
+            }
         }
 
         function forcePlayVideo() {
