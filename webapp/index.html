@@ -838,6 +838,25 @@
         </div>
     </div>
 
+    <!-- Video Intro Container -->
+    <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:100001; align-items:center; justify-content:center;">
+        <video id="intro-vid" style="width:100%; height:100%; object-fit:contain; transform: translateZ(0);" playsinline>
+            <source src="/webapp/intro.mp4" type="video/mp4">
+        </video>
+        
+        <div id="video-loading" style="position:absolute; bottom:20px; right:20px; color:#fff; font-family:'Courier New'; font-size:12px; display:block;">
+            BUFFERING VIDEO...
+        </div>
+        
+        <div id="play-overlay" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:100003; text-align:center;">
+             <button onclick="forcePlayVideo()" style="background:var(--gta-gold); border:2px solid #000; padding:10px 20px; font-family:'Pricedown'; font-size:24px; cursor:pointer;">
+                [ RETRY PLAY ]
+             </button>
+        </div>
+        
+        <div class="video-frame-overlay"></div>
+    </div>
+
     <!-- Character Layer -->
     <div id="char-layer" class="char-overlay">
         <div id="char-text" class="char-bubble">WELCOME!</div>
@@ -1391,21 +1410,26 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             toggleRadio(true); // Force start radio
 
             if(immediate) {
-                 vidContainer.style.display = 'none';
+                 if(vidContainer) vidContainer.style.display = 'none';
                  showSection('shop');
                  charSystem.show('cj', "WELCOME TO THE SHOP!");
                  return;
             }
 
             // Fade out video
-            vidContainer.style.transition = "opacity 1s";
-            vidContainer.style.opacity = "0";
-            
-            setTimeout(() => {
-                vidContainer.style.display = 'none';
+            if(vidContainer) {
+                vidContainer.style.transition = "opacity 1s";
+                vidContainer.style.opacity = "0";
+                
+                setTimeout(() => {
+                    vidContainer.style.display = 'none';
+                    showSection('shop'); 
+                    charSystem.show('cj', "WELCOME TO THE SHOP!");
+                }, 1000);
+            } else {
                 showSection('shop'); 
                 charSystem.show('cj', "WELCOME TO THE SHOP!");
-            }, 1000);
+            }
         }
 
         let allProducts = [];
@@ -1420,6 +1444,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let audioPlayer = null;
 
         // --- Logic ---
+
+        // Navigation Logic
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            const sec = document.getElementById(id);
+            if(sec) sec.classList.add('active');
+            
+            const nav = document.getElementById('nav-'+id);
+            if(nav) nav.classList.add('active');
+        }
 
         async function loadProducts() {
             try {
