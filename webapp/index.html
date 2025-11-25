@@ -812,8 +812,6 @@
     </style>
 </head>
 <body>
-    <!-- DEBUG LOGGER -->
-    <div id="debug-log" style="position:fixed; top:0; right:0; background:rgba(0,0,0,0.8); color:lime; font-family:monospace; z-index:999999; font-size:10px; max-width:200px; pointer-events:none; height:100px; overflow:hidden;"></div>
     <!-- Wasted Overlay -->
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
         <div class="wasted-text">WASTED</div>
@@ -1148,11 +1146,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
     <script>
         const tg = window.Telegram.WebApp;
         function log(msg) { 
-            const d = document.getElementById('debug-log');
-            if(d) d.innerHTML = `[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}<br>` + d.innerHTML;
-            console.log(msg);
+            // Disabled
         }
-        log("App Init Started");
 
         // --- GLOBAL STATE (Moved to top to prevent TDZ errors) ---
         let allProducts = [];
@@ -1464,43 +1459,45 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         async function loadProducts() {
-            log("loadProducts started");
+            // CACHE STRATEGY: Instant Load
+            const cached = localStorage.getItem('shop_cache');
+            if(cached) {
+                try {
+                    const cData = JSON.parse(cached);
+                    if(cData && cData.length > 0) {
+                        allProducts = cData;
+                        renderProducts(allProducts);
+                        renderFilters(allProducts);
+                    }
+                } catch(e) { console.log(e); }
+            }
+
             const loader = document.getElementById('stock-loader');
-            if(loader) loader.innerHTML = "CONNECTING TO DATABASE...";
+            if(loader && !cached) loader.innerHTML = "SYNCING..."; // Only show if no cache
             
             try {
-                // 5s Timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s Timeout
                 
                 const response = await fetch('/webapp/api/products', { signal: controller.signal });
                 clearTimeout(timeoutId);
                 
-                log("fetch response: " + response.status);
-                
-                if(loader) loader.innerHTML = "PARSING DATA...";
-                
                 const data = await response.json();
-                log("data success: " + data.success);
                 
                 if(data.success) {
-                    allProducts = data.products;
-                    log("Products count: " + allProducts.length);
+                    // Update Cache
+                    localStorage.setItem('shop_cache', JSON.stringify(data.products));
                     
-                    if(allProducts.length === 0) {
-                         document.getElementById('product-grid').innerHTML = '<div class="loading">STOCK EMPTY</div>';
-                    } else {
-                         renderProducts(allProducts);
-                         renderFilters(allProducts);
-                         updateStars(Math.floor(Math.random() * 6)); 
-                    }
+                    allProducts = data.products;
+                    renderProducts(allProducts);
+                    renderFilters(allProducts);
+                    updateStars(Math.floor(Math.random() * 6)); 
                 } else {
-                    log("API Error: " + (data.error || "Unknown"));
-                    document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR: ' + (data.error || "Unknown") + '</div>';
+                    if(!cached) document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR: ' + (data.error || "Unknown") + '</div>';
                 }
             } catch (e) {
-                log("Fetch Error: " + e);
-                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">CONNECTION FAILED<br><small>' + e + '</small><br><button onclick="loadProducts()">RETRY</button></div>';
+                console.error(e);
+                if(!cached) document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">OFFLINE<br><button onclick="loadProducts()">RETRY</button></div>';
             }
         }
 
