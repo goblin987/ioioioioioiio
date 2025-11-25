@@ -1153,6 +1153,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             console.log(msg);
         }
         log("App Init Started");
+
+        // --- GLOBAL STATE (Moved to top to prevent TDZ errors) ---
+        let allProducts = [];
+        let currentStation = 0;
+        const stations = [
+            { name: "RADIO OFF", src: null },
+            { name: "RADIO LOS SANTOS", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, 
+            { name: "K-JAH WEST", src: "https://ice2.somafm.com/secretagent-128-mp3" }, 
+            { name: "SF-UR", src: "https://ice2.somafm.com/defcon-128-mp3" } 
+        ];
+        let audioPlayer = null;
+        let basket = [];
+        let activePaymentId = null;
+        let pollInterval = null;
         tg.expand();
         tg.MainButton.hide();
         
@@ -1467,16 +1481,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
-        let allProducts = [];
-        let currentStation = 0;
-        // SomaFM Streams (Reliable HTTPS)
-        const stations = [
-            { name: "RADIO OFF", src: null },
-            { name: "RADIO LOS SANTOS", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, // Rebranded Groove Salad
-            { name: "K-JAH WEST", src: "https://ice2.somafm.com/secretagent-128-mp3" }, // Rebranded Secret Agent
-            { name: "SF-UR", src: "https://ice2.somafm.com/defcon-128-mp3" } // Electronic
-        ];
-        let audioPlayer = null;
+        // Globals moved to top to avoid TDZ
+
 
         // --- Logic ---
 
@@ -1692,7 +1698,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
 
         // --- Basket Logic ---
-        let basket = [];
+        // basket moved to top
         
         function addToBasket(id, name, price) {
             basket.push({id, name, price});
@@ -1750,8 +1756,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         // --- Checkout & Payment ---
-        let activePaymentId = null;
-        let pollInterval = null;
+        // payment globals moved to top
 
         function copyText(elementId) {
             const el = document.getElementById(elementId);
