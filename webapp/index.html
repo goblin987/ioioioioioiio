@@ -715,11 +715,12 @@
 
     <div class="content">
         <!-- Video Intro -->
-        <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99990;">
-            <video id="intro-vid" style="width:100%; height:100%; object-fit:cover;" playsinline preload="auto">
-                <source src="videoooooooooo.mp4" type="video/mp4">
+        <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99990; align-items:center; justify-content:center;">
+            <div id="video-loading" style="position:absolute; color:#555; font-family:'Courier New';">BUFFERING VIDEO...</div>
+            <video id="intro-vid" style="width:100%; height:100%; object-fit:cover; position:relative; z-index:2;" playsinline preload="auto">
+                <source src="/webapp/videoooooooooo.mp4" type="video/mp4">
             </video>
-            <div style="position:absolute; bottom:20px; right:20px; color:rgba(255,255,255,0.3); font-family:'Courier New'; font-size:12px; cursor:pointer;" onclick="skipIntro()">[SKIP INTRO]</div>
+            <div style="position:absolute; bottom:20px; right:20px; color:rgba(255,255,255,0.5); font-family:'Courier New'; font-size:12px; cursor:pointer; z-index:3; border:1px solid #555; padding:5px; background:rgba(0,0,0,0.5);" onclick="skipIntro()">[ SKIP INTRO ]</div>
         </div>
 
         <!-- SHOP SECTION -->
@@ -954,11 +955,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 skipIntro(true); 
             };
 
-            vidContainer.style.display = 'block';
+            vidContainer.style.display = 'flex'; // Changed from block to flex for centering text
             vid.volume = 1.0;
             
             // Attempt play
-            vid.play().catch(e => {
+            vid.play().then(() => {
+                document.getElementById('video-loading').style.display = 'none';
+            }).catch(e => {
                 console.log("Video Autoplay Blocked:", e);
                 skipIntro(true); // Fail gracefully
             });
