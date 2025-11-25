@@ -377,20 +377,116 @@
         .district-item.vagos { border-left-color: #fb0; }
         .district-item.vagos:hover { background: #fb0; color: #000; border-left-color: #fff; }
 
-        /* --- LSPD SURVEILLANCE MAP THEME --- */
+        /* --- GTA SA SATELLITE MAP THEME --- */
         .map-container {
-            overflow: hidden;
             position: relative;
-            height: 400px;
-            /* Blueprint Grid Background */
-            background-color: #000500;
-            background-image: 
-                linear-gradient(rgba(0, 50, 0, 0.15) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 50, 0, 0.15) 1px, transparent 1px);
-            background-size: 40px 40px;
-            border: 2px solid #333;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
+            height: 450px;
+            background-color: #0d161f; /* Deep ocean blue/black */
+            overflow: hidden;
+            border: 4px solid #000;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
+
+        /* 1. Grid Overlay (Moving) */
+        .map-grid {
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            transform: perspective(500px) rotateX(20deg);
+            animation: gridPan 20s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes gridPan {
+            0% { transform: perspective(500px) rotateX(20deg) translateY(0); }
+            100% { transform: perspective(500px) rotateX(20deg) translateY(40px); }
+        }
+
+        /* 2. CRT Scanline */
+        .scanline-bar {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+            animation: scanlineMove 4s linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        @keyframes scanlineMove {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        /* 3. Noise Overlay */
+        .noise-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0.08;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 11;
+            mix-blend-mode: overlay;
+        }
+
+        /* 4. Map Layers (Depth) */
+        .map-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        /* Outline Layer (Thick Black) */
+        .map-layer.outline path {
+            stroke: #000;
+            stroke-width: 60px;
+            fill: none;
+            stroke-linejoin: round;
+        }
+        
+        /* Dark Terrain Layer (Shadow) */
+        .map-layer.dark path {
+            fill: #2a3a2a; 
+            transform: translate(8px, 8px);
+        }
+
+        /* Mid Terrain Layer */
+        .map-layer.mid path {
+            fill: #3a4e3a;
+            transform: translate(4px, 4px);
+        }
+
+        /* Top/Light Terrain Layer (Main) */
+        .map-layer.main path {
+            fill: #5c7a5c; /* GTA Grass Green */
+            stroke: #1a2a1a;
+            stroke-width: 2px;
+        }
+
+        /* 5. Radar Sweep */
+        .radar-beam {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 60%; height: 60%;
+            background: conic-gradient(from 0deg, transparent 300deg, rgba(0, 255, 0, 0.2) 360deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: radarRotate 4s linear infinite;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        @keyframes radarRotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
 
         /* CRT Scanline Overlay */
         .map-container::before {
@@ -465,6 +561,156 @@
             filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.1));
             opacity: 0.8;
         }
+
+        /* 6. Markers (GTA Icons) */
+        .gta-marker {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 30;
+            transition: transform 0.2s;
+        }
+
+        .gta-marker:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            z-index: 35;
+        }
+
+        .marker-icon {
+            width: 36px; height: 36px;
+            background: #f0f0f0;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.8);
+            position: relative;
+        }
+        
+        /* Specific Icon Images (SVGs embedded) */
+        .marker-icon svg {
+            width: 24px; height: 24px;
+            fill: #000;
+        }
+
+        .marker-label {
+            font-family: 'Pricedown', sans-serif;
+            color: #fff;
+            font-size: 22px;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        /* Pulsing Blip */
+        .blip-pulse {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            background: var(--gta-gold);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+            pointer-events: none;
+            z-index: 29;
+        }
+        
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        }
+
+        /* 7. Data Feed */
+        .data-feed {
+            background: #000;
+            border-top: 2px solid #333;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 8px 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            text-transform: uppercase;
+        }
+        
+        .data-scroll {
+            display: inline-block;
+            animation: marquee 20s linear infinite;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* 8. Slide-in District Menu (Replaces old Modal) */
+        .district-menu-slide {
+            position: absolute;
+            top: 20px; right: -250px; /* Hidden right */
+            width: 220px;
+            background: rgba(0,0,0,0.95);
+            border: 3px solid var(--gta-green);
+            padding: 0;
+            transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 50;
+            box-shadow: -10px 10px 20px rgba(0,0,0,0.8);
+            display: block !important; /* Override old display:none */
+        }
+        
+        .district-menu-slide.active {
+            right: 20px;
+        }
+        
+        .dm-header {
+            background: var(--gta-green);
+            color: #000;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 28px;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 2px solid #000;
+        }
+        
+        .dm-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .dm-item {
+            padding: 12px 15px;
+            color: var(--gta-green);
+            font-family: 'Impact', sans-serif;
+            font-size: 18px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .dm-item:hover {
+            background: var(--gta-green);
+            color: #000;
+            padding-left: 20px;
+        }
+        
+        .dm-close {
+            width: 100%;
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            font-family: 'Impact', sans-serif;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .dm-close:hover { background: #555; }
+
 
         /* City Markers -> "Blips" */
         .district-marker {
@@ -1057,6 +1303,250 @@
             /* existing styles... */
         }
 
+        /* --- GTA SA SATELLITE MAP THEME (OVERRIDE) --- */
+        .map-container {
+            position: relative;
+            height: 450px;
+            background-color: #0d161f;
+            overflow: hidden;
+            border: 4px solid #000;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .map-grid {
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            transform: perspective(500px) rotateX(20deg);
+            animation: gridPan 20s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes gridPan {
+            0% { transform: perspective(500px) rotateX(20deg) translateY(0); }
+            100% { transform: perspective(500px) rotateX(20deg) translateY(40px); }
+        }
+
+        .scanline-bar {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+            animation: scanlineMove 4s linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        @keyframes scanlineMove {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        .noise-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0.08;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 11;
+            mix-blend-mode: overlay;
+        }
+
+        .map-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .map-layer.outline path {
+            stroke: #000;
+            stroke-width: 60px;
+            fill: none;
+            stroke-linejoin: round;
+        }
+        
+        .map-layer.dark path {
+            fill: #2a3a2a; 
+            transform: translate(8px, 8px);
+        }
+
+        .map-layer.mid path {
+            fill: #3a4e3a;
+            transform: translate(4px, 4px);
+        }
+
+        .map-layer.main path {
+            fill: #5c7a5c; 
+            stroke: #1a2a1a;
+            stroke-width: 2px;
+        }
+
+        .radar-beam {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 60%; height: 60%;
+            background: conic-gradient(from 0deg, transparent 300deg, rgba(0, 255, 0, 0.2) 360deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: radarRotate 4s linear infinite;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        @keyframes radarRotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .gta-marker {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 30;
+            transition: transform 0.2s;
+        }
+
+        .gta-marker:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            z-index: 35;
+        }
+
+        .marker-icon {
+            width: 36px; height: 36px;
+            background: #f0f0f0;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.8);
+            position: relative;
+        }
+        
+        .marker-icon svg {
+            width: 24px; height: 24px;
+            fill: #000;
+        }
+
+        .marker-label {
+            font-family: 'Pricedown', sans-serif;
+            color: #fff;
+            font-size: 22px;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .blip-pulse {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            background: var(--gta-gold);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+            pointer-events: none;
+            z-index: 29;
+        }
+        
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        }
+
+        .data-feed {
+            background: #000;
+            border-top: 2px solid #333;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 8px 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            text-transform: uppercase;
+        }
+        
+        .data-scroll {
+            display: inline-block;
+            animation: marquee 20s linear infinite;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .district-menu-slide {
+            position: absolute;
+            top: 20px; right: -250px; 
+            width: 220px;
+            background: rgba(0,0,0,0.95);
+            border: 3px solid var(--gta-green);
+            padding: 0;
+            transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 50;
+            box-shadow: -10px 10px 20px rgba(0,0,0,0.8);
+            display: block !important; 
+        }
+        
+        .district-menu-slide.active {
+            right: 20px;
+        }
+        
+        .dm-header {
+            background: var(--gta-green);
+            color: #000;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 28px;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 2px solid #000;
+        }
+        
+        .dm-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .dm-item {
+            padding: 12px 15px;
+            color: var(--gta-green);
+            font-family: 'Impact', sans-serif;
+            font-size: 18px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .dm-item:hover {
+            background: var(--gta-green);
+            color: #000;
+            padding-left: 20px;
+        }
+        
+        .dm-close {
+            width: 100%;
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            font-family: 'Impact', sans-serif;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .dm-close:hover { background: #555; }
     </style>
 </head>
 <body>
@@ -1346,20 +1836,51 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <!-- Radar Sweep -->
                     <div class="radar-sweep"></div>
 
-                    <!-- Styled Blips -->
-                    <div class="district-marker" style="top: 75%; left: 70%;">
-                        <div class="blip-icon" onclick="zoomMap('Vilnius', 75, 70)">🔫</div>
-                        VILNIUS
+                    <!-- 1. Moving Grid -->
+                    <div class="map-grid"></div>
+                    
+                    <!-- 2. CRT Scanline -->
+                    <div class="scanline-bar"></div>
+                    
+                    <!-- 3. Noise Overlay -->
+                    <div class="noise-overlay"></div>
+
+                    <!-- 4. Slide-in District Menu (Hidden by default) -->
+                    <div id="district-menu" class="district-menu-slide">
+                        <div class="dm-header" id="dm-header">LOS SANTOS</div>
+                        <div class="dm-list" id="dm-list"></div>
+                        <button class="dm-close" onclick="closeDistrictMenu()">CLOSE [X]</button>
+                    </div>
+
+                    <!-- 5. Radar Beam -->
+                    <div class="radar-beam"></div>
+
+                    <!-- 6. GTA Markers -->
+                    <!-- VILNIUS (Gun) -->
+                    <div class="gta-marker" style="top: 75%; left: 70%;" onclick="openDistrictMenu('Vilnius')">
+                        <div class="marker-icon">
+                            <svg viewBox="0 0 24 24"><path d="M3,19V17H5V15H7V13H9V11H11V9H13V7H15V5H19V11H17V13H19V15H17V13H15V15H13V17H11V19H3Z"/></svg>
+                        </div>
+                        <div class="marker-label">VILNIUS</div>
+                        <div class="blip-pulse"></div>
                     </div>
                     
-                    <div class="district-marker" style="top: 65%; left: 50%;">
-                        <div class="blip-icon" onclick="zoomMap('Kaunas', 65, 50)">👕</div>
-                        KAUNAS
+                    <!-- KAUNAS (Shirt) -->
+                    <div class="gta-marker" style="top: 65%; left: 50%;" onclick="openDistrictMenu('Kaunas')">
+                        <div class="marker-icon">
+                            <svg viewBox="0 0 24 24"><path d="M9,21V8H5L10,3H14L19,8H15V21H9M11,9H13V6H11V9Z"/></svg>
+                        </div>
+                        <div class="marker-label">KAUNAS</div>
+                        <div class="blip-pulse"></div>
                     </div>
                     
-                    <div class="district-marker" style="top: 35%; left: 15%;">
-                        <div class="blip-icon" onclick="zoomMap('Klaipeda', 35, 15)">🍔</div>
-                        KLAIPEDA
+                    <!-- KLAIPEDA (Burger) -->
+                    <div class="gta-marker" style="top: 35%; left: 15%;" onclick="openDistrictMenu('Klaipeda')">
+                        <div class="marker-icon">
+                            <svg viewBox="0 0 24 24"><path d="M4,13H20V16H4V13M4,17H20V19H4V17M12,3C15.5,3 18.5,5 19.6,8H4.4C5.5,5 8.5,3 12,3Z"/></svg>
+                        </div>
+                        <div class="marker-label">KLAIPEDA</div>
+                        <div class="blip-pulse"></div>
                     </div>
                     
                     <!-- Mock District Zones (Visible on Zoom) -->
@@ -1368,6 +1889,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div id="zone-klaipeda" class="zone-poly" style="top: 30%; left: 10%; width: 10%; height: 10%; border-radius: 50%;"></div>
                 </div>
                 <button class="btn-buy" onclick="resetMap()" style="margin-top: 10px;">RESET VIEW</button>
+                <!-- 8. Data Feed Scrolling -->
+                <div class="data-feed">
+                    <div class="data-scroll">
+                        LSPD UPLINK #239–ACTIVE • DECODING GEO-PACKETS... • CITY NODES: 3 • DISTRICT ROUTE SYNC OK • FREQUENCY: 48.2 MHZ • SUSPECT LAST SEEN IN SECTOR 7G • SCANNING...
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1952,44 +2479,34 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             ]
         };
 
-        // Map Zoom
+        // Map Zoom (Legacy support, redirects to menu)
         function zoomMap(cityName, topPerc, leftPerc) {
-            const map = document.getElementById('map-img');
-            
-            // Play Zoom Sound
-            if(window.sfx) sfx.tick(); 
-
-            // Hide all markers
-            document.querySelectorAll('.district-marker').forEach(el => el.style.opacity = '0');
-            
-            // Zoom
-            map.style.transformOrigin = `${leftPerc}% ${topPerc}%`;
-            map.style.transform = "scale(5)"; // High zoom
-            
-            // Show District Selection after zoom
-            setTimeout(() => {
-                openDistrictModal(cityName);
-            }, 600);
+            openDistrictMenu(cityName);
         }
 
-        function openDistrictModal(city) {
-            const modal = document.getElementById('district-modal');
+        function openDistrictMenu(city) {
+            // Play Select Sound
+            if(window.sfx) sfx.select();
+            
+            const menu = document.getElementById('district-menu');
             const header = document.getElementById('dm-header');
             const list = document.getElementById('dm-list');
             
+            if(!menu || !header || !list) return;
+
             header.innerText = city.toUpperCase();
             list.innerHTML = '';
             
-            // Add "ALL HOODS" option
+            // Add "ALL HOODS"
             const allBtn = document.createElement('div');
-            allBtn.className = 'district-item';
-            allBtn.innerHTML = '<span>ALL HOODS</span><span class="d-icon">★</span>';
+            allBtn.className = 'dm-item';
+            allBtn.innerHTML = '<span>ALL HOODS</span><span>★</span>';
             allBtn.onclick = () => {
-                sfx.select();
-                filterProducts(city); // Filter by city only
-                closeDistrictModal();
+                if(window.sfx) sfx.select();
+                filterProducts(city); 
+                closeDistrictMenu();
                 showSection('shop');
-                charSystem.show('cj', `WELCOME TO ${city.toUpperCase()}!`);
+                if(window.charSystem) charSystem.show('cj', `WELCOME TO ${city.toUpperCase()}!`);
             };
             list.appendChild(allBtn);
 
@@ -2001,35 +2518,28 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
             districts.forEach(d => {
                 const el = document.createElement('div');
-                el.className = `district-item ${d.type}`;
-                el.innerHTML = `<span>${d.name}</span><span class="d-icon">🔫</span>`;
+                el.className = 'dm-item';
+                el.innerHTML = `<span>${d.name}</span><span>🔫</span>`;
                 el.onclick = () => {
-                    sfx.select();
-                    // Filter Logic Here (Simulated)
+                    if(window.sfx) sfx.select();
                     filterProducts(city); 
-                    
-                    closeDistrictModal();
+                    closeDistrictMenu();
                     showSection('shop');
-                    charSystem.show('cj', `${d.name} - GOOD CHOICE!`);
+                    if(window.charSystem) charSystem.show('cj', `${d.name} - GOOD CHOICE!`);
                 };
                 list.appendChild(el);
             });
             
-            modal.style.display = 'block';
+            menu.classList.add('active');
         }
 
-        function closeDistrictModal() {
-            const modal = document.getElementById('district-modal');
-            if(modal) modal.style.display = 'none';
-            resetMap();
+        function closeDistrictMenu() {
+            const menu = document.getElementById('district-menu');
+            if(menu) menu.classList.remove('active');
         }
 
         function resetMap() {
-            document.getElementById('map-img').style.transform = "scale(1)";
-            document.querySelectorAll('.district-marker').forEach(el => el.style.opacity = '1');
-            document.querySelectorAll('.zone-poly').forEach(el => el.style.display = 'none');
-            const modal = document.getElementById('district-modal');
-            if(modal) modal.style.display = 'none';
+            closeDistrictMenu();
         }
 
 
