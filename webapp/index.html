@@ -586,35 +586,38 @@
             z-index: 100005;
             pointer-events: none;
             display: none;
+            overflow: hidden;
         }
 
         .smoke-wall {
             position: absolute;
-            top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            background: #fff;
+            top: -10%; left: 0;
+            width: 150%; height: 120%;
+            /* Classic Cloud Texture */
+            background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') repeat-x;
+            background-size: contain;
+            opacity: 0.9;
             transform: translateX(-100%);
-            filter: url(#smoke-filter);
-            mask-image: linear-gradient(to right, transparent 5%, black 40%, black 60%, transparent 95%);
-            -webkit-mask-image: linear-gradient(to right, transparent 5%, black 40%, black 60%, transparent 95%);
+            will-change: transform;
+            image-rendering: pixelated; /* Retro Feel */
         }
 
-        @keyframes wipeIn {
-            from { transform: translateX(-100%); }
-            to { transform: translateX(0%); }
+        @keyframes retroWipeIn {
+            0% { transform: translateX(-100%) scale(1); }
+            100% { transform: translateX(0%) scale(1.1); }
         }
 
-        @keyframes wipeOut {
-            from { transform: translateX(0%); }
-            to { transform: translateX(100%); }
+        @keyframes retroWipeOut {
+            0% { transform: translateX(0%) scale(1.1); }
+            100% { transform: translateX(100%) scale(1.2); }
         }
 
         .smoke-active .smoke-wall {
-            animation: wipeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            animation: retroWipeIn 0.8s steps(20) forwards; /* Choppy Retro Motion */
         }
 
         .smoke-dissipate .smoke-wall {
-            animation: wipeOut 1s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+            animation: retroWipeOut 0.8s steps(20) forwards;
         }
 
         /* Video Bars */
@@ -1877,12 +1880,5 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Init
         loadProducts();
     </script>
-    <!-- SVG Filter for Smoke -->
-    <svg style="position: fixed; width: 0; height: 0; pointer-events: none;">
-        <filter id="smoke-filter">
-            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="5" result="warp" />
-            <feDisplacementMap xChannelSelector="R" yChannelSelector="G" scale="60" in="SourceGraphic" in2="warp" />
-        </filter>
-    </svg>
 </body>
 </html>
