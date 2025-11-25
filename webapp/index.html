@@ -580,38 +580,47 @@
             pointer-events: none;
         }
 
-        /* Realistic Smoke Container */
+        /* High End Cinematic Smoke Transition */
         .smoke-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 100005;
             pointer-events: none;
             display: none;
-            background: transparent;
+            overflow: hidden;
+            background: transparent; /* Base transparency */
         }
 
-        .smoke-puff {
+        .smoke-layer {
             position: absolute;
             top: 50%; left: 50%;
-            width: 300px; height: 300px; /* Smaller for performance */
-            background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%); /* Fallback if img fails */
+            width: 100vmax; height: 100vmax; /* Huge size */
             background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
             background-size: contain;
-            opacity: 0.5; /* Debug: Visible by default */
-            transform: translate(-50%, -50%) scale(0.5);
-            will-change: transform, opacity; /* GPU Hint */
+            opacity: 0;
+            mix-blend-mode: screen; /* Cinematic blending */
+            transform-origin: center;
+            will-change: transform, opacity;
         }
 
-        /* Keyframes for dense smoke fill */
-        @keyframes smokeFill {
-            0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 0; }
-            20% { opacity: 0.8; }
-            50% { transform: translate(-50%, -50%) scale(1.5) rotate(45deg); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(3) rotate(90deg); opacity: 0; } /* Reduced max scale */
+        /* Phase 1: Wipe IN (Cover Screen) */
+        @keyframes smokeWipeIn {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(2.5) rotate(20deg); } 
         }
 
-        .smoke-active .smoke-puff {
-            animation: smokeFill 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        /* Phase 2: Wipe OUT (Reveal Next Scene) */
+        @keyframes smokeWipeOut {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(2.5) rotate(20deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(4) rotate(40deg); }
+        }
+
+        .smoke-active .smoke-layer {
+            animation: smokeWipeIn 1.5s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+        }
+        
+        .smoke-dissipate .smoke-layer {
+            animation: smokeWipeOut 1.5s ease-out forwards;
         }
 
         /* Video Bars */
@@ -823,11 +832,11 @@
     <div class="cinematic-bar bar-top"></div>
     <div class="cinematic-bar bar-bottom"></div>
 
-    <!-- Smoke Transition Overlay -->
+    <!-- High End Smoke Transition -->
     <div id="smoke-overlay" class="smoke-container">
-        <div class="smoke-puff"></div>
-        <div class="smoke-puff" style="animation-delay: -1s; left: 30%;"></div>
-        <div class="smoke-puff" style="animation-delay: -2s; left: 70%;"></div>
+        <div class="smoke-layer" style="transform: translate(-50%, -50%) rotate(0deg);"></div>
+        <div class="smoke-layer" style="transform: translate(-50%, -50%) rotate(120deg); animation-delay: 0.1s;"></div>
+        <div class="smoke-layer" style="transform: translate(-50%, -50%) rotate(240deg); animation-delay: 0.2s;"></div>
     </div>
 
     <!-- Intro Screen (Main Menu) -->
@@ -1369,40 +1378,50 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 toggleRadio(true);
                 log("Radio toggled");
 
+                // 1. Switch Content (Behind the Smoke Curtain)
                 const menu = document.getElementById('intro-screen');
-                if(menu) menu.style.opacity = '0';
+                if(menu) menu.style.opacity = '0'; // Hide menu
 
-                // Emoji Intro
+                // Show Emoji Intro
                 const emoji = document.getElementById('emoji-intro');
                 if(emoji) {
                     emoji.style.display = 'flex';
-                    // Force reflow
-                    void emoji.offsetWidth;
                     emoji.style.opacity = '1';
-                    
-                    log("Emoji intro shown");
-                    
-                    setTimeout(() => {
-                        emoji.style.opacity = '0';
-                        setTimeout(() => {
-                            emoji.style.display = 'none';
-                            skipIntro();
-                        }, 1000);
-                    }, 3000);
-                } else {
-                    skipIntro();
+                    log("Emoji intro active");
                 }
-                
-                // Fade Out Smoke Overlay
+
+                // 2. Trigger Wipe OUT (Reveal)
                 const smoke = document.getElementById('smoke-overlay');
                 if(smoke) {
-                    smoke.style.transition = "opacity 1.5s ease-out";
-                    smoke.style.opacity = '0';
+                    // Switch animation classes
+                    smoke.classList.remove('smoke-active');
+                    void smoke.offsetWidth; // Force reflow
+                    smoke.classList.add('smoke-dissipate');
+                    
+                    log("Smoke dissipate triggered");
+
+                    // Cleanup after animation
                     setTimeout(() => {
                         smoke.style.display = 'none';
-                        smoke.classList.remove('smoke-active');
+                        smoke.classList.remove('smoke-dissipate');
                         if(menu) menu.style.display = 'none';
-                    }, 1500);
+                        
+                        // 3. Move to Shop after Emoji (2s delay)
+                        if(emoji) {
+                            setTimeout(() => {
+                                emoji.style.opacity = '0';
+                                setTimeout(() => {
+                                    emoji.style.display = 'none';
+                                    skipIntro();
+                                }, 1000);
+                            }, 2000);
+                        } else {
+                            skipIntro();
+                        }
+                    }, 1500); // Match CSS animation duration
+                } else {
+                    // Fallback if smoke missing
+                    skipIntro();
                 }
 
             } catch (e) {
