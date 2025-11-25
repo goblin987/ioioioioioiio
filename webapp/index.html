@@ -572,41 +572,68 @@
             position: fixed;
             bottom: 0; 
             right: 0; 
-            width: 300px;
-            height: 400px;
+            width: 350px; /* Larger character container */
+            height: 500px;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: bottom right;
             z-index: 9000;
-            transform: translateX(100%); /* Start hidden off-screen right */
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateX(100%); 
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); /* Smooth Ease-Out */
             pointer-events: none;
-            filter: drop-shadow(-5px 0 10px rgba(0,0,0,0.5));
+            filter: drop-shadow(-10px 0 20px rgba(0,0,0,0.6)); /* Cinematic Shadow */
         }
         
         .char-visible {
-            transform: translateX(0); /* Slide in */
+            transform: translateX(0); 
         }
         
         .char-bubble {
             position: absolute;
-            top: 100px;
-            left: 20px; /* Relative to the container */
-            width: 180px;
-            background: rgba(0,0,0,0.9);
-            border: 2px solid #fff;
+            bottom: 300px; /* Positioned near head */
+            right: 50px; 
+            width: auto;
+            background: transparent;
+            border: none;
             color: var(--gta-gold);
-            padding: 15px;
+            padding: 0;
             font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
-            border-radius: 10px;
+            font-size: 48px; /* HUGE GTA FONT */
+            line-height: 0.9;
+            text-shadow: 3px 3px 0 #000; /* Hard Shadow */
+            -webkit-text-stroke: 1px #000; /* Outline */
             opacity: 0;
-            transition: opacity 0.3s 0.3s; /* Delay to show after slide */
+            transform: scale(0.5) rotate(-5deg);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             pointer-events: auto;
+            text-align: right;
         }
         
         .char-visible .char-bubble {
             opacity: 1;
+            transform: scale(1) rotate(0deg);
+            transition-delay: 0.3s;
+        }
+
+        /* Cinematic Video Frame */
+        .video-frame-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9); /* Heavy Vignette */
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+        }
+
+        /* Animations */
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .product-card {
+            /* ... existing styles ... */
+            animation: popIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
         }
 
     </style>
@@ -717,12 +744,13 @@
     <div class="content">
         <!-- Video Intro -->
         <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99990; align-items:center; justify-content:center;">
-            <div id="video-loading" style="position:absolute; color:#555; font-family:'Courier New';">BUFFERING...</div>
+            <div class="video-frame-overlay"></div> <!-- CINEMATIC OVERLAY -->
+            <div id="video-loading" style="position:absolute; color:#555; font-family:'Courier New'; z-index:1;">BUFFERING...</div>
             <video id="intro-vid" style="width:100%; height:100%; object-fit:contain; position:relative; z-index:2; transform: translateZ(0); will-change: transform;" playsinline webkit-playsinline preload="auto" muted>
                 <source src="/webapp/intro.mp4" type="video/mp4">
             </video>
             <div id="play-overlay" style="display:none; position:absolute; z-index:4; color:#fff; border:2px solid #fff; padding:10px 20px; cursor:pointer; background:rgba(0,0,0,0.7);" onclick="forcePlayVideo()">[ RETRY PLAY ]</div>
-            <div style="position:absolute; bottom:20px; right:20px; color:rgba(255,255,255,0.5); font-family:'Courier New'; font-size:12px; cursor:pointer; z-index:3; border:1px solid #555; padding:5px; background:rgba(0,0,0,0.5);" onclick="skipIntro()">[ SKIP INTRO ]</div>
+            <div style="position:absolute; bottom:20px; right:20px; color:rgba(255,255,255,0.5); font-family:'Courier New'; font-size:12px; cursor:pointer; z-index:4; border:1px solid #555; padding:5px; background:rgba(0,0,0,0.5);" onclick="skipIntro()">[ SKIP INTRO ]</div>
         </div>
 
         <!-- SHOP SECTION -->
@@ -1118,9 +1146,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            uniqueProducts.forEach(p => {
+            uniqueProducts.forEach((p, index) => {
                 const card = document.createElement('div');
                 card.className = 'product-card';
+                // Staggered Animation
+                card.style.animationDelay = `${index * 0.05}s`;
+                
                 const countBadge = p.count > 1 ? `<div style="position:absolute; top:5px; right:5px; background:var(--gta-gold); color:#000; padding:2px 6px; font-size:12px; border-radius:4px; font-weight:bold;">x${p.count}</div>` : '';
                 
                 card.innerHTML = `
@@ -1130,12 +1161,29 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div class="product-details">${p.size} | ${p.city}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
-                        <button class="btn-buy" style="flex:2;" onclick="buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="playHoverSound(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
+                        <button class="btn-buy" style="flex:2;" onclick="playHoverSound(); buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
                     </div>
                 `;
                 grid.appendChild(card);
             });
+        }
+
+        // Sound FX
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playHoverSound() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
         }
 
         // LSPD Search
