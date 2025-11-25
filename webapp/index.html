@@ -1589,7 +1589,7 @@
             stroke-width: 2px;
         }
 
-        /* Markers */
+        /* --- GTA SA RADAR ICONS (FINAL) --- */
         .gta-marker {
             position: absolute;
             display: flex;
@@ -1597,44 +1597,62 @@
             align-items: center;
             transform: translate(-50%, -50%);
             cursor: pointer;
-            z-index: 30;
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            transition: transform 0.1s ease-out;
+        }
+
+        .gta-marker:active {
+            transform: translate(-50%, -50%) scale(0.95);
         }
 
         .gta-marker:hover {
-            transform: translate(-50%, -50%) scale(1.2);
-            z-index: 40;
+            transform: translate(-50%, -50%) scale(1.1);
+            z-index: 110;
         }
 
         .marker-icon {
-            width: 44px; height: 44px;
-            background: #f0c330; 
-            border: 3px solid #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-            border-radius: 4px; 
+            width: 32px; 
+            height: 32px;
+            filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.8)); /* Hard shadow */
+            transition: filter 0.2s;
         }
         
-        .marker-icon svg {
-            width: 28px; height: 28px;
-            fill: #000;
-            filter: drop-shadow(1px 1px 0 rgba(255,255,255,0.3));
+        .gta-marker:hover .marker-icon {
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));
         }
 
+        .marker-icon svg {
+            width: 100%; 
+            height: 100%;
+            overflow: visible;
+        }
+        
+        .marker-icon path {
+            stroke: #fff; 
+            stroke-width: 1.5px;
+            paint-order: stroke;
+        }
+
+        /* Specific Colors */
+        .marker-vilnius path { fill: #2e7d32; } /* Grove/Safehouse Green */
+        .marker-kaunas path { fill: #5c6bc0; } /* Binco/Clothes Blue */
+        .marker-klaipeda path { fill: #fbc02d; } /* Burger Yellow */
+
         .marker-label {
-            margin-top: 5px;
-            font-family: 'Pricedown', sans-serif;
-            color: #f0c330;
-            font-size: 24px;
-            text-shadow: 3px 3px 0 #000;
-            letter-spacing: 1px;
+            margin-top: 2px;
+            font-family: 'Arial', sans-serif; /* Clean Radar Font */
+            font-weight: 900;
+            color: #fff;
+            font-size: 11px;
+            text-shadow: 
+                -1.5px -1.5px 0 #000,  
+                 1.5px -1.5px 0 #000,
+                -1.5px  1.5px 0 #000,
+                 1.5px  1.5px 0 #000;
+            letter-spacing: 0.5px;
             white-space: nowrap;
-            background: rgba(0,0,0,0.8);
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid #000;
+            text-transform: uppercase;
+            pointer-events: none;
         }
 
         /* Clean Slide-in Menu */
@@ -1972,32 +1990,32 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </div>
 
 
-                    <!-- 6. GTA Markers -->
-                    <!-- VILNIUS (Gun) -->
+                    <!-- 6. GTA Markers (Radar Style) -->
+                    <!-- VILNIUS (Safehouse) -->
                     <div class="gta-marker" style="top: 75%; left: 70%;" onclick="openDistrictMenu('Vilnius')">
-                        <div class="marker-icon">
-                            <svg viewBox="0 0 24 24"><path d="M3,19V17H5V15H7V13H9V11H11V9H13V7H15V5H19V11H17V13H19V15H17V13H15V15H13V17H11V19H3Z"/></svg>
+                        <div class="marker-icon marker-vilnius">
+                            <!-- Floppy Disk / Save Icon Shape -->
+                            <svg viewBox="0 0 24 24"><path d="M5 3h11l5 5v13H5V3zm2 2v4h10V5H7zm0 14h10v-6H7v6z"/></svg>
                         </div>
                         <div class="marker-label">VILNIUS</div>
-                        <div class="blip-pulse"></div>
                     </div>
                     
-                    <!-- KAUNAS (Shirt) -->
+                    <!-- KAUNAS (Clothes) -->
                     <div class="gta-marker" style="top: 65%; left: 50%;" onclick="openDistrictMenu('Kaunas')">
-                        <div class="marker-icon">
-                            <svg viewBox="0 0 24 24"><path d="M9,21V8H5L10,3H14L19,8H15V21H9M11,9H13V6H11V9Z"/></svg>
+                        <div class="marker-icon marker-kaunas">
+                            <!-- T-Shirt Icon Shape -->
+                            <svg viewBox="0 0 24 24"><path d="M12 3L4 7v2h2v12h12V9h2V7l-8-4zm0 2.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5z"/></svg>
                         </div>
                         <div class="marker-label">KAUNAS</div>
-                        <div class="blip-pulse"></div>
                     </div>
                     
-                    <!-- KLAIPEDA (Burger) -->
+                    <!-- KLAIPEDA (Food) -->
                     <div class="gta-marker" style="top: 35%; left: 15%;" onclick="openDistrictMenu('Klaipeda')">
-                        <div class="marker-icon">
-                            <svg viewBox="0 0 24 24"><path d="M4,13H20V16H4V13M4,17H20V19H4V17M12,3C15.5,3 18.5,5 19.6,8H4.4C5.5,5 8.5,3 12,3Z"/></svg>
+                        <div class="marker-icon marker-klaipeda">
+                            <!-- Burger Icon Shape -->
+                            <svg viewBox="0 0 24 24"><path d="M4 13h16v2H4zm0 4h16v3H4zm16-7H4a8 8 0 0 1 16 0z"/></svg>
                         </div>
                         <div class="marker-label">KLAIPEDA</div>
-                        <div class="blip-pulse"></div>
                     </div>
                     
                     <!-- Mock District Zones (Visible on Zoom) -->
