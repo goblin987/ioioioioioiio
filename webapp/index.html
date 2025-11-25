@@ -489,12 +489,13 @@
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000;
-            background: linear-gradient(135deg, #000 0%, #111 100%);
+            /* Use a linear gradient to simulate the dark atmosphere */
+            background: linear-gradient(to bottom, #000 0%, #1a1a1a 100%);
             z-index: 100000;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 20px;
+            padding: 40px;
             box-sizing: border-box;
             font-family: 'UnifrakturMaguntia', cursive;
             overflow: hidden;
@@ -504,29 +505,33 @@
         /* Vinewood Sign */
         .vinewood-bg {
             position: absolute;
-            top: 20px;
-            right: -50px;
-            width: 400px;
-            height: 200px;
+            top: 5%;
+            right: 5%;
+            width: 50%;
+            height: 30%;
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Vinewood_Sign_GTAV.png/640px-Vinewood_Sign_GTAV.png');
             background-size: contain;
+            background-position: top right;
             background-repeat: no-repeat;
-            transform: rotate(-10deg);
-            opacity: 0.6;
+            transform: rotate(-5deg);
+            opacity: 0.8;
             pointer-events: none;
+            filter: sepia(0.5) contrast(1.2);
         }
 
         .menu-header {
-            font-size: 50px;
-            color: #fff;
-            text-shadow: 3px 3px 0 #000;
+            font-size: 72px;
+            color: #e0e0e0;
+            text-shadow: 4px 4px 0 #000;
             z-index: 2;
             margin-top: 20px;
             margin-left: 20px;
+            font-weight: normal;
+            letter-spacing: 2px;
         }
 
         .menu-options {
-            margin-bottom: 100px;
+            margin-bottom: 15%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -536,42 +541,61 @@
 
         .start-btn {
             font-family: 'Pricedown', sans-serif;
-            font-size: 42px;
-            color: #a0a0a0; /* Classic Grey */
+            font-size: 48px;
+            color: #b0b0b0; /* Classic Grey */
             background: none;
             border: none;
             cursor: pointer;
-            text-shadow: 2px 2px 0 #000;
-            transition: all 0.3s;
-            display: block; /* Always show */
+            text-shadow: 3px 3px 0 #000;
+            transition: all 0.2s;
+            display: block;
             letter-spacing: 2px;
-            margin-top: 0;
-            animation: none;
-            padding: 0;
+            padding: 10px 20px;
         }
         
         .start-btn:hover {
             color: #fff;
-            text-shadow: 0 0 10px #fff;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
             transform: scale(1.1);
         }
 
-        /* Smoke Transition */
+        /* Smoke Transition (Improved) */
         .smoke-overlay {
             position: fixed;
-            top: 50%; left: 50%;
-            width: 100vmax; height: 100vmax;
-            background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 30%, rgba(255,255,255,0) 70%);
-            transform: translate(-50%, -50%) scale(0);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 30%, rgba(255,255,255,0) 70%);
             opacity: 0;
             pointer-events: none;
-            z-index: 100001;
-            transition: transform 2.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 2s ease-in;
+            z-index: 100005;
+            transform: scale(0.1);
+            transition: transform 1.5s ease-in-out, opacity 1s ease-in-out;
         }
         
-        .smoke-in {
-            transform: translate(-50%, -50%) scale(3);
+        .smoke-active {
             opacity: 1;
+            transform: scale(3);
+        }
+
+        /* Cinematic Bars */
+        .cinematic-bar {
+            position: fixed;
+            left: 0;
+            width: 100%;
+            height: 12vh; /* 12% height */
+            background: #000;
+            z-index: 100002; /* Above video */
+            transition: transform 0.5s ease-out;
+            pointer-events: none;
+        }
+        .bar-top { top: 0; transform: translateY(-100%); }
+        .bar-bottom { bottom: 0; transform: translateY(100%); }
+        
+        .video-mode .bar-top { transform: translateY(0); }
+        .video-mode .bar-bottom { transform: translateY(0); }
+        
+        #video-intro {
+            background: #000; /* Ensure black background behind video */
         }
 
         /* Full Screen Modals */
@@ -744,6 +768,10 @@
         <div class="wasted-text">WASTED</div>
     </div>
 
+    <!-- Cinematic Bars -->
+    <div class="cinematic-bar bar-top"></div>
+    <div class="cinematic-bar bar-bottom"></div>
+
     <!-- Smoke Transition Overlay -->
     <div id="smoke-overlay" class="smoke-overlay"></div>
 
@@ -754,8 +782,6 @@
         
         <div class="menu-options">
             <button class="start-btn" onclick="startApp()">START GAME</button>
-            <div style="font-family:'Pricedown'; font-size:24px; color:#444; margin-top:15px; text-shadow: 1px 1px 0 #000;">OPTIONS</div>
-            <div style="font-family:'Pricedown'; font-size:24px; color:#444; margin-top:15px; text-shadow: 1px 1px 0 #000;">QUIT GAME</div>
         </div>
     </div>
 
@@ -1196,6 +1222,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 vidContainer.style.display = 'flex'; 
                 vid.muted = false;
                 vid.volume = 1.0;
+
+                // Cinematic Bars IN
+                document.body.classList.add('video-mode');
                 
                 vid.play().then(() => {
                     document.getElementById('video-loading').style.display = 'none';
@@ -1245,6 +1274,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const vidContainer = document.getElementById('video-intro');
             const vid = document.getElementById('intro-vid');
             if(!vid.paused) vid.pause();
+            
+            // Remove Cinematic Bars
+            document.body.classList.remove('video-mode');
             
             // Start Radio when intro ends
             toggleRadio(true); // Force start radio
