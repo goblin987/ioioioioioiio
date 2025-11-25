@@ -1261,17 +1261,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             try {
                 const btn = document.querySelector('.start-btn');
                 if(btn) {
-                    // Immediate visual feedback (Flash White)
+                    // Flash White (Authentic)
                     btn.style.color = "#fff";
                     btn.style.textShadow = "0 0 20px #fff";
                     btn.style.pointerEvents = "none"; 
                 }
 
-                // 1. Smoke ON
+                // 1. Smoke ON (Instant)
                 const smoke = document.getElementById('smoke-overlay');
                 if(smoke) {
                     smoke.style.display = 'block';
-                    setTimeout(() => smoke.classList.add('smoke-active'), 10);
+                    void smoke.offsetWidth; // Force Reflow
+                    smoke.classList.add('smoke-active');
                 }
 
                 // 2. Audio
@@ -1302,11 +1303,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // Start Radio
                 toggleRadio(true);
 
-                // Hide Menu (Fade)
+                // Hide Menu
                 const menu = document.getElementById('intro-screen');
                 if(menu) menu.style.opacity = '0';
 
-                // Setup Video
+                // Show Video
                 const vidContainer = document.getElementById('video-intro');
                 const vid = document.getElementById('intro-vid');
                 
@@ -1315,23 +1316,19 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     return;
                 }
 
-                // Show Video Container
                 vidContainer.style.display = 'flex';
                 document.body.classList.add('video-mode');
 
-                // Play Video
                 const playPromise = vid.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
                         document.getElementById('video-loading').style.display = 'none';
                         
-                        // Reveal Video (Fade out Smoke)
+                        // Fade Out Smoke
                         const smoke = document.getElementById('smoke-overlay');
                         if(smoke) {
                             smoke.style.transition = "opacity 1.5s ease-out";
                             smoke.style.opacity = '0';
-                            
-                            // Cleanup after fade
                             setTimeout(() => {
                                 smoke.style.display = 'none';
                                 smoke.classList.remove('smoke-active');
@@ -1340,11 +1337,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         }
                     }).catch(error => {
                         console.log("Video Play Failed:", error);
-                        // Fallback to play overlay or skip
-                        document.getElementById('play-overlay').style.display = 'block';
-                        // Hide smoke anyway so they can see the play button
+                        // Hide smoke on error
                         const smoke = document.getElementById('smoke-overlay');
                         if(smoke) smoke.style.display = 'none';
+                        document.getElementById('play-overlay').style.display = 'block';
                     });
                 }
                 
