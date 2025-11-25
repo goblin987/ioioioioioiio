@@ -842,24 +842,13 @@
         </div>
     </div>
 
-    <!-- Video Intro Container -->
-    <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:100001; align-items:center; justify-content:center;">
-        <video id="intro-vid" style="width:100%; height:100%; object-fit:contain; transform: translateZ(0);" playsinline>
-            <source src="/webapp/intro.mp4" type="video/mp4">
-        </video>
-        
-        <div id="video-loading" style="position:absolute; bottom:20px; right:20px; color:#fff; font-family:'Courier New'; font-size:12px; display:block;">
-            BUFFERING VIDEO...
-        </div>
-        
-        <div id="play-overlay" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:100003; text-align:center;">
-             <button onclick="forcePlayVideo()" style="background:var(--gta-gold); border:2px solid #000; padding:10px 20px; font-family:'Pricedown'; font-size:24px; cursor:pointer;">
-                [ RETRY PLAY ]
-             </button>
-        </div>
-        
-        <div class="video-frame-overlay"></div>
+    <!-- Emoji Intro Container -->
+    <div id="emoji-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:100001; align-items:center; justify-content:center; transition: opacity 1s;">
+        <div style="font-size: 150px; animation: pulse 2s infinite; filter: drop-shadow(0 0 20px #fff);">💨</div>
     </div>
+    <style>
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
+    </style>
 
     <!-- Character Layer -->
     <div id="char-layer" class="char-overlay">
@@ -1306,6 +1295,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             try { sfx.init(); } catch(e) {} 
         };
         
+        // FORCE LOAD: Backup trigger if onload fails or is overwritten
+        setTimeout(() => {
+            if(document.getElementById('product-grid').innerHTML.includes('LOADING')) {
+                log("Force loading products...");
+                loadProducts();
+            }
+        }, 1000);
+        
         // Failsafe: Force hide loader after 3 seconds max
         setTimeout(hideLoader, 3000);
 
@@ -1369,65 +1366,44 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function performTransition() {
             log("performTransition called");
             try {
-                // Start Radio
                 toggleRadio(true);
                 log("Radio toggled");
 
-                // Hide Menu
                 const menu = document.getElementById('intro-screen');
                 if(menu) menu.style.opacity = '0';
 
-                // Setup Video
-                const vidContainer = document.getElementById('video-intro');
-                const vid = document.getElementById('intro-vid');
-                
-                if (!vid || vid.error) {
-                    log("Video error/missing, skipping");
-                    skipIntro(true);
-                    return;
-                }
-                
-                if(!vidContainer) {
-                    log("Video CONTAINER missing!");
-                    skipIntro(true);
-                    return;
-                }
-
-                vidContainer.style.display = 'flex';
-                document.body.classList.add('video-mode');
-                log("Video container shown");
-
-                const playPromise = vid.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        log("Video playing");
-                        const loader = document.getElementById('video-loading');
-                        if(loader) loader.style.display = 'none';
-                        
-                        // Fade Out Smoke
-                        const smoke = document.getElementById('smoke-overlay');
-                        if(smoke) {
-                            smoke.style.transition = "opacity 1.5s ease-out";
-                            smoke.style.opacity = '0';
-                            setTimeout(() => {
-                                smoke.style.display = 'none';
-                                smoke.classList.remove('smoke-active');
-                                if(menu) menu.style.display = 'none';
-                            }, 1500);
-                        }
-                    }).catch(error => {
-                        log("Video Play Fail: " + error);
-                        const smoke = document.getElementById('smoke-overlay');
-                        if(smoke) smoke.style.display = 'none';
-                        const po = document.getElementById('play-overlay');
-                        if(po) po.style.display = 'block';
-                    });
-                }
-                
-                vid.onended = () => {
-                    log("Video ended");
+                // Emoji Intro
+                const emoji = document.getElementById('emoji-intro');
+                if(emoji) {
+                    emoji.style.display = 'flex';
+                    // Force reflow
+                    void emoji.offsetWidth;
+                    emoji.style.opacity = '1';
+                    
+                    log("Emoji intro shown");
+                    
+                    setTimeout(() => {
+                        emoji.style.opacity = '0';
+                        setTimeout(() => {
+                            emoji.style.display = 'none';
+                            skipIntro();
+                        }, 1000);
+                    }, 3000);
+                } else {
                     skipIntro();
-                };
+                }
+                
+                // Fade Out Smoke Overlay
+                const smoke = document.getElementById('smoke-overlay');
+                if(smoke) {
+                    smoke.style.transition = "opacity 1.5s ease-out";
+                    smoke.style.opacity = '0';
+                    setTimeout(() => {
+                        smoke.style.display = 'none';
+                        smoke.classList.remove('smoke-active');
+                        if(menu) menu.style.display = 'none';
+                    }, 1500);
+                }
 
             } catch (e) {
                 log("Transition Error: " + e);
@@ -1451,39 +1427,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         function skipIntro(immediate = false) {
             log(`skipIntro called (immediate=${immediate})`);
-            const vidContainer = document.getElementById('video-intro');
-            const vid = document.getElementById('intro-vid');
-            if(vid && !vid.paused) vid.pause();
+            const emoji = document.getElementById('emoji-intro');
             
-            // Remove Cinematic Bars
             document.body.classList.remove('video-mode');
-            const lb = document.getElementById('loading-bar-container');
-            if(lb) lb.style.display = 'none';
-            
-            // Start Radio when intro ends
-            toggleRadio(true); // Force start radio
+            toggleRadio(true); 
 
             if(immediate) {
-                 if(vidContainer) vidContainer.style.display = 'none';
+                 if(emoji) emoji.style.display = 'none';
                  showSection('shop');
                  charSystem.show('cj', "WELCOME TO THE SHOP!");
                  return;
             }
 
-            // Fade out video
-            if(vidContainer) {
-                vidContainer.style.transition = "opacity 1s";
-                vidContainer.style.opacity = "0";
-                
-                setTimeout(() => {
-                    vidContainer.style.display = 'none';
-                    showSection('shop'); 
-                    charSystem.show('cj', "WELCOME TO THE SHOP!");
-                }, 1000);
-            } else {
-                showSection('shop'); 
-                charSystem.show('cj', "WELCOME TO THE SHOP!");
-            }
+            showSection('shop'); 
+            charSystem.show('cj', "WELCOME TO THE SHOP!");
         }
 
         // Globals moved to top to avoid TDZ
