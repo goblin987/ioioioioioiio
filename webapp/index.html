@@ -637,9 +637,68 @@
             animation: popIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
         }
 
+        /* Wasted Overlay */
+        .wasted-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100001; /* Above everything */
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: grayscale(100%) contrast(1.2) blur(2px);
+            animation: wastedFade 2s ease-out;
+        }
+        @keyframes wastedFade { from { opacity: 0; } to { opacity: 1; } }
+        
+        .wasted-text {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 80px;
+            color: #fff; /* GTA Wasted is usually white/grey with black outline, rarely red in older ones */
+            text-shadow: 4px 4px 0 #000;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 40px;
+            border-radius: 10px;
+            transform: scale(0);
+            animation: wastedPop 0.5s 0.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes wastedPop { to { transform: scale(1); } }
+
+        /* Graffiti Tags */
+        .graffiti {
+            position: absolute;
+            width: 60px;
+            height: 40px;
+            opacity: 0.4;
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 5;
+            filter: brightness(0.5) sepia(1);
+        }
+        .graffiti:hover { transform: scale(1.1); opacity: 0.8; }
+        .graffiti.found {
+            opacity: 1;
+            filter: brightness(1) sepia(0) hue-rotate(90deg); /* Greenish */
+            pointer-events: none;
+        }
+
+        /* 3D Tilt Context */
+        .product-grid {
+            perspective: 1000px;
+        }
+        .product-card {
+            transform-style: preserve-3d;
+            /* existing styles... */
+        }
+
     </style>
 </head>
 <body>
+    <!-- Wasted Overlay -->
+    <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
+        <div class="wasted-text">WASTED</div>
+    </div>
+
     <!-- Intro Screen -->
     <div id="intro-screen">
         <div class="intro-logo">LOS SANTOS</div>
@@ -927,16 +986,163 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
     <!-- Navigation -->
     <div class="nav">
-        <div class="nav-item active" id="nav-shop" onclick="showSection('shop')">SHOP</div>
-        <div class="nav-item" id="nav-map" onclick="showSection('map')">MAP</div>
-        <div class="nav-item" id="nav-stats" onclick="showSection('stats')">STATS</div>
-        <div class="nav-item" id="nav-basket" onclick="openBasket()">CART (<span id="basket-count">0</span>)</div>
+        <div class="nav-item active" id="nav-shop" onclick="sfx.select(); showSection('shop')">SHOP</div>
+        <div class="nav-item" id="nav-map" onclick="sfx.select(); showSection('map')">MAP</div>
+        <div class="nav-item" id="nav-stats" onclick="sfx.select(); showSection('stats')">STATS</div>
+        <div class="nav-item" id="nav-basket" onclick="sfx.select(); openBasket()">CART (<span id="basket-count">0</span>)</div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.MainButton.hide();
+        
+        // Init Scavenger
+        setTimeout(initGraffiti, 2000);
+
+        // --- Sound FX System (Synthesized) ---
+        const sfx = {
+            ctx: null,
+            init: function() {
+                if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            playTone: function(freq, type, duration, vol=0.1) {
+                this.init();
+                if(this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+            tick: function() { this.playTone(800, 'triangle', 0.05, 0.05); }, // Hover
+            select: function() { this.playTone(300, 'square', 0.1, 0.1); }, // Click
+            cash: function() { 
+                this.playTone(1200, 'sine', 0.1, 0.1); 
+                setTimeout(() => this.playTone(1600, 'sine', 0.2, 0.1), 100);
+            },
+            wasted: function() { this.playTone(50, 'sawtooth', 1.0, 0.3); }, // Low drone
+            spray: function() {
+                // White noise is complex to synth efficiently without buffer, skipping for simple osc
+                this.playTone(400, 'sawtooth', 0.2, 0.05); // Pssht-ish
+            }
+        };
+
+        // --- Day/Night Cycle ---
+        function checkDayNight() {
+            const hour = new Date().getHours();
+            const isNight = hour < 6 || hour > 20;
+            if(isNight) {
+                document.querySelector('.bg').style.backgroundImage = "linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Los_Angeles_night_lights.jpg/1280px-Los_Angeles_night_lights.jpg')";
+            }
+        }
+
+        // --- 3D Parallax (Gyro/Mouse) ---
+        document.addEventListener('mousemove', (e) => {
+            const cards = document.querySelectorAll('.product-card');
+            const x = (window.innerWidth / 2 - e.pageX) / 25;
+            const y = (window.innerHeight / 2 - e.pageY) / 25;
+            
+            cards.forEach(card => {
+                card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+            });
+        });
+        
+        // Mobile Tilt
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener("deviceorientation", function(event) {
+                const x = event.gamma / 5; // Left/Right
+                const y = event.beta / 5;  // Front/Back
+                const cards = document.querySelectorAll('.product-card');
+                cards.forEach(card => {
+                    card.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
+                });
+            }, true);
+        }
+
+        // --- Cheat Codes ---
+        let keyBuffer = "";
+        document.addEventListener('keydown', (e) => {
+            keyBuffer += e.key.toLowerCase();
+            if(keyBuffer.length > 20) keyBuffer = keyBuffer.slice(-20);
+            
+            if(keyBuffer.endsWith("hesoyam")) {
+                activateCheat();
+            }
+        });
+        
+        function activateCheat() {
+            sfx.cash();
+            document.getElementById('money').innerText = "$25000000";
+            document.getElementById('money').style.color = "#fff";
+            charSystem.show('cj', "HESOYAM ACTIVATED!", 2000);
+            // Reset color
+            setTimeout(() => document.getElementById('money').style.color = "var(--gta-green)", 1000);
+        }
+
+        // --- Wasted Logic ---
+        function triggerWasted() {
+            const el = document.getElementById('wasted-overlay');
+            el.style.display = 'flex';
+            sfx.wasted();
+            // Slow motion effect via CSS?
+            document.body.style.transition = "filter 2s";
+            document.body.style.filter = "grayscale(1)";
+        }
+        
+        function closeWasted() {
+            document.getElementById('wasted-overlay').style.display = 'none';
+            document.body.style.filter = "none";
+        }
+
+        // --- Graffiti Scavenger Hunt ---
+        let tagsFound = 0;
+        function initGraffiti() {
+            const container = document.getElementById('shop'); // Put in shop for now
+            const positions = [
+                {top: '10%', left: '80%'},
+                {top: '50%', left: '10%'},
+                {top: '90%', left: '90%'}
+            ];
+            
+            positions.forEach((pos, i) => {
+                const el = document.createElement('div');
+                el.className = 'graffiti';
+                el.style.top = pos.top;
+                el.style.left = pos.left;
+                el.innerText = "GROVE";
+                el.style.fontFamily = "Impact";
+                el.style.color = "#fff";
+                el.style.fontSize = "12px";
+                el.style.transform = `rotate(${Math.random()*40-20}deg)`;
+                
+                el.onclick = function() {
+                    if(this.classList.contains('found')) return;
+                    this.classList.add('found');
+                    sfx.spray();
+                    tagsFound++;
+                    charSystem.show('sweet', `${tagsFound}/3 TAGS!`);
+                    
+                    if(tagsFound === 3) {
+                        sfx.cash();
+                        charSystem.show('cj', "RESPECT + (ALL TAGS FOUND)");
+                        // Maybe give discount?
+                    }
+                };
+                container.appendChild(el);
+            });
+        }
+
+        // --- Init New Systems ---
+        checkDayNight();
+        // Call initGraffiti after products load
+        
+        // ... existing logic ...
 
         // --- Character System ---
         const charSystem = {
@@ -1162,30 +1368,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div class="product-details">${p.size} | ${p.city}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn-buy" style="font-size:14px; flex:1;" onclick="playHoverSound(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
-                        <button class="btn-buy" style="flex:2;" onclick="playHoverSound(); buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick="sfx.select(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
+                        <button class="btn-buy" style="flex:2;" onmouseover="sfx.tick()" onclick="sfx.select(); buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        // Sound FX
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playHoverSound() {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
-        }
+        // Sound FX (Old removed, using sfx object now)
 
         // LSPD Search
         function filterSearch(query) {
@@ -1453,7 +1644,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 } else if (data.status === 'expired' || data.status === 'refunded') {
                     clearInterval(pollInterval);
                     closeInvoice();
-                    tg.showAlert("Payment Expired or Refunded");
+                    triggerWasted(); // WASTED!
                 }
             } catch(e) {
                 console.log("Poll error", e);
@@ -1469,6 +1660,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             closeInvoice();
             basket = []; // Clear basket
             updateBasketUI();
+            sfx.cash(); // Cash Sound!
             charSystem.show('smoke', 'RESPECT +');
             
             // Play Mission Passed Logic
