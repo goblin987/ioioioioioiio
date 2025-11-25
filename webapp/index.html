@@ -595,10 +595,11 @@
             position: absolute;
             top: 50%; left: 50%;
             width: 100vmax; height: 100vmax; /* Huge size */
-            background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
+            /* Fallback color + Image */
+            background: radial-gradient(circle, rgba(200,200,200,0.2) 0%, transparent 70%), url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
             background-size: contain;
             opacity: 0;
-            mix-blend-mode: screen; /* Cinematic blending */
+            mix-blend-mode: normal; /* Safer blending */
             transform-origin: center;
             will-change: transform, opacity;
         }
@@ -1167,6 +1168,35 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         setTimeout(initGraffiti, 2000);
 
         // --- Sound FX System (Synthesized) ---
+        const charSystem = {
+            el: null,
+            text: null,
+            timer: null,
+            
+            init: function() {
+                this.el = document.getElementById('char-layer');
+                this.text = document.getElementById('char-text');
+            },
+            
+            show: function(charName, message, duration=4000) {
+                if(!this.el) this.init();
+                
+                let url = "https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson_GTA_SA.png"; 
+                if(charName === 'ryder') url = "https://upload.wikimedia.org/wikipedia/en/3/3f/Ryder_GTA_SA.png"; 
+                if(charName === 'smoke') url = "https://upload.wikimedia.org/wikipedia/en/1/17/Big_Smoke_GTA_SA.png";
+                
+                this.el.style.backgroundImage = `url('${url}')`;
+                this.text.innerText = message;
+                
+                this.el.classList.add('char-visible');
+                
+                if(this.timer) clearTimeout(this.timer);
+                this.timer = setTimeout(() => {
+                    this.el.classList.remove('char-visible');
+                }, duration);
+            }
+        };
+
         const sfx = {
             ctx: null,
             // ... (keep sfx object)
@@ -1252,34 +1282,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // ... existing logic ...
 
         // --- Character System ---
-        const charSystem = {
-            el: null,
-            text: null,
-            timer: null,
-            
-            init: function() {
-                this.el = document.getElementById('char-layer');
-                this.text = document.getElementById('char-text');
-            },
-            
-            show: function(charName, message, duration=4000) {
-                if(!this.el) this.init();
-                
-                let url = "https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson_GTA_SA.png"; 
-                if(charName === 'ryder') url = "https://upload.wikimedia.org/wikipedia/en/3/3f/Ryder_GTA_SA.png"; 
-                if(charName === 'smoke') url = "https://upload.wikimedia.org/wikipedia/en/1/17/Big_Smoke_GTA_SA.png";
-                
-                this.el.style.backgroundImage = `url('${url}')`;
-                this.text.innerText = message;
-                
-                this.el.classList.add('char-visible');
-                
-                if(this.timer) clearTimeout(this.timer);
-                this.timer = setTimeout(() => {
-                    this.el.classList.remove('char-visible');
-                }, duration);
-            }
-        };
+        // charSystem moved to top
 
         // Init
         function hideLoader() {
