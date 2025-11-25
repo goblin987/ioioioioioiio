@@ -486,6 +486,21 @@
         @keyframes blink { 50% { opacity: 0.5; } }
 
         /* Intro Screen */
+        /* Preloader */
+        #pre-loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 200000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Impact', sans-serif;
+            font-size: 24px;
+            color: #444;
+            transition: opacity 0.5s;
+        }
+
         /* Main Menu (High Fidelity GTA SA PC) */
         #intro-screen {
             position: fixed;
@@ -787,6 +802,8 @@
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
         <div class="wasted-text">WASTED</div>
     </div>
+
+    <div id="pre-loader">LOADING...</div>
 
     <!-- Cinematic Bars -->
     <div class="cinematic-bar bar-top"></div>
@@ -1220,48 +1237,54 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         };
 
-        // --- Intro Logic ---
-        
+        // Init
+        window.onload = () => {
+            // Preload check simulation
+            setTimeout(() => {
+                const pl = document.getElementById('pre-loader');
+                if(pl) {
+                    pl.style.opacity = '0';
+                    setTimeout(() => pl.style.display = 'none', 500);
+                }
+            }, 1000);
+        };
+
         // Global Asset Preload
         const audioFx = new Audio('/webapp/ah_shit.mp3');
         audioFx.preload = 'auto';
 
         function startApp() {
             try {
-                // 1. UI Feedback (Immediate)
                 const btn = document.querySelector('.start-btn');
                 if(btn) {
-                    btn.innerHTML = "INITIALIZING...";
+                    // Immediate visual feedback (Flash White)
                     btn.style.color = "#fff";
+                    btn.style.textShadow = "0 0 20px #fff";
                     btn.style.pointerEvents = "none"; 
                 }
 
-                // 2. Smoke Visuals (Immediate)
+                // 1. Smoke ON
                 const smoke = document.getElementById('smoke-overlay');
                 if(smoke) {
                     smoke.style.display = 'block';
-                    // Force Reflow
-                    void smoke.offsetWidth;
-                    smoke.classList.add('smoke-active');
+                    setTimeout(() => smoke.classList.add('smoke-active'), 10);
                 }
 
-                // 3. Audio Playback
+                // 2. Audio
                 audioFx.volume = 1.0;
-                const audioPromise = audioFx.play();
-                if (audioPromise !== undefined) {
-                    audioPromise.catch(error => {
-                        console.log("Audio blocked:", error);
-                    });
+                const p = audioFx.play();
+                if(p !== undefined) {
+                    p.catch(e => console.log("Audio block:", e));
                 }
 
-                // 4. Prepare Video (Background)
+                // 3. Video Prep
                 const vid = document.getElementById('intro-vid');
                 if(vid) {
                     vid.muted = true;
                     vid.preload = "auto";
                 }
 
-                // 5. Schedule Transition (Fixed 2.5s delay)
+                // 4. Transition
                 setTimeout(performTransition, 2500);
 
             } catch (err) {
@@ -1373,11 +1396,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 charSystem.show('cj', "WELCOME TO THE SHOP!");
             }, 1000);
         }
-
-        // Init
-        window.onload = () => {
-           // No BIOS, just show menu
-        };
 
         let allProducts = [];
         let currentStation = 0;
