@@ -484,19 +484,12 @@
         @keyframes blink { 50% { opacity: 0.5; } }
 
         /* Intro Screen */
-        /* Main Menu (GTA SA Style) */
+        /* Main Menu (GTA SA Reference Style) */
         #intro-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000;
-            /* Use a linear gradient to simulate the dark atmosphere */
-            background: linear-gradient(to bottom, #000 0%, #1a1a1a 100%);
             z-index: 100000;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 40px;
-            box-sizing: border-box;
             font-family: 'UnifrakturMaguntia', cursive;
             overflow: hidden;
             transition: opacity 1s ease-out;
@@ -505,9 +498,9 @@
         /* Vinewood Sign */
         .vinewood-bg {
             position: absolute;
-            top: 5%;
-            right: 5%;
-            width: 50%;
+            top: 50px;
+            right: 50px;
+            width: 40%;
             height: 30%;
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Vinewood_Sign_GTAV.png/640px-Vinewood_Sign_GTAV.png');
             background-size: contain;
@@ -520,65 +513,82 @@
         }
 
         .menu-header {
-            font-size: 72px;
-            color: #e0e0e0;
+            position: absolute;
+            top: 60px;
+            left: 60px;
+            font-size: 80px;
+            color: #fff;
             text-shadow: 4px 4px 0 #000;
             z-index: 2;
-            margin-top: 20px;
-            margin-left: 20px;
+            margin: 0;
             font-weight: normal;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
         }
 
         .menu-options {
-            margin-bottom: 15%;
+            position: absolute;
+            bottom: 15%;
+            left: 100px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            width: 100%;
+            align-items: flex-start;
             z-index: 2;
         }
 
         .start-btn {
             font-family: 'Pricedown', sans-serif;
             font-size: 48px;
-            color: #b0b0b0; /* Classic Grey */
+            color: #a0a0a0; /* Inactive Grey */
             background: none;
             border: none;
             cursor: pointer;
-            text-shadow: 3px 3px 0 #000;
-            transition: all 0.2s;
+            text-shadow: 2px 2px 0 #000;
+            transition: color 0.2s, transform 0.2s;
             display: block;
             letter-spacing: 2px;
-            padding: 10px 20px;
+            padding: 5px 0;
+            text-align: left;
         }
         
         .start-btn:hover {
-            color: #fff;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
-            transform: scale(1.1);
+            color: #fff; /* Active White */
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            transform: scale(1.05) translateX(10px);
         }
 
-        /* Smoke Transition (Improved) */
-        .smoke-overlay {
+        /* Realistic Smoke Container */
+        .smoke-container {
             position: fixed;
-            top: 50%; left: 50%;
-            width: 150vmax; height: 150vmax; /* Large enough to cover corners */
-            background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 70%);
-            opacity: 0;
-            pointer-events: none;
+            top: 0; left: 0; width: 100%; height: 100%;
             z-index: 100005;
-            transform: translate(-50%, -50%) scale(0.1);
-            transition: transform 2s ease-in, opacity 1.5s ease-in;
-            will-change: transform, opacity;
-        }
-        
-        .smoke-active {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.2); /* Reduced scale for performance */
+            pointer-events: none;
+            display: none;
+            background: transparent;
         }
 
-        /* Cinematic Bars */
+        .smoke-puff {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 800px; height: 800px;
+            background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
+            background-size: contain;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
+        }
+
+        /* Keyframes for dense smoke fill */
+        @keyframes smokeFill {
+            0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 0; }
+            20% { opacity: 0.8; }
+            50% { transform: translate(-50%, -50%) scale(2) rotate(45deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(4) rotate(90deg); opacity: 0; } /* Fade out at end */
+        }
+
+        .smoke-active .smoke-puff {
+            animation: smokeFill 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* Video Bars */
         .cinematic-bar {
             position: fixed;
             left: 0;
@@ -774,7 +784,11 @@
     <div class="cinematic-bar bar-bottom"></div>
 
     <!-- Smoke Transition Overlay -->
-    <div id="smoke-overlay" class="smoke-overlay"></div>
+    <div id="smoke-overlay" class="smoke-container">
+        <div class="smoke-puff"></div>
+        <div class="smoke-puff" style="animation-delay: -1s; left: 30%;"></div>
+        <div class="smoke-puff" style="animation-delay: -2s; left: 70%;"></div>
+    </div>
 
     <!-- Intro Screen (Main Menu) -->
     <div id="intro-screen">
@@ -1216,13 +1230,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             loadBar.style.display = 'block';
             setTimeout(() => loadFill.style.width = '100%', 50); // Animate bar
 
-            // 3. Start Radio (Delayed 2.5s - Matches Video Start)
+            // 3. WAIT for Audio to Finish (approx 2.5s)
             setTimeout(() => {
-                 toggleRadio(true);
-            }, 2500);
+                // Start Radio
+                toggleRadio(true);
 
-            // 4. Transition to Video (2s delay)
-            setTimeout(() => {
+                // Fade out Menu -> Reveal Video
                 document.getElementById('intro-screen').style.opacity = '0';
                 
                 const vidContainer = document.getElementById('video-intro');
@@ -1234,7 +1247,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
 
                 vidContainer.style.display = 'flex'; 
-                vid.muted = true; // Force Mute (Radio is playing)
+                vid.muted = true; // Force Mute
                 
                 // Cinematic Bars
                 document.body.classList.add('video-mode');
@@ -1242,12 +1255,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 vid.play().then(() => {
                     document.getElementById('video-loading').style.display = 'none';
                     
-                    // CLEANUP: Remove heavy smoke element from rendering
+                    // FADE OUT SMOKE (Video is now playing behind it)
                     setTimeout(() => {
                          document.getElementById('intro-screen').style.display = 'none';
                          smoke.classList.remove('smoke-active');
-                         smoke.style.display = 'none'; // Force hide to save GPU
-                    }, 500);
+                         smoke.style.display = 'none'; 
+                    }, 2000); // Wait for smoke to clear visually
                 }).catch(e => {
                     console.log("Video Play Error", e);
                     document.getElementById('play-overlay').style.display = 'block';
@@ -1257,7 +1270,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     skipIntro();
                 };
 
-            }, 2000); // Extended delay to enjoy smoke/loading
+            }, 2500); // 2.5s delay for "Ah shit" to finish
         }
 
         function forcePlayVideo() {
