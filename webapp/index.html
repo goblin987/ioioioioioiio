@@ -484,58 +484,83 @@
         @keyframes blink { 50% { opacity: 0.5; } }
 
         /* Intro Screen */
-        /* Main Menu (Reference Style) */
+        /* Main Menu (High Fidelity GTA SA PC) */
         #intro-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000;
             z-index: 100000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            display: block; /* Changed from flex to allow absolute pos */
             transition: opacity 1s ease-out;
         }
         
-        .vinewood-bg { display: none; }
+        .vinewood-bg {
+            display: block;
+            position: absolute;
+            top: 0; right: 0;
+            width: 60%; height: 50%;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Vinewood_Sign_GTAV.png/640px-Vinewood_Sign_GTAV.png');
+            background-size: contain;
+            background-position: top right;
+            background-repeat: no-repeat;
+            -webkit-mask-image: linear-gradient(225deg, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 80%);
+            mask-image: linear-gradient(225deg, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 80%);
+            opacity: 0.7;
+            pointer-events: none;
+        }
 
         .menu-header {
             font-family: 'Diploma', 'Old English Text MT', 'UnifrakturMaguntia', cursive;
-            font-size: 90px;
+            font-size: 70px;
             color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.2);
-            margin-bottom: 50px; /* Reduced margin */
-            text-align: center;
-            letter-spacing: 2px;
-            position: relative;
-            top: -20px;
+            text-shadow: 3px 3px 0 #000;
+            position: absolute;
+            top: 50px; left: 50px;
+            margin: 0;
+            line-height: 1;
+            text-align: left;
         }
 
         .menu-options {
+            position: absolute;
+            bottom: 15%; left: 50%;
+            transform: translateX(-50%);
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 15px;
             width: 100%;
         }
 
         .start-btn {
-            font-family: 'Diploma', 'Old English Text MT', 'UnifrakturMaguntia', cursive;
-            font-size: 50px;
-            color: #808080; /* Silver/Grey */
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            font-size: 36px;
+            color: #a0a0a0; /* Silver */
             background: none;
             border: none;
             cursor: pointer;
             transition: all 0.2s;
             display: block;
             font-weight: normal;
-            text-transform: capitalize; /* Gothic often uses Title Case */
-            letter-spacing: 1px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transform: scaleX(1.1);
         }
         
         .start-btn:hover {
-            color: #fff; /* White on hover */
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
-            transform: scale(1.1);
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            transform: scaleX(1.1) scale(1.1);
+        }
+        
+        .menu-item-dummy {
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            font-size: 36px;
+            color: #444; /* Dark Grey */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transform: scaleX(1.1);
+            pointer-events: none;
         }
 
         /* Realistic Smoke Container */
@@ -551,7 +576,7 @@
         .smoke-puff {
             position: absolute;
             top: 50%; left: 50%;
-            width: 800px; height: 800px;
+            width: 400px; height: 400px; /* Reduced for stability */
             background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
             background-size: contain;
             opacity: 0;
@@ -774,13 +799,13 @@
 
     <!-- Intro Screen (Main Menu) -->
     <div id="intro-screen">
-        <div class="menu-header">Main Menu</div>
+        <div class="vinewood-bg"></div>
+        <div class="menu-header">Main<br>Menu</div>
         
         <div class="menu-options">
             <button class="start-btn" onclick="startApp()">START GAME</button>
-        </div>
-        <div id="loading-bar-container" style="position:absolute; bottom:20px; left:5%; width:90%; height:8px; background:#333; border:1px solid #555; display:none; border-radius: 4px; overflow: hidden;">
-            <div id="loading-bar" style="width:0%; height:100%; background:#ccc; box-shadow: 0 0 10px #fff;"></div>
+            <div class="menu-item-dummy">OPTIONS</div>
+            <div class="menu-item-dummy">QUIT GAME</div>
         </div>
     </div>
 
