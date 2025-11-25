@@ -1547,6 +1547,133 @@
             text-transform: uppercase;
         }
         .dm-close:hover { background: #555; }
+        /* --- GTA SA CLEAN VECTOR MAP THEME (FINAL) --- */
+        .map-container {
+            position: relative;
+            height: 450px;
+            background-color: #0f1821 !important; 
+            overflow: hidden;
+            border: 4px solid #000 !important;
+            font-family: 'Pricedown', sans-serif;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important;
+        }
+
+        /* Hide broken effects */
+        .map-grid, .scanline-bar, .noise-overlay, .radar-beam, .data-feed {
+            display: none !important;
+        }
+
+        /* Map Layers */
+        .map-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transition: transform 0.5s ease;
+        }
+        
+        .map-layer.outline path {
+            stroke: #000;
+            stroke-width: 40px;
+            fill: none;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+        
+        .map-layer.dark path {
+            fill: rgba(0,0,0,0.5);
+            transform: translate(10px, 10px);
+        }
+
+        .map-layer.main path {
+            fill: #383838; 
+            stroke: #000;
+            stroke-width: 2px;
+        }
+
+        /* Markers */
+        .gta-marker {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 30;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .gta-marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 40;
+        }
+
+        .marker-icon {
+            width: 44px; height: 44px;
+            background: #f0c330; 
+            border: 3px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+            border-radius: 4px; 
+        }
+        
+        .marker-icon svg {
+            width: 28px; height: 28px;
+            fill: #000;
+            filter: drop-shadow(1px 1px 0 rgba(255,255,255,0.3));
+        }
+
+        .marker-label {
+            margin-top: 5px;
+            font-family: 'Pricedown', sans-serif;
+            color: #f0c330;
+            font-size: 24px;
+            text-shadow: 3px 3px 0 #000;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.8);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #000;
+        }
+
+        /* Clean Slide-in Menu */
+        .district-menu-slide {
+            background: rgba(0,0,0,0.95) !important;
+            border-left: 4px solid #f0c330 !important;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.8) !important;
+        }
+        
+        .dm-header {
+            background: #f0c330 !important;
+            color: #000 !important;
+            border-bottom: 4px solid #000 !important;
+            font-size: 32px !important;
+        }
+        
+        .dm-item {
+            background: #222 !important;
+            color: #fff !important;
+            border: 2px solid #444 !important;
+            font-family: 'Impact', sans-serif !important;
+        }
+        
+        .dm-item:hover {
+            background: #f0c330 !important;
+            color: #000 !important;
+            border-color: #fff !important;
+        }
+        /* Ensure single-layer SVG fallback looks perfect */
+        .map-img-interactive g path {
+            fill: #383838 !important;
+            stroke: #000 !important;
+            stroke-width: 30px !important;
+            stroke-linejoin: round !important;
+            stroke-linecap: round !important;
+        }
+        
+        /* Hide any previous broken layers if they exist */
+        .map-layer { display: contents; } 
     </style>
 </head>
 <body>
@@ -1836,14 +1963,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <!-- Radar Sweep -->
                     <div class="radar-sweep"></div>
 
-                    <!-- 1. Moving Grid -->
-                    <div class="map-grid"></div>
-                    
-                    <!-- 2. CRT Scanline -->
-                    <div class="scanline-bar"></div>
-                    
-                    <!-- 3. Noise Overlay -->
-                    <div class="noise-overlay"></div>
 
                     <!-- 4. Slide-in District Menu (Hidden by default) -->
                     <div id="district-menu" class="district-menu-slide">
@@ -1852,8 +1971,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         <button class="dm-close" onclick="closeDistrictMenu()">CLOSE [X]</button>
                     </div>
 
-                    <!-- 5. Radar Beam -->
-                    <div class="radar-beam"></div>
 
                     <!-- 6. GTA Markers -->
                     <!-- VILNIUS (Gun) -->
@@ -1889,12 +2006,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div id="zone-klaipeda" class="zone-poly" style="top: 30%; left: 10%; width: 10%; height: 10%; border-radius: 50%;"></div>
                 </div>
                 <button class="btn-buy" onclick="resetMap()" style="margin-top: 10px;">RESET VIEW</button>
-                <!-- 8. Data Feed Scrolling -->
-                <div class="data-feed">
-                    <div class="data-scroll">
-                        LSPD UPLINK #239–ACTIVE • DECODING GEO-PACKETS... • CITY NODES: 3 • DISTRICT ROUTE SYNC OK • FREQUENCY: 48.2 MHZ • SUSPECT LAST SEEN IN SECTOR 7G • SCANNING...
-                    </div>
-                </div>
             </div>
         </div>
 
