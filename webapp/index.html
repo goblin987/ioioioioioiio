@@ -377,25 +377,93 @@
         .district-item.vagos { border-left-color: #fb0; }
         .district-item.vagos:hover { background: #fb0; color: #000; border-left-color: #fff; }
 
-        /* --- GTA SA MAP THEME --- */
+        /* --- LSPD SURVEILLANCE MAP THEME --- */
         .map-container {
             overflow: hidden;
             position: relative;
             height: 400px;
-            /* Deep Ocean Blue Background */
-            background-color: #0e131a; 
-            /* Water Texture Effect */
-            background-image: radial-gradient(#151b24 2px, transparent 2px);
-            background-size: 30px 30px;
-            border: 4px solid #000;
-            /* Removed heavy vignette box-shadow for performance */
-            border: 4px solid #000;
+            /* Blueprint Grid Background */
+            background-color: #000500;
+            background-image: 
+                linear-gradient(rgba(0, 50, 0, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 50, 0, 0.15) 1px, transparent 1px);
+            background-size: 40px 40px;
+            border: 2px solid #333;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
         }
 
-        /* The Land Mass (Lithuania) */
+        /* CRT Scanline Overlay */
+        .map-container::before {
+            content: "LSPD SAT-LINK ACTIVE [REC]";
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: rgba(0, 255, 0, 0.7);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 20;
+            pointer-events: none;
+            animation: blinkText 2s infinite;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        .map-container::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Radar Sweep Animation */
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 200%;
+            transform: translate(-50%, -50%);
+            background: conic-gradient(
+                from 0deg, 
+                transparent 0deg, 
+                rgba(0, 255, 0, 0.05) 60deg, 
+                rgba(0, 255, 0, 0.2) 90deg, 
+                transparent 91deg
+            );
+            border-radius: 50%;
+            animation: radarSpin 4s linear infinite;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        @keyframes radarSpin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        @keyframes blinkText {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* The Land Mass (Lithuania) - Digital Outline */
         .map-img-interactive g {
-            /* Reduced drop shadow blur for performance */
-            filter: drop-shadow(0 5px 2px rgba(0,0,0,0.8));
+            fill: #0f1f0f;
+            stroke: #2a5c2a;
+            stroke-width: 20px;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 0, 0.1));
+            opacity: 0.8;
         }
 
         /* City Markers -> "Blips" */
@@ -418,22 +486,29 @@
             transition: 0.2s;
         }
 
-        /* The Yellow Square Blip (Shop/Objective) */
+        /* Pixel Art Icon Styles */
         .blip-icon {
-            width: 16px;
-            height: 16px;
-            background-color: #f0c330; /* GTA Gold */
-            border: 2px solid #000;
-            box-shadow: 0 0 4px #000;
-            margin-bottom: 4px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--gta-gold);
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            margin-bottom: 5px;
+            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+            pointer-events: auto;
             cursor: pointer;
-            pointer-events: auto; /* Ensure clickable */
-            transition: transform 0.2s;
         }
         
         .blip-icon:hover {
-            transform: scale(1.5);
-            background-color: #fff; /* Highlight on hover */
+            transform: scale(1.3);
+            background: var(--gta-gold);
+            border-color: #fff;
+            z-index: 30;
         }
 
         /* District Selection Modal (GTA SA Style) */
@@ -1268,19 +1343,22 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         </g>
                     </svg>
                     
+                    <!-- Radar Sweep -->
+                    <div class="radar-sweep"></div>
+
                     <!-- Styled Blips -->
                     <div class="district-marker" style="top: 75%; left: 70%;">
-                        <div class="blip-icon" onclick="zoomMap('Vilnius', 75, 70)"></div>
+                        <div class="blip-icon" onclick="zoomMap('Vilnius', 75, 70)">🔫</div>
                         VILNIUS
                     </div>
                     
                     <div class="district-marker" style="top: 65%; left: 50%;">
-                        <div class="blip-icon" onclick="zoomMap('Kaunas', 65, 50)"></div>
+                        <div class="blip-icon" onclick="zoomMap('Kaunas', 65, 50)">👕</div>
                         KAUNAS
                     </div>
                     
                     <div class="district-marker" style="top: 35%; left: 15%;">
-                        <div class="blip-icon" onclick="zoomMap('Klaipeda', 35, 15)"></div>
+                        <div class="blip-icon" onclick="zoomMap('Klaipeda', 35, 15)">🍔</div>
                         KLAIPEDA
                     </div>
                     
