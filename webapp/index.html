@@ -580,48 +580,41 @@
             pointer-events: none;
         }
 
-        /* High End Cinematic Smoke Transition */
         .smoke-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 100005;
             pointer-events: none;
             display: none;
-            overflow: hidden;
-            background: transparent; /* Base transparency */
         }
 
-        .smoke-layer {
+        .smoke-wall {
             position: absolute;
-            top: 50%; left: 50%;
-            width: 100vmax; height: 100vmax; /* Huge size */
-            /* Fallback color + Image */
-            background: radial-gradient(circle, rgba(200,200,200,0.2) 0%, transparent 70%), url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
-            background-size: contain;
-            opacity: 0;
-            mix-blend-mode: normal; /* Safer blending */
-            transform-origin: center;
-            will-change: transform, opacity;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: #fff;
+            transform: translateX(-100%);
+            filter: url(#smoke-filter);
+            mask-image: linear-gradient(to right, transparent 5%, black 40%, black 60%, transparent 95%);
+            -webkit-mask-image: linear-gradient(to right, transparent 5%, black 40%, black 60%, transparent 95%);
         }
 
-        /* Phase 1: Wipe IN (Cover Screen) */
-        @keyframes smokeWipeIn {
-            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
-            100% { opacity: 1; transform: translate(-50%, -50%) scale(2.5) rotate(20deg); } 
+        @keyframes wipeIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0%); }
         }
 
-        /* Phase 2: Wipe OUT (Reveal Next Scene) */
-        @keyframes smokeWipeOut {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(2.5) rotate(20deg); }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(4) rotate(40deg); }
+        @keyframes wipeOut {
+            from { transform: translateX(0%); }
+            to { transform: translateX(100%); }
         }
 
-        .smoke-active .smoke-layer {
-            animation: smokeWipeIn 1.5s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+        .smoke-active .smoke-wall {
+            animation: wipeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
-        
-        .smoke-dissipate .smoke-layer {
-            animation: smokeWipeOut 1.5s ease-out forwards;
+
+        .smoke-dissipate .smoke-wall {
+            animation: wipeOut 1s cubic-bezier(0.5, 0, 0.75, 0) forwards;
         }
 
         /* Video Bars */
@@ -833,11 +826,9 @@
     <div class="cinematic-bar bar-top"></div>
     <div class="cinematic-bar bar-bottom"></div>
 
-    <!-- High End Smoke Transition -->
+    <!-- Procedural Smoke Wipe -->
     <div id="smoke-overlay" class="smoke-container">
-        <div class="smoke-layer" style="transform: translate(-50%, -50%) rotate(0deg);"></div>
-        <div class="smoke-layer" style="transform: translate(-50%, -50%) rotate(120deg); animation-delay: 0.1s;"></div>
-        <div class="smoke-layer" style="transform: translate(-50%, -50%) rotate(240deg); animation-delay: 0.2s;"></div>
+        <div class="smoke-wall"></div>
     </div>
 
     <!-- Intro Screen (Main Menu) -->
@@ -1886,5 +1877,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Init
         loadProducts();
     </script>
+    <!-- SVG Filter for Smoke -->
+    <svg style="position: fixed; width: 0; height: 0; pointer-events: none;">
+        <filter id="smoke-filter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="5" result="warp" />
+            <feDisplacementMap xChannelSelector="R" yChannelSelector="G" scale="60" in="SourceGraphic" in2="warp" />
+        </filter>
+    </svg>
 </body>
 </html>
