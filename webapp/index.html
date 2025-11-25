@@ -562,19 +562,20 @@
         /* Smoke Transition (Improved) */
         .smoke-overlay {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 30%, rgba(255,255,255,0) 70%);
+            top: 50%; left: 50%;
+            width: 150vmax; height: 150vmax; /* Large enough to cover corners */
+            background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,0) 70%);
             opacity: 0;
             pointer-events: none;
             z-index: 100005;
-            transform: scale(0.1);
-            transition: transform 1.5s ease-in-out, opacity 1s ease-in-out;
+            transform: translate(-50%, -50%) scale(0.1);
+            transition: transform 2s ease-in, opacity 1.5s ease-in;
+            will-change: transform, opacity;
         }
         
         .smoke-active {
             opacity: 1;
-            transform: scale(3);
+            transform: translate(-50%, -50%) scale(1.2); /* Reduced scale for performance */
         }
 
         /* Cinematic Bars */
@@ -782,6 +783,9 @@
         
         <div class="menu-options">
             <button class="start-btn" onclick="startApp()">START GAME</button>
+        </div>
+        <div id="loading-bar-container" style="position:absolute; bottom:20px; left:5%; width:90%; height:8px; background:#333; border:1px solid #555; display:none; border-radius: 4px; overflow: hidden;">
+            <div id="loading-bar" style="width:0%; height:100%; background:#ccc; box-shadow: 0 0 10px #fff;"></div>
         </div>
     </div>
 
@@ -1201,16 +1205,26 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             cjVoice.volume = 1.0;
             cjVoice.play().catch(e => console.log("Voice blocked", e));
             
-            // 2. Trigger Smoke Transition
+            // 2. Trigger Smoke & Loading Bar
             const smoke = document.getElementById('smoke-overlay');
-            smoke.classList.add('smoke-active');
+            const loadBar = document.getElementById('loading-bar-container');
+            const loadFill = document.getElementById('loading-bar');
             
-            // 3. Wait for smoke to cover screen (1.5s) then swap
+            smoke.style.display = 'block'; // Ensure visible
+            setTimeout(() => smoke.classList.add('smoke-active'), 10);
+            
+            loadBar.style.display = 'block';
+            setTimeout(() => loadFill.style.width = '100%', 50); // Animate bar
+
+            // 3. Start Radio (Delayed 2.5s - Matches Video Start)
             setTimeout(() => {
-                // Hide Menu
+                 toggleRadio(true);
+            }, 2500);
+
+            // 4. Transition to Video (2s delay)
+            setTimeout(() => {
                 document.getElementById('intro-screen').style.opacity = '0';
                 
-                // Start Video
                 const vidContainer = document.getElementById('video-intro');
                 const vid = document.getElementById('intro-vid');
                 
@@ -1220,40 +1234,30 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
 
                 vidContainer.style.display = 'flex'; 
-                vid.muted = false;
-                vid.volume = 1.0;
-
-                // Cinematic Bars IN
+                vid.muted = true; // Force Mute (Radio is playing)
+                
+                // Cinematic Bars
                 document.body.classList.add('video-mode');
                 
                 vid.play().then(() => {
                     document.getElementById('video-loading').style.display = 'none';
-                    // Fade out smoke to reveal video
+                    
+                    // CLEANUP: Remove heavy smoke element from rendering
                     setTimeout(() => {
                          document.getElementById('intro-screen').style.display = 'none';
                          smoke.classList.remove('smoke-active');
+                         smoke.style.display = 'none'; // Force hide to save GPU
                     }, 500);
                 }).catch(e => {
-                    // Fallback muted
-                    vid.muted = true;
-                    vid.play().then(() => {
-                        document.getElementById('video-loading').style.display = 'none';
-                        setTimeout(() => {
-                             document.getElementById('intro-screen').style.display = 'none';
-                             smoke.classList.remove('smoke-active');
-                        }, 500);
-                    }).catch(e2 => {
-                         document.getElementById('play-overlay').style.display = 'block';
-                         smoke.classList.remove('smoke-active');
-                    });
+                    console.log("Video Play Error", e);
+                    document.getElementById('play-overlay').style.display = 'block';
                 });
                 
-                // 5. End Listener -> Start Radio
                 vid.onended = () => {
                     skipIntro();
                 };
 
-            }, 1500);
+            }, 2000); // Extended delay to enjoy smoke/loading
         }
 
         function forcePlayVideo() {
@@ -1277,6 +1281,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // Remove Cinematic Bars
             document.body.classList.remove('video-mode');
+            document.getElementById('loading-bar-container').style.display = 'none';
             
             // Start Radio when intro ends
             toggleRadio(true); // Force start radio
