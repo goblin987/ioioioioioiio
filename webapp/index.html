@@ -803,10 +803,16 @@
         <div class="wasted-text">WASTED</div>
     </div>
 
-    <div id="pre-loader">LOADING...</div>
+    <div id="pre-loader">LOADING SYSTEM...</div>
     <script>
         // Progressive Enhancement: Only show loader if JS is working
-        document.getElementById('pre-loader').style.display = 'flex';
+        var pl = document.getElementById('pre-loader');
+        pl.style.display = 'flex';
+        
+        // CRITICAL FAILSAFE: Force hide after 3s even if main JS crashes
+        setTimeout(function(){
+            pl.style.display = 'none';
+        }, 3000);
     </script>
 
     <!-- Cinematic Bars -->
