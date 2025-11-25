@@ -1238,16 +1238,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         };
 
         // Init
+        function hideLoader() {
+            const pl = document.getElementById('pre-loader');
+            if(pl && pl.style.display !== 'none') {
+                pl.style.opacity = '0';
+                setTimeout(() => pl.style.display = 'none', 500);
+            }
+        }
+
         window.onload = () => {
-            // Preload check simulation
-            setTimeout(() => {
-                const pl = document.getElementById('pre-loader');
-                if(pl) {
-                    pl.style.opacity = '0';
-                    setTimeout(() => pl.style.display = 'none', 500);
-                }
-            }, 1000);
+            hideLoader();
         };
+        
+        // Failsafe: Force hide loader after 3 seconds max
+        setTimeout(hideLoader, 3000);
 
         // Global Asset Preload
         const audioFx = new Audio('/webapp/ah_shit.mp3');
