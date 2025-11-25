@@ -1145,6 +1145,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
     <script>
         const tg = window.Telegram.WebApp;
+        
+        // Global Error Handler
+        window.onerror = function(msg, url, line, col, error) {
+            const grid = document.getElementById('product-grid');
+            if(grid && grid.innerHTML.includes('LOADING')) {
+                grid.innerHTML = '<div class="loading" style="color:red">CRITICAL ERROR<br><small>Line ' + line + ': ' + msg + '</small><br><button onclick="location.reload()" style="background:#333;color:#fff;border:1px solid #fff;padding:8px;cursor:pointer;">RELOAD APP</button></div>';
+            }
+            console.error('Global Error:', msg, line, error);
+            return false;
+        };
+        
         function log(msg) { 
             // Disabled
         }
@@ -1295,7 +1306,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         window.onload = () => {
-            log("Window Loaded");
             hideLoader();
             loadProducts(); // CRITICAL: Load Data
             try { sfx.init(); } catch(e) {} 
@@ -1303,11 +1313,19 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         // FORCE LOAD: Backup trigger if onload fails or is overwritten
         setTimeout(() => {
-            if(document.getElementById('product-grid').innerHTML.includes('LOADING')) {
-                log("Force loading products...");
+            const grid = document.getElementById('product-grid');
+            if(grid && grid.innerHTML.includes('LOADING')) {
                 loadProducts();
             }
-        }, 1000);
+        }, 2000); // Increased to 2s to ensure DOM is ready
+        
+        // NUCLEAR OPTION: Force load after 5s no matter what
+        setTimeout(() => {
+            const grid = document.getElementById('product-grid');
+            if(grid && grid.innerHTML.includes('LOADING')) {
+                grid.innerHTML = '<div class="loading" style="color:orange">TIMEOUT<br><button onclick="loadProducts()" style="background:#333;color:#fff;border:1px solid #fff;padding:8px;cursor:pointer;font-family:\'Pricedown\',serif;">FORCE LOAD</button></div>';
+            }
+        }, 5000);
         
         // Failsafe: Force hide loader after 3 seconds max
         setTimeout(hideLoader, 3000);
@@ -1915,8 +1933,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             return '📦';
         }
 
-        // Init
-        loadProducts();
+        // Init - Removed immediate call, using window.onload instead
     </script>
 </body>
 </html>
