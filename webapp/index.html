@@ -1003,6 +1003,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // --- Sound FX System (Synthesized) ---
         const sfx = {
             ctx: null,
+            // ... (keep sfx object)
             init: function() {
                 if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             },
@@ -1020,17 +1021,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 osc.start();
                 osc.stop(this.ctx.currentTime + duration);
             },
-            tick: function() { this.playTone(800, 'triangle', 0.05, 0.05); }, // Hover
-            select: function() { this.playTone(300, 'square', 0.1, 0.1); }, // Click
+            tick: function() { this.playTone(800, 'triangle', 0.05, 0.05); }, 
+            select: function() { this.playTone(300, 'square', 0.1, 0.1); }, 
             cash: function() { 
                 this.playTone(1200, 'sine', 0.1, 0.1); 
                 setTimeout(() => this.playTone(1600, 'sine', 0.2, 0.1), 100);
             },
-            wasted: function() { this.playTone(50, 'sawtooth', 1.0, 0.3); }, // Low drone
-            spray: function() {
-                // White noise is complex to synth efficiently without buffer, skipping for simple osc
-                this.playTone(400, 'sawtooth', 0.2, 0.05); // Pssht-ish
-            }
+            wasted: function() { this.playTone(50, 'sawtooth', 1.0, 0.3); },
+            spray: function() { this.playTone(400, 'sawtooth', 0.2, 0.05); }
         };
 
         // --- Day/Night Cycle ---
@@ -1042,28 +1040,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
-        // --- 3D Parallax (Gyro/Mouse) ---
-        document.addEventListener('mousemove', (e) => {
-            const cards = document.querySelectorAll('.product-card');
-            const x = (window.innerWidth / 2 - e.pageX) / 25;
-            const y = (window.innerHeight / 2 - e.pageY) / 25;
-            
-            cards.forEach(card => {
-                card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
-            });
-        });
-        
-        // Mobile Tilt
-        if (window.DeviceOrientationEvent) {
-            window.addEventListener("deviceorientation", function(event) {
-                const x = event.gamma / 5; // Left/Right
-                const y = event.beta / 5;  // Front/Back
-                const cards = document.querySelectorAll('.product-card');
-                cards.forEach(card => {
-                    card.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
-                });
-            }, true);
-        }
+        // 3D Tilt Disabled (Mobile Optimization)
+        // Graffiti Hunt Disabled (Optimization)
 
         // --- Cheat Codes ---
         let keyBuffer = "";
@@ -1100,47 +1078,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             document.body.style.filter = "none";
         }
 
-        // --- Graffiti Scavenger Hunt ---
-        let tagsFound = 0;
-        function initGraffiti() {
-            const container = document.getElementById('shop'); // Put in shop for now
-            const positions = [
-                {top: '10%', left: '80%'},
-                {top: '50%', left: '10%'},
-                {top: '90%', left: '90%'}
-            ];
-            
-            positions.forEach((pos, i) => {
-                const el = document.createElement('div');
-                el.className = 'graffiti';
-                el.style.top = pos.top;
-                el.style.left = pos.left;
-                el.innerText = "GROVE";
-                el.style.fontFamily = "Impact";
-                el.style.color = "#fff";
-                el.style.fontSize = "12px";
-                el.style.transform = `rotate(${Math.random()*40-20}deg)`;
-                
-                el.onclick = function() {
-                    if(this.classList.contains('found')) return;
-                    this.classList.add('found');
-                    sfx.spray();
-                    tagsFound++;
-                    charSystem.show('sweet', `${tagsFound}/3 TAGS!`);
-                    
-                    if(tagsFound === 3) {
-                        sfx.cash();
-                        charSystem.show('cj', "RESPECT + (ALL TAGS FOUND)");
-                        // Maybe give discount?
-                    }
-                };
-                container.appendChild(el);
-            });
-        }
-
+        // --- Graffiti Scavenger Hunt (Disabled for performance) ---
+        
         // --- Init New Systems ---
         checkDayNight();
-        // Call initGraffiti after products load
         
         // ... existing logic ...
 
@@ -1179,8 +1120,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             // 1. Fade out BIOS UI
             document.getElementById('intro-screen').style.opacity = '0';
             
-            // 2. Start Radio IMMEDIATELY (User Interaction)
-            toggleRadio();
+            // 2. Play "Ah Shit" Sound
+            const cjVoice = new Audio('/webapp/ah_shit.mp3');
+            cjVoice.volume = 1.0;
+            cjVoice.play().catch(e => console.log("Voice blocked", e));
             
             // 3. Start Video IMMEDIATELY
             const vidContainer = document.getElementById('video-intro');
@@ -1188,34 +1131,22 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // Check if error already occurred
             if(vid.error) {
-                console.log("Video Error Pre-Check:", vid.error);
                 skipIntro(true);
                 return;
             }
 
-            // Error Handler (Fix for Black Screen)
-            vid.onerror = function() {
-                console.log("Video Load Error:", vid.error);
-                skipIntro(true); 
-            };
-
-            vidContainer.style.display = 'flex'; // Changed from block to flex for centering text
-            // Try unmuted first, but video tag has 'muted' as fallback
+            vidContainer.style.display = 'flex'; 
+            // Try unmuted first
             vid.muted = false;
             vid.volume = 1.0;
             
-            // Attempt play
             vid.play().then(() => {
                 document.getElementById('video-loading').style.display = 'none';
             }).catch(e => {
-                console.log("Video Autoplay Blocked (Unmuted):", e);
-                // Retry with muted
                 vid.muted = true;
                 vid.play().then(() => {
                      document.getElementById('video-loading').style.display = 'none';
-                     console.log("Playing Muted");
                 }).catch(e2 => {
-                    console.log("Video Autoplay Blocked (Muted):", e2);
                     document.getElementById('video-loading').style.display = 'none';
                     document.getElementById('play-overlay').style.display = 'block';
                 });
@@ -1226,7 +1157,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 document.getElementById('intro-screen').style.display = 'none';
             }, 1000);
             
-            // 5. End Listener
+            // 5. End Listener -> Start Radio
             vid.onended = () => {
                 skipIntro();
             };
@@ -1251,6 +1182,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const vid = document.getElementById('intro-vid');
             if(!vid.paused) vid.pause();
             
+            // Start Radio when intro ends
+            toggleRadio(true); // Force start radio
+
             if(immediate) {
                  vidContainer.style.display = 'none';
                  showSection('shop');
@@ -1265,7 +1199,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             setTimeout(() => {
                 vidContainer.style.display = 'none';
                 showSection('shop'); 
-                // Trigger CJ Welcome
                 charSystem.show('cj', "WELCOME TO THE SHOP!");
             }, 1000);
         }
@@ -1292,9 +1225,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // SomaFM Streams (Reliable HTTPS)
         const stations = [
             { name: "RADIO OFF", src: null },
-            { name: "GROOVE SALAD", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, // Downtempo
-            { name: "SECRET AGENT", src: "https://ice2.somafm.com/secretagent-128-mp3" }, // Spy/Lounge
-            { name: "DEF CON", src: "https://ice2.somafm.com/defcon-128-mp3" } // Electronic
+            { name: "RADIO LOS SANTOS", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, // Rebranded Groove Salad
+            { name: "K-JAH WEST", src: "https://ice2.somafm.com/secretagent-128-mp3" }, // Rebranded Secret Agent
+            { name: "SF-UR", src: "https://ice2.somafm.com/defcon-128-mp3" } // Electronic
         ];
         let audioPlayer = null;
 
@@ -1420,15 +1353,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         // Radio - Native HTML5 Audio
-        function toggleRadio() {
-            // Stop previous
-            if(audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer.src = "";
-                audioPlayer = null;
+        function toggleRadio(forceStart = false) {
+            if(!forceStart) {
+                // Stop previous
+                if(audioPlayer) {
+                    audioPlayer.pause();
+                    audioPlayer.src = "";
+                    audioPlayer = null;
+                }
+                currentStation = (currentStation + 1) % stations.length;
+            } else {
+                // Start at station 1 (Los Santos)
+                currentStation = 1;
             }
 
-            currentStation = (currentStation + 1) % stations.length;
             const station = stations[currentStation];
             const widget = document.querySelector('.radio-widget');
             
@@ -1438,24 +1376,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
             if(station.src) {
                 try {
+                    if(audioPlayer) { audioPlayer.pause(); } // Safety check
                     audioPlayer = new Audio(station.src);
                     audioPlayer.crossOrigin = "anonymous";
                     audioPlayer.volume = 0.5;
                     
                     const playPromise = audioPlayer.play();
                     if (playPromise !== undefined) {
-                        playPromise.then(_ => {
-                            // Autoplay started!
-                        }).catch(error => {
+                        playPromise.catch(error => {
                             console.log("Radio Play Blocked: " + error);
-                            document.querySelector('.radio-text').innerText = "❌ SIGNAL BLOCKED";
                         });
                     }
-                    
-                    audioPlayer.onerror = function() {
-                        console.log("Stream Error");
-                        document.querySelector('.radio-text').innerText = "❌ SIGNAL LOST";
-                    };
                 } catch(e) {
                     console.log("Audio Error: " + e);
                 }
