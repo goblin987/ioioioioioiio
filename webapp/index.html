@@ -597,7 +597,7 @@
             background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%); /* Fallback if img fails */
             background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
             background-size: contain;
-            opacity: 0;
+            opacity: 0.5; /* Debug: Visible by default */
             transform: translate(-50%, -50%) scale(0.5);
             will-change: transform, opacity; /* GPU Hint */
         }
@@ -1504,19 +1504,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         async function loadProducts() {
+            log("loadProducts started");
             try {
                 const response = await fetch('/webapp/api/products');
+                log("fetch response: " + response.status);
                 const data = await response.json();
+                log("data success: " + data.success);
                 if(data.success) {
                     allProducts = data.products;
+                    log("Products count: " + allProducts.length);
                     renderProducts(allProducts);
                     renderFilters(allProducts);
-                    updateStars(Math.floor(Math.random() * 6)); // Mock stars for now
+                    updateStars(Math.floor(Math.random() * 6)); 
                 } else {
-                    document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR</div>';
+                    log("API Error: " + (data.error || "Unknown"));
+                    document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR: ' + (data.error || "Unknown") + '</div>';
                 }
             } catch (e) {
-                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">OFFLINE</div>';
+                log("Fetch Error: " + e);
+                document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">OFFLINE: ' + e + '</div>';
             }
         }
 
