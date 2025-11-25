@@ -798,6 +798,8 @@
     </style>
 </head>
 <body>
+    <!-- DEBUG LOGGER -->
+    <div id="debug-log" style="position:fixed; top:0; right:0; background:rgba(0,0,0,0.8); color:lime; font-family:monospace; z-index:999999; font-size:10px; max-width:200px; pointer-events:none; height:100px; overflow:hidden;"></div>
     <!-- Wasted Overlay -->
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
         <div class="wasted-text">WASTED</div>
@@ -1145,6 +1147,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
     <script>
         const tg = window.Telegram.WebApp;
+        function log(msg) { 
+            const d = document.getElementById('debug-log');
+            if(d) d.innerHTML = `[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}<br>` + d.innerHTML;
+            console.log(msg);
+        }
+        log("App Init Started");
         tg.expand();
         tg.MainButton.hide();
         
@@ -1287,6 +1295,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         audioFx.preload = 'auto';
 
         function startApp() {
+            log("startApp called");
             try {
                 const btn = document.querySelector('.start-btn');
                 if(btn) {
@@ -1302,35 +1311,45 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     smoke.style.display = 'block';
                     void smoke.offsetWidth;
                     smoke.classList.add('smoke-active');
+                    log("Smoke active");
+                } else {
+                    log("Smoke NOT found");
                 }
 
                 // 2. Audio
                 audioFx.volume = 1.0;
                 const p = audioFx.play();
                 if(p !== undefined) {
-                    p.catch(e => console.log("Audio block:", e));
+                    p.catch(e => log("Audio error: " + e));
                 }
+                log("Audio requested");
 
                 // 3. Video Prep
                 const vid = document.getElementById('intro-vid');
                 if(vid) {
                     vid.muted = true;
                     vid.preload = "auto";
+                    log("Video prepped");
+                } else {
+                    log("Video element NOT found!");
                 }
 
                 // 4. Transition
+                log("Scheduling transition in 2.5s");
                 setTimeout(performTransition, 2500);
 
             } catch (err) {
-                console.error("Start Crash:", err);
+                log("Start Crash: " + err);
                 skipIntro(true);
             }
         }
 
         function performTransition() {
+            log("performTransition called");
             try {
                 // Start Radio
                 toggleRadio(true);
+                log("Radio toggled");
 
                 // Hide Menu
                 const menu = document.getElementById('intro-screen');
@@ -1341,16 +1360,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const vid = document.getElementById('intro-vid');
                 
                 if (!vid || vid.error) {
+                    log("Video error/missing, skipping");
+                    skipIntro(true);
+                    return;
+                }
+                
+                if(!vidContainer) {
+                    log("Video CONTAINER missing!");
                     skipIntro(true);
                     return;
                 }
 
                 vidContainer.style.display = 'flex';
                 document.body.classList.add('video-mode');
+                log("Video container shown");
 
                 const playPromise = vid.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
+                        log("Video playing");
                         const loader = document.getElementById('video-loading');
                         if(loader) loader.style.display = 'none';
                         
@@ -1366,7 +1394,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                             }, 1500);
                         }
                     }).catch(error => {
-                        console.log("Video Play Failed:", error);
+                        log("Video Play Fail: " + error);
                         const smoke = document.getElementById('smoke-overlay');
                         if(smoke) smoke.style.display = 'none';
                         const po = document.getElementById('play-overlay');
@@ -1374,10 +1402,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     });
                 }
                 
-                vid.onended = () => skipIntro();
+                vid.onended = () => {
+                    log("Video ended");
+                    skipIntro();
+                };
 
             } catch (e) {
-                console.error("Transition Error:", e);
+                log("Transition Error: " + e);
                 skipIntro(true);
             }
         }
@@ -1397,6 +1428,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
         
         function skipIntro(immediate = false) {
+            log(`skipIntro called (immediate=${immediate})`);
             const vidContainer = document.getElementById('video-intro');
             const vid = document.getElementById('intro-vid');
             if(vid && !vid.paused) vid.pause();
