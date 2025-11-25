@@ -10,7 +10,7 @@
     <style>
         @font-face {
             font-family: 'Pricedown';
-            src: url('https://db.onlinewebfonts.com/t/5799b47862f27227c47c4827594d4068.woff2') format('woff2');
+            src: url('/webapp/pricedown.woff') format('woff');
         }
         
         :root {
@@ -40,7 +40,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* Reliable Wikimedia Image */
             background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Los_Angeles_from_Griffith_Observatory.jpg/1280px-Los_Angeles_from_Griffith_Observatory.jpg');
             background-size: cover;
             background-position: center;
@@ -172,9 +171,10 @@
             border-radius: 0;
             padding: 10px;
             text-align: center;
-            transition: 0.2s;
+            transition: transform 0.2s;
             position: relative;
             overflow: hidden;
+            /* Removed expensive shadow on idle state */
         }
 
         .product-card:hover {
@@ -304,13 +304,14 @@
             background-image: radial-gradient(#151b24 2px, transparent 2px);
             background-size: 30px 30px;
             border: 4px solid #000;
-            box-shadow: inset 0 0 150px #000; /* Heavy Vignette */
+            /* Removed heavy vignette box-shadow for performance */
+            border: 4px solid #000;
         }
 
         /* The Land Mass (Lithuania) */
         .map-img-interactive g {
-            /* Drop shadow to separate land from water */
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
+            /* Reduced drop shadow blur for performance */
+            filter: drop-shadow(0 5px 2px rgba(0,0,0,0.8));
         }
 
         /* City Markers -> "Blips" */
@@ -340,7 +341,7 @@
             background-color: #f0c330; /* GTA Gold */
             border: 2px solid #000;
             margin-bottom: 5px;
-            box-shadow: 0 0 8px rgba(240, 195, 48, 0.6);
+            box-shadow: 0 0 4px rgba(240, 195, 48, 0.6); /* Reduced spread */
             transition: transform 0.2s;
             cursor: pointer;
             pointer-events: auto;
@@ -567,21 +568,21 @@
             background: var(--gta-green);
         }
 
-        /* Character Overlay */
+        /* Character Overlay - OPTIMIZED */
         .char-overlay {
             position: fixed;
             bottom: 0; 
             right: 0; 
-            width: 350px; /* Larger character container */
+            width: 350px;
             height: 500px;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: bottom right;
             z-index: 9000;
             transform: translateX(100%); 
-            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); /* Smooth Ease-Out */
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
             pointer-events: none;
-            filter: drop-shadow(-10px 0 20px rgba(0,0,0,0.6)); /* Cinematic Shadow */
+            /* Removed expensive filter: drop-shadow */
         }
         
         .char-visible {
@@ -590,7 +591,7 @@
         
         .char-bubble {
             position: absolute;
-            bottom: 300px; /* Positioned near head */
+            bottom: 300px; 
             right: 50px; 
             width: auto;
             background: transparent;
@@ -598,13 +599,13 @@
             color: var(--gta-gold);
             padding: 0;
             font-family: 'Pricedown', sans-serif;
-            font-size: 48px; /* HUGE GTA FONT */
+            font-size: 48px;
             line-height: 0.9;
-            text-shadow: 3px 3px 0 #000; /* Hard Shadow */
-            -webkit-text-stroke: 1px #000; /* Outline */
+            text-shadow: 3px 3px 0 #000; /* Keep hard shadow, cheap */
+            -webkit-text-stroke: 1px #000;
             opacity: 0;
             transform: scale(0.5) rotate(-5deg);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: opacity 0.4s, transform 0.4s; /* Removed complex bezier for performance */
             pointer-events: auto;
             text-align: right;
         }
@@ -615,14 +616,14 @@
             transition-delay: 0.3s;
         }
 
-        /* Cinematic Video Frame */
+        /* Cinematic Video Frame - OPTIMIZED */
         .video-frame-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.9); /* Heavy Vignette */
             z-index: 3;
             pointer-events: none;
-            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+            /* Replaced box-shadow with cheaper gradient */
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.9) 100%);
         }
 
         /* Animations */
