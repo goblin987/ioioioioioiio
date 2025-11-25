@@ -593,19 +593,21 @@
         .smoke-puff {
             position: absolute;
             top: 50%; left: 50%;
-            width: 400px; height: 400px; /* Reduced for stability */
+            width: 300px; height: 300px; /* Smaller for performance */
+            background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%); /* Fallback if img fails */
             background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png') no-repeat center center;
             background-size: contain;
             opacity: 0;
             transform: translate(-50%, -50%) scale(0.5);
+            will-change: transform, opacity; /* GPU Hint */
         }
 
         /* Keyframes for dense smoke fill */
         @keyframes smokeFill {
             0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 0; }
             20% { opacity: 0.8; }
-            50% { transform: translate(-50%, -50%) scale(2) rotate(45deg); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(4) rotate(90deg); opacity: 0; } /* Fade out at end */
+            50% { transform: translate(-50%, -50%) scale(1.5) rotate(45deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(3) rotate(90deg); opacity: 0; } /* Reduced max scale */
         }
 
         .smoke-active .smoke-puff {
@@ -1298,7 +1300,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         window.onload = () => {
+            log("Window Loaded");
             hideLoader();
+            loadProducts(); // CRITICAL: Load Data
+            try { sfx.init(); } catch(e) {} 
         };
         
         // Failsafe: Force hide loader after 3 seconds max
