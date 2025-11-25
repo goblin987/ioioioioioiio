@@ -492,7 +492,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
             background: #000;
             z-index: 200000;
-            display: flex;
+            display: none; /* Default hidden (Fail-Open) */
             align-items: center;
             justify-content: center;
             font-family: 'Impact', sans-serif;
@@ -804,6 +804,10 @@
     </div>
 
     <div id="pre-loader">LOADING...</div>
+    <script>
+        // Progressive Enhancement: Only show loader if JS is working
+        document.getElementById('pre-loader').style.display = 'flex';
+    </script>
 
     <!-- Cinematic Bars -->
     <div class="cinematic-bar bar-top"></div>
@@ -1261,17 +1265,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             try {
                 const btn = document.querySelector('.start-btn');
                 if(btn) {
-                    // Flash White (Authentic)
+                    // Flash White
                     btn.style.color = "#fff";
                     btn.style.textShadow = "0 0 20px #fff";
                     btn.style.pointerEvents = "none"; 
                 }
 
-                // 1. Smoke ON (Instant)
+                // 1. Smoke ON
                 const smoke = document.getElementById('smoke-overlay');
                 if(smoke) {
                     smoke.style.display = 'block';
-                    void smoke.offsetWidth; // Force Reflow
+                    void smoke.offsetWidth;
                     smoke.classList.add('smoke-active');
                 }
 
@@ -1307,7 +1311,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const menu = document.getElementById('intro-screen');
                 if(menu) menu.style.opacity = '0';
 
-                // Show Video
+                // Setup Video
                 const vidContainer = document.getElementById('video-intro');
                 const vid = document.getElementById('intro-vid');
                 
@@ -1322,7 +1326,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const playPromise = vid.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
-                        document.getElementById('video-loading').style.display = 'none';
+                        const loader = document.getElementById('video-loading');
+                        if(loader) loader.style.display = 'none';
                         
                         // Fade Out Smoke
                         const smoke = document.getElementById('smoke-overlay');
@@ -1337,10 +1342,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         }
                     }).catch(error => {
                         console.log("Video Play Failed:", error);
-                        // Hide smoke on error
                         const smoke = document.getElementById('smoke-overlay');
                         if(smoke) smoke.style.display = 'none';
-                        document.getElementById('play-overlay').style.display = 'block';
+                        const po = document.getElementById('play-overlay');
+                        if(po) po.style.display = 'block';
                     });
                 }
                 
