@@ -1459,6 +1459,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         async function loadProducts() {
+            const grid = document.getElementById('product-grid');
+            
             // CACHE STRATEGY: Instant Load
             const cached = localStorage.getItem('shop_cache');
             if(cached) {
@@ -1466,38 +1468,42 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     const cData = JSON.parse(cached);
                     if(cData && cData.length > 0) {
                         allProducts = cData;
+                        grid.innerHTML = ''; // Clear loading immediately
                         renderProducts(allProducts);
                         renderFilters(allProducts);
                     }
-                } catch(e) { console.log(e); }
+                } catch(e) { 
+                    console.log("Cache error:", e);
+                    localStorage.removeItem('shop_cache'); // Clear bad cache
+                }
             }
 
             const loader = document.getElementById('stock-loader');
-            if(loader && !cached) loader.innerHTML = "SYNCING..."; // Only show if no cache
+            if(loader && !cached) loader.innerHTML = "SYNCING...";
             
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s Timeout
+                const timeoutId = setTimeout(() => controller.abort(), 4000);
                 
                 const response = await fetch('/webapp/api/products', { signal: controller.signal });
                 clearTimeout(timeoutId);
                 
                 const data = await response.json();
                 
-                if(data.success) {
-                    // Update Cache
+                if(data.success && data.products) {
                     localStorage.setItem('shop_cache', JSON.stringify(data.products));
                     
                     allProducts = data.products;
+                    grid.innerHTML = ''; // Clear before render
                     renderProducts(allProducts);
                     renderFilters(allProducts);
                     updateStars(Math.floor(Math.random() * 6)); 
                 } else {
-                    if(!cached) document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">ERROR: ' + (data.error || "Unknown") + '</div>';
+                    if(!cached) grid.innerHTML = '<div class="loading" style="color:red">NO DATA</div>';
                 }
             } catch (e) {
-                console.error(e);
-                if(!cached) document.getElementById('product-grid').innerHTML = '<div class="loading" style="color:red">OFFLINE<br><button onclick="loadProducts()">RETRY</button></div>';
+                console.error("Fetch error:", e);
+                if(!cached) grid.innerHTML = '<div class="loading" style="color:red">OFFLINE<br><button onclick="loadProducts()" style="background:#333;color:#fff;border:1px solid #fff;padding:8px 16px;cursor:pointer;font-family:\'Pricedown\',serif;">RETRY</button></div>';
             }
         }
 
@@ -1505,6 +1511,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             console.log("Render Products v2.1 - Strict Cleaning");
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
+            
+            if(!products || products.length === 0) {
+                grid.innerHTML = '<div class="loading">NO PRODUCTS AVAILABLE</div>';
+                return;
+            }
             
             // Group products by Cleaned Name + Type + City + Size + Price
             const groups = {};
