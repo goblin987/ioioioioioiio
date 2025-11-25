@@ -938,27 +938,34 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         // --- Intro Logic ---
         function startApp() {
-            // 1. Fade out BIOS
+            // 1. Fade out BIOS UI
             document.getElementById('intro-screen').style.opacity = '0';
+            
+            // 2. Start Radio IMMEDIATELY (User Interaction)
+            toggleRadio();
+            
+            // 3. Start Video IMMEDIATELY
+            const vidContainer = document.getElementById('video-intro');
+            const vid = document.getElementById('intro-vid');
+            
+            vidContainer.style.display = 'block';
+            vid.volume = 1.0;
+            
+            // Attempt play
+            vid.play().catch(e => {
+                console.log("Video Autoplay Blocked:", e);
+                skipIntro(); // Fail gracefully
+            });
+            
+            // 4. Cleanup BIOS after fade
             setTimeout(() => {
                 document.getElementById('intro-screen').style.display = 'none';
-                
-                // 2. Play Video
-                const vidContainer = document.getElementById('video-intro');
-                const vid = document.getElementById('intro-vid');
-                
-                vidContainer.style.display = 'block';
-                vid.volume = 0.5; // Moderate volume
-                vid.play().catch(e => {
-                    console.log("Auto-play failed", e);
-                    skipIntro(); // Fallback if blocked
-                });
-                
-                // 3. Listen for end
-                vid.onended = () => {
-                    skipIntro();
-                };
             }, 1000);
+            
+            // 5. End Listener
+            vid.onended = () => {
+                skipIntro();
+            };
         }
         
         function skipIntro() {
