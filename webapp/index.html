@@ -1989,24 +1989,53 @@
             display: block;
         }
 
-        /* --- BURNER PHONE UI --- */
+        /* --- BURNER PHONE UI (UPGRADED) --- */
         .phone-container {
             position: fixed;
-            bottom: -100%; left: 50%;
+            bottom: -120%; left: 50%;
             transform: translateX(-50%);
             width: 320px;
-            height: 600px;
-            background: #1a1a1a;
-            border-radius: 20px 20px 0 0;
-            border: 4px solid #333;
+            height: 640px;
+            background: #111;
+            border-radius: 25px 25px 0 0;
+            /* 3D Depth Bevels */
+            border: 5px solid #222;
+            border-right: 8px solid #000;
             border-bottom: none;
-            box-shadow: 0 -10px 50px rgba(0,0,0,1);
+            box-shadow: 
+                inset 5px 0 10px rgba(255,255,255,0.05),
+                inset -5px 0 10px rgba(0,0,0,0.8),
+                0 -20px 60px rgba(0,0,0,1);
             z-index: 20000;
             transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex;
             flex-direction: column;
-            padding: 25px;
+            padding: 20px;
+            padding-top: 40px; /* Space for speaker */
             box-sizing: border-box;
+        }
+        
+        .phone-container::before {
+            /* Antenna Stub */
+            content: '';
+            position: absolute;
+            top: -30px; right: 20px;
+            width: 25px; height: 40px;
+            background: #111;
+            border-radius: 5px 5px 0 0;
+            border: 4px solid #222;
+            border-bottom: none;
+            z-index: -1;
+        }
+        
+        .phone-speaker {
+            position: absolute;
+            top: 15px; left: 50%;
+            transform: translateX(-50%);
+            width: 60px; height: 8px;
+            background: repeating-linear-gradient(90deg, #000, #000 2px, #444 2px, #444 3px);
+            border-radius: 4px;
+            border: 1px solid #000;
         }
         
         .phone-container.active {
@@ -2021,26 +2050,40 @@
         }
         
         .phone-screen {
-            background: #9ea718; /* Retro LCD Green */
-            border: 6px solid #000;
-            border-radius: 8px;
+            background: #8b9616; /* Richer LCD Green */
+            border: 8px solid #000;
+            border-radius: 6px;
             height: 240px;
-            padding: 8px;
+            padding: 10px;
             font-family: 'Courier New', monospace;
-            color: #000;
+            color: #111;
             display: flex;
             flex-direction: column;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.4);
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.6),
+                0 0 0 2px #333; /* Plastic rim */
             position: relative;
             overflow: hidden;
         }
         
-        /* Scanlines on phone screen */
+        /* Screen Backlight Flicker & Scanlines */
         .phone-screen::after {
             content: '';
             position: absolute; top:0; left:0; width:100%; height:100%;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05), rgba(0,0,0,0.05) 1px, transparent 1px, transparent 2px);
+            background: 
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.08), rgba(0,0,0,0.08) 1px, transparent 1px, transparent 2px),
+                radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 80%);
             pointer-events: none;
+            animation: screenFlicker 4s infinite;
+        }
+        
+        @keyframes screenFlicker {
+            0% { opacity: 0.9; }
+            95% { opacity: 0.9; }
+            96% { opacity: 0.8; }
+            97% { opacity: 0.95; }
+            98% { opacity: 0.85; }
+            100% { opacity: 0.9; }
         }
         
         .status-bar {
@@ -2048,19 +2091,21 @@
             justify-content: space-between;
             font-size: 12px;
             font-weight: bold;
-            border-bottom: 2px solid #000;
+            border-bottom: 2px solid #111;
             padding-bottom: 4px;
             margin-bottom: 8px;
+            opacity: 0.8;
         }
         
         .screen-header {
-            background: #000;
-            color: #9ea718;
+            background: #111;
+            color: #8b9616;
             text-align: center;
             font-weight: bold;
             font-size: 16px;
             margin-bottom: 8px;
             padding: 2px 0;
+            text-transform: uppercase;
         }
         
         .contact-list {
@@ -2080,12 +2125,11 @@
             font-size: 14px;
             font-weight: bold;
             border: 1px solid transparent;
-            transition: background 0.1s;
         }
         
-        .contact-item:hover {
-            background: #000;
-            color: #9ea718;
+        .contact-item:hover, .contact-item.selected {
+            background: #111;
+            color: #8b9616;
         }
         
         .contact-item .signal {
@@ -2093,11 +2137,42 @@
             font-weight: normal;
         }
         
+        .dialing-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            display: none; /* Hidden by default */
+        }
+        
+        .dialing-screen.active {
+            display: flex;
+        }
+        
+        .dial-text {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            animation: blink 1s infinite;
+        }
+        
+        .dial-number {
+            font-size: 24px;
+            letter-spacing: 2px;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
         .phone-keypad {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
         }
         
         .key-row {
@@ -2108,58 +2183,64 @@
         
         .key-btn {
             flex: 1;
-            background: #ddd;
+            background: linear-gradient(to bottom, #ddd, #bbb);
             color: #000;
             padding: 12px 0;
             text-align: center;
-            border-radius: 5px;
+            border-radius: 8px;
             font-weight: bold;
             font-family: sans-serif;
             cursor: pointer;
-            border-bottom: 4px solid #999;
+            border-bottom: 4px solid #888;
+            box-shadow: 0 4px 5px rgba(0,0,0,0.3);
             font-size: 14px;
+            transition: transform 0.05s;
         }
         
         .key-btn.call {
-            background: #4caf50;
+            background: linear-gradient(to bottom, #66bb6a, #43a047);
             color: #fff;
             border-bottom-color: #2e7d32;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
         
         .key-btn.end {
-            background: #d32f2f;
+            background: linear-gradient(to bottom, #ef5350, #e53935);
             color: #fff;
             border-bottom-color: #b71c1c;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
         
         .key-btn:active {
-            transform: translateY(2px);
-            border-bottom-width: 2px;
+            transform: translateY(4px);
+            border-bottom-width: 0px;
+            box-shadow: none;
         }
         
         .key-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 8px;
         }
         
         .num-key {
-            background: #333;
+            background: linear-gradient(to bottom, #333, #222);
             color: #fff;
             text-align: center;
             padding: 10px 0;
-            border-radius: 4px;
+            border-radius: 6px;
             font-family: sans-serif;
             font-weight: bold;
             border-bottom: 3px solid #000;
             cursor: pointer;
             font-size: 18px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         .num-key:active {
-            transform: translateY(2px);
-            border-bottom-width: 1px;
+            transform: translateY(3px);
+            border-bottom-width: 0px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
         }
-    </style>
 </head>
 <body>
     <!-- Wasted Overlay -->
@@ -3762,8 +3843,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const phone = document.getElementById('burner-phone');
             const list = document.getElementById('phone-contacts');
             const header = document.getElementById('phone-header');
+            const dialScreen = document.getElementById('dialing-screen');
             
             if(!phone || !list) return;
+            
+            // Reset UI state
+            if(dialScreen) dialScreen.classList.remove('active');
+            if(list) list.style.display = 'flex';
+            if(header) header.style.display = 'block';
             
             if(header) header.innerText = city.toUpperCase();
             list.innerHTML = '';
@@ -3788,6 +3875,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             phone.classList.add('active');
             if(window.sfx) sfx.tick();
+            updatePhoneTime();
+        }
+        
+        function updatePhoneTime() {
+             const t = new Date();
+             const span = document.getElementById('phone-time');
+             if(span) span.innerText = t.getHours().toString().padStart(2, '0') + ":" + t.getMinutes().toString().padStart(2, '0');
         }
         
         function addPhoneContact(city, name, bars) {
@@ -3799,31 +3893,92 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             for(let i=0; i<5; i++) {
                 signalStr += i < bars ? "|" : ".";
             }
+            // Darker text for better visibility on green screen
+            const color = bars > 0 ? '#111' : '#555'; 
             
             item.innerHTML = `
                 <span>${name.toUpperCase()}</span>
-                <span class="signal" style="font-weight:bold;">[${signalStr}]</span>
+                <span class="signal" style="color:${color}; font-weight:bold;">[${signalStr}]</span>
             `;
             
             item.onclick = () => {
                 if(window.sfx) sfx.select();
-                // Simulate dialing delay
-                setTimeout(() => {
-                    closeBurnerPhone();
-                    resetSatelliteView(); // Ensure map resets
-                    showSection('shop');
-                    filterProducts(city, name === "ALL ZONES" ? null : name);
-                    if(window.charSystem) charSystem.show('cj', `CALLING ${name.toUpperCase()}...`);
-                }, 300);
+                simulateCall(city, name);
             };
             
             list.appendChild(item);
         }
 
+        function simulateCall(city, districtName) {
+            const contacts = document.getElementById('phone-contacts');
+            const header = document.getElementById('phone-header');
+            const dialScreen = document.getElementById('dialing-screen');
+            const dialStatus = document.getElementById('dial-status');
+            const dialNum = document.getElementById('dial-number');
+            
+            // 1. Hide Contacts
+            if(contacts) contacts.style.display = 'none';
+            if(header) header.style.display = 'none';
+            
+            // 2. Show Dialing
+            if(dialScreen) dialScreen.classList.add('active');
+            if(dialStatus) {
+                dialStatus.innerText = "DIALING...";
+                dialStatus.style.color = "#111";
+                dialStatus.style.animation = "blink 1s infinite";
+            }
+            
+            // Generate fake number
+            const prefix = "555";
+            const suffix = Math.floor(1000 + Math.random() * 9000);
+            if(dialNum) dialNum.innerText = `${prefix}-${suffix}`;
+            
+            // Play ringing sound loop
+            let rings = 0;
+            const ringInterval = setInterval(() => {
+                if(window.sfx) sfx.tick();
+                rings++;
+                if(rings >= 4) clearInterval(ringInterval);
+            }, 800);
+            
+            // 3. Connect
+            setTimeout(() => {
+                clearInterval(ringInterval);
+                if(dialStatus) {
+                    dialStatus.innerText = "CONNECTED";
+                    dialStatus.style.animation = 'none';
+                }
+                if(window.sfx) sfx.select();
+                
+                // 4. Transition to Shop
+                setTimeout(() => {
+                    closeBurnerPhone();
+                    resetSatelliteView();
+                    showSection('shop');
+                    filterProducts(city, districtName === "ALL ZONES" ? null : districtName);
+                    
+                    if(window.charSystem) charSystem.show('cj', `CONNECTED TO ${districtName.toUpperCase()}.`);
+                    
+                }, 1000);
+                
+            }, 2500); 
+        }
+
+        function handleKey(key) {
+            if(window.sfx) sfx.tick();
+            // Future: Cheat Code Implementation
+            console.log("Key pressed:", key);
+        }
+        
+        function endCall() {
+             closeBurnerPhone();
+             resetSatelliteView();
+        }
+
         function closeBurnerPhone() {
             const phone = document.getElementById('burner-phone');
             if(phone) phone.classList.remove('active');
-            // Only trigger reset if we are still zoomed (e.g. "END" button pressed)
+            // Only trigger reset if we are still zoomed
             if(isZoomed) resetSatelliteView();
         }
         
@@ -3832,31 +3987,39 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
     </script>
     <!-- BURNER PHONE UI -->
     <div id="burner-phone" class="phone-container">
+        <div class="phone-speaker"></div>
         <div class="phone-body">
             <div class="phone-screen">
                 <div class="status-bar">
-                    <span>📶 4G</span>
+                    <span>📶 LTE</span>
                     <span id="phone-time">12:00</span>
-                    <span>🔋</span>
+                    <span>🔋 98%</span>
                 </div>
+                
+                <!-- View: Contacts -->
                 <div class="screen-header" id="phone-header">CONTACTS</div>
                 <div class="contact-list" id="phone-contacts">
                     <!-- Contacts go here -->
+                </div>
+                
+                <!-- View: Dialing -->
+                <div id="dialing-screen" class="dialing-screen">
+                    <div class="dial-text" id="dial-status">DIALING...</div>
+                    <div class="dial-number" id="dial-number">555-0192</div>
                 </div>
             </div>
             <div class="phone-keypad">
                 <div class="key-row">
                     <div class="key-btn call" onclick="if(window.sfx) sfx.select()">CALL</div>
-                    <div class="key-btn end" onclick="closeBurnerPhone()">END</div>
+                    <div class="key-btn end" onclick="endCall()">END</div>
                 </div>
                 <div class="key-grid">
-                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">1</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">2</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">3</div>
-                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">4</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">5</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">6</div>
-                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">7</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">8</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">9</div>
-                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">*</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">0</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">#</div>
+                    <div class="num-key" onclick="handleKey('1')">1</div><div class="num-key" onclick="handleKey('2')">2</div><div class="num-key" onclick="handleKey('3')">3</div>
+                    <div class="num-key" onclick="handleKey('4')">4</div><div class="num-key" onclick="handleKey('5')">5</div><div class="num-key" onclick="handleKey('6')">6</div>
+                    <div class="num-key" onclick="handleKey('7')">7</div><div class="num-key" onclick="handleKey('8')">8</div><div class="num-key" onclick="handleKey('9')">9</div>
+                    <div class="num-key" onclick="handleKey('*')">*</div><div class="num-key" onclick="handleKey('0')">0</div><div class="num-key" onclick="handleKey('#')">#</div>
                 </div>
             </div>
         </div>
     </div>
 </body>
-</html>
