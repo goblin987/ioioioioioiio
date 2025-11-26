@@ -1692,189 +1692,131 @@
         
         /* Hide any previous broken layers if they exist */
         .map-layer { display: contents; } 
-        /* --- METRO MAP: HACKER SURVEILLANCE MODE --- */
-        .metro-container {
-            width: 100%;
-            height: 100%;
-            background: #050505;
+        /* --- GTA V SATELLITE NIGHT MODE --- */
+        .satellite-view {
+            width: 100%; height: 100%;
+            background: #0f161e; /* Deep Ocean Blue */
             position: relative;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-            border: 2px solid #333;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
+            font-family: 'Arial', sans-serif;
         }
 
-        /* CRT Scanline & Flicker */
-        .metro-container::before {
-            content: "SYSTEM MONITORING // LSPD NET LINKED";
-            position: absolute;
-            top: 15px; left: 15px;
-            color: rgba(0, 255, 0, 0.7);
-            font-size: 10px;
-            z-index: 20;
-            font-weight: bold;
-            animation: textFlicker 4s infinite;
-            pointer-events: none;
-        }
-
-        .metro-container::after {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 3px, 3px 100%;
-            pointer-events: none;
-            z-index: 15;
-            animation: scanlineScroll 0.5s linear infinite;
-            opacity: 0.6;
-        }
-        
-        @keyframes scanlineScroll { 0% { background-position: 0 0; } 100% { background-position: 0 100%; } }
-        @keyframes textFlicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 0.8; } 20%, 24%, 55% { opacity: 0.1; } }
-
-        /* Moving Grid (Parallax) */
-        .metro-bg {
-            position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            background-image: 
-                linear-gradient(rgba(46, 125, 50, 0.15) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(46, 125, 50, 0.15) 1px, transparent 1px);
-            background-size: 50px 50px;
-            transform: perspective(500px) rotateX(20deg);
-            animation: gridMove 10s linear infinite;
-            z-index: 1;
-        }
-        @keyframes gridMove { 0% { transform: perspective(500px) rotateX(20deg) translateY(0); } 100% { transform: perspective(500px) rotateX(20deg) translateY(50px); } }
-
-        /* Metro Line (Data Pipe) */
-        .metro-line {
-            position: absolute;
-            left: 70px; 
-            top: 10%; bottom: 10%;
-            width: 6px;
-            background: #111;
-            border: 1px solid #333;
-            z-index: 2;
-            box-shadow: 0 0 15px rgba(0,255,0,0.2);
-        }
-        
-        .metro-line::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent, #0f0, transparent);
-            background-size: 100% 200%;
-            animation: lineFlow 2s linear infinite;
+        /* Background Effects */
+        .sat-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
             opacity: 0.5;
         }
-        
-        @keyframes lineFlow { 0% { background-position: 0 -100%; } 100% { background-position: 0 200%; } }
 
-        /* The Signal Packet (Train) */
-        .metro-train {
-            position: absolute;
-            left: 63px; /* Centered on 70px line (width 6). 70 + 3 - 10 = 63. */
-            top: 15%;
-            width: 20px; height: 20px;
-            background: #0f0;
-            box-shadow: 0 0 15px #0f0, 0 0 30px #0f0;
-            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* Diamond shape */
+        .sat-grid {
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 100px 100px;
+            transform: perspective(1000px) rotateX(20deg);
+            pointer-events: none;
+        }
+
+        .sat-vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 40%, #000 100%);
+            pointer-events: none;
             z-index: 10;
-            transition: top 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
         }
 
-        /* Stations (Nodes) */
-        .metro-stations {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 5;
+        /* Zoom Layer */
+        .map-zoom-layer {
+            width: 100%; height: 100%;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); /* Smooth Swoop */
+            transform-origin: center center;
         }
 
-        .station-node {
-            position: absolute;
-            left: 73px; /* Center of line */
-            transform: translateX(-50%);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            transition: 0.2s;
-            width: 80%; /* Click area */
-        }
-
-        .station-dot {
-            width: 14px; height: 14px;
-            background: #000;
-            border: 2px solid #555;
-            transform: rotate(45deg); /* Diamond */
-            margin-right: 25px;
-            z-index: 6;
-            transition: 0.3s;
-            flex-shrink: 0;
-        }
-
-        .station-node:hover .station-dot {
-            background: #0f0;
-            border-color: #0f0;
-            box-shadow: 0 0 15px #0f0;
-            transform: rotate(225deg) scale(1.3);
-        }
-
-        /* Labels */
-        .station-label {
-            color: rgba(255,255,255,0.6);
-            font-size: 20px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: 0.3s;
-            background: rgba(0,0,0,0.6);
-            padding: 6px 10px;
-            border-radius: 2px;
-            border-left: 2px solid transparent;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
-        }
-
-        .station-node:hover .station-label {
-            color: #0f0;
-            border-left-color: #0f0;
-            background: rgba(0, 255, 0, 0.1);
-            text-shadow: 0 0 10px #0f0;
-            padding-left: 20px;
-        }
-
-        .station-sub {
-            font-size: 10px;
-            color: #666;
-            display: block;
-            margin-top: 4px;
-            font-family: Arial, sans-serif;
-            letter-spacing: 0;
+        /* Map SVG Styling */
+        .map-img-interactive {
+            width: 100%; height: 100%;
+            filter: drop-shadow(0 0 15px rgba(0,0,0,0.8));
         }
         
-        /* Side Data Columns */
-        .data-col {
+        .map-img-interactive g path {
+            fill: #1c242d !important; /* Dark Land */
+            stroke: #384452 !important; /* Lighter Outline */
+            stroke-width: 15px !important;
+            vector-effect: non-scaling-stroke;
+        }
+
+        /* Blips */
+        .sat-blip {
             position: absolute;
-            top: 0; bottom: 0;
-            width: 40px;
-            font-size: 8px;
-            line-height: 1.5;
-            color: rgba(0, 255, 0, 0.3);
-            overflow: hidden;
-            z-index: 1;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 20;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            pointer-events: none;
-            user-select: none;
+            align-items: center;
+            transition: opacity 0.5s;
         }
-        .data-col.right { right: 10px; text-align: right; }
-        .data-col.left { right: auto; left: 10px; text-align: left; display: none; } /* Only right col */
+
+        .satellite-view.zoomed .sat-blip { opacity: 0; pointer-events: none; }
+
+        .blip-dot {
+            width: 12px; height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #fff;
+        }
+
+        .blip-ring {
+            position: absolute; top: 50%; left: 50%;
+            width: 40px; height: 40px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: blipPulse 2s infinite;
+        }
+
+        @keyframes blipPulse { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } }
+
+        .blip-label {
+            margin-top: 8px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #000;
+            opacity: 0.7;
+            transition: 0.3s;
+        }
+
+        .sat-blip:hover .blip-label { opacity: 1; text-shadow: 0 0 10px #fff; }
+
+        /* HUD */
+        .sat-hud {
+            position: absolute; bottom: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            z-index: 30;
+            pointer-events: none;
+        }
+
+        .hud-coords {
+            font-family: 'Courier New', monospace;
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+        }
+
+        .hud-reset {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 5px 10px;
+            font-family: 'Arial', sans-serif;
+            font-size: 10px;
+            cursor: pointer;
+            pointer-events: auto;
+            text-transform: uppercase;
+            transition: 0.3s;
+            opacity: 0; /* Hidden by default */
+        }
+        
+        .satellite-view.zoomed .hud-reset { opacity: 1; pointer-events: auto; }
+
 
 
         /* District Panel (Reuse existing, ensure it looks good) */
@@ -2068,37 +2010,12 @@
         <div id="map" class="section">
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
-                    <div class="metro-container">
-                        <div class="metro-bg"></div>
-                        <div class="data-col right">
-                            <span>0F 2A 4C 99</span><span>1B 8D E2 10</span><span>AA FF 00 12</span><span>44 22 11 00</span><span>99 88 77 66</span>
-                            <span>00 11 00 11</span><span>FF 00 FF 00</span><span>42 42 42 42</span><span>12 34 56 78</span><span>AB CD EF 00</span>
-                            <span>-- -- -- --</span><span>LSPD NET</span><span>CONNECTED</span><span>-- -- -- --</span>
-                            <span>0F 2A 4C 99</span><span>1B 8D E2 10</span><span>AA FF 00 12</span><span>44 22 11 00</span><span>99 88 77 66</span>
-                            <span>00 11 00 11</span><span>FF 00 FF 00</span><span>42 42 42 42</span><span>12 34 56 78</span><span>AB CD EF 00</span>
-                        </div>
-                        <div class="metro-line"></div>
-                        <div class="metro-train" id="metro-train"></div>
-                        <div class="metro-stations">
-                            <div class="station-node" data-city="Vilnius" onclick="goToStation('Vilnius', 15)" style="top: 15%;">
-                                <div class="station-dot dot-green"></div>
-                                <div class="station-label">VILNIUS <span class="station-sub">TERMINAL 1</span></div>
-                            </div>
-                            <div class="station-node" data-city="Kaunas" onclick="goToStation('Kaunas', 50)" style="top: 50%;">
-                                <div class="station-dot dot-blue"></div>
-                                <div class="station-label">KAUNAS <span class="station-sub">CENTRAL</span></div>
-                            </div>
-                            <div class="station-node" data-city="Klaipeda" onclick="goToStation('Klaipeda', 85)" style="top: 85%;">
-                                <div class="station-dot dot-yellow"></div>
-                                <div class="station-label">KLAIPEDA <span class="station-sub">HARBOR</span></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display:none;">
-                    <div class="globe-container">
-                        <div class="globe" id="globe">
-                            <div class="globe-face front">
-                                <!-- Map SVG -->
+                    <div class="satellite-view">
+                        <div class="sat-bg"></div>
+                        <div class="sat-grid"></div>
+                        <div class="sat-vignette"></div>
+                        <div class="sat-scanline"></div>
+                        <div class="map-zoom-layer" id="map-zoom-layer">
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
                         <defs>
                             <!-- PAPER MAP TEXTURE -->
@@ -2197,32 +2114,29 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         </g>
                     </svg>
                     
-                            </div> <!-- End Front Face -->
-                            
-                            <!-- Other Faces -->
-                            <div class="globe-face back"></div>
-                            <div class="globe-face left"></div>
-                            <div class="globe-face right"></div>
-                            <div class="globe-face top"></div>
-                            <div class="globe-face bottom"></div>
-
-                            <!-- 3D Pins -->
-                            <div class="city-pin" data-city="Vilnius" style="transform: translateZ(140px) translateX(50px) translateY(50px);">
-                                <div class="pin-marker pin-green"></div>
-                                <div class="pin-label">VILNIUS</div>
+                            <!-- City Blips -->
+                            <div class="sat-blip" id="blip-vilnius" style="top: 70%; left: 70%;" onclick="zoomToCity('Vilnius', 70, 70)">
+                                <div class="blip-ring"></div>
+                                <div class="blip-dot"></div>
+                                <div class="blip-label">VILNIUS</div>
                             </div>
-                            <div class="city-pin" data-city="Kaunas" style="transform: translateZ(140px) translateX(0px) translateY(20px);">
-                                <div class="pin-marker pin-blue"></div>
-                                <div class="pin-label">KAUNAS</div>
+                            <div class="sat-blip" id="blip-kaunas" style="top: 55%; left: 50%;" onclick="zoomToCity('Kaunas', 55, 50)">
+                                <div class="blip-ring"></div>
+                                <div class="blip-dot"></div>
+                                <div class="blip-label">KAUNAS</div>
                             </div>
-                            <div class="city-pin" data-city="Klaipeda" style="transform: translateZ(140px) translateX(-60px) translateY(-30px);">
-                                <div class="pin-marker pin-yellow"></div>
-                                <div class="pin-label">KLAIPEDA</div>
+                            <div class="sat-blip" id="blip-klaipeda" style="top: 30%; left: 15%;" onclick="zoomToCity('Klaipeda', 30, 15)">
+                                <div class="blip-ring"></div>
+                                <div class="blip-dot"></div>
+                                <div class="blip-label">KLAIPEDA</div>
                             </div>
+                        </div> <!-- End Zoom Layer -->
+                        
+                        <div class="sat-hud">
+                            <div class="hud-coords">SAT-LINK: ACTIVE</div>
+                            <button class="hud-reset" onclick="resetSatelliteView()">RESET VIEW</button>
                         </div>
-                        <div class="globe-hint">👆 SWIPE TO ROTATE THE WORLD</div>
                     </div>
-                    </div> <!-- End Hidden Globe -->
 
                     <!-- District Panel -->
                     <div id="district-panel" class="district-panel">
@@ -3236,33 +3150,43 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Initialize after DOM
         // setTimeout(initGlobe, 1000); // Disabled for Metro Map
 
-        // --- METRO MAP LOGIC ---
+        // --- SATELLITE VIEW LOGIC ---
         
-        function goToStation(city, percent) {
+        let isZoomed = false;
+
+        function zoomToCity(city, topP, leftP) {
+            if(isZoomed) return;
+            isZoomed = true;
+            
             if(window.sfx) sfx.select();
             
-            const train = document.getElementById('metro-train');
-            if(train) train.style.top = percent + '%';
+            const layer = document.getElementById('map-zoom-layer');
+            const container = document.querySelector('.satellite-view');
             
-            // Dim all, highlight active
-            document.querySelectorAll('.station-node').forEach(node => {
-                node.style.opacity = '0.5';
-                node.querySelector('.station-label').style.color = '#aaa';
-            });
+            container.classList.add('zoomed');
             
-            const active = document.querySelector(`.station-node[data-city="${city}"]`);
-            if(active) {
-                active.style.opacity = '1';
-                active.querySelector('.station-label').style.color = '#fff';
-            }
-
-            // Open menu
+            // Zoom to point
+            layer.style.transformOrigin = `${leftP}% ${topP}%`;
+            layer.style.transform = 'scale(3.5)';
+            
             setTimeout(() => {
                 openDistrictPanel(city);
-            }, 600);
+            }, 1000);
         }
 
-        // Overwrite the previous openDistrictPanel
+        function resetSatelliteView() {
+            if(!isZoomed) return;
+            isZoomed = false;
+            
+            const layer = document.getElementById('map-zoom-layer');
+            const container = document.querySelector('.satellite-view');
+            
+            container.classList.remove('zoomed');
+            layer.style.transform = 'scale(1)';
+            
+            closePanel();
+        }
+
         function openDistrictPanel(city) {
             const panel = document.getElementById('district-panel');
             const header = document.getElementById('panel-header');
@@ -3272,8 +3196,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             header.innerText = city.toUpperCase();
             list.innerHTML = '';
             
-            const colors = { 'Vilnius': '#2e7d32', 'Kaunas': '#5c6bc0', 'Klaipeda': '#fbc02d' };
-            header.style.background = colors[city] || '#333';
+            // GTA V Style
+            header.style.background = '#0f161e';
+            header.style.borderBottom = '2px solid #fff';
+            header.style.fontFamily = 'Arial, sans-serif';
+            header.style.fontWeight = 'bold';
             header.style.color = '#fff';
 
             const districts = {
@@ -3287,32 +3214,38 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 item.className = 'dm-item'; 
                 item.innerText = d;
                 item.style.padding = '15px';
-                item.style.borderBottom = '1px solid #333';
+                item.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
                 item.style.cursor = 'pointer';
-                item.style.fontFamily = "'Courier New', monospace";
+                item.style.fontFamily = "Arial, sans-serif";
                 item.style.fontWeight = "bold";
-                item.style.color = "#fff";
-                item.style.backgroundColor = "#111";
+                item.style.color = "#aaa";
+                item.style.backgroundColor = "transparent";
+                item.style.transition = "0.2s";
                 
                 item.onmouseover = () => {
                     item.style.background = '#fff';
                     item.style.color = '#000';
+                    item.style.paddingLeft = '25px';
                 };
                 item.onmouseout = () => {
-                    item.style.background = '#111';
-                    item.style.color = '#fff';
+                    item.style.background = 'transparent';
+                    item.style.color = '#aaa';
+                    item.style.paddingLeft = '15px';
                 };
                 
                 item.onclick = () => {
                     closePanel();
                     showSection('shop');
-                    if(window.charSystem) charSystem.show('cj', `ARRIVING AT ${d.toUpperCase()}`);
+                    if(window.charSystem) charSystem.show('cj', `ENTERING ${d.toUpperCase()}`);
                 };
                 list.appendChild(item);
             });
             
             panel.classList.add('active');
         }
+        
+        // Remove Metro Init
+        function goToStation(){}; // Stub
     </script>
 </body>
 </html>
