@@ -1559,113 +1559,137 @@
             text-transform: uppercase;
         }
         .dm-close:hover { background: #555; }
-        /* --- GTA SA CLEAN VECTOR MAP THEME (FINAL) --- */
+        /* --- HACKER SIGNAL TRACKER THEME --- */
         .map-container {
             position: relative;
-            height: 450px;
-            background-color: #0f1821 !important; 
+            height: 550px;
+            background-color: #000 !important; 
             overflow: hidden;
-            border: 4px solid #000 !important;
-            font-family: 'Pricedown', sans-serif;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important;
+            border: 4px solid #222 !important;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.05) !important;
         }
-
-        /* Hide broken effects */
-        .map-grid, .scanline-bar, .noise-overlay, .radar-beam, .data-feed {
-            display: none !important;
+        
+        .satellite-view {
+            background-color: #000;
+            background-image: 
+                linear-gradient(rgba(0, 50, 0, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 50, 0, 0.4) 1px, transparent 1px);
+            background-size: 40px 40px;
+            position: relative;
         }
-
-        /* Map Layers */
-        .map-layer {
+        
+        /* Scanline Effect */
+        .satellite-view::before {
+            content: '';
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            transition: transform 0.5s ease;
-        }
-        
-        .map-layer.outline path {
-            stroke: #000;
-            stroke-width: 40px;
-            fill: none;
-            stroke-linejoin: round;
-            stroke-linecap: round;
-        }
-        
-        .map-layer.dark path {
-            fill: rgba(0,0,0,0.5);
-            transform: translate(10px, 10px);
-        }
-
-        .map-layer.main path {
-            fill: #383838; 
-            stroke: #000;
-            stroke-width: 2px;
-        }
-
-        /* --- GTA SA RADAR ICONS (FINAL) --- */
-        .gta-marker {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transform: translate(-50%, -50%);
-            cursor: pointer;
-            z-index: 100;
-            transition: transform 0.1s ease-out;
-        }
-
-        .gta-marker:active {
-            transform: translate(-50%, -50%) scale(0.95);
-        }
-
-        .gta-marker:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            z-index: 110;
-        }
-
-        .marker-icon {
-            width: 32px; 
-            height: 32px;
-            filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.8)); /* Hard shadow */
-            transition: filter 0.2s;
-        }
-        
-        .gta-marker:hover .marker-icon {
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));
-        }
-
-        .marker-icon svg {
-            width: 100%; 
-            height: 100%;
-            overflow: visible;
-        }
-        
-        .marker-icon path {
-            stroke: #fff; 
-            stroke-width: 1.5px;
-            paint-order: stroke;
-        }
-
-        /* Specific Colors */
-        .marker-vilnius path { fill: #2e7d32; } /* Grove/Safehouse Green */
-        .marker-kaunas path { fill: #5c6bc0; } /* Binco/Clothes Blue */
-        .marker-klaipeda path { fill: #fbc02d; } /* Burger Yellow */
-
-        .marker-label {
-            margin-top: 2px;
-            font-family: 'Arial', sans-serif; /* Clean Radar Font */
-            font-weight: 900;
-            color: #fff;
-            font-size: 11px;
-            text-shadow: 
-                -1.5px -1.5px 0 #000,  
-                 1.5px -1.5px 0 #000,
-                -1.5px  1.5px 0 #000,
-                 1.5px  1.5px 0 #000;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-            text-transform: uppercase;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: rgba(0, 255, 0, 0.6);
+            box-shadow: 0 0 10px #0f0;
+            animation: scanDown 4s linear infinite;
+            z-index: 5;
             pointer-events: none;
         }
+        
+        @keyframes scanDown {
+            0% { top: -10%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 110%; opacity: 0; }
+        }
+
+        /* Map Outline (Digital) */
+        .map-layer path {
+            stroke: #004400; 
+            stroke-width: 2px;
+            fill: #000800; 
+            vector-effect: non-scaling-stroke;
+        }
+
+        /* --- SIGNAL EMITTERS (CITIES) --- */
+        .city-pin {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 80px; height: 80px;
+            display: flex;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
+        .pin-core {
+            width: 12px; height: 12px;
+            background: #0f0;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #0f0;
+            z-index: 2;
+            transition: all 0.3s;
+        }
+        
+        .pin-pulse {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%; height: 100%;
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
+            animation: pulseRipple 2s infinite;
+            box-sizing: border-box;
+        }
+        
+        @keyframes pulseRipple {
+            0% { width: 10%; height: 10%; opacity: 1; border-width: 4px; }
+            100% { width: 100%; height: 100%; opacity: 0; border-width: 0px; }
+        }
+        
+        .city-label {
+            position: absolute;
+            top: 60px;
+            background: rgba(0, 20, 0, 0.9);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 4px 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 0 0 5px #0f0;
+            letter-spacing: 1px;
+        }
+        
+        /* Hover State */
+        .city-pin:hover .pin-core {
+            background: #fff;
+            box-shadow: 0 0 25px #fff;
+            transform: scale(1.2);
+        }
+        
+        .city-pin:hover .city-label {
+            background: #0f0;
+            color: #000;
+            text-shadow: none;
+        }
+        
+        .city-pin:hover .pin-pulse {
+            animation-duration: 1s;
+            border-color: #fff;
+        }
+        
+        .scanner-text {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border: 1px solid #0f0;
+            animation: blinkText 2s infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+        @keyframes blinkText { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         /* Clean Slide-in Menu */
         .district-menu-slide {
@@ -2531,6 +2555,7 @@
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
                     <div class="satellite-view">
+                        <div class="scanner-text">SCANNING NETWORK...</div>
                         <div class="sat-bg"></div>
                         <div class="sat-grid"></div>
                         <div class="sat-clouds"></div>
@@ -2636,21 +2661,21 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         </g>
                     </svg>
                     
-                            <!-- City Blips -->
-                            <div class="sat-blip" id="blip-vilnius" style="top: 70%; left: 70%;" onclick="zoomToCity('Vilnius', 70, 70)">
-                                <div class="blip-ring"></div>
-                                <div class="blip-dot"></div>
-                                <div class="blip-label">VILNIUS</div>
+                            <!-- Signal Emitters -->
+                            <div class="city-pin" style="top: 70%; left: 70%;" onclick="zoomToCity('Vilnius', 70, 70)">
+                                <div class="pin-core"></div>
+                                <div class="pin-pulse"></div>
+                                <div class="city-label">SIGNAL: VILNIUS</div>
                             </div>
-                            <div class="sat-blip" id="blip-kaunas" style="top: 55%; left: 50%;" onclick="zoomToCity('Kaunas', 55, 50)">
-                                <div class="blip-ring"></div>
-                                <div class="blip-dot"></div>
-                                <div class="blip-label">KAUNAS</div>
+                            <div class="city-pin" style="top: 55%; left: 50%;" onclick="zoomToCity('Kaunas', 55, 50)">
+                                <div class="pin-core"></div>
+                                <div class="pin-pulse"></div>
+                                <div class="city-label">SIGNAL: KAUNAS</div>
                             </div>
-                            <div class="sat-blip" id="blip-klaipeda" style="top: 30%; left: 15%;" onclick="zoomToCity('Klaipeda', 30, 15)">
-                                <div class="blip-ring"></div>
-                                <div class="blip-dot"></div>
-                                <div class="blip-label">KLAIPEDA</div>
+                            <div class="city-pin" style="top: 30%; left: 15%;" onclick="zoomToCity('Klaipeda', 30, 15)">
+                                <div class="pin-core"></div>
+                                <div class="pin-pulse"></div>
+                                <div class="city-label">SIGNAL: KLAIPEDA</div>
                             </div>
                             
                             <!-- District Polygon Overlays -->
