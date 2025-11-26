@@ -2298,18 +2298,17 @@
         .char-body {
             position: absolute;
             bottom: -100%; left: -10%;
-            width: 90%; height: 80%;
-            max-width: 600px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: bottom center;
+            width: auto; height: 90%;
+            max-width: 80%;
+            object-fit: contain;
+            object-position: bottom left;
             transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1;
             filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.8));
         }
         
         .character-overlay.active .char-body {
-            bottom: -10%; /* Slide up */
+            bottom: -5%; /* Slide up */
         }
         
         /* Dialogue Box (Comic Style) */
@@ -2367,7 +2366,7 @@
     
     <!-- Cinematic Hand-Off Overlay -->
     <div id="cj-overlay" class="character-overlay">
-        <div class="char-body" id="char-body-img"></div>
+        <img id="char-body-img" class="char-body" src="" alt="Character">
         <div class="char-dialogue-box">
             <div class="char-name">CARL JOHNSON</div>
             <div class="char-dialogue" id="cj-dialogue">Yo! You lookin' for something?</div>
@@ -4030,7 +4029,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(nameEl) nameEl.innerText = char.name;
                 if(dialogEl) dialogEl.innerText = line;
                 if(bodyEl) {
-                    bodyEl.style.backgroundImage = `url('${char.img}')`;
+                    bodyEl.src = char.img;
+                    // Fallback logic
+                    bodyEl.onerror = function() {
+                        this.src = 'https://placehold.co/400x600/111/FFF.png?text=' + encodeURIComponent(char.name);
+                    };
                 }
                 
                 // 4. Show
