@@ -8,6 +8,7 @@
     <link rel="preload" href="/webapp/ah_shit.mp3" as="audio">
     <link rel="preload" href="https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png" as="image">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="assets.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap" rel="stylesheet">
     <style>
@@ -3971,10 +3972,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'cj',
                 name: 'CARL JOHNSON',
-                // Primary: Image Proxy to bypass hotlink protection
-                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png&output=png',
-                // Backup: Direct Wikimedia URL
-                backup: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson.png',
+                img: CHAR_ASSETS.cj,
                 lines: [
                     "Yo! You lookin' for product here? Hold up.",
                     "Grove Street 4 Life! I got the hookup.",
@@ -3984,8 +3982,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'ryder',
                 name: 'RYDER',
-                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png&output=png',
-                backup: 'https://upload.wikimedia.org/wikipedia/en/1/14/Ryder_GTA_San_Andreas.jpg',
+                img: CHAR_ASSETS.ryder,
                 lines: [
                     "You drive like a genius, fool! Check the phone!",
                     "Don't expect me to kiss your ass. Just buy it!",
@@ -3995,8 +3992,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'smoke',
                 name: 'BIG SMOKE',
-                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png&output=png',
-                backup: 'https://upload.wikimedia.org/wikipedia/en/3/3e/Big_Smoke_GTA_San_Andreas.jpg',
+                img: CHAR_ASSETS.smoke,
                 lines: [
                     "All we had to do, was follow the damn signal, CJ!",
                     "I'll have two number 9s... and your order ready.",
@@ -4006,8 +4002,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'sweet',
                 name: 'SWEET',
-                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png&output=png',
-                backup: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson.png', // Fallback to CJ if Sweet missing
+                img: CHAR_ASSETS.sweet,
                 lines: [
                     "For the hood! We takin' over this city.",
                     "Stay true to the families. Check the supply.",
@@ -4017,8 +4012,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'tenpenny',
                 name: 'OFFICER TENPENNY',
-                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png&output=png',
-                backup: 'https://upload.wikimedia.org/wikipedia/en/3/39/Frank_Tenpenny.jpg',
+                img: CHAR_ASSETS.tenpenny,
                 lines: [
                     "I'm watching you... make the deal and get out.",
                     "We can all get along... just pay the price.",
@@ -4071,17 +4065,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(bodyEl) {
                     bodyEl.style.display = 'block';
                     bodyEl.src = char.img;
-                    
-                    bodyEl.onerror = function() {
-                        // Try backup source if main proxy fails
-                        if (char.backup && this.src !== char.backup) {
-                            console.log("Using backup image for " + char.name);
-                            this.src = char.backup;
-                        } else {
-                             // Just in case
-                             console.log("All images failed for " + char.name);
-                        }
-                    };
+                    bodyEl.style.imageRendering = 'pixelated'; // Ensure retro look
                 }
                 
                 // 4. Show
