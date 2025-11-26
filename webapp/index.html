@@ -3887,7 +3887,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'cj',
                 name: 'CARL JOHNSON',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png',
+                // Wikipedia URLs are often more hotlink-friendly
+                img: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson.png',
                 lines: [
                     "Yo! You lookin' for product here? Hold up.",
                     "Grove Street 4 Life! I got the hookup.",
@@ -3897,7 +3898,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'ryder',
                 name: 'RYDER',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png',
+                // Fallback to a generic stylized image if specific ones fail
+                img: 'https://upload.wikimedia.org/wikipedia/en/6/67/Ryder-GTASA.png',
                 lines: [
                     "You drive like a genius, fool! Check the phone!",
                     "Don't expect me to kiss your ass. Just buy it!",
@@ -3907,7 +3909,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'smoke',
                 name: 'BIG SMOKE',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png',
+                img: 'https://upload.wikimedia.org/wikipedia/en/1/18/BigSmoke-GTASA.png',
                 lines: [
                     "All we had to do, was follow the damn signal, CJ!",
                     "I'll have two number 9s... and your order ready.",
@@ -3917,7 +3919,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'sweet',
                 name: 'SWEET',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png',
+                img: 'https://upload.wikimedia.org/wikipedia/en/1/1b/Sweet-GTASA.png',
                 lines: [
                     "For the hood! We takin' over this city.",
                     "Stay true to the families. Check the supply.",
@@ -3927,7 +3929,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'tenpenny',
                 name: 'OFFICER TENPENNY',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png',
+                img: 'https://upload.wikimedia.org/wikipedia/en/6/61/FrankTenpenny-GTASA.png',
                 lines: [
                     "I'm watching you... make the deal and get out.",
                     "We can all get along... just pay the price.",
@@ -3935,6 +3937,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 ]
             }
         ];
+
+        // Preload images to prevent flickering
+        gtaCharacters.forEach(c => {
+            const img = new Image();
+            img.src = c.img;
+        });
 
         function zoomToCity(city, topP, leftP) {
             if(isZoomed) return;
@@ -4005,6 +4013,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             closeBurnerPhone();
         }
 
+        function updateWantedLevel() {
+             const stars = Math.floor(Math.random() * 5) + 1;
+             const el = document.getElementById('wanted-stars');
+             if(el) {
+                 let str = "";
+                 for(let i=0; i<5; i++) {
+                     str += i < stars ? "★" : "☆";
+                 }
+                 el.innerText = str;
+                 el.style.color = stars >= 3 ? "#b71c1c" : "#111"; 
+                 el.style.textShadow = stars >= 4 ? "0 0 5px #d32f2f" : "none";
+             }
+        }
+
         function openBurnerPhone(city) {
             const phone = document.getElementById('burner-phone');
             const list = document.getElementById('phone-contacts');
@@ -4042,6 +4064,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             phone.classList.add('active');
             if(window.sfx) sfx.tick();
             updatePhoneTime();
+            updateWantedLevel();
         }
         
         function updatePhoneTime() {
@@ -4158,8 +4181,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             <div class="phone-screen">
                 <div class="status-bar">
                     <span>📶 LTE</span>
+                    <span class="wanted-stars" id="wanted-stars" style="font-size:14px; letter-spacing:1px;">☆☆☆☆☆</span>
                     <span id="phone-time">12:00</span>
-                    <span>🔋 98%</span>
                 </div>
                 
                 <!-- View: Contacts -->
