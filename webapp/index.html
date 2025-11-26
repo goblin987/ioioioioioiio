@@ -1692,6 +1692,138 @@
         
         /* Hide any previous broken layers if they exist */
         .map-layer { display: contents; } 
+        /* --- 3D GLOBE MAP THEME --- */
+        .globe-container {
+            width: 100%;
+            height: 100%;
+            perspective: 1000px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at center, #1a2634 0%, #0d161f 100%);
+            overflow: hidden;
+        }
+
+        .globe {
+            width: 280px;
+            height: 280px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-10deg) rotateY(20deg);
+            transition: transform 0.1s ease-out; /* Smooth drag */
+            cursor: grab;
+        }
+
+        .globe:active { cursor: grabbing; }
+
+        /* Cube Faces */
+        .globe-face {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            background: #0d161f;
+            border: 1px solid rgba(255,255,255,0.05);
+            backface-visibility: hidden; /* Hide back faces for performance */
+        }
+
+        /* Front Face (Map) */
+        .globe-face.front {
+            transform: translateZ(140px);
+            background: #d4c5a9; /* Parchment */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* Other Faces */
+        .globe-face.back   { transform: rotateY(180deg) translateZ(140px); background: #15202b; }
+        .globe-face.right  { transform: rotateY(90deg) translateZ(140px); background: #111a26; }
+        .globe-face.left   { transform: rotateY(-90deg) translateZ(140px); background: #111a26; }
+        .globe-face.top    { transform: rotateX(90deg) translateZ(140px); background: #0e151f; }
+        .globe-face.bottom { transform: rotateX(-90deg) translateZ(140px); background: #0e151f; }
+
+        /* Map SVG on Face */
+        .globe-map {
+            width: 90%;
+            height: 90%;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
+            pointer-events: none; /* Let clicks pass to pins */
+        }
+
+        /* Pins in 3D */
+        .city-pin {
+            position: absolute;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s;
+            z-index: 10;
+        }
+
+        .city-pin:hover { transform: scale(1.2) translateZ(10px); }
+
+        .pin-marker {
+            width: 24px; height: 24px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid #fff;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+        }
+
+        .pin-green { background: #2e7d32; }
+        .pin-blue { background: #5c6bc0; }
+        .pin-yellow { background: #fbc02d; }
+
+        .pin-label {
+            margin-top: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Impact', sans-serif;
+            font-size: 12px;
+            text-transform: uppercase;
+            pointer-events: none;
+            transform: translateZ(20px); /* Float above map */
+        }
+
+        .globe-hint {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            pointer-events: none;
+            animation: pulseHint 2s infinite;
+        }
+
+        @keyframes pulseHint {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        /* District Panel (Slide-in) - Reusing existing styles but ensuring compatibility */
+        .district-panel {
+            position: absolute;
+            top: 0; right: -100%;
+            width: 100%;
+            max-width: 300px;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            border-left: 4px solid #f0c330;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .district-panel.active { right: 0; }
     </style>
 </head>
 <body>
@@ -1867,19 +1999,10 @@
         <div id="map" class="section">
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
-                    <!-- Crosshair UI -->
-                    <div class="map-cursor"></div>
-
-                    <!-- District Selection Modal -->
-                    <div id="district-modal" class="district-modal">
-                        <div class="district-header" id="dm-header">LOS SANTOS</div>
-                        <div class="district-list" id="dm-list">
-                            <!-- JS will populate this -->
-                        </div>
-                        <button class="btn-buy" onclick="closeDistrictModal()" style="margin-top: 10px; width: 100%; font-size: 18px; padding: 12px;">CANCEL</button>
-                    </div>
-
-                    <!-- Map SVG -->
+                    <div class="globe-container">
+                        <div class="globe" id="globe">
+                            <div class="globe-face front">
+                                <!-- Map SVG -->
                     <svg id="map-img" class="map-img-interactive" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet">
                         <defs>
                             <!-- PAPER MAP TEXTURE -->
@@ -1978,50 +2101,38 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         </g>
                     </svg>
                     
-                    <!-- Radar Sweep -->
-                    <div class="radar-sweep"></div>
+                            </div> <!-- End Front Face -->
+                            
+                            <!-- Other Faces -->
+                            <div class="globe-face back"></div>
+                            <div class="globe-face left"></div>
+                            <div class="globe-face right"></div>
+                            <div class="globe-face top"></div>
+                            <div class="globe-face bottom"></div>
 
-
-                    <!-- 4. Slide-in District Menu (Hidden by default) -->
-                    <div id="district-menu" class="district-menu-slide">
-                        <div class="dm-header" id="dm-header">LOS SANTOS</div>
-                        <div class="dm-list" id="dm-list"></div>
-                        <button class="dm-close" onclick="closeDistrictMenu()">CLOSE [X]</button>
-                    </div>
-
-
-                    <!-- 6. GTA Markers (Radar Style) -->
-                    <!-- VILNIUS (Safehouse) -->
-                    <div class="gta-marker" style="top: 75%; left: 70%;" onclick="openDistrictMenu('Vilnius')">
-                        <div class="marker-icon marker-vilnius">
-                            <!-- Floppy Disk / Save Icon Shape -->
-                            <svg viewBox="0 0 24 24"><path d="M5 3h11l5 5v13H5V3zm2 2v4h10V5H7zm0 14h10v-6H7v6z"/></svg>
+                            <!-- 3D Pins -->
+                            <div class="city-pin" data-city="Vilnius" style="transform: translateZ(140px) translateX(50px) translateY(50px);">
+                                <div class="pin-marker pin-green"></div>
+                                <div class="pin-label">VILNIUS</div>
+                            </div>
+                            <div class="city-pin" data-city="Kaunas" style="transform: translateZ(140px) translateX(0px) translateY(20px);">
+                                <div class="pin-marker pin-blue"></div>
+                                <div class="pin-label">KAUNAS</div>
+                            </div>
+                            <div class="city-pin" data-city="Klaipeda" style="transform: translateZ(140px) translateX(-60px) translateY(-30px);">
+                                <div class="pin-marker pin-yellow"></div>
+                                <div class="pin-label">KLAIPEDA</div>
+                            </div>
                         </div>
-                        <div class="marker-label">VILNIUS</div>
+                        <div class="globe-hint">👆 SWIPE TO ROTATE THE WORLD</div>
                     </div>
-                    
-                    <!-- KAUNAS (Clothes) -->
-                    <div class="gta-marker" style="top: 65%; left: 50%;" onclick="openDistrictMenu('Kaunas')">
-                        <div class="marker-icon marker-kaunas">
-                            <!-- T-Shirt Icon Shape -->
-                            <svg viewBox="0 0 24 24"><path d="M12 3L4 7v2h2v12h12V9h2V7l-8-4zm0 2.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5z"/></svg>
-                        </div>
-                        <div class="marker-label">KAUNAS</div>
+
+                    <!-- District Panel -->
+                    <div id="district-panel" class="district-panel">
+                        <div class="panel-header" id="panel-header">SELECT ZONE</div>
+                        <div class="panel-list" id="panel-list"></div>
+                        <button class="panel-close" onclick="closePanel()" style="position:absolute; top:10px; right:10px; background:red; border:none; color:white; width:30px; height:30px; border-radius:50%;">X</button>
                     </div>
-                    
-                    <!-- KLAIPEDA (Food) -->
-                    <div class="gta-marker" style="top: 35%; left: 15%;" onclick="openDistrictMenu('Klaipeda')">
-                        <div class="marker-icon marker-klaipeda">
-                            <!-- Burger Icon Shape -->
-                            <svg viewBox="0 0 24 24"><path d="M4 13h16v2H4zm0 4h16v3H4zm16-7H4a8 8 0 0 1 16 0z"/></svg>
-                        </div>
-                        <div class="marker-label">KLAIPEDA</div>
-                    </div>
-                    
-                    <!-- Mock District Zones (Visible on Zoom) -->
-                    <div id="zone-vilnius" class="zone-poly" style="top: 70%; left: 65%; width: 10%; height: 10%; border-radius: 50%;"></div>
-                    <div id="zone-kaunas" class="zone-poly" style="top: 60%; left: 45%; width: 10%; height: 10%; border-radius: 50%;"></div>
-                    <div id="zone-klaipeda" class="zone-poly" style="top: 30%; left: 10%; width: 10%; height: 10%; border-radius: 50%;"></div>
                 </div>
                 <button class="btn-buy" onclick="resetMap()" style="margin-top: 10px;">RESET VIEW</button>
             </div>
@@ -2894,6 +3005,139 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         // Init - Removed immediate call, using window.onload instead
+
+        // --- 3D GLOBE LOGIC ---
+        let globeRotation = { x: -10, y: 20 };
+        let isDragging = false;
+        let lastTouch = { x: 0, y: 0 };
+
+        function initGlobe() {
+            const globe = document.getElementById('globe');
+            if(!globe) return;
+
+            // Touch Events
+            globe.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                const touch = e.touches[0];
+                lastTouch = { x: touch.clientX, y: touch.clientY };
+            });
+            
+            globe.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - lastTouch.x;
+                const deltaY = touch.clientY - lastTouch.y;
+                
+                globeRotation.y += deltaX * 0.5;
+                globeRotation.x -= deltaY * 0.5;
+                updateGlobeRotation();
+                lastTouch = { x: touch.clientX, y: touch.clientY };
+            });
+            
+            globe.addEventListener('touchend', () => isDragging = false);
+
+            // Mouse Events
+            globe.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastTouch = { x: e.clientX, y: e.clientY };
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaX = e.clientX - lastTouch.x;
+                const deltaY = e.clientY - lastTouch.y;
+                globeRotation.y += deltaX * 0.5;
+                globeRotation.x -= deltaY * 0.5;
+                updateGlobeRotation();
+                lastTouch = { x: e.clientX, y: e.clientY };
+            });
+
+            document.addEventListener('mouseup', () => isDragging = false);
+
+            // Pins
+            document.querySelectorAll('.city-pin').forEach(pin => {
+                pin.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const city = pin.getAttribute('data-city');
+                    selectCity(city);
+                });
+            });
+            
+            // Auto-spin
+            setInterval(() => {
+                if(!isDragging) {
+                    globeRotation.y += 0.1;
+                    updateGlobeRotation();
+                }
+            }, 50);
+        }
+
+        function updateGlobeRotation() {
+            const globe = document.getElementById('globe');
+            if(globe) globe.style.transform = `rotateX(${globeRotation.x}deg) rotateY(${globeRotation.y}deg)`;
+        }
+
+        function selectCity(city) {
+            if(window.sfx) sfx.select();
+            
+            // Rotate to city
+            const rots = {
+                'Vilnius': { x: -10, y: 20 },
+                'Kaunas': { x: -5, y: 0 },
+                'Klaipeda': { x: -15, y: -30 }
+            };
+            if(rots[city]) globeRotation = rots[city];
+            updateGlobeRotation();
+            
+            openDistrictPanel(city);
+        }
+
+        function openDistrictPanel(city) {
+            const panel = document.getElementById('district-panel');
+            const header = document.getElementById('panel-header');
+            const list = document.getElementById('panel-list');
+            if(!panel) return;
+
+            header.innerText = city.toUpperCase();
+            list.innerHTML = '';
+
+            // Mock Districts
+            const districts = {
+                'Vilnius': ['Senamiestis', 'Naujamiestis', 'Antakalnis', 'Šnipiškės'],
+                'Kaunas': ['Centras', 'Žaliakalnis', 'Šilainiai', 'Dainava'],
+                'Klaipeda': ['Senamiestis', 'Baltija', 'Danė', 'Pempininkai']
+            };
+            
+            (districts[city] || ['Downtown']).forEach(d => {
+                const item = document.createElement('div');
+                item.className = 'dm-item'; 
+                item.innerText = d;
+                item.style.padding = '15px';
+                item.style.borderBottom = '1px solid #333';
+                item.style.cursor = 'pointer';
+                item.onmouseover = () => item.style.background = '#f0c330';
+                item.onmouseout = () => item.style.background = 'transparent';
+                
+                item.onclick = () => {
+                    closePanel();
+                    showSection('shop');
+                    filterProducts(city);
+                    if(window.charSystem) charSystem.show('cj', `${d.toUpperCase()} SELECTED!`);
+                };
+                list.appendChild(item);
+            });
+            
+            panel.classList.add('active');
+        }
+
+        function closePanel() {
+            const panel = document.getElementById('district-panel');
+            if(panel) panel.classList.remove('active');
+        }
+
+        // Initialize after DOM
+        setTimeout(initGlobe, 1000); 
     </script>
 </body>
 </html>
