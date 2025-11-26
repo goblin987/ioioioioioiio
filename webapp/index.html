@@ -3971,7 +3971,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'cj',
                 name: 'CARL JOHNSON',
-                img: 'https://api.allorigins.win/raw?url=https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png',
+                // Primary: Image Proxy to bypass hotlink protection
+                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png&output=png',
+                // Backup: Direct Wikimedia URL
+                backup: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson.png',
                 lines: [
                     "Yo! You lookin' for product here? Hold up.",
                     "Grove Street 4 Life! I got the hookup.",
@@ -3981,7 +3984,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'ryder',
                 name: 'RYDER',
-                img: 'https://api.allorigins.win/raw?url=https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png',
+                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png&output=png',
+                backup: 'https://upload.wikimedia.org/wikipedia/en/1/14/Ryder_GTA_San_Andreas.jpg',
                 lines: [
                     "You drive like a genius, fool! Check the phone!",
                     "Don't expect me to kiss your ass. Just buy it!",
@@ -3991,7 +3995,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'smoke',
                 name: 'BIG SMOKE',
-                img: 'https://api.allorigins.win/raw?url=https://static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png',
+                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png&output=png',
+                backup: 'https://upload.wikimedia.org/wikipedia/en/3/3e/Big_Smoke_GTA_San_Andreas.jpg',
                 lines: [
                     "All we had to do, was follow the damn signal, CJ!",
                     "I'll have two number 9s... and your order ready.",
@@ -4001,7 +4006,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'sweet',
                 name: 'SWEET',
-                img: 'https://api.allorigins.win/raw?url=https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png',
+                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png&output=png',
+                backup: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson.png', // Fallback to CJ if Sweet missing
                 lines: [
                     "For the hood! We takin' over this city.",
                     "Stay true to the families. Check the supply.",
@@ -4011,7 +4017,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'tenpenny',
                 name: 'OFFICER TENPENNY',
-                img: 'https://api.allorigins.win/raw?url=https://static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png',
+                img: 'https://wsrv.nl/?url=static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png&output=png',
+                backup: 'https://upload.wikimedia.org/wikipedia/en/3/39/Frank_Tenpenny.jpg',
                 lines: [
                     "I'm watching you... make the deal and get out.",
                     "We can all get along... just pay the price.",
@@ -4062,10 +4069,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(nameEl) nameEl.innerText = char.name;
                 if(dialogEl) dialogEl.innerText = line;
                 if(bodyEl) {
+                    bodyEl.style.display = 'block';
                     bodyEl.src = char.img;
+                    
                     bodyEl.onerror = function() {
-                        // Fallback if proxy fails
-                        this.src = 'https://placehold.co/400x600/000/4caf50?text=' + encodeURIComponent(char.name) + '&font=oswald';
+                        // Try backup source if main proxy fails
+                        if (char.backup && this.src !== char.backup) {
+                            console.log("Using backup image for " + char.name);
+                            this.src = char.backup;
+                        } else {
+                             // Just in case
+                             console.log("All images failed for " + char.name);
+                        }
                     };
                 }
                 
