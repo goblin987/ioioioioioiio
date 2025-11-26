@@ -2297,18 +2297,21 @@
         /* Character Cutout */
         .char-body {
             position: absolute;
-            bottom: -100%; left: -10%;
-            width: auto; height: 90%;
-            max-width: 80%;
+            bottom: -100%; 
+            left: 50%; 
+            transform: translateX(-50%);
+            width: auto; height: 85%;
+            max-width: 90%;
             object-fit: contain;
-            object-position: bottom left;
+            object-position: bottom center;
             transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1;
-            filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.8));
+            filter: drop-shadow(0 0 15px rgba(0,0,0,0.9));
+            pointer-events: none; /* Let clicks pass through to map if needed */
         }
         
         .character-overlay.active .char-body {
-            bottom: -5%; /* Slide up */
+            bottom: 0; /* Anchored to bottom */
         }
         
         /* Dialogue Box (Comic Style) */
@@ -3925,6 +3928,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let isZoomed = false;
         let currentZoomedCity = null;
 
+        // --- ASSETS ---
+        const CJ_FALLBACK = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgNDAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1heCBtZWV0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMTExIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzMzMyIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9Imdsb3ciPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIyLjUiIHJlc3VsdD0iY29sb3JlZEJsdXIiLz4KICAgICAgPGZlTWVyZ2U+CiAgICAgICAgPGZlTWVyZ2VOb2RlIGluPSJjb2xvcmVkQmx1ciIvPgogICAgICAgIDxmZU1lcmdlTm9kZSBpbj0iU291cmNlR3JhcGhpYyIvPgogICAgICA8L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTUwLDQwMCBMNjAsMTYwIEMzMCwxODAgMjAsMjUwIDIwLDI1MCBMNDAsMjYwIEM0MCwyNjAgNTAsMjAwIDYwLDE2MCBDNjAsMTYwIDYwLDEwMCA2MCwxMDAgQzYwLDUwIDgwLDIwIDExMCwyMCBDMTQwLDIwIDE2MCw1MCAxNjAsMTAwIEwxNjAsMTYwIEMxNzAsMjAwIDE4MCwyNjAgMTgwLDI2MCBMMjAwLDI1MCBDMjAwLDI1MCAxOTAsMTgwIDE2MCwxNjAgTDE3MCw0MDAgWiIgCiAgICAgICAgZmlsbD0idXJsKCNnKSIgc3Ryb2tlPSIjNGNhZjUwIiBzdHJva2Utd2lkdGg9IjIiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDxjaXJjbGUgY3g9IjExMCIgY3k9IjkwIiByPSIzNSIgZmlsbD0iIzAwMCIvPgogIDxyZWN0IHg9Ijk1IiB5PSI4NSIgd2lkdGg9IjEwIiBoZWlnaHQ9IjMiIGZpbGw9IiM0Y2FmNTAiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDxyZWN0IHg9IjExNSIgeT0iODUiIHdpZHRoPSIxMCIgaGVpZ2h0PSIzIiBmaWxsPSIjNGNhZjUwIiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KPC9zdmc+";
+
         // --- THE CREW DATA ---
         const gtaCharacters = [
             {
@@ -4021,12 +4027,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(nameEl) nameEl.innerText = char.name;
                 if(dialogEl) dialogEl.innerText = line;
                 if(bodyEl) {
-                    bodyEl.src = char.img;
-                    // Fallback logic
-                    bodyEl.onerror = function() {
-                        this.src = 'https://placehold.co/400x600/000/4caf50?text=' + encodeURIComponent(char.name) + '&font=oswald';
-                        this.style.objectFit = 'cover';
+                    // 1. Start with Safe Fallback (Silhouette)
+                    bodyEl.src = CJ_FALLBACK;
+                    bodyEl.style.objectFit = 'contain';
+                    
+                    // 2. Try to load Real Image
+                    const tempImg = new Image();
+                    tempImg.onload = function() {
+                        bodyEl.src = this.src;
                     };
+                    tempImg.src = char.img;
                 }
                 
                 // 4. Show
