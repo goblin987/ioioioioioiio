@@ -1692,138 +1692,168 @@
         
         /* Hide any previous broken layers if they exist */
         .map-layer { display: contents; } 
-        /* --- 3D GLOBE MAP THEME --- */
-        .globe-container {
+        /* --- METRO MAP THEME (Modern Retro) --- */
+        .metro-container {
             width: 100%;
             height: 100%;
-            perspective: 1000px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #111;
             position: relative;
-            background: radial-gradient(circle at center, #1a2634 0%, #0d161f 100%);
             overflow: hidden;
-        }
-
-        .globe {
-            width: 280px;
-            height: 280px;
-            position: relative;
-            transform-style: preserve-3d;
-            transform: rotateX(-10deg) rotateY(20deg);
-            transition: transform 0.1s ease-out; /* Smooth drag */
-            cursor: grab;
-        }
-
-        .globe:active { cursor: grabbing; }
-
-        /* Cube Faces */
-        .globe-face {
-            position: absolute;
-            width: 280px;
-            height: 280px;
-            background: #0d161f;
-            border: 1px solid rgba(255,255,255,0.05);
-            backface-visibility: hidden; /* Hide back faces for performance */
-        }
-
-        /* Front Face (Map) */
-        .globe-face.front {
-            transform: translateZ(140px);
-            background: #d4c5a9; /* Parchment */
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+            font-family: 'Courier New', monospace;
         }
 
-        /* Other Faces */
-        .globe-face.back   { transform: rotateY(180deg) translateZ(140px); background: #15202b; }
-        .globe-face.right  { transform: rotateY(90deg) translateZ(140px); background: #111a26; }
-        .globe-face.left   { transform: rotateY(-90deg) translateZ(140px); background: #111a26; }
-        .globe-face.top    { transform: rotateX(90deg) translateZ(140px); background: #0e151f; }
-        .globe-face.bottom { transform: rotateX(-90deg) translateZ(140px); background: #0e151f; }
-
-        /* Map SVG on Face */
-        .globe-map {
-            width: 90%;
-            height: 90%;
-            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
-            pointer-events: none; /* Let clicks pass to pins */
-        }
-
-        /* Pins in 3D */
-        .city-pin {
+        /* Background Grid */
+        .metro-bg {
             position: absolute;
-            transform-style: preserve-3d;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 1;
+        }
+
+        /* Main Metro Line */
+        .metro-line {
+            position: absolute;
+            left: 50px; /* Left aligned line */
+            top: 10%;
+            bottom: 10%;
+            width: 8px;
+            background: #333;
+            border-radius: 4px;
+            z-index: 2;
+        }
+
+        /* Active Path (Animated) */
+        .metro-line::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, #2e7d32, #5c6bc0, #fbc02d);
+            opacity: 0.3;
+        }
+
+        /* The Train (Marker) */
+        .metro-train {
+            position: absolute;
+            left: 44px; /* Centered on 8px line: 50 - (20/2) + 4 = 44? No. Line left 50, width 8. Center 54. Train width 20. 54 - 10 = 44. */
+            top: 15%; /* Start at top */
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border: 3px solid #000;
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: 0 0 10px #fff, 0 0 20px #fff;
+            transition: top 0.8s cubic-bezier(0.45, 0, 0.55, 1);
+        }
+
+        .metro-train::after {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.5);
+            animation: trainPulse 1s infinite;
+        }
+
+        @keyframes trainPulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* Stations */
+        .metro-stations {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5;
+        }
+
+        .station-node {
+            position: absolute;
+            left: 54px; /* Center of line */
+            transform: translateX(-50%);
             cursor: pointer;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            transition: transform 0.3s;
-            z-index: 10;
+            transition: 0.3s;
         }
 
-        .city-pin:hover { transform: scale(1.2) translateZ(10px); }
-
-        .pin-marker {
-            width: 24px; height: 24px;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            border: 2px solid #fff;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+        .station-node:hover {
+            transform: translateX(-45%); /* Slight nudge */
         }
 
-        .pin-green { background: #2e7d32; }
-        .pin-blue { background: #5c6bc0; }
-        .pin-yellow { background: #fbc02d; }
+        /* Station Dot */
+        .station-dot {
+            width: 16px; height: 16px;
+            background: #111;
+            border: 3px solid #555;
+            border-radius: 50%;
+            margin-right: 15px; /* Space to label */
+            z-index: 6;
+            transition: 0.3s;
+        }
 
-        .pin-label {
-            margin-top: 10px;
+        .station-node:hover .station-dot {
+            background: #fff;
+            border-color: #fff;
+        }
+
+        .dot-green { border-color: #2e7d32; }
+        .dot-blue { border-color: #5c6bc0; }
+        .dot-yellow { border-color: #fbc02d; }
+
+        /* Station Label */
+        .station-label {
             background: rgba(0,0,0,0.8);
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Impact', sans-serif;
-            font-size: 12px;
+            padding: 8px 12px;
+            border-left: 4px solid #555;
+            color: #aaa;
+            font-size: 20px;
+            font-weight: bold;
             text-transform: uppercase;
-            pointer-events: none;
-            transform: translateZ(20px); /* Float above map */
+            transition: 0.3s;
+            min-width: 150px;
         }
 
-        .globe-hint {
-            position: absolute;
-            bottom: 30px;
-            width: 100%;
-            text-align: center;
-            color: rgba(255,255,255,0.5);
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            pointer-events: none;
-            animation: pulseHint 2s infinite;
-        }
-
-        @keyframes pulseHint {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.8; }
-        }
-
-        /* District Panel (Slide-in) - Reusing existing styles but ensuring compatibility */
-        .district-panel {
-            position: absolute;
-            top: 0; right: -100%;
-            width: 100%;
-            max-width: 300px;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            border-left: 4px solid #f0c330;
-            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
+        .station-node:hover .station-label {
+            color: #fff;
+            padding-left: 20px;
         }
         
-        .district-panel.active { right: 0; }
+        .station-node[data-city="Vilnius"]:hover .station-label { border-color: #2e7d32; text-shadow: 0 0 10px #2e7d32; }
+        .station-node[data-city="Kaunas"]:hover .station-label { border-color: #5c6bc0; text-shadow: 0 0 10px #5c6bc0; }
+        .station-node[data-city="Klaipeda"]:hover .station-label { border-color: #fbc02d; text-shadow: 0 0 10px #fbc02d; }
+
+        .station-sub {
+            font-size: 10px;
+            color: #666;
+            display: block;
+            margin-top: 2px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* District Panel (Reuse existing, ensure it looks good) */
+        .district-panel {
+            background: #0a0a0a !important;
+            border-left: 2px solid #fff !important;
+        }
+        
+        .dm-item {
+            font-family: 'Courier New', monospace !important;
+            border: 1px solid #333 !important;
+            margin-bottom: 5px !important;
+            background: #111 !important;
+        }
+        .dm-item:hover {
+            background: #fff !important;
+            color: #000 !important;
+        }
     </style>
 </head>
 <body>
@@ -1999,6 +2029,26 @@
         <div id="map" class="section">
             <div class="placeholder-box" style="padding: 0; border: none;">
                 <div class="map-container" id="map-container">
+                    <div class="metro-container">
+                        <div class="metro-bg"></div>
+                        <div class="metro-line"></div>
+                        <div class="metro-train" id="metro-train"></div>
+                        <div class="metro-stations">
+                            <div class="station-node" data-city="Vilnius" onclick="goToStation('Vilnius', 15)" style="top: 15%;">
+                                <div class="station-dot dot-green"></div>
+                                <div class="station-label">VILNIUS <span class="station-sub">TERMINAL 1</span></div>
+                            </div>
+                            <div class="station-node" data-city="Kaunas" onclick="goToStation('Kaunas', 50)" style="top: 50%;">
+                                <div class="station-dot dot-blue"></div>
+                                <div class="station-label">KAUNAS <span class="station-sub">CENTRAL</span></div>
+                            </div>
+                            <div class="station-node" data-city="Klaipeda" onclick="goToStation('Klaipeda', 85)" style="top: 85%;">
+                                <div class="station-dot dot-yellow"></div>
+                                <div class="station-label">KLAIPEDA <span class="station-sub">HARBOR</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:none;">
                     <div class="globe-container">
                         <div class="globe" id="globe">
                             <div class="globe-face front">
@@ -2126,6 +2176,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         </div>
                         <div class="globe-hint">👆 SWIPE TO ROTATE THE WORLD</div>
                     </div>
+                    </div> <!-- End Hidden Globe -->
 
                     <!-- District Panel -->
                     <div id="district-panel" class="district-panel">
@@ -3137,7 +3188,85 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         // Initialize after DOM
-        setTimeout(initGlobe, 1000); 
+        // setTimeout(initGlobe, 1000); // Disabled for Metro Map
+
+        // --- METRO MAP LOGIC ---
+        
+        function goToStation(city, percent) {
+            if(window.sfx) sfx.select();
+            
+            const train = document.getElementById('metro-train');
+            if(train) train.style.top = percent + '%';
+            
+            // Dim all, highlight active
+            document.querySelectorAll('.station-node').forEach(node => {
+                node.style.opacity = '0.5';
+                node.querySelector('.station-label').style.color = '#aaa';
+            });
+            
+            const active = document.querySelector(`.station-node[data-city="${city}"]`);
+            if(active) {
+                active.style.opacity = '1';
+                active.querySelector('.station-label').style.color = '#fff';
+            }
+
+            // Open menu
+            setTimeout(() => {
+                openDistrictPanel(city);
+            }, 600);
+        }
+
+        // Overwrite the previous openDistrictPanel
+        function openDistrictPanel(city) {
+            const panel = document.getElementById('district-panel');
+            const header = document.getElementById('panel-header');
+            const list = document.getElementById('panel-list');
+            if(!panel) return;
+
+            header.innerText = city.toUpperCase();
+            list.innerHTML = '';
+            
+            const colors = { 'Vilnius': '#2e7d32', 'Kaunas': '#5c6bc0', 'Klaipeda': '#fbc02d' };
+            header.style.background = colors[city] || '#333';
+            header.style.color = '#fff';
+
+            const districts = {
+                'Vilnius': ['Senamiestis', 'Naujamiestis', 'Antakalnis', 'Šnipiškės'],
+                'Kaunas': ['Centras', 'Žaliakalnis', 'Šilainiai', 'Dainava'],
+                'Klaipeda': ['Senamiestis', 'Baltija', 'Danė', 'Pempininkai']
+            };
+            
+            (districts[city] || ['Downtown']).forEach(d => {
+                const item = document.createElement('div');
+                item.className = 'dm-item'; 
+                item.innerText = d;
+                item.style.padding = '15px';
+                item.style.borderBottom = '1px solid #333';
+                item.style.cursor = 'pointer';
+                item.style.fontFamily = "'Courier New', monospace";
+                item.style.fontWeight = "bold";
+                item.style.color = "#fff";
+                item.style.backgroundColor = "#111";
+                
+                item.onmouseover = () => {
+                    item.style.background = '#fff';
+                    item.style.color = '#000';
+                };
+                item.onmouseout = () => {
+                    item.style.background = '#111';
+                    item.style.color = '#fff';
+                };
+                
+                item.onclick = () => {
+                    closePanel();
+                    showSection('shop');
+                    if(window.charSystem) charSystem.show('cj', `ARRIVING AT ${d.toUpperCase()}`);
+                };
+                list.appendChild(item);
+            });
+            
+            panel.classList.add('active');
+        }
     </script>
 </body>
 </html>
