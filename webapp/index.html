@@ -2932,6 +2932,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const modal = document.getElementById('basket-modal');
             renderBasketContent();
             modal.style.display = 'flex';
+            checkDiscounts(); // Check for auto-applied discounts
         }
         
         function renderBasketContent() {
@@ -2999,15 +3000,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             openBasket();
         }
 
-        async function applyDiscount() {
-            const input = document.getElementById('discount-input');
+        async function checkDiscounts(code = "") {
             const msg = document.getElementById('discount-msg');
-            const code = input.value.trim();
-            
-            if(!code) return;
-            
-            msg.innerText = "VALIDATING...";
-            msg.style.color = "#aaa";
+            if(msg) {
+                msg.innerText = code ? "VALIDATING..." : "CHECKING DISCOUNTS...";
+                msg.style.color = "#aaa";
+            }
             
             try {
                 const user = tg.initDataUnsafe?.user;
@@ -3025,28 +3023,43 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 const data = await response.json();
                 
-                if(data.success && data.code_valid) {
+                if(data.success) {
                     currentDiscount = {
-                        code: code,
+                        code: data.code_valid ? code : null,
                         reseller_discount: data.reseller_discount,
-                        code_discount: data.code_discount,
+                        code_discount: data.code_valid ? data.code_discount : 0,
                         final_total: data.final_total,
                         message: data.message
                     };
-                    msg.innerText = data.message;
-                    msg.style.color = "var(--gta-green)";
-                    renderBasketContent();
-                } else {
-                    msg.innerText = data.message || "INVALID CODE";
-                    msg.style.color = "#f00";
-                    currentDiscount = null;
+                    
+                    if (msg) {
+                        if (data.code_valid) {
+                            msg.innerText = data.message;
+                            msg.style.color = "var(--gta-green)";
+                        } else if (code) {
+                            msg.innerText = data.message || "INVALID CODE";
+                            msg.style.color = "#f00";
+                        } else if (data.reseller_discount > 0) {
+                            msg.innerText = "RESELLER DISCOUNT ACTIVE";
+                            msg.style.color = "var(--gta-gold)";
+                        } else {
+                            msg.innerText = "";
+                        }
+                    }
                     renderBasketContent();
                 }
             } catch(e) {
-                msg.innerText = "ERROR CHECKING CODE";
-                msg.style.color = "#f00";
                 console.error(e);
+                if(msg && code) {
+                    msg.innerText = "ERROR CHECKING CODE";
+                    msg.style.color = "#f00";
+                }
             }
+        }
+
+        function applyDiscount() {
+             const input = document.getElementById('discount-input');
+             checkDiscounts(input.value.trim());
         }
 
         // --- Checkout & Payment ---

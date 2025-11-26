@@ -2464,7 +2464,10 @@ def webapp_validate_discount():
         message = ""
         is_valid = False
         
-        if code:
+        if reseller_discount_total > 0 and code:
+             message = "⚠️ Reseller discount cannot be combined with promo codes."
+             is_valid = False
+        elif code:
             is_valid, msg, details = validate_discount_code(code, float(base_total_after_reseller))
             if is_valid and details:
                 code_discount_amount = Decimal(str(details['discount_amount']))
@@ -2537,6 +2540,9 @@ def webapp_create_invoice():
             'code': None,
             'code_discount': 0.0
         }
+        
+        if reseller_discount_total > 0 and discount_code:
+             discount_code = None # Disable code if reseller discount exists
         
         if discount_code:
             is_valid, msg, details = validate_discount_code(discount_code, float(base_total_after_reseller))
