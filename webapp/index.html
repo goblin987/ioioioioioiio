@@ -2039,6 +2039,22 @@
         </div>
     </div>
 
+    <!-- District Selection Modal (New) -->
+    <div id="district-modal" class="modal-3d" style="display:none; align-items:center; justify-content:center; z-index: 50000;">
+        <div class="terminal-box" style="width: 90%; max-width: 400px; text-align: center; padding: 20px;">
+            <div style="border-bottom: 2px solid var(--gta-green); padding-bottom:10px; margin-bottom:15px; font-size:24px; color:var(--gta-gold); font-family: 'Pricedown';">
+                SELECT DISTRICT
+            </div>
+            <div id="district-modal-header" style="margin-bottom: 15px; color: #aaa; font-family: 'Impact'; font-size: 18px;">
+                CITY
+            </div>
+            <div id="district-modal-content" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding-bottom: 20px; max-height: 50vh; overflow-y: auto;">
+                <!-- Buttons go here -->
+            </div>
+            <button onclick="closeDistrictModal()" style="background:#900; color:#fff; border:1px solid #fff; padding:10px 20px; font-family:'Pricedown'; width:100%; cursor:pointer; font-size: 18px;">CANCEL</button>
+        </div>
+    </div>
+
     <!-- Invoice Modal -->
     <div id="invoice-modal" class="modal-3d" style="display:none;">
         <div class="terminal-box">
@@ -3455,68 +3471,66 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             container.classList.remove('zoomed');
             layer.style.transform = 'scale(1)';
             
-            // Clear pins
+            // Clear pins (Legacy)
             document.querySelectorAll('.district-pin').forEach(p => p.remove());
             
-            const panel = document.getElementById('district-panel');
-            if(panel) panel.classList.remove('active');
+            // Hide Modal (New)
+            const modal = document.getElementById('district-modal');
+            if(modal) modal.style.display = 'none';
+        }
+
+        function closeDistrictModal() {
+             resetSatelliteView();
         }
 
         function openDistrictPanel(city) {
-            const container = document.getElementById('map-zoom-layer');
-            document.querySelectorAll('.district-pin').forEach(p => p.remove());
+            // NEW: Show Modal instead of Pins
+            const modal = document.getElementById('district-modal');
+            const header = document.getElementById('district-modal-header');
+            const content = document.getElementById('district-modal-content');
+            
+            if(!modal || !content) return;
+            
+            if(header) header.innerText = city.toUpperCase();
+            content.innerHTML = '';
+            
+            // 1. "ALL ZONES" Button
+            const allBtn = document.createElement('button');
+            allBtn.className = 'filter-btn back-btn';
+            allBtn.style.width = "100%";
+            allBtn.style.marginBottom = "15px";
+            allBtn.innerText = 'ALL ' + city.toUpperCase();
+            allBtn.onclick = () => {
+                if(window.sfx) sfx.select();
+                showSection('shop');
+                filterProducts(city);
+                closeDistrictModal();
+            };
+            content.appendChild(allBtn);
 
-            const cityCoords = {
-                'Vilnius': { x: 70, y: 70 },
-                'Kaunas': { x: 50, y: 55 },
-                'Klaipeda': { x: 15, y: 30 }
-            };
+            // 2. District Buttons
+            const dList = districtData[city] || [];
             
-            const center = cityCoords[city];
-            const districts = {
-                'Vilnius': [
-                    { name: 'Senamiestis', dx: 2, dy: -2 },
-                    { name: 'Naujamiestis', dx: -3, dy: 3 },
-                    { name: 'Antakalnis', dx: 4, dy: 1 },
-                    { name: 'Šnipiškės', dx: -1, dy: -4 }
-                ],
-                'Kaunas': [
-                    { name: 'Centras', dx: 1, dy: -1 },
-                    { name: 'Žaliakalnis', dx: 3, dy: -3 },
-                    { name: 'Šilainiai', dx: -4, dy: -2 }
-                ],
-                'Klaipeda': [
-                    { name: 'Senamiestis', dx: 2, dy: 1 },
-                    { name: 'Baltija', dx: -2, dy: -3 },
-                    { name: 'Danė', dx: 3, dy: -2 }
-                ]
-            };
-            
-            const list = districts[city] || [];
-            
-            list.forEach((d, i) => {
-                const pin = document.createElement('div');
-                pin.className = 'district-pin';
-                pin.style.left = (center.x + d.dx) + '%';
-                pin.style.top = (center.y + d.dy) + '%';
+            dList.forEach(d => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.innerText = d.name.toUpperCase();
+                btn.style.flex = "1 0 40%"; 
+                btn.style.margin = "5px";
+                btn.style.padding = "15px";
+                btn.style.fontSize = "16px";
                 
-                pin.innerHTML = `
-                    <div class="pin-label-box">
-                        <div style="font-weight:bold;">${d.name.toUpperCase()}</div>
-                        <div style="font-size:8px; color:#fff;">STOCK: HIGH</div>
-                    </div>
-                `;
-                
-                pin.onclick = (e) => {
-                    e.stopPropagation();
+                btn.onclick = () => {
+                    if(window.sfx) sfx.select();
                     showSection('shop');
-                    filterProducts(city, d.name); // Filter by City + District
-                    if(window.charSystem) charSystem.show('cj', `TARGET: ${d.name.toUpperCase()}`);
+                    filterProducts(city, d.name);
+                    closeDistrictModal();
+                    if(window.charSystem) charSystem.show('cj', `${d.name} - GOOD CHOICE!`);
                 };
-                
-                container.appendChild(pin);
-                setTimeout(() => pin.classList.add('visible'), i * 100);
+                content.appendChild(btn);
             });
+            
+            modal.style.display = 'flex';
         }
         
         // Remove Metro Init
