@@ -2279,76 +2279,84 @@
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* --- CHARACTER OVERLAY (THE CREW) --- */
+        /* --- CINEMATIC HANDOFF THEME --- */
         .character-overlay {
             position: fixed;
-            bottom: 15%; right: -120%;
-            width: 90%;
-            max-width: 380px;
-            background: linear-gradient(135deg, rgba(0,0,0,0.95) 60%, rgba(20,20,20,0.95));
-            border: 2px solid #fff;
-            border-left: 6px solid var(--gta-green);
-            display: flex;
-            align-items: center;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); /* Dim background */
             z-index: 25000;
-            transition: right 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Snappy spring */
-            box-shadow: 10px 10px 20px rgba(0,0,0,0.8);
-            overflow: hidden;
+            display: none; /* Hidden by default */
+            pointer-events: none;
         }
         
         .character-overlay.active {
-            right: 5%;
+            display: block;
+            pointer-events: auto;
         }
         
-        .char-img-box {
-            width: 110px;
-            height: 110px;
-            border-right: 2px solid #444;
-            background: #111;
-            overflow: hidden;
-            position: relative;
-            flex-shrink: 0;
+        /* Character Cutout */
+        .char-body {
+            position: absolute;
+            bottom: -100%; left: -10%;
+            width: 90%; height: 80%;
+            max-width: 600px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom center;
+            transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1;
+            filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.8));
         }
         
-        .char-img-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top;
-            transition: transform 3s ease;
+        .character-overlay.active .char-body {
+            bottom: -10%; /* Slide up */
         }
         
-        .character-overlay.active .char-img-box img {
-            transform: scale(1.1); /* Subtle zoom */
-        }
-        
-        .char-text-box {
+        /* Dialogue Box (Comic Style) */
+        .char-dialogue-box {
+            position: absolute;
+            top: 20%; right: 5%;
+            width: 45%;
+            background: #fff;
+            border: 4px solid #000;
             padding: 15px;
-            color: #fff;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            font-family: 'Impact', sans-serif;
+            font-size: 20px;
+            color: #000;
+            border-radius: 2px;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.4s 0.5s; /* Delay */
+            z-index: 2;
+            box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+        }
+        
+        .char-dialogue-box::after {
+            content: '';
+            position: absolute;
+            bottom: -15px; left: 20px;
+            border-width: 15px 15px 0;
+            border-style: solid;
+            border-color: #000 transparent;
+            display: block;
+            width: 0;
+        }
+        
+        .character-overlay.active .char-dialogue-box {
+            opacity: 1;
+            transform: scale(1);
         }
         
         .char-name {
-            color: var(--gta-gold);
-            font-size: 18px;
-            font-weight: bold;
+            color: var(--gta-green);
+            font-size: 14px;
             margin-bottom: 5px;
-            font-family: 'Diplomata', serif;
-            text-shadow: 1px 1px 0 #000;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
-        .char-dialogue {
-            font-family: 'Arial', sans-serif;
-            font-size: 13px;
-            line-height: 1.4;
-            color: #ddd;
-            font-style: italic;
-        }
+
+        /* Override old inner elements */
+        .char-img-box, .char-text-box { display: none !important; }
     </style>
 </head>
 <body>
@@ -2357,12 +2365,10 @@
         <div class="wasted-text">WASTED</div>
     </div>
     
-    <!-- CJ Contact Overlay -->
+    <!-- Cinematic Hand-Off Overlay -->
     <div id="cj-overlay" class="character-overlay">
-        <div class="char-img-box">
-            <img src="https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png" alt="CJ">
-        </div>
-        <div class="char-text-box">
+        <div class="char-body" id="char-body-img"></div>
+        <div class="char-dialogue-box">
             <div class="char-name">CARL JOHNSON</div>
             <div class="char-dialogue" id="cj-dialogue">Yo! You lookin' for something?</div>
         </div>
@@ -4006,7 +4012,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
             layer.style.transform = 'scale(4)';
             
-            // --- RANDOM CHARACTER INTRO ---
+            // --- CINEMATIC CHARACTER INTRO ---
             const cj = document.getElementById('cj-overlay');
             
             if(cj) {
@@ -4018,17 +4024,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 // 3. Update UI
                 const nameEl = cj.querySelector('.char-name');
-                const dialogEl = cj.querySelector('.char-dialogue');
-                const imgEl = cj.querySelector('img');
+                const dialogEl = document.getElementById('cj-dialogue');
+                const bodyEl = document.getElementById('char-body-img');
                 
                 if(nameEl) nameEl.innerText = char.name;
-                if(dialogEl) dialogEl.innerText = `"${line}"`;
-                if(imgEl) {
-                     imgEl.src = char.img;
-                     // Fallback if image fails
-                     imgEl.onerror = function() {
-                         this.src = 'https://placehold.co/100x100/111/FFF?text=NO+SIGNAL';
-                     };
+                if(dialogEl) dialogEl.innerText = line;
+                if(bodyEl) {
+                    bodyEl.style.backgroundImage = `url('${char.img}')`;
                 }
                 
                 // 4. Show
@@ -4041,7 +4043,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(cj) cj.classList.remove('active');
                 if(scanner) scanner.innerText = "CONNECTION ESTABLISHED";
                 openBurnerPhone(city);
-            }, 2500);
+            }, 3000);
         }
 
         function resetSatelliteView() {
