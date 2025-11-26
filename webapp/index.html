@@ -1692,11 +1692,11 @@
         
         /* Hide any previous broken layers if they exist */
         .map-layer { display: contents; } 
-        /* --- METRO MAP THEME (Modern Retro) --- */
+        /* --- METRO MAP: HACKER SURVEILLANCE MODE --- */
         .metro-container {
             width: 100%;
             height: 100%;
-            background: #111;
+            background: #050505;
             position: relative;
             overflow: hidden;
             display: flex;
@@ -1704,70 +1704,92 @@
             align-items: center;
             justify-content: center;
             font-family: 'Courier New', monospace;
+            border: 2px solid #333;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
         }
 
-        /* Background Grid */
-        .metro-bg {
+        /* CRT Scanline & Flicker */
+        .metro-container::before {
+            content: "SYSTEM MONITORING // LSPD NET LINKED";
+            position: absolute;
+            top: 15px; left: 15px;
+            color: rgba(0, 255, 0, 0.7);
+            font-size: 10px;
+            z-index: 20;
+            font-weight: bold;
+            animation: textFlicker 4s infinite;
+            pointer-events: none;
+        }
+
+        .metro-container::after {
+            content: "";
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 15;
+            animation: scanlineScroll 0.5s linear infinite;
+            opacity: 0.6;
+        }
+        
+        @keyframes scanlineScroll { 0% { background-position: 0 0; } 100% { background-position: 0 100%; } }
+        @keyframes textFlicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 0.8; } 20%, 24%, 55% { opacity: 0.1; } }
+
+        /* Moving Grid (Parallax) */
+        .metro-bg {
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
             background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
+                linear-gradient(rgba(46, 125, 50, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(46, 125, 50, 0.15) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(20deg);
+            animation: gridMove 10s linear infinite;
             z-index: 1;
         }
+        @keyframes gridMove { 0% { transform: perspective(500px) rotateX(20deg) translateY(0); } 100% { transform: perspective(500px) rotateX(20deg) translateY(50px); } }
 
-        /* Main Metro Line */
+        /* Metro Line (Data Pipe) */
         .metro-line {
             position: absolute;
-            left: 50px; /* Left aligned line */
-            top: 10%;
-            bottom: 10%;
-            width: 8px;
-            background: #333;
-            border-radius: 4px;
+            left: 70px; 
+            top: 10%; bottom: 10%;
+            width: 6px;
+            background: #111;
+            border: 1px solid #333;
             z-index: 2;
+            box-shadow: 0 0 15px rgba(0,255,0,0.2);
         }
-
-        /* Active Path (Animated) */
+        
         .metro-line::after {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, #2e7d32, #5c6bc0, #fbc02d);
-            opacity: 0.3;
+            background: linear-gradient(to bottom, transparent, #0f0, transparent);
+            background-size: 100% 200%;
+            animation: lineFlow 2s linear infinite;
+            opacity: 0.5;
         }
+        
+        @keyframes lineFlow { 0% { background-position: 0 -100%; } 100% { background-position: 0 200%; } }
 
-        /* The Train (Marker) */
+        /* The Signal Packet (Train) */
         .metro-train {
             position: absolute;
-            left: 44px; /* Centered on 8px line: 50 - (20/2) + 4 = 44? No. Line left 50, width 8. Center 54. Train width 20. 54 - 10 = 44. */
-            top: 15%; /* Start at top */
-            width: 20px;
-            height: 20px;
-            background: #fff;
-            border: 3px solid #000;
-            border-radius: 50%;
+            left: 63px; /* Centered on 70px line (width 6). 70 + 3 - 10 = 63. */
+            top: 15%;
+            width: 20px; height: 20px;
+            background: #0f0;
+            box-shadow: 0 0 15px #0f0, 0 0 30px #0f0;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* Diamond shape */
             z-index: 10;
-            box-shadow: 0 0 10px #fff, 0 0 20px #fff;
-            transition: top 0.8s cubic-bezier(0.45, 0, 0.55, 1);
+            transition: top 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
         }
 
-        .metro-train::after {
-            content: '';
-            position: absolute;
-            top: -2px; left: -2px; right: -2px; bottom: -2px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.5);
-            animation: trainPulse 1s infinite;
-        }
-
-        @keyframes trainPulse {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
-        }
-
-        /* Stations */
+        /* Stations (Nodes) */
         .metro-stations {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -1776,67 +1798,84 @@
 
         .station-node {
             position: absolute;
-            left: 54px; /* Center of line */
+            left: 73px; /* Center of line */
             transform: translateX(-50%);
             cursor: pointer;
             display: flex;
             align-items: center;
-            transition: 0.3s;
+            transition: 0.2s;
+            width: 80%; /* Click area */
         }
 
-        .station-node:hover {
-            transform: translateX(-45%); /* Slight nudge */
-        }
-
-        /* Station Dot */
         .station-dot {
-            width: 16px; height: 16px;
-            background: #111;
-            border: 3px solid #555;
-            border-radius: 50%;
-            margin-right: 15px; /* Space to label */
+            width: 14px; height: 14px;
+            background: #000;
+            border: 2px solid #555;
+            transform: rotate(45deg); /* Diamond */
+            margin-right: 25px;
             z-index: 6;
             transition: 0.3s;
+            flex-shrink: 0;
         }
 
         .station-node:hover .station-dot {
-            background: #fff;
-            border-color: #fff;
+            background: #0f0;
+            border-color: #0f0;
+            box-shadow: 0 0 15px #0f0;
+            transform: rotate(225deg) scale(1.3);
         }
 
-        .dot-green { border-color: #2e7d32; }
-        .dot-blue { border-color: #5c6bc0; }
-        .dot-yellow { border-color: #fbc02d; }
-
-        /* Station Label */
+        /* Labels */
         .station-label {
-            background: rgba(0,0,0,0.8);
-            padding: 8px 12px;
-            border-left: 4px solid #555;
-            color: #aaa;
+            color: rgba(255,255,255,0.6);
             font-size: 20px;
             font-weight: bold;
             text-transform: uppercase;
+            letter-spacing: 1px;
             transition: 0.3s;
-            min-width: 150px;
+            background: rgba(0,0,0,0.6);
+            padding: 6px 10px;
+            border-radius: 2px;
+            border-left: 2px solid transparent;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
         }
 
         .station-node:hover .station-label {
-            color: #fff;
+            color: #0f0;
+            border-left-color: #0f0;
+            background: rgba(0, 255, 0, 0.1);
+            text-shadow: 0 0 10px #0f0;
             padding-left: 20px;
         }
-        
-        .station-node[data-city="Vilnius"]:hover .station-label { border-color: #2e7d32; text-shadow: 0 0 10px #2e7d32; }
-        .station-node[data-city="Kaunas"]:hover .station-label { border-color: #5c6bc0; text-shadow: 0 0 10px #5c6bc0; }
-        .station-node[data-city="Klaipeda"]:hover .station-label { border-color: #fbc02d; text-shadow: 0 0 10px #fbc02d; }
 
         .station-sub {
             font-size: 10px;
             color: #666;
             display: block;
-            margin-top: 2px;
-            font-family: 'Arial', sans-serif;
+            margin-top: 4px;
+            font-family: Arial, sans-serif;
+            letter-spacing: 0;
         }
+        
+        /* Side Data Columns */
+        .data-col {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 40px;
+            font-size: 8px;
+            line-height: 1.5;
+            color: rgba(0, 255, 0, 0.3);
+            overflow: hidden;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            pointer-events: none;
+            user-select: none;
+        }
+        .data-col.right { right: 10px; text-align: right; }
+        .data-col.left { right: auto; left: 10px; text-align: left; display: none; } /* Only right col */
+
 
         /* District Panel (Reuse existing, ensure it looks good) */
         .district-panel {
@@ -2031,6 +2070,13 @@
                 <div class="map-container" id="map-container">
                     <div class="metro-container">
                         <div class="metro-bg"></div>
+                        <div class="data-col right">
+                            <span>0F 2A 4C 99</span><span>1B 8D E2 10</span><span>AA FF 00 12</span><span>44 22 11 00</span><span>99 88 77 66</span>
+                            <span>00 11 00 11</span><span>FF 00 FF 00</span><span>42 42 42 42</span><span>12 34 56 78</span><span>AB CD EF 00</span>
+                            <span>-- -- -- --</span><span>LSPD NET</span><span>CONNECTED</span><span>-- -- -- --</span>
+                            <span>0F 2A 4C 99</span><span>1B 8D E2 10</span><span>AA FF 00 12</span><span>44 22 11 00</span><span>99 88 77 66</span>
+                            <span>00 11 00 11</span><span>FF 00 FF 00</span><span>42 42 42 42</span><span>12 34 56 78</span><span>AB CD EF 00</span>
+                        </div>
                         <div class="metro-line"></div>
                         <div class="metro-train" id="metro-train"></div>
                         <div class="metro-stations">
