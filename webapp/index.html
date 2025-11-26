@@ -1817,6 +1817,40 @@
         
         .satellite-view.zoomed .hud-reset { opacity: 1; pointer-events: auto; }
 
+        /* --- CLOUD LAYERS & GLITCH --- */
+        .sat-clouds {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 12;
+            pointer-events: none;
+            opacity: 0.3;
+            background: url('https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png'); 
+            background-size: cover;
+            animation: drift 60s linear infinite;
+            mix-blend-mode: overlay;
+        }
+        
+        .sat-clouds.layer2 {
+            z-index: 13;
+            opacity: 0.15;
+            background-position: 100px 50px;
+            animation: drift 40s linear infinite reverse;
+        }
+
+        @keyframes drift { from { background-position: 0 0; } to { background-position: 100% 0; } }
+
+        /* Glitch Effect on SVG when zooming */
+        .satellite-view.glitching .map-img-interactive {
+            animation: rgbSplit 0.4s steps(5);
+        }
+        
+        @keyframes rgbSplit {
+            0% { transform: translate(0); }
+            25% { transform: translate(-3px, 3px); filter: drop-shadow(-3px 0 0 rgba(255,0,0,0.7)) drop-shadow(3px 0 0 rgba(0,0,255,0.7)); }
+            50% { transform: translate(3px, -3px); filter: drop-shadow(3px 0 0 rgba(255,0,0,0.7)) drop-shadow(-3px 0 0 rgba(0,0,255,0.7)); }
+            75% { transform: translate(-2px, 0); }
+            100% { transform: translate(0); }
+        }
+
 
 
         /* District Panel (Reuse existing, ensure it looks good) */
@@ -2013,6 +2047,8 @@
                     <div class="satellite-view">
                         <div class="sat-bg"></div>
                         <div class="sat-grid"></div>
+                        <div class="sat-clouds"></div>
+                        <div class="sat-clouds layer2"></div>
                         <div class="sat-vignette"></div>
                         <div class="sat-scanline"></div>
                         <div class="map-zoom-layer" id="map-zoom-layer">
@@ -3162,6 +3198,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             const layer = document.getElementById('map-zoom-layer');
             const container = document.querySelector('.satellite-view');
+            
+            // Trigger Glitch
+            container.classList.add('glitching');
+            setTimeout(() => container.classList.remove('glitching'), 500);
             
             container.classList.add('zoomed');
             
