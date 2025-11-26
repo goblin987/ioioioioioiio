@@ -1881,52 +1881,112 @@
             background: #fff !important;
             color: #000 !important;
         }
-        /* --- TACTICAL DISTRICT OVERLAY --- */
-        .district-pin {
+        /* --- DISTRICT POLYGON SYSTEM --- */
+        .district-polygons {
             position: absolute;
-            width: 14px; height: 14px;
-            background: #000;
-            border: 2px solid #0ff; /* Cyan for districts */
-            border-radius: 50%;
-            cursor: pointer;
-            transform: translate(-50%, -50%) scale(0);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 25;
-            box-shadow: 0 0 10px #0ff;
-        }
-        
-        .district-pin.visible { transform: translate(-50%, -50%) scale(1); }
-        .district-pin:hover { background: #0ff; transform: translate(-50%, -50%) scale(1.5); z-index: 30; }
-
-        /* Connecting Line & Label */
-        .pin-label-box {
-            position: absolute;
-            left: 20px; bottom: 20px; 
-            background: rgba(0, 20, 40, 0.9);
-            border: 1px solid #0ff;
-            padding: 5px 10px;
-            color: #0ff;
-            font-size: 10px;
-            font-family: 'Courier New', monospace;
-            white-space: nowrap;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             pointer-events: none;
             opacity: 0;
-            transition: 0.2s;
-            z-index: 26;
-            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            transition: opacity 0.5s ease 0.3s;
+            z-index: 15;
         }
         
-        .district-pin:hover .pin-label-box { opacity: 1; }
+        .satellite-view.zoomed .district-polygons {
+            opacity: 1;
+            pointer-events: auto;
+        }
         
-        /* Connector Line (Pseudo-element) */
-        .pin-label-box::before {
-            content: '';
+        .district-polygons svg {
+            width: 100%; height: 100%;
+        }
+        
+        .district-poly {
+            fill: #1a1a1a;
+            stroke: #333;
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform-origin: center;
+        }
+        
+        .satellite-view.zoomed .district-poly {
+            opacity: 1;
+        }
+        
+        /* Stock Status Colors */
+        .district-poly.has-stock {
+            fill: rgba(46, 125, 50, 0.6); /* Green */
+            stroke: #4caf50;
+            stroke-width: 3px;
+        }
+        
+        .district-poly.no-stock {
+            fill: rgba(50, 50, 50, 0.6); /* Grey */
+            stroke: #555;
+        }
+        
+        .district-poly.hot-zone {
+            fill: rgba(255, 193, 7, 0.5); /* Gold - Featured */
+            stroke: #ffc107;
+            stroke-width: 3px;
+            animation: hotPulse 2s infinite;
+        }
+        
+        @keyframes hotPulse {
+            0%, 100% { fill: rgba(255, 193, 7, 0.4); }
+            50% { fill: rgba(255, 193, 7, 0.7); }
+        }
+        
+        .district-poly:hover {
+            fill: rgba(255, 255, 255, 0.3) !important;
+            stroke: #fff !important;
+            stroke-width: 4px !important;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+        }
+        
+        /* District Label */
+        .district-label {
             position: absolute;
-            width: 20px; height: 1px;
-            background: #0ff;
-            left: -20px; bottom: -6px; /* Connect to pin */
-            transform: rotate(45deg);
-            transform-origin: right bottom;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #fff;
+            padding: 8px 12px;
+            color: #fff;
+            font-family: 'Impact', sans-serif;
+            font-size: 14px;
+            text-transform: uppercase;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            white-space: nowrap;
+            transform: translate(-50%, -100%);
+            margin-top: -10px;
+        }
+        
+        .district-label.visible {
+            opacity: 1;
+        }
+        
+        .district-label .stock-count {
+            display: block;
+            font-size: 11px;
+            color: #4caf50;
+            margin-top: 2px;
+        }
+        
+        .district-label .stock-count.empty {
+            color: #666;
+        }
+        
+        /* City District Containers */
+        .city-districts {
+            display: none;
+        }
+        
+        .city-districts.active {
+            display: block;
         }
     </style>
 </head>
@@ -2256,6 +2316,55 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                                 <div class="blip-ring"></div>
                                 <div class="blip-dot"></div>
                                 <div class="blip-label">KLAIPEDA</div>
+                            </div>
+                            
+                            <!-- District Polygon Overlays -->
+                            <div class="district-polygons">
+                                <!-- VILNIUS DISTRICTS -->
+                                <svg class="city-districts" id="districts-vilnius" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <polygon class="district-poly" data-city="Vilnius" data-district="Senamiestis" 
+                                        points="68,68 72,65 75,68 74,73 70,74 67,72" />
+                                    <polygon class="district-poly" data-city="Vilnius" data-district="Naujamiestis" 
+                                        points="65,72 68,70 72,73 71,78 66,77 64,74" />
+                                    <polygon class="district-poly" data-city="Vilnius" data-district="Zirmunai" 
+                                        points="72,63 77,61 80,64 79,68 74,69 71,66" />
+                                    <polygon class="district-poly" data-city="Vilnius" data-district="Antakalnis" 
+                                        points="75,67 80,65 84,68 82,73 77,72 74,70" />
+                                    <polygon class="district-poly" data-city="Vilnius" data-district="Fabijoniskes" 
+                                        points="66,62 70,59 74,62 73,66 68,67 65,65" />
+                                    <polygon class="district-poly" data-city="Vilnius" data-district="Pilaite" 
+                                        points="60,68 64,65 68,68 67,73 62,74 59,71" />
+                                </svg>
+                                
+                                <!-- KAUNAS DISTRICTS -->
+                                <svg class="city-districts" id="districts-kaunas" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <polygon class="district-poly" data-city="Kaunas" data-district="Centras" 
+                                        points="48,53 52,50 56,53 55,58 50,59 47,56" />
+                                    <polygon class="district-poly" data-city="Kaunas" data-district="Zaliakalnis" 
+                                        points="52,48 57,45 61,48 59,53 54,54 51,51" />
+                                    <polygon class="district-poly" data-city="Kaunas" data-district="Silainiai" 
+                                        points="42,52 46,49 50,52 49,57 44,58 41,55" />
+                                    <polygon class="district-poly" data-city="Kaunas" data-district="Dainava" 
+                                        points="48,58 53,55 57,58 55,63 50,64 47,61" />
+                                    <polygon class="district-poly" data-city="Kaunas" data-district="Aleksotas" 
+                                        points="44,58 48,55 52,58 51,63 46,64 43,61" />
+                                </svg>
+                                
+                                <!-- KLAIPEDA DISTRICTS -->
+                                <svg class="city-districts" id="districts-klaipeda" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <polygon class="district-poly" data-city="Klaipeda" data-district="Senamiestis" 
+                                        points="13,28 17,25 21,28 20,33 15,34 12,31" />
+                                    <polygon class="district-poly" data-city="Klaipeda" data-district="Baltija" 
+                                        points="14,33 18,30 22,33 21,38 16,39 13,36" />
+                                    <polygon class="district-poly" data-city="Klaipeda" data-district="Melnrage" 
+                                        points="10,25 14,22 18,25 17,30 12,31 9,28" />
+                                </svg>
+                            </div>
+                            
+                            <!-- Floating District Label -->
+                            <div id="district-hover-label" class="district-label">
+                                <span class="district-name">DISTRICT</span>
+                                <span class="stock-count">0 ITEMS</span>
                             </div>
                         </div> <!-- End Zoom Layer -->
                         
@@ -2677,7 +2786,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     grid.innerHTML = ''; // Clear before render
                     renderProducts(allProducts);
                     renderFilters(allProducts);
-                    updateStars(Math.floor(Math.random() * 6)); 
+                    updateStars(Math.floor(Math.random() * 6));
+                    refreshDistrictColors(); // Update map district colors 
                 } else {
                     if(!cached) grid.innerHTML = '<div class="loading" style="color:red">NO DATA</div>';
                 }
@@ -3432,13 +3542,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Initialize after DOM
         // setTimeout(initGlobe, 1000); // Disabled for Metro Map
 
-        // --- SATELLITE VIEW LOGIC (TACTICAL UPGRADE) ---
+        // --- SATELLITE VIEW LOGIC (POLYGON DISTRICTS) ---
         
         let isZoomed = false;
+        let currentZoomedCity = null;
 
         function zoomToCity(city, topP, leftP) {
             if(isZoomed) return;
             isZoomed = true;
+            currentZoomedCity = city;
             
             if(window.sfx) sfx.select();
             
@@ -3453,17 +3565,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // Zoom to point
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
-            layer.style.transform = 'scale(3.5)';
+            layer.style.transform = 'scale(4)';
             
-            // Spawn Pins on Map
+            // Show district polygons for this city
             setTimeout(() => {
-                openDistrictPanel(city); 
-            }, 800);
+                showDistrictPolygons(city);
+            }, 300);
         }
 
         function resetSatelliteView() {
             if(!isZoomed) return;
             isZoomed = false;
+            currentZoomedCity = null;
             
             const layer = document.getElementById('map-zoom-layer');
             const container = document.querySelector('.satellite-view');
@@ -3471,10 +3584,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             container.classList.remove('zoomed');
             layer.style.transform = 'scale(1)';
             
-            // Clear pins (Legacy)
-            document.querySelectorAll('.district-pin').forEach(p => p.remove());
+            // Hide all district SVGs
+            document.querySelectorAll('.city-districts').forEach(svg => {
+                svg.classList.remove('active');
+            });
             
-            // Hide Modal (New)
+            // Hide label
+            const label = document.getElementById('district-hover-label');
+            if(label) label.classList.remove('visible');
+            
+            // Hide Modal (fallback)
             const modal = document.getElementById('district-modal');
             if(modal) modal.style.display = 'none';
         }
@@ -3483,54 +3602,145 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
              resetSatelliteView();
         }
 
-        function openDistrictPanel(city) {
-            // NEW: Show Modal instead of Pins
-            const modal = document.getElementById('district-modal');
-            const header = document.getElementById('district-modal-header');
-            const content = document.getElementById('district-modal-content');
-            
-            if(!modal || !content) return;
-            
-            if(header) header.innerText = city.toUpperCase();
-            content.innerHTML = '';
-            
-            // 1. "ALL ZONES" Button
-            const allBtn = document.createElement('button');
-            allBtn.className = 'filter-btn back-btn';
-            allBtn.style.width = "100%";
-            allBtn.style.marginBottom = "15px";
-            allBtn.innerText = 'ALL ' + city.toUpperCase();
-            allBtn.onclick = () => {
-                if(window.sfx) sfx.select();
-                showSection('shop');
-                filterProducts(city);
-                closeDistrictModal();
-            };
-            content.appendChild(allBtn);
-
-            // 2. District Buttons
-            const dList = districtData[city] || [];
-            
-            dList.forEach(d => {
-                const btn = document.createElement('button');
-                btn.className = 'filter-btn';
-                btn.innerText = d.name.toUpperCase();
-                btn.style.flex = "1 0 40%"; 
-                btn.style.margin = "5px";
-                btn.style.padding = "15px";
-                btn.style.fontSize = "16px";
-                
-                btn.onclick = () => {
-                    if(window.sfx) sfx.select();
-                    showSection('shop');
-                    filterProducts(city, d.name);
-                    closeDistrictModal();
-                    if(window.charSystem) charSystem.show('cj', `${d.name} - GOOD CHOICE!`);
-                };
-                content.appendChild(btn);
+        function showDistrictPolygons(city) {
+            // Hide all first
+            document.querySelectorAll('.city-districts').forEach(svg => {
+                svg.classList.remove('active');
             });
             
-            modal.style.display = 'flex';
+            // Show the correct city's districts
+            const cityId = city.toLowerCase().replace(/[^a-z]/g, '');
+            const svg = document.getElementById(`districts-${cityId}`);
+            if(svg) {
+                svg.classList.add('active');
+                
+                // Color polygons based on stock
+                colorDistrictsByStock(city);
+                
+                // Add event listeners
+                initDistrictPolygonEvents(city);
+            }
+        }
+
+        function colorDistrictsByStock(city) {
+            const svg = document.getElementById(`districts-${city.toLowerCase()}`);
+            if(!svg) return;
+            
+            const polygons = svg.querySelectorAll('.district-poly');
+            
+            polygons.forEach(poly => {
+                const district = poly.dataset.district;
+                
+                // Count products in this district
+                const count = allProducts.filter(p => 
+                    p.city && p.city.toLowerCase() === city.toLowerCase() &&
+                    p.district && p.district.toLowerCase().includes(district.toLowerCase())
+                ).length;
+                
+                // Remove all status classes
+                poly.classList.remove('has-stock', 'no-stock', 'hot-zone');
+                
+                // Apply appropriate class
+                if(count >= 5) {
+                    poly.classList.add('hot-zone'); // Lots of stock = hot zone
+                } else if(count > 0) {
+                    poly.classList.add('has-stock'); // Some stock = green
+                } else {
+                    poly.classList.add('no-stock'); // Empty = grey
+                }
+                
+                // Store count for tooltip
+                poly.dataset.stockCount = count;
+            });
+        }
+
+        function initDistrictPolygonEvents(city) {
+            const svg = document.getElementById(`districts-${city.toLowerCase()}`);
+            if(!svg) return;
+            
+            const label = document.getElementById('district-hover-label');
+            const polygons = svg.querySelectorAll('.district-poly');
+            
+            polygons.forEach(poly => {
+                // Hover events
+                poly.addEventListener('mouseenter', (e) => {
+                    showDistrictLabel(e, poly);
+                });
+                
+                poly.addEventListener('mousemove', (e) => {
+                    moveDistrictLabel(e);
+                });
+                
+                poly.addEventListener('mouseleave', () => {
+                    hideDistrictLabel();
+                });
+                
+                // Touch events for mobile
+                poly.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    showDistrictLabel(e.touches[0], poly);
+                });
+                
+                // Click event
+                poly.addEventListener('click', () => {
+                    const district = poly.dataset.district;
+                    const stockCount = parseInt(poly.dataset.stockCount || 0);
+                    
+                    if(window.sfx) sfx.select();
+                    
+                    if(stockCount > 0) {
+                        showSection('shop');
+                        filterProducts(city, district);
+                        resetSatelliteView();
+                        if(window.charSystem) charSystem.show('cj', `${district.toUpperCase()} - ${stockCount} ITEMS!`);
+                    } else {
+                        if(window.charSystem) charSystem.show('cj', `${district.toUpperCase()} - NO STOCK!`);
+                    }
+                });
+            });
+        }
+
+        function showDistrictLabel(e, poly) {
+            const label = document.getElementById('district-hover-label');
+            if(!label) return;
+            
+            const district = poly.dataset.district;
+            const count = poly.dataset.stockCount || 0;
+            
+            label.querySelector('.district-name').innerText = district.toUpperCase();
+            
+            const stockSpan = label.querySelector('.stock-count');
+            stockSpan.innerText = count > 0 ? `${count} ITEMS AVAILABLE` : 'NO STOCK';
+            stockSpan.className = 'stock-count' + (count == 0 ? ' empty' : '');
+            
+            label.classList.add('visible');
+            moveDistrictLabel(e);
+        }
+
+        function moveDistrictLabel(e) {
+            const label = document.getElementById('district-hover-label');
+            if(!label) return;
+            
+            const container = document.querySelector('.satellite-view');
+            const rect = container.getBoundingClientRect();
+            
+            const x = (e.clientX || e.pageX) - rect.left;
+            const y = (e.clientY || e.pageY) - rect.top;
+            
+            label.style.left = x + 'px';
+            label.style.top = y + 'px';
+        }
+
+        function hideDistrictLabel() {
+            const label = document.getElementById('district-hover-label');
+            if(label) label.classList.remove('visible');
+        }
+
+        // Refresh district colors when products load
+        function refreshDistrictColors() {
+            if(currentZoomedCity) {
+                colorDistrictsByStock(currentZoomedCity);
+            }
         }
         
         // Remove Metro Init
