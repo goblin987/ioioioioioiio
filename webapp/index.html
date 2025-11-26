@@ -1559,7 +1559,7 @@
             text-transform: uppercase;
         }
         .dm-close:hover { background: #555; }
-        /* --- HACKER SIGNAL TRACKER THEME --- */
+        /* --- HACKER SIGNAL TRACKER THEME (TACTICAL) --- */
         .map-container {
             position: relative;
             height: 550px;
@@ -1567,6 +1567,7 @@
             overflow: hidden;
             border: 4px solid #222 !important;
             box-shadow: 0 0 30px rgba(0, 255, 0, 0.05) !important;
+            perspective: 1200px; /* 3D Depth */
         }
         
         .satellite-view {
@@ -1576,6 +1577,18 @@
                 linear-gradient(90deg, rgba(0, 50, 0, 0.4) 1px, transparent 1px);
             background-size: 40px 40px;
             position: relative;
+            
+            /* TACTICAL TILT */
+            transform: rotateX(15deg) scale(0.95);
+            transform-origin: center center;
+            transition: transform 1s ease;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+        
+        /* Zooming removes tilt for clarity */
+        .satellite-view.zoomed {
+            transform: rotateX(0deg) scale(1);
         }
         
         /* Scanline Effect */
@@ -3978,6 +3991,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             const layer = document.getElementById('map-zoom-layer');
             const container = document.querySelector('.satellite-view');
+            const scanner = document.querySelector('.scanner-text');
+            
+            // Idea 2: Decryption Overlay Text
+            if(scanner) scanner.innerText = "DECRYPTING SIGNAL SOURCE...";
             
             // Trigger Glitch
             container.classList.add('glitching');
@@ -4006,7 +4023,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 if(nameEl) nameEl.innerText = char.name;
                 if(dialogEl) dialogEl.innerText = `"${line}"`;
-                if(imgEl) imgEl.src = char.img;
+                if(imgEl) {
+                     imgEl.src = char.img;
+                     // Fallback if image fails
+                     imgEl.onerror = function() {
+                         this.src = 'https://placehold.co/100x100/111/FFF?text=NO+SIGNAL';
+                     };
+                }
                 
                 // 4. Show
                 cj.classList.add('active');
@@ -4016,6 +4039,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             // Open Burner Phone after delay
             setTimeout(() => {
                 if(cj) cj.classList.remove('active');
+                if(scanner) scanner.innerText = "CONNECTION ESTABLISHED";
                 openBurnerPhone(city);
             }, 2500);
         }
@@ -4027,9 +4051,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             const layer = document.getElementById('map-zoom-layer');
             const container = document.querySelector('.satellite-view');
+            const scanner = document.querySelector('.scanner-text');
             
             container.classList.remove('zoomed');
             layer.style.transform = 'scale(1)';
+            
+            // Reset Scanner Text
+            if(scanner) scanner.innerText = "SCANNING NETWORK...";
             
             // Hide CJ if active
             const cj = document.getElementById('cj-overlay');
