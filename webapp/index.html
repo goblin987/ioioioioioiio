@@ -2079,6 +2079,35 @@
         .phone-container.active {
             bottom: 0;
         }
+
+        /* Handoff Animation Override */
+        @keyframes phoneHandoffZoom {
+            0% {
+                top: 60%; 
+                transform: translate(-50%, 50%) scale(0.2) rotate(-10deg);
+                opacity: 0;
+            }
+            100% {
+                top: 50%; 
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        .phone-container.handoff {
+            bottom: auto !important;
+            top: 50%; left: 50%;
+            /* transform is handled by animation */
+            
+            /* Adjust shape to be a floating device */
+            border-radius: 30px;
+            border-bottom: 5px solid #222;
+            height: 600px;
+            max-height: 90vh;
+            
+            display: flex;
+            animation: phoneHandoffZoom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
         
         .phone-body {
             flex: 1;
@@ -4074,9 +4103,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // Open Burner Phone after delay
             setTimeout(() => {
-                if(cj) cj.classList.remove('active');
                 if(scanner) scanner.innerText = "CONNECTION ESTABLISHED";
-                openBurnerPhone(city);
+                
+                // Start Phone Handoff Animation
+                openBurnerPhone(city, true);
+                
+                // Hide character after delay to allow overlap
+                setTimeout(() => {
+                    if(cj) cj.classList.remove('active');
+                }, 600);
             }, 3000);
         }
 
@@ -4116,7 +4151,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
              }
         }
 
-        function openBurnerPhone(city) {
+        function openBurnerPhone(city, isHandoff = false) {
             const phone = document.getElementById('burner-phone');
             const list = document.getElementById('phone-contacts');
             const header = document.getElementById('phone-header');
@@ -4150,7 +4185,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 addPhoneContact(city, d.name, bars);
             });
             
-            phone.classList.add('active');
+            // Reset classes to force restart animation
+            phone.classList.remove('active', 'handoff');
+            void phone.offsetWidth; // Trigger reflow
+            
+            if(isHandoff) {
+                phone.classList.add('handoff');
+            } else {
+                phone.classList.add('active');
+            }
+            
             if(window.sfx) sfx.tick();
             updatePhoneTime();
             updateWantedLevel();
