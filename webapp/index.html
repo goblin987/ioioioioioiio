@@ -2300,17 +2300,21 @@
             bottom: -100%; 
             left: 50%; 
             transform: translateX(-50%);
-            width: auto; 
-            height: 70vh; /* Use viewport height for better mobile scaling */
+            
+            /* Dimensions for Container */
+            height: 65vh;
+            aspect-ratio: 2/3;
             max-height: 500px;
-            max-width: 80%;
-            object-fit: contain;
-            object-position: bottom center;
+            max-width: 80vw;
+            
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            
             transition: bottom 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1;
             filter: drop-shadow(0 10px 30px rgba(0,0,0,0.8)) brightness(1.1);
             pointer-events: none;
-            image-rendering: crisp-edges; /* Sharp SVG rendering */
         }
         
         .character-overlay.active .char-body {
@@ -2401,7 +2405,7 @@
     
     <!-- Cinematic Hand-Off Overlay -->
     <div id="cj-overlay" class="character-overlay">
-        <img id="char-body-img" class="char-body" src="" alt="Character">
+        <div id="char-body-container" class="char-body"></div>
         <div class="char-dialogue-box">
             <div class="char-name" id="char-name-text">CARL JOHNSON</div>
             <div class="char-dialogue" id="cj-dialogue">Yo! You lookin' for something?</div>
@@ -3960,8 +3964,91 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let isZoomed = false;
         let currentZoomedCity = null;
 
-        // --- ASSETS ---
-        const CJ_FALLBACK = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgNDAwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1heCBtZWV0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMTExIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzMzMyIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9Imdsb3ciPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIyLjUiIHJlc3VsdD0iY29sb3JlZEJsdXIiLz4KICAgICAgPGZlTWVyZ2U+CiAgICAgICAgPGZlTWVyZ2VOb2RlIGluPSJjb2xvcmVkQmx1ciIvPgogICAgICAgIDxmZU1lcmdlTm9kZSBpbj0iU291cmNlR3JhcGhpYyIvPgogICAgICA8L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTUwLDQwMCBMNjAsMTYwIEMzMCwxODAgMjAsMjUwIDIwLDI1MCBMNDAsMjYwIEM0MCwyNjAgNTAsMjAwIDYwLDE2MCBDNjAsMTYwIDYwLDEwMCA2MCwxMDAgQzYwLDUwIDgwLDIwIDExMCwyMCBDMTQwLDIwIDE2MCw1MCAxNjAsMTAwIEwxNjAsMTYwIEMxNzAsMjAwIDE4MCwyNjAgMTgwLDI2MCBMMjAwLDI1MCBDMjAwLDI1MCAxOTAsMTgwIDE2MCwxNjAgTDE3MCw0MDAgWiIgCiAgICAgICAgZmlsbD0idXJsKCNnKSIgc3Ryb2tlPSIjNGNhZjUwIiBzdHJva2Utd2lkdGg9IjIiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDxjaXJjbGUgY3g9IjExMCIgY3k9IjkwIiByPSIzNSIgZmlsbD0iIzAwMCIvPgogIDxyZWN0IHg9Ijk1IiB5PSI4NSIgd2lkdGg9IjEwIiBoZWlnaHQ9IjMiIGZpbGw9IiM0Y2FmNTAiIGZpbHRlcj0idXJsKCNnbG93KSIvPgogIDxyZWN0IHg9IjExNSIgeT0iODUiIHdpZHRoPSIxMCIgaGVpZ2h0PSIzIiBmaWxsPSIjNGNhZjUwIiBmaWx0ZXI9InVybCgjZ2xvdykiLz4KPC9zdmc+";
+        // --- ASSETS & GENERATION ---
+        function getCharacterSVG(charId) {
+            const configs = {
+                cj: { skin: "#8d5524", shirt: "#ecf0f1", pants: "#2980b9" },
+                ryder: { skin: "#8d5524", shirt: "#27ae60", pants: "#2c3e50", hat: true, glasses: true },
+                smoke: { skin: "#8d5524", shirt: "#27ae60", pants: "#2c3e50", fat: true, glasses: true },
+                sweet: { skin: "#8d5524", shirt: "#2ecc71", pants: "#2980b9" },
+                tenpenny: { skin: "#c9a87c", shirt: "#34495e", pants: "#2c3e50" }
+            };
+            
+            const config = configs[charId] || configs.cj;
+            const torsoWidth = config.fat ? 140 : 110;
+            const name = charId; // unique ID for gradients
+            
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" preserveAspectRatio="xMidYMax meet" style="width:100%;height:100%;overflow:visible;">
+              <defs>
+                <linearGradient id="skinGrad${name}" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:${config.skin};stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#6b4423;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="shirtGrad${name}" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:${config.shirt};stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#bdc3c7;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="pantsGrad${name}" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:${config.pants};stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#1a252f;stop-opacity:1" />
+                </linearGradient>
+                <filter id="shadow${name}" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+                  <feOffset dx="4" dy="6" result="offsetblur"/>
+                  <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+                  <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <g filter="url(#shadow${name})">
+                <!-- LEGS -->
+                <rect x="140" y="380" width="50" height="220" fill="url(#pantsGrad${name})" rx="5"/>
+                <rect x="210" y="380" width="50" height="220" fill="url(#pantsGrad${name})" rx="5"/>
+                <line x1="165" y1="380" x2="165" y2="600" stroke="#1a252f" stroke-width="3"/>
+                <line x1="235" y1="380" x2="235" y2="600" stroke="#1a252f" stroke-width="3"/>
+                <!-- TORSO -->
+                <rect x="${150 - torsoWidth/4}" y="200" width="${torsoWidth}" height="190" fill="url(#shirtGrad${name})" rx="10"/>
+                <!-- ARMS -->
+                <ellipse cx="120" cy="260" rx="25" ry="80" fill="url(#skinGrad${name})"/>
+                <ellipse cx="280" cy="260" rx="25" ry="80" fill="url(#skinGrad${name})"/>
+                <!-- NECK -->
+                <rect x="175" y="180" width="50" height="30" fill="url(#skinGrad${name})" rx="5"/>
+                <!-- HEAD -->
+                <ellipse cx="200" cy="130" rx="50" ry="60" fill="url(#skinGrad${name})"/>`;
+                
+            if (config.hat) {
+                svg += `<!-- Cap -->
+                <ellipse cx="200" cy="85" rx="55" ry="15" fill="#000"/>
+                <rect x="145" y="70" width="110" height="20" fill="#000" rx="5"/>
+                <path d="M145,85 L200,95 L255,85" fill="#111"/>`;
+            } else {
+                svg += `<!-- Hair -->
+                <ellipse cx="200" cy="85" rx="52" ry="25" fill="#000"/>
+                <rect x="148" y="75" width="104" height="30" fill="#000"/>`;
+            }
+            
+            if (config.glasses) {
+                svg += `<!-- Glasses -->
+                <rect x="165" y="125" width="30" height="20" fill="none" stroke="#000" stroke-width="4" rx="5"/>
+                <rect x="205" y="125" width="30" height="20" fill="none" stroke="#000" stroke-width="4" rx="5"/>
+                <line x1="195" y1="135" x2="205" y2="135" stroke="#000" stroke-width="4"/>
+                <circle cx="180" cy="135" r="8" fill="#1a1a1a" opacity="0.3"/>
+                <circle cx="220" cy="135" r="8" fill="#1a1a1a" opacity="0.3"/>`;
+            } else {
+                svg += `<!-- Eyes -->
+                <ellipse cx="180" cy="130" rx="8" ry="5" fill="#000"/>
+                <ellipse cx="220" cy="130" rx="8" ry="5" fill="#000"/>
+                <circle cx="182" cy="129" r="2" fill="#fff" opacity="0.8"/>
+                <circle cx="222" cy="129" r="2" fill="#fff" opacity="0.8"/>`;
+            }
+            
+            svg += `<!-- Mouth & Nose -->
+                <path d="M185,155 Q200,162 215,155" stroke="#000" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <ellipse cx="200" cy="145" rx="8" ry="12" fill="#000" opacity="0.1"/>
+              </g>
+            </svg>`;
+            
+            return svg;
+        }
 
         // --- THE CREW DATA ---
         const gtaCharacters = [
@@ -4054,14 +4141,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // 3. Update UI
                 const nameEl = document.getElementById('char-name-text');
                 const dialogEl = document.getElementById('cj-dialogue');
-                const bodyEl = document.getElementById('char-body-img');
+                const bodyContainer = document.getElementById('char-body-container');
                 
                 if(nameEl) nameEl.innerText = char.name;
                 if(dialogEl) dialogEl.innerText = line;
-                if(bodyEl) {
-                    bodyEl.src = char.img;
-                    bodyEl.style.objectFit = 'contain';
-                    bodyEl.onerror = function() { this.src = CJ_FALLBACK; };
+                if(bodyContainer) {
+                    // INJECT SVG DIRECTLY - NO EXTERNAL FILES
+                    bodyContainer.innerHTML = getCharacterSVG(char.id);
                 }
                 
                 // 4. Show
