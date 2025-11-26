@@ -2712,7 +2712,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     ${countBadge}
                     <div class="product-emoji">${getProductEmoji(p.type)}</div>
                     <div class="product-name">${p.display_name}</div>
-                    <div class="product-details">${p.size} | ${p.city}</div>
+                    <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
                     <div style="display:flex; gap:5px;">
                         <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick="sfx.select(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
@@ -2750,28 +2750,66 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function filterProducts(city, district = null) {
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            // event might be undefined if called programmatically
-            if(event && event.target) event.target.classList.add('active');
+            // UI Update Logic
+            const container = document.getElementById('city-filters');
             
-            let filtered = allProducts;
-            if(city !== 'all') {
-                filtered = allProducts.filter(p => p.city === city);
-            }
-            
-            if(district) {
-                const dTerm = district.toLowerCase();
-                filtered = filtered.filter(p => p.district && p.district.toLowerCase().includes(dTerm));
-                
-                // Update Search Label to show context
-                const label = document.querySelector('.search-label');
-                if(label) label.innerHTML = `LSPD > ${city.toUpperCase()} > <span style="color:#fff">${district.toUpperCase()}</span>`;
-            } else {
+            if (city === 'all') {
+                renderFilters(allProducts);
+                renderProducts(allProducts);
                 const label = document.querySelector('.search-label');
                 if(label) label.innerText = `LSPD DATABASE > SEARCH:`;
+                return;
             }
+
+            // Filter for the selected city first
+            let cityProducts = allProducts.filter(p => p.city === city);
             
-            renderProducts(filtered);
+            // 1. Update Product Grid
+            let displayProducts = cityProducts;
+            if (district) {
+                const dTerm = district.toLowerCase();
+                displayProducts = cityProducts.filter(p => p.district && p.district.toLowerCase().includes(dTerm));
+            }
+            renderProducts(displayProducts);
+
+            // 2. Update Filter Bar (Show Districts)
+            // Get unique districts for this city from the PRODUCTS list
+            const districts = [...new Set(cityProducts.map(p => p.district).filter(d => d))].sort();
+            
+            container.innerHTML = '';
+            
+            // Back Button
+            const backBtn = document.createElement('button');
+            backBtn.className = 'filter-btn';
+            backBtn.innerText = 'ALL ZONES';
+            backBtn.onclick = () => filterProducts('all');
+            container.appendChild(backBtn);
+
+            // City Button (Reset to City level)
+            const cityBtn = document.createElement('button');
+            cityBtn.className = 'filter-btn' + (district ? '' : ' active');
+            cityBtn.innerText = city.toUpperCase(); 
+            cityBtn.onclick = () => filterProducts(city);
+            container.appendChild(cityBtn);
+
+            // District Buttons
+            districts.forEach(d => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn' + (district && district.toLowerCase() === d.toLowerCase() ? ' active' : '');
+                btn.innerText = d.toUpperCase();
+                btn.onclick = () => filterProducts(city, d);
+                container.appendChild(btn);
+            });
+
+            // Update Search Label
+            const label = document.querySelector('.search-label');
+            if(label) {
+                if(district) {
+                    label.innerHTML = `LSPD > ${city.toUpperCase()} > <span style="color:#fff">${district.toUpperCase()}</span>`;
+                } else {
+                    label.innerHTML = `LSPD > <span style="color:#fff">${city.toUpperCase()}</span>`;
+                }
+            }
         }
 
         // Stars
