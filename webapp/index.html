@@ -3930,8 +3930,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'cj',
                 name: 'CARL JOHNSON',
-                // Wikipedia URLs are often more hotlink-friendly
-                img: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Carl_Johnson.png',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png',
                 lines: [
                     "Yo! You lookin' for product here? Hold up.",
                     "Grove Street 4 Life! I got the hookup.",
@@ -3941,8 +3940,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'ryder',
                 name: 'RYDER',
-                // Fallback to a generic stylized image if specific ones fail
-                img: 'https://upload.wikimedia.org/wikipedia/en/6/67/Ryder-GTASA.png',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png',
                 lines: [
                     "You drive like a genius, fool! Check the phone!",
                     "Don't expect me to kiss your ass. Just buy it!",
@@ -3952,7 +3950,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'smoke',
                 name: 'BIG SMOKE',
-                img: 'https://upload.wikimedia.org/wikipedia/en/1/18/BigSmoke-GTASA.png',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png',
                 lines: [
                     "All we had to do, was follow the damn signal, CJ!",
                     "I'll have two number 9s... and your order ready.",
@@ -3962,7 +3960,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'sweet',
                 name: 'SWEET',
-                img: 'https://upload.wikimedia.org/wikipedia/en/1/1b/Sweet-GTASA.png',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png',
                 lines: [
                     "For the hood! We takin' over this city.",
                     "Stay true to the families. Check the supply.",
@@ -3972,7 +3970,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'tenpenny',
                 name: 'OFFICER TENPENNY',
-                img: 'https://upload.wikimedia.org/wikipedia/en/6/61/FrankTenpenny-GTASA.png',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png',
                 lines: [
                     "I'm watching you... make the deal and get out.",
                     "We can all get along... just pay the price.",
@@ -3981,7 +3979,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         ];
 
-        // Preload images to prevent flickering
+        // Preload images
         gtaCharacters.forEach(c => {
             const img = new Image();
             img.src = c.img;
@@ -4032,7 +4030,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     bodyEl.src = char.img;
                     // Fallback logic
                     bodyEl.onerror = function() {
-                        this.src = 'https://placehold.co/400x600/111/FFF.png?text=' + encodeURIComponent(char.name);
+                        this.src = 'https://placehold.co/400x600/000/4caf50?text=' + encodeURIComponent(char.name) + '&font=oswald';
                     };
                 }
                 
