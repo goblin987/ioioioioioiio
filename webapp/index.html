@@ -2242,19 +2242,21 @@
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* --- CHARACTER OVERLAY --- */
+        /* --- CHARACTER OVERLAY (THE CREW) --- */
         .character-overlay {
             position: fixed;
-            bottom: 10%; right: -100%;
-            width: 85%;
-            max-width: 350px;
-            background: rgba(0,0,0,0.9);
-            border: 3px solid #fff;
+            bottom: 15%; right: -120%;
+            width: 90%;
+            max-width: 380px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.95) 60%, rgba(20,20,20,0.95));
+            border: 2px solid #fff;
+            border-left: 6px solid var(--gta-green);
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             z-index: 25000;
-            transition: right 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Bounce effect */
-            box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
+            transition: right 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* Snappy spring */
+            box-shadow: 10px 10px 20px rgba(0,0,0,0.8);
+            overflow: hidden;
         }
         
         .character-overlay.active {
@@ -2262,11 +2264,13 @@
         }
         
         .char-img-box {
-            width: 100px;
-            height: 100px;
-            border-right: 3px solid #fff;
-            background: #333;
+            width: 110px;
+            height: 110px;
+            border-right: 2px solid #444;
+            background: #111;
             overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
         }
         
         .char-img-box img {
@@ -2274,28 +2278,39 @@
             height: 100%;
             object-fit: cover;
             object-position: top;
+            transition: transform 3s ease;
+        }
+        
+        .character-overlay.active .char-img-box img {
+            transform: scale(1.1); /* Subtle zoom */
         }
         
         .char-text-box {
-            padding: 12px;
+            padding: 15px;
             color: #fff;
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         .char-name {
-            color: #ffc107; /* Gold */
-            font-size: 14px;
+            color: var(--gta-gold);
+            font-size: 18px;
             font-weight: bold;
-            margin-bottom: 4px;
-            font-family: 'Impact', sans-serif;
+            margin-bottom: 5px;
+            font-family: 'Diplomata', serif;
+            text-shadow: 1px 1px 0 #000;
+            text-transform: uppercase;
             letter-spacing: 1px;
         }
         
         .char-dialogue {
-            font-family: sans-serif;
+            font-family: 'Arial', sans-serif;
             font-size: 13px;
-            line-height: 1.3;
-            font-weight: bold;
+            line-height: 1.4;
+            color: #ddd;
+            font-style: italic;
         }
     </style>
 </head>
@@ -3867,6 +3882,60 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let isZoomed = false;
         let currentZoomedCity = null;
 
+        // --- THE CREW DATA ---
+        const gtaCharacters = [
+            {
+                id: 'cj',
+                name: 'CARL JOHNSON',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png',
+                lines: [
+                    "Yo! You lookin' for product here? Hold up.",
+                    "Grove Street 4 Life! I got the hookup.",
+                    "Ah sh*t, here we go again... Check the burner."
+                ]
+            },
+            {
+                id: 'ryder',
+                name: 'RYDER',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png',
+                lines: [
+                    "You drive like a genius, fool! Check the phone!",
+                    "Don't expect me to kiss your ass. Just buy it!",
+                    "I'm a motherf***in' genius! Look at this stock!"
+                ]
+            },
+            {
+                id: 'smoke',
+                name: 'BIG SMOKE',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png',
+                lines: [
+                    "All we had to do, was follow the damn signal, CJ!",
+                    "I'll have two number 9s... and your order ready.",
+                    "Remember the name! Big Smoke! Now pick a district."
+                ]
+            },
+            {
+                id: 'sweet',
+                name: 'SWEET',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png',
+                lines: [
+                    "For the hood! We takin' over this city.",
+                    "Stay true to the families. Check the supply.",
+                    "Don't be a busta! Make the deal."
+                ]
+            },
+            {
+                id: 'tenpenny',
+                name: 'OFFICER TENPENNY',
+                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png',
+                lines: [
+                    "I'm watching you... make the deal and get out.",
+                    "We can all get along... just pay the price.",
+                    "Don't make me come down there!"
+                ]
+            }
+        ];
+
         function zoomToCity(city, topP, leftP) {
             if(isZoomed) return;
             isZoomed = true;
@@ -3887,20 +3956,27 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
             layer.style.transform = 'scale(4)';
             
-            // --- CJ INTRO SEQUENCE ---
+            // --- RANDOM CHARACTER INTRO ---
             const cj = document.getElementById('cj-overlay');
-            const dialog = document.getElementById('cj-dialogue');
             
-            if(cj && dialog) {
-                // Dynamic Dialogue
-                let text = "Yo! You lookin' for product here? Hold up, use this phone.";
-                if(city.toLowerCase() === 'vilnius') text = "Vilnius? That's Grove Street territory. Let me hook you up.";
-                if(city.toLowerCase() === 'kaunas') text = "Kaunas... My cousin is runnin' things there. Call him.";
-                if(city.toLowerCase() === 'klaipeda') text = "The port city? Easy money. Use the burner.";
+            if(cj) {
+                // 1. Pick Random Character
+                const char = gtaCharacters[Math.floor(Math.random() * gtaCharacters.length)];
                 
-                dialog.innerText = text;
+                // 2. Pick Random Line
+                const line = char.lines[Math.floor(Math.random() * char.lines.length)];
+                
+                // 3. Update UI
+                const nameEl = cj.querySelector('.char-name');
+                const dialogEl = cj.querySelector('.char-dialogue');
+                const imgEl = cj.querySelector('img');
+                
+                if(nameEl) nameEl.innerText = char.name;
+                if(dialogEl) dialogEl.innerText = `"${line}"`;
+                if(imgEl) imgEl.src = char.img;
+                
+                // 4. Show
                 cj.classList.add('active');
-                
                 if(window.sfx) sfx.tick();
             }
             
