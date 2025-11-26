@@ -2419,6 +2419,76 @@ def webapp_get_products():
         logger.error(f"Error fetching products for webapp: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@flask_app.route("/webapp/api/validate_discount", methods=['POST'])
+def webapp_validate_discount():
+    """Validates a discount code and calculates reseller discounts"""
+    try:
+        data = request.json
+        code = data.get('code', '').strip()
+        user_id = data.get('user_id')
+        items = data.get('items', [])
+        
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User ID required'}), 400
+
+        # 1. Calculate Base Total & Reseller Discounts
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        total_eur = Decimal('0.0')
+        reseller_discount_total = Decimal('0.0')
+        
+        for item in items:
+            p_id = item.get('id')
+            # Verify price from DB to be safe
+            c.execute("SELECT price, product_type FROM products WHERE id = %s", (p_id,))
+            row = c.fetchone()
+            if row:
+                price = Decimal(str(row['price']))
+                p_type = row['product_type']
+                total_eur += price
+                
+                # Calculate reseller discount for this item
+                r_disc_percent = get_reseller_discount(user_id, p_type)
+                if r_disc_percent > 0:
+                    item_discount = (price * r_disc_percent) / Decimal('100.0')
+                    reseller_discount_total += item_discount
+        
+        conn.close()
+        
+        base_total_after_reseller = total_eur - reseller_discount_total
+        base_total_after_reseller = max(Decimal('0.0'), base_total_after_reseller)
+        
+        # 2. Validate Promo Code
+        code_discount_amount = Decimal('0.0')
+        message = ""
+        is_valid = False
+        
+        if code:
+            is_valid, msg, details = validate_discount_code(code, float(base_total_after_reseller))
+            if is_valid and details:
+                code_discount_amount = Decimal(str(details['discount_amount']))
+                message = msg
+            else:
+                message = msg # Error message
+        
+        final_total = base_total_after_reseller - code_discount_amount
+        final_total = max(Decimal('0.0'), final_total)
+        
+        return jsonify({
+            'success': True,
+            'original_total': float(total_eur),
+            'reseller_discount': float(reseller_discount_total),
+            'code_discount': float(code_discount_amount),
+            'final_total': float(final_total),
+            'message': message,
+            'code_valid': is_valid
+        })
+
+    except Exception as e:
+        logger.error(f"Error validating discount: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @flask_app.route("/webapp/api/create_invoice", methods=['POST'])
 def webapp_create_invoice():
     """Create a Solana invoice for Web App items"""
@@ -2426,6 +2496,7 @@ def webapp_create_invoice():
         data = request.json
         user_id = data.get('user_id')
         items = data.get('items', [])
+        discount_code = data.get('discount_code', '').strip()
         
         if not user_id or not items:
             return jsonify({'error': 'Invalid data'}), 400
@@ -2433,19 +2504,49 @@ def webapp_create_invoice():
         conn = get_db_connection()
         c = conn.cursor()
         total_eur = Decimal('0.0')
+        reseller_discount_total = Decimal('0.0')
         
         # Validate items and calculate total
         for item in items:
             p_id = item.get('id')
-            c.execute("SELECT price FROM products WHERE id = %s", (p_id,))
+            c.execute("SELECT price, product_type FROM products WHERE id = %s", (p_id,))
             row = c.fetchone()
             if row:
-                total_eur += Decimal(str(row['price']))
+                price = Decimal(str(row['price']))
+                p_type = row['product_type']
+                total_eur += price
+                
+                # Calculate reseller discount for this item
+                r_disc_percent = get_reseller_discount(user_id, p_type)
+                if r_disc_percent > 0:
+                    item_discount = (price * r_disc_percent) / Decimal('100.0')
+                    reseller_discount_total += item_discount
         
         conn.close()
         
         if total_eur == 0:
              return jsonify({'error': 'Empty basket'}), 400
+
+        base_total_after_reseller = total_eur - reseller_discount_total
+        base_total_after_reseller = max(Decimal('0.0'), base_total_after_reseller)
+        
+        # Validate Promo Code
+        code_discount_amount = Decimal('0.0')
+        discount_info = {
+            'reseller_discount': float(reseller_discount_total),
+            'code': None,
+            'code_discount': 0.0
+        }
+        
+        if discount_code:
+            is_valid, msg, details = validate_discount_code(discount_code, float(base_total_after_reseller))
+            if is_valid and details:
+                code_discount_amount = Decimal(str(details['discount_amount']))
+                discount_info['code'] = discount_code
+                discount_info['code_discount'] = float(code_discount_amount)
+        
+        final_total = base_total_after_reseller - code_discount_amount
+        final_total = max(Decimal('0.0'), final_total)
 
         # Create unique order ID
         order_id = f"WEBAPP_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
@@ -2454,7 +2555,7 @@ def webapp_create_invoice():
         # Use main_loop if available, else new loop
         loop = main_loop if main_loop else asyncio.new_event_loop()
         payment_res = asyncio.run_coroutine_threadsafe(
-            create_solana_payment(user_id, order_id, total_eur), 
+            create_solana_payment(user_id, order_id, final_total), 
             loop
         ).result()
         
@@ -2465,14 +2566,21 @@ def webapp_create_invoice():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Store basket snapshot
+        # Store basket snapshot WITH discount info
+        basket_snapshot = {
+            'items': items,
+            'discounts': discount_info,
+            'original_total': float(total_eur),
+            'final_total': float(final_total)
+        }
+        
         c.execute("""
             INSERT INTO pending_deposits 
             (user_id, payment_id, amount_eur, pay_currency, pay_amount_crypto, 
              pay_address, status, created_at, is_purchase, basket_snapshot_json)
             VALUES (%s, %s, %s, %s, %s, %s, 'pending', NOW(), 1, %s)
-        """, (user_id, order_id, float(total_eur), 'SOL', float(payment_res['pay_amount']), 
-              payment_res['pay_address'], json.dumps(items)))
+        """, (user_id, order_id, float(final_total), 'SOL', float(payment_res['pay_amount']), 
+              payment_res['pay_address'], json.dumps(basket_snapshot)))
         
         conn.commit()
         conn.close()
@@ -2482,13 +2590,13 @@ def webapp_create_invoice():
             'payment_id': order_id,
             'pay_address': payment_res['pay_address'],
             'pay_amount': payment_res['pay_amount'],
-            'amount_eur': float(total_eur)
+            'amount_eur': float(final_total)
         })
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
 
     except Exception as e:
-        logger.error(f"Error creating invoice: {e}")
+        logger.error(f"Error creating invoice: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
