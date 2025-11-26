@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 600">
+      <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+          <feOffset dx="5" dy="5" result="offsetblur"/>
+          <feMerge>
+            <feMergeNode in="offsetblur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#shadow)">
+        <!-- Legs -->
+        <path d="M100.0,600 L100.0,350 L200.0,350 L200.0,600" fill="#2c3e50" />
+        <path d="M150,350 L150,600" stroke="#111" stroke-width="2"/>
+        
+        <!-- Torso -->
+        <path d="M80,360 L220,360 L220,150 L190.0,150 L190,120 L110,120 L110.0,150 L80,150 Z" fill="#27ae60"/>
+        
+        <!-- Arms -->
+        <path d="M80,150 L50,250 L80,260 L110.0,150" fill="#8d5524"/>
+        <path d="M220,150 L250,250 L220,260 L190.0,150" fill="#8d5524"/>
+        
+        <!-- Head -->
+        <rect x="110" y="60" width="80" height="90" rx="10" fill="#8d5524"/>
+        <path d="M100,60 L200,60 L200,40 L100,40 Z" fill="#111"/><rect x="120" y="90" width="25" height="10" fill="#111"/> <rect x="155" y="90" width="25" height="10" fill="#111"/> <line x1="145" y1="95" x2="155" y2="95" stroke="#111" stroke-width="2"/>
+        <path d="M135,125 Q150,135 165,125" stroke="#000" stroke-width="3" fill="none"/>
+      </g>
+    </svg>
