@@ -942,25 +942,37 @@
             padding-bottom: 5px;
         }
         
-        /* Filters */
+        /* Filters - Grid Layout for Visibility */
         .filters {
             display: flex;
-            overflow-x: auto;
-            gap: 10px;
-            padding-bottom: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            padding-bottom: 5px;
             margin-bottom: 15px;
-            scrollbar-width: none;
+            width: 100%;
         }
         
         .filter-btn {
             background: rgba(0,0,0,0.8);
             border: 1px solid var(--gta-grey);
             color: #fff;
-            padding: 5px 15px;
+            padding: 8px 12px;
             font-family: 'Impact', sans-serif;
             font-size: 14px;
             white-space: nowrap;
             cursor: pointer;
+            flex: 0 0 auto;
+            transition: all 0.1s;
+        }
+
+        .filter-btn:active {
+            transform: scale(0.95);
+        }
+
+        .filter-btn.back-btn {
+            border-color: #a00;
+            color: #aaa;
         }
         
         .filter-btn.active {
@@ -2780,7 +2792,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // Back Button
             const backBtn = document.createElement('button');
-            backBtn.className = 'filter-btn';
+            backBtn.className = 'filter-btn back-btn';
             backBtn.innerText = 'ALL ZONES';
             backBtn.onclick = () => filterProducts('all');
             container.appendChild(backBtn);
