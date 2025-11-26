@@ -2733,11 +2733,29 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             });
         }
 
-        function filterProducts(city) {
+        function filterProducts(city, district = null) {
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            if(city === 'all') renderProducts(allProducts);
-            else renderProducts(allProducts.filter(p => p.city === city));
+            // event might be undefined if called programmatically
+            if(event && event.target) event.target.classList.add('active');
+            
+            let filtered = allProducts;
+            if(city !== 'all') {
+                filtered = allProducts.filter(p => p.city === city);
+            }
+            
+            if(district) {
+                const dTerm = district.toLowerCase();
+                filtered = filtered.filter(p => p.district && p.district.toLowerCase().includes(dTerm));
+                
+                // Update Search Label to show context
+                const label = document.querySelector('.search-label');
+                if(label) label.innerHTML = `LSPD > ${city.toUpperCase()} > <span style="color:#fff">${district.toUpperCase()}</span>`;
+            } else {
+                const label = document.querySelector('.search-label');
+                if(label) label.innerText = `LSPD DATABASE > SEARCH:`;
+            }
+            
+            renderProducts(filtered);
         }
 
         // Stars
@@ -3327,6 +3345,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 pin.onclick = (e) => {
                     e.stopPropagation();
                     showSection('shop');
+                    filterProducts(city, d.name); // Filter by City + District
                     if(window.charSystem) charSystem.show('cj', `TARGET: ${d.name.toUpperCase()}`);
                 };
                 
