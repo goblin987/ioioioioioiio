@@ -1869,6 +1869,53 @@
             background: #fff !important;
             color: #000 !important;
         }
+        /* --- TACTICAL DISTRICT OVERLAY --- */
+        .district-pin {
+            position: absolute;
+            width: 14px; height: 14px;
+            background: #000;
+            border: 2px solid #0ff; /* Cyan for districts */
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 25;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        .district-pin.visible { transform: translate(-50%, -50%) scale(1); }
+        .district-pin:hover { background: #0ff; transform: translate(-50%, -50%) scale(1.5); z-index: 30; }
+
+        /* Connecting Line & Label */
+        .pin-label-box {
+            position: absolute;
+            left: 20px; bottom: 20px; 
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid #0ff;
+            padding: 5px 10px;
+            color: #0ff;
+            font-size: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: 0.2s;
+            z-index: 26;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        
+        .district-pin:hover .pin-label-box { opacity: 1; }
+        
+        /* Connector Line (Pseudo-element) */
+        .pin-label-box::before {
+            content: '';
+            position: absolute;
+            width: 20px; height: 1px;
+            background: #0ff;
+            left: -20px; bottom: -6px; /* Connect to pin */
+            transform: rotate(45deg);
+            transform-origin: right bottom;
+        }
     </style>
 </head>
 <body>
@@ -3186,7 +3233,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Initialize after DOM
         // setTimeout(initGlobe, 1000); // Disabled for Metro Map
 
-        // --- SATELLITE VIEW LOGIC ---
+        // --- SATELLITE VIEW LOGIC (TACTICAL UPGRADE) ---
         
         let isZoomed = false;
 
@@ -3209,9 +3256,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
             layer.style.transform = 'scale(3.5)';
             
+            // Spawn Pins on Map
             setTimeout(() => {
-                openDistrictPanel(city);
-            }, 1000);
+                openDistrictPanel(city); 
+            }, 800);
         }
 
         function resetSatelliteView() {
@@ -3224,64 +3272,67 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             container.classList.remove('zoomed');
             layer.style.transform = 'scale(1)';
             
-            closePanel();
+            // Clear pins
+            document.querySelectorAll('.district-pin').forEach(p => p.remove());
+            
+            const panel = document.getElementById('district-panel');
+            if(panel) panel.classList.remove('active');
         }
 
         function openDistrictPanel(city) {
-            const panel = document.getElementById('district-panel');
-            const header = document.getElementById('panel-header');
-            const list = document.getElementById('panel-list');
-            if(!panel) return;
+            const container = document.getElementById('map-zoom-layer');
+            document.querySelectorAll('.district-pin').forEach(p => p.remove());
 
-            header.innerText = city.toUpperCase();
-            list.innerHTML = '';
-            
-            // GTA V Style
-            header.style.background = '#0f161e';
-            header.style.borderBottom = '2px solid #fff';
-            header.style.fontFamily = 'Arial, sans-serif';
-            header.style.fontWeight = 'bold';
-            header.style.color = '#fff';
-
-            const districts = {
-                'Vilnius': ['Senamiestis', 'Naujamiestis', 'Antakalnis', 'Šnipiškės'],
-                'Kaunas': ['Centras', 'Žaliakalnis', 'Šilainiai', 'Dainava'],
-                'Klaipeda': ['Senamiestis', 'Baltija', 'Danė', 'Pempininkai']
+            const cityCoords = {
+                'Vilnius': { x: 70, y: 70 },
+                'Kaunas': { x: 50, y: 55 },
+                'Klaipeda': { x: 15, y: 30 }
             };
             
-            (districts[city] || ['Downtown']).forEach(d => {
-                const item = document.createElement('div');
-                item.className = 'dm-item'; 
-                item.innerText = d;
-                item.style.padding = '15px';
-                item.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-                item.style.cursor = 'pointer';
-                item.style.fontFamily = "Arial, sans-serif";
-                item.style.fontWeight = "bold";
-                item.style.color = "#aaa";
-                item.style.backgroundColor = "transparent";
-                item.style.transition = "0.2s";
-                
-                item.onmouseover = () => {
-                    item.style.background = '#fff';
-                    item.style.color = '#000';
-                    item.style.paddingLeft = '25px';
-                };
-                item.onmouseout = () => {
-                    item.style.background = 'transparent';
-                    item.style.color = '#aaa';
-                    item.style.paddingLeft = '15px';
-                };
-                
-                item.onclick = () => {
-                    closePanel();
-                    showSection('shop');
-                    if(window.charSystem) charSystem.show('cj', `ENTERING ${d.toUpperCase()}`);
-                };
-                list.appendChild(item);
-            });
+            const center = cityCoords[city];
+            const districts = {
+                'Vilnius': [
+                    { name: 'Senamiestis', dx: 2, dy: -2 },
+                    { name: 'Naujamiestis', dx: -3, dy: 3 },
+                    { name: 'Antakalnis', dx: 4, dy: 1 },
+                    { name: 'Šnipiškės', dx: -1, dy: -4 }
+                ],
+                'Kaunas': [
+                    { name: 'Centras', dx: 1, dy: -1 },
+                    { name: 'Žaliakalnis', dx: 3, dy: -3 },
+                    { name: 'Šilainiai', dx: -4, dy: -2 }
+                ],
+                'Klaipeda': [
+                    { name: 'Senamiestis', dx: 2, dy: 1 },
+                    { name: 'Baltija', dx: -2, dy: -3 },
+                    { name: 'Danė', dx: 3, dy: -2 }
+                ]
+            };
             
-            panel.classList.add('active');
+            const list = districts[city] || [];
+            
+            list.forEach((d, i) => {
+                const pin = document.createElement('div');
+                pin.className = 'district-pin';
+                pin.style.left = (center.x + d.dx) + '%';
+                pin.style.top = (center.y + d.dy) + '%';
+                
+                pin.innerHTML = `
+                    <div class="pin-label-box">
+                        <div style="font-weight:bold;">${d.name.toUpperCase()}</div>
+                        <div style="font-size:8px; color:#fff;">STOCK: HIGH</div>
+                    </div>
+                `;
+                
+                pin.onclick = (e) => {
+                    e.stopPropagation();
+                    showSection('shop');
+                    if(window.charSystem) charSystem.show('cj', `TARGET: ${d.name.toUpperCase()}`);
+                };
+                
+                container.appendChild(pin);
+                setTimeout(() => pin.classList.add('visible'), i * 100);
+            });
         }
         
         // Remove Metro Init
