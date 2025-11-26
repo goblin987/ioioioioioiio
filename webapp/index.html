@@ -1988,6 +1988,177 @@
         .city-districts.active {
             display: block;
         }
+
+        /* --- BURNER PHONE UI --- */
+        .phone-container {
+            position: fixed;
+            bottom: -100%; left: 50%;
+            transform: translateX(-50%);
+            width: 320px;
+            height: 600px;
+            background: #1a1a1a;
+            border-radius: 20px 20px 0 0;
+            border: 4px solid #333;
+            border-bottom: none;
+            box-shadow: 0 -10px 50px rgba(0,0,0,1);
+            z-index: 20000;
+            transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+        
+        .phone-container.active {
+            bottom: 0;
+        }
+        
+        .phone-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .phone-screen {
+            background: #9ea718; /* Retro LCD Green */
+            border: 6px solid #000;
+            border-radius: 8px;
+            height: 240px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Scanlines on phone screen */
+        .phone-screen::after {
+            content: '';
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05), rgba(0,0,0,0.05) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: bold;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .screen-header {
+            background: #000;
+            color: #9ea718;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            padding: 2px 0;
+        }
+        
+        .contact-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            scrollbar-width: none;
+        }
+        
+        .contact-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid transparent;
+            transition: background 0.1s;
+        }
+        
+        .contact-item:hover {
+            background: #000;
+            color: #9ea718;
+        }
+        
+        .contact-item .signal {
+            font-family: monospace;
+            font-weight: normal;
+        }
+        
+        .phone-keypad {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .key-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .key-btn {
+            flex: 1;
+            background: #ddd;
+            color: #000;
+            padding: 12px 0;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+            font-family: sans-serif;
+            cursor: pointer;
+            border-bottom: 4px solid #999;
+            font-size: 14px;
+        }
+        
+        .key-btn.call {
+            background: #4caf50;
+            color: #fff;
+            border-bottom-color: #2e7d32;
+        }
+        
+        .key-btn.end {
+            background: #d32f2f;
+            color: #fff;
+            border-bottom-color: #b71c1c;
+        }
+        
+        .key-btn:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+        }
+        
+        .key-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .num-key {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            border-radius: 4px;
+            font-family: sans-serif;
+            font-weight: bold;
+            border-bottom: 3px solid #000;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .num-key:active {
+            transform: translateY(2px);
+            border-bottom-width: 1px;
+        }
     </style>
 </head>
 <body>
@@ -3542,7 +3713,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Initialize after DOM
         // setTimeout(initGlobe, 1000); // Disabled for Metro Map
 
-        // --- SATELLITE VIEW LOGIC (POLYGON DISTRICTS) ---
+        // --- SATELLITE VIEW LOGIC (BURNER PHONE MODE) ---
         
         let isZoomed = false;
         let currentZoomedCity = null;
@@ -3567,9 +3738,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
             layer.style.transform = 'scale(4)';
             
-            // Show district polygons for this city
+            // Open Burner Phone
             setTimeout(() => {
-                showDistrictPolygons(city);
+                openBurnerPhone(city);
             }, 300);
         }
 
@@ -3584,167 +3755,108 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             container.classList.remove('zoomed');
             layer.style.transform = 'scale(1)';
             
-            // Hide all district SVGs
-            document.querySelectorAll('.city-districts').forEach(svg => {
-                svg.classList.remove('active');
-            });
-            
-            // Hide label
-            const label = document.getElementById('district-hover-label');
-            if(label) label.classList.remove('visible');
-            
-            // Hide Modal (fallback)
-            const modal = document.getElementById('district-modal');
-            if(modal) modal.style.display = 'none';
+            closeBurnerPhone();
         }
 
-        function closeDistrictModal() {
-             resetSatelliteView();
-        }
-
-        function showDistrictPolygons(city) {
-            // Hide all first
-            document.querySelectorAll('.city-districts').forEach(svg => {
-                svg.classList.remove('active');
-            });
+        function openBurnerPhone(city) {
+            const phone = document.getElementById('burner-phone');
+            const list = document.getElementById('phone-contacts');
+            const header = document.getElementById('phone-header');
             
-            // Show the correct city's districts
-            const cityId = city.toLowerCase().replace(/[^a-z]/g, '');
-            const svg = document.getElementById(`districts-${cityId}`);
-            if(svg) {
-                svg.classList.add('active');
-                
-                // Color polygons based on stock
-                colorDistrictsByStock(city);
-                
-                // Add event listeners
-                initDistrictPolygonEvents(city);
-            }
-        }
-
-        function colorDistrictsByStock(city) {
-            const svg = document.getElementById(`districts-${city.toLowerCase()}`);
-            if(!svg) return;
+            if(!phone || !list) return;
             
-            const polygons = svg.querySelectorAll('.district-poly');
+            if(header) header.innerText = city.toUpperCase();
+            list.innerHTML = '';
             
-            polygons.forEach(poly => {
-                const district = poly.dataset.district;
-                
-                // Count products in this district
+            // 1. Add "ALL ZONES" contact
+            addPhoneContact(city, "ALL ZONES", 5); 
+            
+            // 2. Add Districts
+            const dList = districtData[city] || [];
+            
+            dList.forEach(d => {
+                // Stock Check
                 const count = allProducts.filter(p => 
                     p.city && p.city.toLowerCase() === city.toLowerCase() &&
-                    p.district && p.district.toLowerCase().includes(district.toLowerCase())
+                    p.district && p.district.toLowerCase().includes(d.name.toLowerCase())
                 ).length;
                 
-                // Remove all status classes
-                poly.classList.remove('has-stock', 'no-stock', 'hot-zone');
-                
-                // Apply appropriate class
-                if(count >= 5) {
-                    poly.classList.add('hot-zone'); // Lots of stock = hot zone
-                } else if(count > 0) {
-                    poly.classList.add('has-stock'); // Some stock = green
-                } else {
-                    poly.classList.add('no-stock'); // Empty = grey
-                }
-                
-                // Store count for tooltip
-                poly.dataset.stockCount = count;
+                // Signal bars (0-5)
+                const bars = count > 5 ? 5 : (count > 0 ? 3 : 0);
+                addPhoneContact(city, d.name, bars);
             });
+            
+            phone.classList.add('active');
+            if(window.sfx) sfx.tick();
         }
-
-        function initDistrictPolygonEvents(city) {
-            const svg = document.getElementById(`districts-${city.toLowerCase()}`);
-            if(!svg) return;
+        
+        function addPhoneContact(city, name, bars) {
+            const list = document.getElementById('phone-contacts');
+            const item = document.createElement('div');
+            item.className = 'contact-item';
             
-            const label = document.getElementById('district-hover-label');
-            const polygons = svg.querySelectorAll('.district-poly');
-            
-            polygons.forEach(poly => {
-                // Hover events
-                poly.addEventListener('mouseenter', (e) => {
-                    showDistrictLabel(e, poly);
-                });
-                
-                poly.addEventListener('mousemove', (e) => {
-                    moveDistrictLabel(e);
-                });
-                
-                poly.addEventListener('mouseleave', () => {
-                    hideDistrictLabel();
-                });
-                
-                // Touch events for mobile
-                poly.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    showDistrictLabel(e.touches[0], poly);
-                });
-                
-                // Click event
-                poly.addEventListener('click', () => {
-                    const district = poly.dataset.district;
-                    const stockCount = parseInt(poly.dataset.stockCount || 0);
-                    
-                    if(window.sfx) sfx.select();
-                    
-                    if(stockCount > 0) {
-                        showSection('shop');
-                        filterProducts(city, district);
-                        resetSatelliteView();
-                        if(window.charSystem) charSystem.show('cj', `${district.toUpperCase()} - ${stockCount} ITEMS!`);
-                    } else {
-                        if(window.charSystem) charSystem.show('cj', `${district.toUpperCase()} - NO STOCK!`);
-                    }
-                });
-            });
-        }
-
-        function showDistrictLabel(e, poly) {
-            const label = document.getElementById('district-hover-label');
-            if(!label) return;
-            
-            const district = poly.dataset.district;
-            const count = poly.dataset.stockCount || 0;
-            
-            label.querySelector('.district-name').innerText = district.toUpperCase();
-            
-            const stockSpan = label.querySelector('.stock-count');
-            stockSpan.innerText = count > 0 ? `${count} ITEMS AVAILABLE` : 'NO STOCK';
-            stockSpan.className = 'stock-count' + (count == 0 ? ' empty' : '');
-            
-            label.classList.add('visible');
-            moveDistrictLabel(e);
-        }
-
-        function moveDistrictLabel(e) {
-            const label = document.getElementById('district-hover-label');
-            if(!label) return;
-            
-            const container = document.querySelector('.satellite-view');
-            const rect = container.getBoundingClientRect();
-            
-            const x = (e.clientX || e.pageX) - rect.left;
-            const y = (e.clientY || e.pageY) - rect.top;
-            
-            label.style.left = x + 'px';
-            label.style.top = y + 'px';
-        }
-
-        function hideDistrictLabel() {
-            const label = document.getElementById('district-hover-label');
-            if(label) label.classList.remove('visible');
-        }
-
-        // Refresh district colors when products load
-        function refreshDistrictColors() {
-            if(currentZoomedCity) {
-                colorDistrictsByStock(currentZoomedCity);
+            let signalStr = "";
+            for(let i=0; i<5; i++) {
+                signalStr += i < bars ? "|" : ".";
             }
+            
+            item.innerHTML = `
+                <span>${name.toUpperCase()}</span>
+                <span class="signal" style="font-weight:bold;">[${signalStr}]</span>
+            `;
+            
+            item.onclick = () => {
+                if(window.sfx) sfx.select();
+                // Simulate dialing delay
+                setTimeout(() => {
+                    closeBurnerPhone();
+                    resetSatelliteView(); // Ensure map resets
+                    showSection('shop');
+                    filterProducts(city, name === "ALL ZONES" ? null : name);
+                    if(window.charSystem) charSystem.show('cj', `CALLING ${name.toUpperCase()}...`);
+                }, 300);
+            };
+            
+            list.appendChild(item);
+        }
+
+        function closeBurnerPhone() {
+            const phone = document.getElementById('burner-phone');
+            if(phone) phone.classList.remove('active');
+            // Only trigger reset if we are still zoomed (e.g. "END" button pressed)
+            if(isZoomed) resetSatelliteView();
         }
         
         // Remove Metro Init
         function goToStation(){}; // Stub
     </script>
+    <!-- BURNER PHONE UI -->
+    <div id="burner-phone" class="phone-container">
+        <div class="phone-body">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>📶 4G</span>
+                    <span id="phone-time">12:00</span>
+                    <span>🔋</span>
+                </div>
+                <div class="screen-header" id="phone-header">CONTACTS</div>
+                <div class="contact-list" id="phone-contacts">
+                    <!-- Contacts go here -->
+                </div>
+            </div>
+            <div class="phone-keypad">
+                <div class="key-row">
+                    <div class="key-btn call" onclick="if(window.sfx) sfx.select()">CALL</div>
+                    <div class="key-btn end" onclick="closeBurnerPhone()">END</div>
+                </div>
+                <div class="key-grid">
+                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">1</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">2</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">3</div>
+                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">4</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">5</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">6</div>
+                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">7</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">8</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">9</div>
+                    <div class="num-key" onclick="if(window.sfx) sfx.tick()">*</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">0</div><div class="num-key" onclick="if(window.sfx) sfx.tick()">#</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
