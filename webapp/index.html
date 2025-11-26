@@ -2283,9 +2283,9 @@
         .character-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); /* Dim background */
+            background: rgba(0,0,0,0.85);
             z-index: 25000;
-            display: none; /* Hidden by default */
+            display: none;
             pointer-events: none;
         }
         
@@ -2294,68 +2294,145 @@
             pointer-events: auto;
         }
         
-        /* Character Cutout */
+        /* Character Silhouette - CSS Only */
         .char-body {
             position: absolute;
-            bottom: -100%; left: -10%;
-            width: auto; height: 90%;
-            max-width: 80%;
-            object-fit: contain;
-            object-position: bottom left;
+            bottom: -100%; left: 5%;
+            width: 250px; height: 400px;
             transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1;
-            filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.8));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
         }
         
         .character-overlay.active .char-body {
-            bottom: -5%; /* Slide up */
+            bottom: 0;
+        }
+        
+        /* Digital Avatar Container */
+        .avatar-frame {
+            width: 200px;
+            height: 300px;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            border: 3px solid #4caf50;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 0 30px rgba(76, 175, 80, 0.3),
+                inset 0 0 50px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Scanline effect on avatar */
+        .avatar-frame::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,255,0,0.03) 2px,
+                rgba(0,255,0,0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Character Icon (Large Emoji or Symbol) */
+        .avatar-icon {
+            font-size: 100px;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 20px rgba(76, 175, 80, 0.8));
+        }
+        
+        /* Character Name Badge */
+        .avatar-name {
+            background: #4caf50;
+            color: #000;
+            padding: 8px 20px;
+            font-family: 'Impact', sans-serif;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+        
+        /* Status indicator */
+        .avatar-status {
+            color: #4caf50;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 5px;
+            animation: blink 1s infinite;
         }
         
         /* Dialogue Box (Comic Style) */
         .char-dialogue-box {
             position: absolute;
-            top: 20%; right: 5%;
-            width: 45%;
+            top: 15%; right: 5%;
+            width: 50%;
+            max-width: 300px;
             background: #fff;
             border: 4px solid #000;
             padding: 15px;
             font-family: 'Impact', sans-serif;
-            font-size: 20px;
+            font-size: 18px;
             color: #000;
-            border-radius: 2px;
+            border-radius: 5px;
             opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.4s 0.5s; /* Delay */
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.4s 0.4s;
             z-index: 2;
-            box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+            box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
         }
         
+        /* Speech bubble tail */
         .char-dialogue-box::after {
             content: '';
             position: absolute;
-            bottom: -15px; left: 20px;
-            border-width: 15px 15px 0;
+            bottom: -20px; left: 30px;
+            border-width: 20px 15px 0;
             border-style: solid;
-            border-color: #000 transparent;
-            display: block;
-            width: 0;
+            border-color: #000 transparent transparent;
+        }
+        
+        .char-dialogue-box::before {
+            content: '';
+            position: absolute;
+            bottom: -14px; left: 33px;
+            border-width: 16px 12px 0;
+            border-style: solid;
+            border-color: #fff transparent transparent;
+            z-index: 1;
         }
         
         .character-overlay.active .char-dialogue-box {
             opacity: 1;
-            transform: scale(1);
+            transform: scale(1) translateY(0);
         }
         
         .char-name {
-            color: var(--gta-green);
+            color: #4caf50;
             font-size: 14px;
             margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: bold;
         }
-
-        /* Override old inner elements */
-        .char-img-box, .char-text-box { display: none !important; }
+        
+        .char-dialogue {
+            font-family: 'Arial', sans-serif;
+            font-size: 15px;
+            line-height: 1.4;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -2366,9 +2443,15 @@
     
     <!-- Cinematic Hand-Off Overlay -->
     <div id="cj-overlay" class="character-overlay">
-        <img id="char-body-img" class="char-body" src="" alt="Character">
+        <div class="char-body" id="char-body-container">
+            <div class="avatar-frame">
+                <div class="avatar-icon" id="char-avatar-icon">🧔</div>
+                <div class="avatar-status">● ONLINE</div>
+            </div>
+            <div class="avatar-name" id="char-avatar-name">CARL JOHNSON</div>
+        </div>
         <div class="char-dialogue-box">
-            <div class="char-name">CARL JOHNSON</div>
+            <div class="char-name" id="char-name-text">CARL JOHNSON</div>
             <div class="char-dialogue" id="cj-dialogue">Yo! You lookin' for something?</div>
         </div>
     </div>
@@ -3930,7 +4013,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'cj',
                 name: 'CARL JOHNSON',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/c/ce/Carl_Johnson.png',
+                icon: '🧔',
+                color: '#4caf50', // Grove Green
                 lines: [
                     "Yo! You lookin' for product here? Hold up.",
                     "Grove Street 4 Life! I got the hookup.",
@@ -3940,7 +4024,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'ryder',
                 name: 'RYDER',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/67/Ryder-GTASA.png',
+                icon: '😎',
+                color: '#8bc34a', // Light Green
                 lines: [
                     "You drive like a genius, fool! Check the phone!",
                     "Don't expect me to kiss your ass. Just buy it!",
@@ -3950,7 +4035,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'smoke',
                 name: 'BIG SMOKE',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/18/BigSmoke-GTASA.png',
+                icon: '🍔',
+                color: '#ff9800', // Orange
                 lines: [
                     "All we had to do, was follow the damn signal, CJ!",
                     "I'll have two number 9s... and your order ready.",
@@ -3960,7 +4046,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'sweet',
                 name: 'SWEET',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png',
+                icon: '💪',
+                color: '#2196f3', // Blue
                 lines: [
                     "For the hood! We takin' over this city.",
                     "Stay true to the families. Check the supply.",
@@ -3970,7 +4057,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             {
                 id: 'tenpenny',
                 name: 'OFFICER TENPENNY',
-                img: 'https://static.wikia.nocookie.net/gtawiki/images/6/61/FrankTenpenny-GTASA.png',
+                icon: '👮',
+                color: '#f44336', // Red (Danger)
                 lines: [
                     "I'm watching you... make the deal and get out.",
                     "We can all get along... just pay the price.",
@@ -3978,12 +4066,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 ]
             }
         ];
-
-        // Preload images
-        gtaCharacters.forEach(c => {
-            const img = new Image();
-            img.src = c.img;
-        });
 
         function zoomToCity(city, topP, leftP) {
             if(isZoomed) return;
@@ -4019,20 +4101,30 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // 2. Pick Random Line
                 const line = char.lines[Math.floor(Math.random() * char.lines.length)];
                 
-                // 3. Update UI
-                const nameEl = cj.querySelector('.char-name');
+                // 3. Update UI Elements
+                const nameText = document.getElementById('char-name-text');
                 const dialogEl = document.getElementById('cj-dialogue');
-                const bodyEl = document.getElementById('char-body-img');
+                const avatarIcon = document.getElementById('char-avatar-icon');
+                const avatarName = document.getElementById('char-avatar-name');
+                const avatarFrame = cj.querySelector('.avatar-frame');
                 
-                if(nameEl) nameEl.innerText = char.name;
+                if(nameText) nameText.innerText = char.name;
                 if(dialogEl) dialogEl.innerText = line;
-                if(bodyEl) {
-                    bodyEl.src = char.img;
-                    // Fallback logic
-                    bodyEl.onerror = function() {
-                        this.src = 'https://placehold.co/400x600/000/4caf50?text=' + encodeURIComponent(char.name) + '&font=oswald';
-                    };
+                if(avatarIcon) avatarIcon.innerText = char.icon;
+                if(avatarName) avatarName.innerText = char.name;
+                
+                // Apply character color
+                if(avatarFrame) {
+                    avatarFrame.style.borderColor = char.color;
+                    avatarFrame.style.boxShadow = `0 0 30px ${char.color}40, inset 0 0 50px rgba(0,0,0,0.8)`;
                 }
+                if(avatarIcon) avatarIcon.style.filter = `drop-shadow(0 0 20px ${char.color})`;
+                if(avatarName) avatarName.style.background = char.color;
+                if(nameText) nameText.style.color = char.color;
+                
+                // Update status color
+                const status = cj.querySelector('.avatar-status');
+                if(status) status.style.color = char.color;
                 
                 // 4. Show
                 cj.classList.add('active');
