@@ -188,32 +188,30 @@
             gap: 15px;
         }
 
+        /* APPLE-QUALITY GLASS CARD */
         .product-card {
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid var(--gta-grey);
-            border-radius: 0;
-            padding: 10px;
+            background: rgba(30, 35, 30, 0.65);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 15px;
             text-align: center;
-            transition: transform 0.2s;
+            transition: all 0.3s var(--spring-smooth);
             position: relative;
             overflow: hidden;
-            /* Removed expensive shadow on idle state */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .product-card:hover {
-            border-color: var(--gta-green);
-            transform: scale(1.02);
-            box-shadow: 0 0 15px rgba(63, 165, 53, 0.3);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.2);
+            background: rgba(40, 45, 40, 0.75);
+            z-index: 10;
         }
-
+        
         .product-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: var(--gta-gold);
+            display: none;
         }
 
         .product-emoji {
@@ -246,20 +244,30 @@
         }
 
         .btn-buy {
-            background: var(--gta-green);
+            background: #fff;
             color: #000;
             border: none;
-            padding: 5px 15px;
-            font-family: 'Pricedown', sans-serif;
-            font-size: 20px;
+            border-radius: 20px;
+            padding: 10px;
+            font-family: sans-serif;
+            font-weight: 800;
+            font-size: 13px;
             cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             width: 100%;
-            transition: 0.2s;
         }
-
+        
+        .btn-buy:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            background: #f0f0f0;
+        }
+        
         .btn-buy:active {
             transform: scale(0.95);
-            background: #fff;
         }
 
         /* Radio */
@@ -2939,7 +2947,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let currentStation = 0;
         const stations = [
             { name: "RADIO OFF", src: null },
-            { name: "100.1 WEST COAST (SNOOP)", src: "https://stream.zeno.fm/6m1h151131zuv" }, 
+            { name: "100.1 WEST COAST (OG)", src: "https://ais-sa2.cdnstream1.com/2442_128.mp3" }, 
             { name: "LO-FI CHILL", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, 
             { name: "SF-UR UNDERGROUND", src: "https://ice2.somafm.com/defcon-128-mp3" } 
         ];
