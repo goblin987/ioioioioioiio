@@ -389,99 +389,79 @@
             z-index: 100;
         }
         
-        /* Police Tape Header V3 (Layered) */
-        .tape-header-v3 {
+        /* Police Tape Header (Restored) */
+        .tape-header {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 80px; /* Fixed height */
-            z-index: 2000; /* Boost Z-Index */
+            top: 15px; 
+            left: -5%;
+            width: 110%;
+            height: 50px;
+            z-index: 9999; /* Max visibility */
             pointer-events: none; 
-            display: flex;
-            justify-content: center;
-            overflow: visible;
-        }
-
-        .tape-strip {
-            position: absolute;
+            transform: rotate(-2deg);
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            /* Reflective Plastic Texture */
+            overflow: hidden;
+        }
+
+        .tape-strip {
+            width: 100%;
+            height: 100%;
+            background: #006622; /* Police Green */
+            
+            /* Texture */
             background-image: 
                 repeating-linear-gradient(
-                    90deg,
+                    45deg,
                     rgba(255,255,255,0.1) 0px,
-                    rgba(255,255,255,0.1) 1px,
-                    transparent 1px,
-                    transparent 40px
-                ),
-                linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.2) 100%);
-        }
-
-        /* Secondary Strip (Background - Decoration) */
-        .tape-strip.secondary {
-            top: 35px;
-            left: -10%;
-            width: 120%;
-            height: 30px;
-            background-color: #113311; /* Dark Forest Green */
-            border-top: 1px solid #fff;
-            border-bottom: 1px solid #000;
-            transform: rotate(-2deg);
-            opacity: 0.7;
-            z-index: 1;
-        }
-
-        /* Main Strip (Foreground - Text) */
-        .tape-strip.primary {
-            top: 15px;
-            left: -5%;
-            width: 110%;
-            height: 45px;
-            background-color: #006622; /* Vivid Police Green */
+                    rgba(255,255,255,0.1) 2px,
+                    transparent 2px,
+                    transparent 10px
+                );
+            
             border-top: 2px solid rgba(255,255,255,0.9);
-            border-bottom: 2px solid rgba(0,0,0,0.5);
-            transform: rotate(1.5deg);
-            z-index: 2;
-            animation: tapeFloat 6s ease-in-out infinite;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            border-bottom: 1px solid rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: tapeSway 6s ease-in-out infinite;
         }
 
         .tape-text {
             font-family: 'Impact', sans-serif;
-            font-size: 24px;
+            font-size: 26px;
             color: #fff;
             letter-spacing: 2px;
-            text-transform: uppercase;
+            font-weight: bold;
             white-space: nowrap;
+            text-transform: uppercase;
             text-shadow: 0 2px 0 #000;
             padding: 0 20px;
         }
 
-        @keyframes tapeFloat {
-            0%, 100% { transform: rotate(1.5deg) translateY(0); }
-            50% { transform: rotate(1.5deg) translateY(-3px); }
+        @keyframes tapeSway {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-3px) rotate(0.5deg); }
         }
         
-        /* Search Bar Spacing */
+        /* Search Container Adjustment */
         .search-container {
-            margin-top: 75px; /* Clear the crossed tapes */
-            margin-bottom: 15px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            border: 1px solid #333;
+            margin-top: 80px; /* Clear the tape */
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--gta-green);
             padding: 10px;
-        }
-        
-        .section {
-            padding-top: 10px;
+            position: relative;
+            z-index: 50;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
         }
 
         /* Removed Old Headers */
-        .hood-header, .hood-header::before, .hud-line, .tape-header, .street-sign-header, .sign-board, .radio-faceplate-header, .faceplate-body, .spray-header, .spray-text, .drip { display: none; }
+        .hood-header, .street-sign-header, .radio-faceplate-header, .spray-header, .tape-header-v3 { display: none; }
         .header-title { display: none; }
 
         /* Removed Old Headers */
@@ -2773,12 +2753,9 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Police Tape Header V3 -->
-    <div class="app-header tape-header-v3" id="tape-header">
-        <!-- Background Strip (Angled Left) -->
-        <div class="tape-strip secondary"></div>
-        <!-- Main Strip (Angled Right) -->
-        <div class="tape-strip primary">
+    <!-- Police Tape Header (Restored) -->
+    <div class="app-header tape-header" id="tape-header">
+        <div class="tape-strip">
             <span class="tape-text">STOP POLICIJA • STOP POLICIJA • STOP POLICIJA</span>
         </div>
     </div>
@@ -3548,7 +3525,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Police Tape V3)
+            // Update Header Zone (Police Tape - Restored)
             const tapeText = document.querySelector('.tape-text');
             
             if(tapeText) {
