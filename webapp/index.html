@@ -395,11 +395,12 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 0; /* Logical height 0 */
-            z-index: 1000;
+            height: 80px; /* Fixed height */
+            z-index: 2000; /* Boost Z-Index */
             pointer-events: none; 
             display: flex;
             justify-content: center;
+            overflow: visible;
         }
 
         .tape-strip {
@@ -498,14 +499,17 @@
 
         /* Search Bar (LSPD Terminal - Minimal) */
         .search-container {
-            margin-bottom: 15px;
+            margin-top: 80px; /* Override for Tape Header */
+            margin-bottom: 30px; /* Space for buttons */
             border: 1px solid var(--gta-green);
-            background: #000;
-            padding: 8px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
             display: flex;
             align-items: center;
             box-shadow: 0 0 10px rgba(63, 165, 53, 0.1);
             position: relative;
+            border-radius: 4px;
+            z-index: 10;
         }
         
         .search-container::after {
