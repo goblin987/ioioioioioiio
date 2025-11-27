@@ -409,39 +409,41 @@
         .tape-strip {
             width: 110%;
             height: 100%;
-            background: #fff;
+            background: #eebb00; /* Classic Caution Yellow */
             
-            /* Red/White Stop Tape Pattern */
+            /* Gritty Texture */
             background-image: 
                 repeating-linear-gradient(
-                    -45deg,
-                    #cc0000 0px,
-                    #cc0000 30px,
-                    #ffffff 30px,
-                    #ffffff 60px
-                );
+                    45deg,
+                    rgba(0,0,0,0.05) 0px,
+                    rgba(0,0,0,0.05) 2px,
+                    transparent 2px,
+                    transparent 10px
+                ),
+                linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 60%, rgba(0,0,0,0.3) 100%);
             
-            border-top: 2px solid rgba(255,255,255,0.5);
-            border-bottom: 1px solid rgba(0,0,0,0.3);
+            border-top: 1px solid rgba(255,255,255,0.6);
+            border-bottom: 1px solid rgba(0,0,0,0.4);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
             animation: tapeSway 6s ease-in-out infinite;
         }
 
         .tape-text {
             font-family: 'Impact', sans-serif;
-            font-size: 32px;
-            color: #fff;
-            background: #cc0000; /* Red Box */
-            padding: 2px 25px;
-            border: 3px solid #fff;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            font-size: 28px;
+            color: #111; /* Black Text */
+            background: transparent;
+            padding: 0 20px;
+            border: none;
+            box-shadow: none;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            transform: skewX(-10deg); /* Aggressive Angle */
-            text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+            letter-spacing: 3px;
+            transform: none;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+            font-weight: 900;
         }
 
         @keyframes tapeSway {
@@ -2746,7 +2748,7 @@
     <!-- Police Tape Header (Restored) -->
     <div class="app-header tape-header" id="tape-header">
         <div class="tape-strip">
-            <span class="tape-text">STOP • LOS LITHUANIA • STOP</span>
+            <span class="tape-text">CRIME SCENE • LOS LITHUANIA • DO NOT CROSS</span>
         </div>
     </div>
 
@@ -3515,7 +3517,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Red Stop Tape)
+            // Update Header Zone (Yellow Crime Scene)
             const tapeText = document.querySelector('.tape-text');
             
             if(tapeText) {
@@ -3524,7 +3526,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(id === 'map') txt = "LOS SANTOS MAP";
                 if(id === 'stats') txt = "PLAYER STATS";
                 
-                tapeText.innerText = `STOP • ${txt} • STOP`;
+                tapeText.innerText = `CRIME SCENE • ${txt} • DO NOT CROSS`;
             }
         }
 
