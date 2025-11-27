@@ -391,7 +391,7 @@
         
         /* Street Sign Sticker Header */
         .sticker-header-container {
-            position: fixed;
+            position: absolute; /* Changed from fixed */
             top: 15px;
             right: 15px;
             z-index: 10000;
@@ -2773,18 +2773,6 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Street Sign Sticker Header -->
-    <div class="sticker-header-container">
-        <div class="street-sign-sticker" id="street-sign-sticker">
-            <div class="sticker-content">
-                <div class="sticker-sub">GROVE ST.</div>
-                <div class="sticker-main" id="header-zone-text">LOS LITHUANIA</div>
-                <div class="sticker-block">400 BLK</div>
-            </div>
-            <div class="sticker-shine"></div>
-            <div class="sticker-graffiti">GSF</div>
-        </div>
-    </div>
 
     <!-- Mission Passed Overlay -->
     <div class="mission-passed-overlay" id="mp-overlay" style="display:none;">
@@ -2890,6 +2878,18 @@
     </div>
 
     <div class="content">
+        <!-- Street Sign Sticker Header (Scrolled) -->
+        <div class="sticker-header-container">
+            <div class="street-sign-sticker" id="street-sign-sticker">
+                <div class="sticker-content">
+                    <div class="sticker-sub">GROVE ST.</div>
+                    <div class="sticker-main" id="header-zone-text">LOS LITHUANIA</div>
+                    <div class="sticker-block">400 BLK</div>
+                </div>
+                <div class="sticker-shine"></div>
+                <div class="sticker-graffiti">GSF</div>
+            </div>
+        </div>
         <!-- Video Intro -->
         <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99990; align-items:center; justify-content:center;">
             <div class="video-frame-overlay"></div> <!-- CINEMATIC OVERLAY -->
