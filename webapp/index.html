@@ -389,17 +389,17 @@
             z-index: 100;
         }
         
-        /* Police Tape Header */
+        /* Lithuanian Police Tape Header */
         .tape-header {
             position: fixed;
-            top: 15px; 
+            top: 20px; 
             left: -5%;
             width: 110%;
-            height: 45px;
+            height: 50px;
             z-index: 1000;
             pointer-events: none; 
-            transform: rotate(-1.5deg);
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+            transform: rotate(-1deg);
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -409,47 +409,52 @@
         .tape-strip {
             width: 100%;
             height: 100%;
-            background: #ffcc00; /* Classic Caution Yellow */
-            /* Subtle diagonal hatch texture for plastic feel */
+            /* Lithuanian Police Style: Green/White or Silver/Green. 
+               Let's go with a Green base with White text for the 'App Theme' + Authenticity */
+            background: #005522; /* Police Green */
+            
+            /* Reflective Tape Texture */
             background-image: 
                 repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 10px,
-                    rgba(0,0,0,0.03) 10px,
-                    rgba(0,0,0,0.03) 20px
+                    90deg,
+                    rgba(255,255,255,0.1) 0px,
+                    rgba(255,255,255,0.1) 2px,
+                    transparent 2px,
+                    transparent 50px
                 ),
-                linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 60%, rgba(0,0,0,0.2) 100%);
+                linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(0,0,0,0.3) 100%);
             
-            border-top: 1px solid rgba(255,255,255,0.6);
-            border-bottom: 1px solid rgba(0,0,0,0.3);
+            border-top: 2px solid rgba(255,255,255,0.8);
+            border-bottom: 2px solid rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 1px 10px rgba(0,0,0,0.1);
-            animation: tapeSway 6s ease-in-out infinite;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            animation: tapeSway 5s ease-in-out infinite;
         }
 
         .tape-text {
-            font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: 24px;
-            color: #111; /* Near Black */
-            letter-spacing: 4px;
+            font-family: 'Arial Black', 'Impact', sans-serif;
+            font-size: 26px;
+            color: #fff;
+            letter-spacing: 2px;
             font-weight: 900;
             white-space: nowrap;
             text-transform: uppercase;
-            /* Slight emboss */
-            text-shadow: 1px 1px 0 rgba(255,255,255,0.3);
+            text-shadow: 0 2px 0 #000;
         }
 
-        @keyframes tapeSway {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-3px) rotate(0.5deg); }
+        /* Search Container Fix - Push down below tape */
+        .search-container {
+            margin-top: 60px; /* Added margin to clear the header */
+            position: relative;
+            z-index: 50; /* Ensure it's clickable */
+            background: rgba(0,0,0,0.8); /* Enhance visibility */
+            padding: 10px;
+            border-bottom: 1px solid var(--gta-green);
+            display: flex;
+            align-items: center;
         }
-
-        /* Removed Old Headers */
-        .hood-header, .hood-header::before, .hud-line { display: none; }
-        .header-title { display: none; }
             position: absolute;
             bottom: 0;
             left: 25%; 
@@ -2736,7 +2741,7 @@
     <!-- Police Tape Header -->
     <div class="app-header tape-header" id="tape-header">
         <div class="tape-strip">
-            <span class="tape-text">LOS LITHUANIA • DO NOT CROSS • LOS LITHUANIA</span>
+            <span class="tape-text">LOS LITHUANIA • STOP POLICIJA • LOS LITHUANIA</span>
         </div>
     </div>
 
@@ -3513,7 +3518,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(id === 'map') txt = "LOS SANTOS MAP";
                 if(id === 'stats') txt = "PLAYER STATS";
                 
-                tapeText.innerText = `${txt} • DO NOT CROSS • ${txt}`;
+                tapeText.innerText = `${txt} • STOP POLICIJA • ${txt}`;
             }
         }
 
