@@ -389,71 +389,63 @@
             z-index: 100;
         }
         
-        /* Police Tape Header (Restored) */
-        .tape-header {
+        /* Wanted Level Header */
+        .wanted-header {
             position: fixed;
-            top: 15px; 
-            left: -5%;
-            width: 110%;
-            height: 50px;
-            z-index: 9999; /* Max visibility */
-            pointer-events: none; 
-            transform: rotate(-2deg);
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 70%, transparent 100%);
+            z-index: 1000;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            padding-top: 10px;
+            pointer-events: none; /* Click through */
         }
 
-        .tape-strip {
-            width: 110%;
-            height: 100%;
-            background: #eebb00; /* Classic Caution Yellow */
-            
-            /* Gritty Texture */
-            background-image: 
-                repeating-linear-gradient(
-                    45deg,
-                    rgba(0,0,0,0.05) 0px,
-                    rgba(0,0,0,0.05) 2px,
-                    transparent 2px,
-                    transparent 10px
-                ),
-                linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 60%, rgba(0,0,0,0.3) 100%);
-            
-            border-top: 1px solid rgba(255,255,255,0.6);
-            border-bottom: 1px solid rgba(0,0,0,0.4);
+        .stars-container {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
-            animation: tapeSway 6s ease-in-out infinite;
+            gap: 8px;
+            margin-bottom: 0px;
         }
 
-        .tape-text {
-            font-family: 'Impact', sans-serif;
-            font-size: 28px;
-            color: #111; /* Black Text */
-            background: transparent;
-            padding: 0 20px;
-            border: none;
-            box-shadow: none;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            transform: none;
-            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
-            font-weight: 900;
+        .hud-star {
+            font-size: 20px;
+            color: #444; /* Empty star - Dark Grey */
+            text-shadow: 0 1px 2px #000;
+        }
+        .hud-star.active {
+            color: var(--gta-gold);
+            filter: drop-shadow(0 0 8px rgba(189, 147, 249, 0.2)); /* Subtle glow */
+            animation: starPulse 2s infinite alternate;
         }
 
-        @keyframes tapeSway {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-3px) rotate(0.5deg); }
+        .zone-name {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 32px;
+            color: #fff;
+            /* Classic GTA Text Border */
+            text-shadow: 
+                2px 2px 0 #000,
+                -1px -1px 0 #000,  
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000;
+            letter-spacing: 1px;
+            margin-top: 5px;
         }
-        
+
+        @keyframes starPulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.1); opacity: 0.9; }
+        }
+
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 80px; /* Clear the tape */
+            margin-top: 85px; /* Clear the header */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.8);
             border: 1px solid var(--gta-green);
@@ -466,7 +458,7 @@
         }
 
         /* Removed Old Headers */
-        .hood-header, .street-sign-header, .radio-faceplate-header, .spray-header, .tape-header-v3 { display: none; }
+        .hood-header, .street-sign-header, .radio-faceplate-header, .spray-header, .tape-header-v3, .tape-header, .tape-strip, .tape-text { display: none; }
         .header-title { display: none; }
 
         /* Search Bar (LSPD Terminal - Minimal) */
@@ -2745,11 +2737,16 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Police Tape Header (Restored) -->
-    <div class="app-header tape-header" id="tape-header">
-        <div class="tape-strip">
-            <span class="tape-text">CRIME SCENE • LOS LITHUANIA • DO NOT CROSS</span>
+    <!-- Wanted Level Header -->
+    <div class="app-header wanted-header" id="wanted-header">
+        <div class="stars-container">
+            <span class="hud-star active">★</span>
+            <span class="hud-star active">★</span>
+            <span class="hud-star">★</span>
+            <span class="hud-star">★</span>
+            <span class="hud-star">★</span>
         </div>
+        <div class="zone-name" id="header-zone-text">LOS LITHUANIA</div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3517,16 +3514,26 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Yellow Crime Scene)
-            const tapeText = document.querySelector('.tape-text');
+            // Update Header Zone (Wanted Level HUD)
+            const zoneText = document.getElementById('header-zone-text');
+            const stars = document.querySelectorAll('.hud-star');
             
-            if(tapeText) {
+            if(zoneText) {
                 let txt = "LOS LITHUANIA";
-                if(id === 'shop') txt = "AMMU-NATION";
-                if(id === 'map') txt = "LOS SANTOS MAP";
-                if(id === 'stats') txt = "PLAYER STATS";
+                let starCount = 2;
+                if(id === 'shop') { txt = "AMMU-NATION"; starCount = 0; }
+                if(id === 'map') { txt = "LOS SANTOS MAP"; starCount = 1; }
+                if(id === 'stats') { txt = "PLAYER STATS"; starCount = 5; }
                 
-                tapeText.innerText = `CRIME SCENE • ${txt} • DO NOT CROSS`;
+                zoneText.innerText = txt;
+                
+                // Update Stars
+                if(stars) {
+                    stars.forEach((s, i) => {
+                        if(i < starCount) s.classList.add('active');
+                        else s.classList.remove('active');
+                    });
+                }
             }
         }
 
