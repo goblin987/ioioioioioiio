@@ -389,142 +389,114 @@
             z-index: 100;
         }
         
-        /* Car Radio Faceplate Header */
+        /* Tactical Glass HUD Header (Clean & Tech) */
         .radio-faceplate-header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 64px;
+            height: 60px;
             z-index: 1000;
             display: flex;
             justify-content: center;
-            background: #000;
-            border-bottom: 1px solid #333;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.9);
+            /* Dark Glass Base */
+            background: rgba(5, 10, 5, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(46, 204, 113, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
         .faceplate-body {
             width: 100%;
-            max-width: 100%; /* Full width on mobile */
             height: 100%;
-            background: #151515;
-            /* Matte Plastic Texture */
-            background-image: 
-                radial-gradient(circle at 50% 50%, #1a1a1a 1px, transparent 1px),
-                linear-gradient(to bottom, #222 0%, #111 100%);
-            background-size: 3px 3px, 100% 100%;
+            background: transparent;
+            background-image: none;
+            box-shadow: none;
             display: flex;
             align-items: center;
-            padding: 0 8px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.8);
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        /* Left Tech Status */
+        .faceplate-left {
+            width: 60px;
+            align-items: flex-start;
+        }
+        .faceplate-left::after {
+            content: 'SIGNAL: OK';
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #444;
+            font-weight: bold;
+        }
+        
+        /* Right Tech Status */
+        .faceplate-right {
+            width: 60px;
+            align-items: flex-end;
+        }
+        .faceplate-right::after {
+            content: 'BAT: 100%';
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: var(--gta-green);
+            font-weight: bold;
         }
 
         .lcd-screen {
             flex-grow: 1;
-            height: 42px;
-            background: #050505;
-            border: 2px solid #2a2a2a;
-            border-radius: 4px;
-            margin: 0 8px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 12px;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
-            position: relative;
-            overflow: hidden;
+            height: auto;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            margin: 0;
+            padding: 0;
+            justify-content: center;
+            flex-direction: column;
+            gap: 2px;
         }
-
-        /* Scanline/Grid for LCD */
-        .lcd-screen::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
-            z-index: 2;
-        }
+        
+        .lcd-screen::before { display: none; }
 
         .lcd-text {
-            font-family: 'Courier New', 'Monaco', monospace; 
-            font-size: 22px;
-            color: #ff8800; /* Retro Amber */
-            text-shadow: 0 0 8px rgba(255, 136, 0, 0.6);
-            font-weight: bold;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 32px;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
             letter-spacing: 1px;
-            white-space: nowrap;
-            z-index: 1;
         }
 
         .lcd-icon {
-            font-size: 9px;
-            color: #cc6600;
-            font-family: sans-serif;
-            border: 1px solid #cc6600;
-            padding: 2px 4px;
-            border-radius: 2px;
-            opacity: 0.8;
-            z-index: 1;
-        }
-
-        .knob {
-            width: 28px;
-            height: 28px;
-            background: radial-gradient(circle at 30% 30%, #333 0%, #000 80%);
-            border-radius: 50%;
-            border: 1px solid #000;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            position: relative;
-        }
-        /* Grip lines on knob */
-        .knob::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 40%; height: 2px;
-            background: #555;
-            transform: translate(-50%, -50%) rotate(45deg);
-        }
-
-        .btn-tiny {
-            width: 16px;
-            height: 8px;
-            background: #222;
-            margin: 3px 0;
-            border: 1px solid #000;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
-        }
-
-        .eject-btn {
+            /* Now acting as subtitle */
             font-size: 10px;
-            color: #555;
-            margin-bottom: 6px;
-            text-shadow: 0 -1px 0 #000;
-        }
-
-        .faceplate-left, .faceplate-right {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            flex-shrink: 0;
-        }
-
-        /* Search Container Reset */
-        .search-container {
-            margin-top: 20px; /* Standard spacing from header */
-            background: transparent; /* Remove extra bg from previous fix */
+            color: #666;
+            font-family: 'Courier New', monospace;
             border: none;
+            padding: 0;
+            background: transparent;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Hide old controls */
+        .knob, .btn-tiny, .eject-btn { display: none; }
+
+        /* Search Container - Spaced Out & Clean */
+        .search-container {
+            margin-top: 15px;
+            margin-bottom: 30px; /* More breathing room above buttons */
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px 16px;
+            backdrop-filter: blur(10px);
         }
         
-        /* Adjust section padding for solid header */
+        /* Section Padding */
         .section {
-            padding-top: 75px; 
+            padding-top: 85px; /* Account for header + margin */
         }
 
         /* Removed Old Headers */
@@ -3597,15 +3569,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Car Radio)
+            // Update Header Zone (Glass HUD)
             const lcdText = document.querySelector('.lcd-text');
+            const lcdIcon = document.querySelector('.lcd-icon');
+            
             if(lcdText) {
                 let txt = "LOS LITHUANIA";
-                if(id === 'shop') txt = "AMMU-NATION";
-                if(id === 'map') txt = "LOS SANTOS MAP";
-                if(id === 'stats') txt = "PLAYER STATS";
+                let sub = "EST. 1992";
+                
+                if(id === 'shop') { txt = "AMMU-NATION"; sub = "WEAPONS & ARMOR"; }
+                if(id === 'map') { txt = "LOS SANTOS MAP"; sub = "SATELLITE VIEW"; }
+                if(id === 'stats') { txt = "PLAYER STATS"; sub = "RESPECT: MAX"; }
                 
                 lcdText.innerText = txt;
+                if(lcdIcon) lcdIcon.innerText = sub;
             }
         }
 
