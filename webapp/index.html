@@ -389,16 +389,16 @@
             z-index: 100;
         }
         
-        /* Illustrated "Simpsons" Style Pipe Header */
+        /* GTA 5 / Indie Game Style 3D Street Sign */
         .street-sign-assembly {
             position: fixed;
             top: 0;
             right: 0;
-            width: 320px;
-            height: 140px;
+            width: 340px;
+            height: 160px;
             z-index: 10000;
             pointer-events: none;
-            filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.3)); /* Hard shadow */
+            filter: drop-shadow(-10px 10px 20px rgba(0,0,0,0.8)); /* Deep realistic shadow */
         }
 
         .pole-group {
@@ -409,194 +409,233 @@
             height: 100%;
         }
 
-        /* The Vertical Pipe */
+        /* 3D Realistic Pole Rendering */
         .pole-vertical {
             position: absolute;
             right: 0;
             top: -50px;
-            width: 35px;
+            width: 40px;
             height: 250px;
-            background: #546e7a; /* Blue-Grey Industrial */
-            border-left: 3px solid #000;
+            /* Chrome/Steel Cylinder Gradient */
+            background: linear-gradient(to right, #444, #888, #ccc, #888, #444);
             z-index: 2;
-            /* "Cell Shaded" Highlight */
-            background-image: linear-gradient(90deg, rgba(0,0,0,0.2) 0%, transparent 20%, rgba(255,255,255,0.3) 30%, rgba(255,255,255,0.1) 50%, rgba(0,0,0,0.3) 100%);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8); /* Depth */
         }
 
-        /* The Elbow Joint (Connector) */
+        /* The Elbow Joint */
         .pole-elbow {
             position: absolute;
             right: 0px;
-            top: 10px;
-            width: 50px;
-            height: 50px;
-            background: #455a64;
-            border: 3px solid #000;
-            border-radius: 8px 0 0 8px;
+            top: 15px;
+            width: 55px;
+            height: 55px;
+            /* Cast Iron Texture */
+            background: radial-gradient(circle at 30% 30%, #5a5a5a, #1a1a1a);
+            border-radius: 12px 0 0 12px;
             z-index: 3;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             align-content: center;
-            gap: 4px;
-            box-shadow: inset 2px 2px 0 rgba(255,255,255,0.2);
+            gap: 5px;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.1), 0 5px 10px rgba(0,0,0,0.5);
+            border-left: 1px solid #666;
         }
 
+        /* Realistic Bolts */
         .bolt {
-            width: 8px;
-            height: 8px;
-            background: #cfd8dc;
-            border: 2px solid #000;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #e6e6e6, #7f8c8d);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            position: relative;
+        }
+        .bolt::after { /* Hex Screw Indent */
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50%; height: 50%;
+            background: #333;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
         }
 
-        /* The Horizontal Arm */
+        /* Horizontal Arm */
         .pole-horizontal {
             position: absolute;
-            right: 30px; /* Coming out of elbow */
-            top: 20px;
-            width: 280px;
-            height: 28px;
-            background: #546e7a;
-            border-top: 3px solid #000;
-            border-bottom: 3px solid #000;
-            border-left: 3px solid #000;
-            border-radius: 4px 0 0 4px;
+            right: 30px;
+            top: 25px;
+            width: 300px;
+            height: 35px;
+            /* Chrome/Steel Cylinder Gradient */
+            background: linear-gradient(to bottom, #444, #888, #ccc, #888, #444);
+            border-radius: 6px 0 0 6px;
             z-index: 1;
-            transform: rotate(2deg);
+            transform: rotate(1.5deg);
             transform-origin: right center;
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 40%, rgba(0,0,0,0.2) 100%);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
         .pole-cap {
             position: absolute;
-            left: -8px;
-            top: 15px;
-            width: 15px;
-            height: 38px;
-            background: #37474f;
-            border: 3px solid #000;
-            border-radius: 4px;
+            left: -6px;
+            top: 20px;
+            width: 12px;
+            height: 45px;
+            background: linear-gradient(to right, #333, #666, #333);
+            border-radius: 3px;
             z-index: 2;
-            transform: rotate(2deg);
+            transform: rotate(1.5deg);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* Rust Spots (Details) */
+        /* Rust / Grime Details */
         .rust-mark {
             position: absolute;
-            background: #d35400;
-            border-radius: 50%;
-            opacity: 0.8;
-            filter: blur(1px);
+            background: radial-gradient(circle, #8e44ad 0%, transparent 70%); /* Oil stain color */
+            opacity: 0.4;
+            mix-blend-mode: multiply;
+            filter: blur(2px);
         }
-        .r1 { top: 5px; left: 50px; width: 10px; height: 6px; }
-        .r2 { bottom: 4px; left: 120px; width: 15px; height: 8px; }
+        .r1 { top: 10px; left: 60px; width: 30px; height: 15px; background: #a0522d; /* Rust */ }
+        .r2 { bottom: 5px; left: 150px; width: 40px; height: 20px; background: #000; /* Grease */ }
 
-        /* Hanging Clamps */
+        /* Heavy Duty Clamps */
         .sign-hanger {
             position: absolute;
-            top: 40px;
-            right: 60px;
-            width: 200px;
+            top: 55px;
+            right: 70px;
+            width: 220px;
             transform-origin: top center;
-            animation: signSway 5s ease-in-out infinite;
+            animation: signSwayReal 6s ease-in-out infinite;
         }
 
         .metal-clamp {
             position: absolute;
-            top: -15px;
-            width: 10px;
-            height: 25px;
-            background: #90a4ae;
-            border: 2px solid #000;
+            top: -25px;
+            width: 15px;
+            height: 35px;
+            background: linear-gradient(to right, #555, #aaa, #555);
             border-radius: 4px;
             z-index: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            border: 1px solid #333;
         }
-        .left-clamp { left: 20px; }
-        .right-clamp { right: 20px; }
+        .left-clamp { left: 25px; }
+        .right-clamp { right: 25px; }
 
-        /* The Sign Box */
+        /* Photorealistic Sign Box */
         .gta-street-sign {
             position: relative;
-            background: #006400; /* Strong Green */
-            border: 3px solid #fff;
-            outline: 3px solid #000; /* "Simpsons" Outline */
-            border-radius: 6px;
-            padding: 4px;
-            box-shadow: 5px 5px 0 rgba(0,0,0,0.2);
+            /* Retro Reflective Green Material */
+            background: 
+                linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.05) 100%),
+                radial-gradient(circle at center, #0e6628, #053312);
+            width: 100%;
+            padding: 6px;
+            border-radius: 8px;
+            box-shadow: 
+                inset 0 1px 1px rgba(255,255,255,0.3), /* Top Bevel */
+                inset 0 -1px 1px rgba(0,0,0,0.5),    /* Bottom Bevel */
+                0 10px 20px rgba(0,0,0,0.6);         /* Ambient Shadow */
+            border: 1px solid #0a4d1c;
         }
 
         .sign-inner-border {
-            border: 1px solid rgba(255,255,255,0.5);
-            border-radius: 4px;
-            padding: 5px 10px;
+            border: 3px ridge rgba(220, 220, 220, 0.9); /* Reflective White Border (Double Ridge) */
+            border-radius: 5px;
+            padding: 5px 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            box-shadow: 0 0 5px rgba(255,255,255,0.4); /* Enhanced Bloom */
+            backdrop-filter: brightness(1.1); /* Slight pop */
         }
 
-        /* Typography */
+        /* Authentic Typography */
         .district-label {
             font-family: 'Arial', sans-serif;
-            font-size: 10px;
-            color: #fff;
+            font-size: 11px;
+            color: #eee;
             text-transform: uppercase;
-            font-weight: 900;
+            font-weight: bold;
             align-self: flex-start;
-            -webkit-text-stroke: 0.5px black; /* Cartoon text */
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            opacity: 0.9;
         }
 
         .street-name {
             font-family: 'Impact', sans-serif;
-            font-size: 26px;
+            font-size: 28px;
             color: #fff;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            text-shadow: 2px 2px 0 #000; /* Cartoon shadow */
+            letter-spacing: 1.5px;
+            /* Engraved Text Effect */
+            text-shadow: 
+                0 2px 0 #000,
+                0 0 10px rgba(255,255,255,0.2);
             white-space: nowrap;
-            line-height: 1.1;
+            line-height: 1.2;
+            transform: scaleY(1.1); /* Taller font like real signs */
         }
 
         .block-num {
             font-family: 'Arial', sans-serif;
-            font-size: 9px;
-            color: #fff;
+            font-size: 10px;
+            color: #eee;
             align-self: flex-end;
-            font-weight: 900;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }
 
-        /* Graffiti */
+        /* Realistic Decals */
         .graffiti-overlay {
             position: absolute;
-            bottom: 0px;
-            right: 10px;
+            bottom: 5px;
+            right: 15px;
             font-family: 'Brush Script MT', cursive;
-            font-size: 30px;
-            color: #00ff00;
-            transform: rotate(-10deg);
-            text-shadow: 1px 1px 0 #000;
-            opacity: 0.9;
-            z-index: 5;
+            font-size: 32px;
+            color: #2ecc71;
+            transform: rotate(-12deg);
+            opacity: 0.7;
+            mix-blend-mode: hard-light; /* Looks painted ON */
+            filter: blur(0.5px);
         }
         
-        /* Animation */
-        @keyframes signSway {
-            0%, 100% { transform: rotate(1.5deg); }
-            50% { transform: rotate(-1.5deg); }
+        .sticker-overlay {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 25px;
+            height: 25px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%23fff" opacity="0.8"/><text x="50" y="55" font-size="30" text-anchor="middle" fill="black">R</text></svg>');
+            background-size: contain;
+            transform: rotate(15deg);
+            opacity: 0.8;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+            mix-blend-mode: overlay;
+        }
+
+        /* Physics Animation */
+        @keyframes signSwayReal {
+            0%, 100% { transform: rotate(1deg); }
+            50% { transform: rotate(-1deg); }
         }
 
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 80px; /* Adjusted for visibility */
+            margin-top: 90px; /* More clearance */
             margin-bottom: 20px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
-            padding: 10px;
+            padding: 12px;
             position: relative;
             z-index: 50;
             border-radius: 4px;
             display: flex;
             align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
         /* Removed Old Headers */
