@@ -134,27 +134,57 @@
             to { color: #cfa936; opacity: 0.8; }
         }
 
-        /* Navigation */
-        .nav {
+        /* Navigation (HUD Style) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #333;
+            border-radius: 50px;
             display: flex;
-            justify-content: space-around;
-            background: rgba(0, 0, 0, 0.9);
+            justify-content: space-evenly;
             padding: 10px 0;
-            border-top: 2px solid var(--gta-grey);
-            z-index: 10;
+            z-index: 10000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
         }
-
+        
         .nav-item {
-            font-size: 24px;
-            color: var(--gta-grey);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #666;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s;
+            width: 60px;
         }
-
+        
+        .nav-icon {
+            font-size: 22px;
+            margin-bottom: 2px;
+            filter: grayscale(100%) brightness(0.7);
+            transition: all 0.2s;
+        }
+        
+        .nav-item span {
+            font-family: 'Impact', sans-serif;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+        
         .nav-item.active {
-            color: var(--gta-gold);
-            transform: scale(1.1);
-            text-shadow: 0 0 5px var(--gta-gold);
+            color: #fff;
+        }
+        
+        .nav-item.active .nav-icon {
+            filter: grayscale(0%) brightness(1.2);
+            transform: scale(1.2);
+            text-shadow: 0 0 10px var(--gta-green);
         }
 
         /* Content Area */
@@ -305,14 +335,24 @@
             white-space: nowrap;
         }
 
-        /* Search Bar (LSPD) */
+        /* Search Bar (LSPD Terminal) */
         .search-container {
-            margin-bottom: 15px;
-            border: 2px solid #fff;
+            margin-bottom: 20px;
+            border: 2px solid var(--gta-green);
             background: #000;
-            padding: 5px;
+            padding: 10px;
             display: flex;
             align-items: center;
+            box-shadow: 0 0 15px rgba(63, 165, 53, 0.15);
+            position: relative;
+        }
+        
+        .search-container::after {
+            content: '[REC]';
+            position: absolute;
+            right: 5px; top: 5px;
+            font-size: 10px; color: red;
+            animation: blink 1s infinite;
         }
         
         .search-input {
@@ -320,17 +360,19 @@
             border: none;
             color: var(--gta-green);
             font-family: 'Courier New', monospace;
-            font-size: 16px;
+            font-size: 18px;
             width: 100%;
             outline: none;
             text-transform: uppercase;
+            font-weight: bold;
         }
         
         .search-label {
-            color: #fff;
+            color: var(--gta-green);
             font-family: 'Courier New', monospace;
             margin-right: 10px;
             font-weight: bold;
+            text-shadow: 0 0 5px var(--gta-green);
         }
 
         /* Map Zoom */
@@ -2928,11 +2970,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
     </div>
 
     <!-- Navigation -->
-    <div class="nav">
-        <div class="nav-item active" id="nav-shop" onclick="sfx.select(); showSection('shop')">SHOP</div>
-        <div class="nav-item" id="nav-map" onclick="sfx.select(); showSection('map')">MAP</div>
-        <div class="nav-item" id="nav-stats" onclick="sfx.select(); showSection('stats')">STATS</div>
-        <div class="nav-item" id="nav-basket" onclick="sfx.select(); openBasket()">CART (<span id="basket-count">0</span>)</div>
+    <div class="bottom-nav">
+        <div class="nav-item active" id="nav-shop" onclick="sfx.select(); showSection('shop')">
+            <div class="nav-icon">🔫</div>
+            <span>SHOP</span>
+        </div>
+        <div class="nav-item" id="nav-map" onclick="sfx.select(); showSection('map')">
+            <div class="nav-icon">🌍</div>
+            <span>MAP</span>
+        </div>
+        <div class="nav-item" id="nav-stats" onclick="sfx.select(); showSection('stats')">
+            <div class="nav-icon">📊</div>
+            <span>STATS</span>
+        </div>
+        <div class="nav-item" id="nav-basket" onclick="sfx.select(); openBasket()">
+            <div class="nav-icon">🎒</div>
+            <span>CART <span id="basket-count" style="color:var(--gta-gold)">(0)</span></span>
+        </div>
     </div>
 
     <script>
@@ -3366,7 +3420,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 card.innerHTML = `
                     ${countBadge}
-                    <div class="product-emoji">${getProductEmoji(p.type)}</div>
+                    <div class="product-emoji">${getProductEmoji(p.type, p.display_name)}</div>
                     <div class="product-name">${p.display_name}</div>
                     <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>
                     <div class="product-price">$${p.price.toFixed(2)}</div>
@@ -3921,12 +3975,27 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             document.getElementById(`nav-${id}`).classList.add('active');
         }
         
-        function getProductEmoji(type) {
+        function getProductEmoji(type, name = '') {
+            // Check Name First (Specifics)
+            const n = name.toLowerCase();
+            if(n.includes('lemon') || n.includes('haze') || n.includes('skunk') || n.includes('weed')) return '🌿';
+            if(n.includes('kush') || n.includes('og') || n.includes('wido')) return '🥦';
+            if(n.includes('xan') || n.includes('tab') || n.includes('pill')) return '💊';
+            if(n.includes('snow') || n.includes('pure') || n.includes('coke')) return '🌨️';
+            if(n.includes('speed') || n.includes('amp')) return '⚡';
+            if(n.includes('lsd') || n.includes('acid')) return '👅';
+            if(n.includes('shroom')) return '🍄';
+            if(n.includes('alus') || n.includes('beer')) return '🍺';
+            if(n.includes('deg') || n.includes('vodka')) return '🍾';
+            if(n.includes('pienas')) return '🥛';
+            if(n.includes('kava')) return '☕';
+            
+            // Fallback to Type
             if(!type) return '📦';
             const t = type.toLowerCase();
             if(t.includes('weed') || t.includes('cannabis')) return '🌿';
             if(t.includes('pill') || t.includes('xtc')) return '💊';
-            if(t.includes('powder') || t.includes('coke')) return '🍚';
+            if(t.includes('powder') || t.includes('coke')) return '🌨️';
             return '📦';
         }
 
