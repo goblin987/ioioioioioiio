@@ -389,108 +389,73 @@
             z-index: 100;
         }
         
-        /* Hanging Header Structure */
-        .hanging-header {
-            position: relative;
+        /* Pager Header (90s Tech) */
+        .pager-header {
             height: 80px;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding-top: 20px;
-            pointer-events: none;
             z-index: 100;
-            overflow: visible;
+            pointer-events: none;
         }
         
-        .sign-structure {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            height: 100%;
+        .pager-screen {
+            background: #1a2219;
+            width: 280px;
+            height: 50px;
+            border: 4px solid #333;
+            border-radius: 6px;
             display: flex;
-            justify-content: center;
-        }
-        
-        .sign-bar {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            height: 10px;
-            background: linear-gradient(90deg, #222, #444, #222);
-            border-bottom: 1px solid #000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-        
-        .chains {
-            position: absolute;
-            top: 0;
-            width: 220px;
-            height: 30px;
-            display: flex;
+            align-items: center;
             justify-content: space-between;
-        }
-        
-        .chain {
-            width: 3px;
-            height: 100%;
-            background: repeating-linear-gradient(to bottom, #555 0px, #555 3px, transparent 3px, transparent 5px);
-            border-left: 1px solid rgba(0,0,0,0.5);
-        }
-
-        /* Backlit Alley Sign (Hanging) */
-        .street-sign-text {
-            background: #051105;
-            color: #e0ffe0;
-            font-family: 'Pricedown', sans-serif;
-            font-size: 36px;
-            padding: 8px 30px;
-            border: 4px solid #222;
-            border-radius: 4px;
+            padding: 0 15px;
             box-shadow: 
-                0 0 0 1px #444,
-                0 10px 30px rgba(0,0,0,1);
-            text-shadow: 0 0 10px rgba(100, 255, 100, 0.6);
-            background-image: 
-                linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px);
-            background-size: 4px 4px;
-            transform-origin: top center;
-            animation: sign-sway 4s ease-in-out infinite alternate;
+                0 0 0 2px #111,
+                0 5px 15px rgba(0,0,0,0.8),
+                inset 0 0 10px rgba(0,0,0,0.8);
             position: relative;
             overflow: hidden;
-            min-width: 250px;
-            text-align: center;
             pointer-events: auto;
-            margin-top: 10px;
+            transform: rotate(-1deg);
         }
         
-        @keyframes sign-sway {
-            from { transform: rotate(-1.5deg); }
-            to { transform: rotate(1.5deg); }
-        }
-
-        .street-sign-text::before {
+        .pager-screen::after {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(63, 165, 53, 0.3) 0%, transparent 80%);
-            mix-blend-mode: screen;
-            animation: backlight-flicker 4s infinite;
+            background: 
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px),
+                radial-gradient(circle at 50% 50%, rgba(100,255,100,0.05) 0%, transparent 80%);
             pointer-events: none;
         }
         
-        @keyframes backlight-flicker {
-            0%, 100% { opacity: 1; }
-            3% { opacity: 0.3; }
-            4% { opacity: 1; }
-            40% { opacity: 1; }
-            41% { opacity: 0.5; }
-            42% { opacity: 1; }
-            70% { opacity: 1; }
-            72% { opacity: 0.8; }
-            74% { opacity: 1; }
+        .pager-label {
+            font-family: Arial, sans-serif;
+            font-size: 8px;
+            color: #666;
+            position: absolute;
+            top: 3px; left: 6px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .pager-text {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 22px;
+            color: #4af626;
+            text-shadow: 0 0 5px rgba(74, 246, 38, 0.6);
+            letter-spacing: -1px;
+            flex: 1;
+            text-align: center;
+            z-index: 2;
+            margin-top: 4px;
+        }
+        
+        .pager-icon {
+            font-size: 18px;
+            filter: grayscale(100%) sepia(1) hue-rotate(50deg) saturate(5) brightness(0.8);
+            opacity: 0.8;
         }
 
         /* Search Bar (LSPD Terminal - Minimal) */
@@ -2766,16 +2731,13 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Hanging Sign Header -->
-    <div class="app-header hanging-header">
-        <div class="sign-structure">
-            <div class="sign-bar"></div>
-            <div class="chains">
-                <div class="chain"></div>
-                <div class="chain"></div>
-            </div>
+    <!-- Retro Pager Header -->
+    <div class="app-header pager-header">
+        <div class="pager-screen">
+            <div class="pager-label">MOTOROLA</div>
+            <div class="pager-text" id="header-zone-text">LOS LITHUANIA</div>
+            <div class="pager-icon">📟</div>
         </div>
-        <div class="street-sign-text" id="header-zone-text">LOS LITHUANIA</div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3352,6 +3314,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 ctx.resume();
             }
             
+            // 1. Pre-load Radio (Crucial for Mobile)
+            if(audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+            const station = stations[1]; 
+            audioPlayer = new Audio(station.src);
+            audioPlayer.volume = 0.5;
+            // Trick: Play then immediately pause to unlock 'Audio' element
+            const warmUp = audioPlayer.play();
+            if(warmUp !== undefined) {
+                warmUp.then(() => audioPlayer.pause()).catch(e => console.log("Audio Warmup", e));
+            }
+            
             // Init Audio Locally
             const audioFx = new Audio('/webapp/ah_shit.mp3');
             audioFx.preload = 'auto';
@@ -3410,7 +3383,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function performTransition() {
             log("performTransition called");
             try {
-                toggleRadio(true);
+                // Resume Radio (Pre-loaded)
+                if(audioPlayer) {
+                    audioPlayer.play().catch(e => console.log("Resume failed", e));
+                    currentStation = 1; 
+                    const radioText = document.getElementById('radio-display');
+                    if(radioText) {
+                        radioText.innerText = stations[1].name;
+                        radioText.style.color = "var(--gta-green)";
+                    }
+                } else {
+                    toggleRadio(true);
+                }
                 log("Radio toggled");
 
                 // 1. Switch Content (Behind the Smoke Curtain)
