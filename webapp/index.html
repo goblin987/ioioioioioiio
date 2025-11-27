@@ -85,27 +85,29 @@
             opacity: 0.3;
         }
 
-        /* App Header (Clean) */
+        /* App Header (Minimal Authentic) */
         .app-header {
             background: #000;
-            border-bottom: 1px solid #333;
-            padding: 5px 15px;
+            border-bottom: 2px solid #333;
+            padding: 0;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             z-index: 100;
-            height: 50px;
+            height: 60px;
             box-sizing: border-box;
             position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         
-        .header-left, .header-right {
-            flex: 1;
+        /* Center Only */
+        .header-center { 
+            text-align: center; 
+            width: 100%;
             display: flex;
+            justify-content: center;
             align-items: center;
         }
-        .header-right { justify-content: flex-end; }
-        .header-center { flex: 2; text-align: center; }
 
         .zone-text {
             font-family: 'Pricedown', sans-serif;
@@ -332,74 +334,42 @@
         }
 
         /* Radio */
-        .radio-widget {
+        /* Authentic GTA Radio HUD */
+        .radio-hud {
             position: fixed;
             bottom: 90px;
-            right: 15px;
-            left: 15px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 1px solid #333;
-            border-radius: 16px;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            right: 20px;
+            text-align: right;
             z-index: 9999;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            transform: translateY(0);
-        }
-        
-        .radio-icon {
-            font-size: 24px;
-            margin-right: 15px;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
-        }
-        
-        .radio-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .radio-label {
-            color: #666;
-            font-size: 10px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-        }
-        
-        .radio-station {
-            color: #fff;
-            font-size: 14px;
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .radio-controls {
-            margin-left: 15px;
-        }
-        
-        .radio-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            font-size: 16px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
+            pointer-events: auto;
+            user-select: none;
         }
-        .radio-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
+        
+        .radio-hud-label {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 12px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+            opacity: 0.8;
+            margin-bottom: -5px;
+        }
+        
+        .radio-hud-text {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 32px;
+            color: #b69b4c;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000;
+            transition: transform 0.1s;
+        }
+        
+        .radio-hud:active .radio-hud-text {
+            transform: scale(0.95);
+            color: #fff;
+        }
 
         /* Search Bar (LSPD Terminal - Minimal) */
         .search-container {
@@ -2665,34 +2635,19 @@
     </div>
 
     <!-- Audio Elements -->
-    <!-- Music Player Widget -->
-    <div class="radio-widget" id="music-player">
-        <div class="radio-icon">📻</div>
-        <div class="radio-info" onclick="toggleRadio()">
-            <div class="radio-label">FM TUNER</div>
-            <div class="radio-station radio-text">RADIO OFF</div>
-        </div>
-        <div class="radio-controls">
-            <button class="radio-btn" onclick="toggleRadio()">⏭</button>
-        </div>
+    <!-- Authentic GTA Radio HUD -->
+    <div class="radio-hud" onclick="toggleRadio()">
+        <div class="radio-hud-label">RADIO STATION:</div>
+        <div class="radio-hud-text" id="radio-display">RADIO OFF</div>
     </div>
 
     <div class="bg"></div>
     <div class="scanlines"></div>
 
     <!-- App Header (Clean) -->
-    <div class="app-header clean">
-        <div class="header-left">
-            <div class="wanted-stars" id="stars">
-                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
-            </div>
-        </div>
-        <div class="header-center">
-            <div class="zone-text small" id="header-zone-text">LOS LITHUANIA</div>
-        </div>
-        <div class="header-right">
-            <div class="money" id="money">$00000000</div>
-        </div>
+    <!-- Authentic Minimal Header -->
+    <div class="app-header minimal">
+        <div class="zone-text" id="header-zone-text">LOS LITHUANIA</div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3306,8 +3261,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
 
                 // 4. Transition
-                log("Scheduling transition in 1.6s");
-                setTimeout(performTransition, 1600);
+                log("Waiting for audio end...");
+                audioFx.onended = performTransition;
+                setTimeout(() => {
+                    if(document.getElementById('welcome-screen')) performTransition();
+                }, 2000);
 
             } catch (err) {
                 log("Start Crash: " + err);
@@ -3642,12 +3600,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
             const station = stations[currentStation];
             
-            // Update Widget UI
-            const txt = document.querySelector('.radio-station');
-            if(txt) txt.innerText = station.name;
-            
-            const label = document.querySelector('.radio-label');
-            if(label) label.innerText = station.src ? "PLAYING FM" : "FM TUNER";
+            // Update HUD UI
+            const hudText = document.getElementById('radio-display');
+            if(hudText) {
+                hudText.innerText = station.name;
+                hudText.style.color = "#fff";
+                setTimeout(() => hudText.style.color = "#b69b4c", 300);
+            }
 
             if(station.src) {
                 try {
