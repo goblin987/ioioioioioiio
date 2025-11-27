@@ -2034,6 +2034,7 @@
             transform: translateX(-50%);
             width: 320px;
             height: 640px;
+            max-height: 90vh;
             background: #111;
             border-radius: 25px 25px 0 0;
             /* 3D Depth Bevels */
@@ -2080,34 +2081,6 @@
             bottom: 0;
         }
 
-        /* Handoff Animation Override */
-        @keyframes phoneHandoffZoom {
-            0% {
-                top: 60%; 
-                transform: translate(-50%, 50%) scale(0.2) rotate(-10deg);
-                opacity: 0;
-            }
-            100% {
-                top: 50%; 
-                transform: translate(-50%, -50%) scale(1) rotate(0deg);
-                opacity: 1;
-            }
-        }
-
-        .phone-container.handoff {
-            bottom: auto !important;
-            top: 50%; left: 50%;
-            /* transform is handled by animation */
-            
-            /* Adjust shape to be a floating device */
-            border-radius: 30px;
-            border-bottom: 5px solid #222;
-            height: 600px;
-            max-height: 90vh;
-            
-            display: flex;
-            animation: phoneHandoffZoom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
         
         .phone-body {
             flex: 1;
@@ -2432,14 +2405,6 @@
         <div class="wasted-text">WASTED</div>
     </div>
     
-    <!-- Cinematic Hand-Off Overlay -->
-    <div id="cj-overlay" class="character-overlay">
-        <img id="char-body-img" class="char-body" src="" alt="Character">
-        <div class="char-dialogue-box">
-            <div class="char-name" id="char-name-text">CARL JOHNSON</div>
-            <div class="char-dialogue" id="cj-dialogue">Yo! You lookin' for something?</div>
-        </div>
-    </div>
 
     <div id="pre-loader">LOADING SYSTEM...</div>
     <script>
@@ -4058,6 +4023,7 @@ const CHAR_ASSETS = {
         ];
 
         function zoomToCity(city, topP, leftP) {
+            console.log("Zooming to:", city);
             if(isZoomed) return;
             isZoomed = true;
             currentZoomedCity = city;
@@ -4068,59 +4034,21 @@ const CHAR_ASSETS = {
             const container = document.querySelector('.satellite-view');
             const scanner = document.querySelector('.scanner-text');
             
-            // Idea 2: Decryption Overlay Text
             if(scanner) scanner.innerText = "DECRYPTING SIGNAL SOURCE...";
             
-            // Trigger Glitch
             container.classList.add('glitching');
             setTimeout(() => container.classList.remove('glitching'), 500);
             
             container.classList.add('zoomed');
             
-            // Zoom to point
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
             layer.style.transform = 'scale(4)';
             
-            // --- CINEMATIC CHARACTER INTRO ---
-            const cj = document.getElementById('cj-overlay');
-            
-            if(cj) {
-                // 1. Pick Random Character
-                const char = gtaCharacters[Math.floor(Math.random() * gtaCharacters.length)];
-                
-                // 2. Pick Random Line
-                const line = char.lines[Math.floor(Math.random() * char.lines.length)];
-                
-                // 3. Update UI
-                const nameEl = document.getElementById('char-name-text');
-                const dialogEl = document.getElementById('cj-dialogue');
-                const bodyEl = document.getElementById('char-body-img');
-                
-                if(nameEl) nameEl.innerText = char.name;
-                if(dialogEl) dialogEl.innerText = line;
-                if(bodyEl) {
-                    bodyEl.style.display = 'block';
-                    bodyEl.src = char.img;
-                    bodyEl.style.imageRendering = 'pixelated'; // Ensure retro look
-                }
-                
-                // 4. Show
-                cj.classList.add('active');
-                if(window.sfx) sfx.tick();
-            }
-            
-            // Open Burner Phone after delay
+            // Direct Phone Open
             setTimeout(() => {
                 if(scanner) scanner.innerText = "CONNECTION ESTABLISHED";
-                
-                // Start Phone Handoff Animation
-                openBurnerPhone(city, true);
-                
-                // Hide character after delay to allow overlap
-                setTimeout(() => {
-                    if(cj) cj.classList.remove('active');
-                }, 600);
-            }, 3000);
+                openBurnerPhone(city);
+            }, 1000);
         }
 
         function resetSatelliteView() {
@@ -4159,7 +4087,7 @@ const CHAR_ASSETS = {
              }
         }
 
-        function openBurnerPhone(city, isHandoff = false) {
+        function openBurnerPhone(city) {
             const phone = document.getElementById('burner-phone');
             const list = document.getElementById('phone-contacts');
             const header = document.getElementById('phone-header');
@@ -4197,11 +4125,7 @@ const CHAR_ASSETS = {
             phone.classList.remove('active', 'handoff');
             void phone.offsetWidth; // Trigger reflow
             
-            if(isHandoff) {
-                phone.classList.add('handoff');
-            } else {
-                phone.classList.add('active');
-            }
+            phone.classList.add('active');
             
             if(window.sfx) sfx.tick();
             updatePhoneTime();
