@@ -389,53 +389,42 @@
             z-index: 100;
         }
         
-        /* Vinewood Header (Parallax) */
-        .vinewood-header {
-            height: 100px;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(to bottom, #2c3e50, #000);
-            border-bottom: 2px solid #fff;
-            z-index: 100;
-        }
-        
-        .layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-        }
-        
-        .sky {
-            background: radial-gradient(circle at 50% 80%, rgba(255, 165, 0, 0.2), transparent 60%);
-        }
-        
-        .hills-back {
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNDQwIDMyMCI+PHBhdGggZmlsbD0iIzMzMyIgZmlsbC1vcGFjaXR5PSIwLjgiIGQ9Ik0wLDIyNEw0OCwyMTMuM0M5NiwyMDMsMTkyLDE4MSwyODgsMTgxLjNDMzg0LDE4MSw0ODAsMjAzLDU3NiwyMjRMNjcyLDI0NS4zQzc2OCwyNjcsODY0LDMwOSw5NjAsMzAzLjNDMTA1NiwyOTksMTE1MiwyNDUsMTI0OCwyMTMuM0wxMzQ0LDE4MUwxNDQwLDE2MFYzMjBIMWwwLDBWMjI0WiI+PC9wYXRoPjwvc3ZnPg==');
-            background-size: cover;
-            background-position: center bottom;
-            transform: translateY(20px) scale(1.1);
-        }
-        
-        .sign-text {
-            font-family: 'Pricedown', sans-serif;
-            font-size: 42px;
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        /* Hood Glass Header (Apple x GTA) */
+        .hood-header {
+            height: 64px;
+            background: rgba(10, 10, 10, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100%;
-            z-index: 10;
-            transform: perspective(500px) rotateX(5deg) translateY(-5px);
-            letter-spacing: 2px;
+            justify-content: center;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
         }
-        
-        .hills-front {
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNDQwIDMyMCI+PHBhdGggZmlsbD0iIzAwMCIgZD0iTTAsMTkyTDQ4LDE5Ny4zQzk2LDIwMywxOTIsMjEzLDI4OCwyMjkuM0MzODQsMjQ1LDQ4MCwyNjcsNTc2LDI1MC43QzY3MiwyMzUsNzY4LDE4MSw4NjQsMTcwLjdDOTYwLDE2MCwxMDU2LDE5MiwxMTUyLDIwOC4zQzEyNDgsMjI0LDEzNDQsMjI0LDEzOTIsMjI0TDE0NDAsMjI0VjMyMEgwVjE5MloiPjwvcGF0aD48L3N2Zz4=');
-            background-size: cover;
-            background-position: center bottom;
-            z-index: 20;
-            transform: translateY(10px) scale(1.2);
+
+        .hood-text {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 32px;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            background: linear-gradient(to bottom, #fff 40%, #ccc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 1px rgba(255,255,255,0.3));
+        }
+
+        .hood-accent {
+            position: absolute;
+            bottom: 0;
+            left: 25%; 
+            right: 25%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4af626, transparent);
+            box-shadow: 0 -2px 15px rgba(74, 246, 38, 0.6);
+            opacity: 0.9;
         }
 
         /* Search Bar (LSPD Terminal - Minimal) */
@@ -2711,12 +2700,10 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Vinewood Parallax Header -->
-    <div class="app-header vinewood-header" id="vinewood-header">
-        <div class="layer sky"></div>
-        <div class="layer hills-back"></div>
-        <div class="layer sign-text" id="header-zone-text">LOS LITHUANIA</div>
-        <div class="layer hills-front"></div>
+    <!-- Hood Glass Header -->
+    <div class="app-header hood-header" id="hood-header">
+        <div class="hood-text" id="header-zone-text">LOS LITHUANIA</div>
+        <div class="hood-accent"></div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3120,9 +3107,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let currentStation = 0;
         const stations = [
             { name: "RADIO OFF", src: null },
-            { name: "RADIO LOS SANTOS", src: "https://ais-sa2.cdnstream1.com/2442_128.mp3" },
-            { name: "PLAYBACK FM", src: "https://igor.torontocast.com:1025/;" },
-            { name: "K-DST", src: "https://ice6.somafm.com/secretagent-128-mp3" }
+            { name: "HOT 108 JAMZ", src: "https://ais-sa2.cdnstream1.com/2442_128.mp3" },
+            { name: "OLD SCHOOL", src: "https://stream.zeno.fm/f3wvbbqcd08uv" },
+            { name: "WEST COAST", src: "https://stream-mixtape-geo.ntslive.co.uk/mixtape2" }
         ];
         let audioPlayer = null;
         let basket = [];
@@ -3740,6 +3727,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                             radioText.innerText = "SIGNAL LOST";
                             radioText.style.color = "red";
                         }
+                        // Auto-skip to next station on error
+                        setTimeout(() => toggleRadio(), 1000);
                     };
                     
                     const playPromise = audioPlayer.play();
