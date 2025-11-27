@@ -389,78 +389,98 @@
             z-index: 100;
         }
         
-        /* Spray Paint Header (Vandalism) */
-        .spray-header {
+        /* Police Tape Header V3 (Layered) */
+        .tape-header-v3 {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 0; /* Zero logical height so clicks pass */
+            height: 0; /* Logical height 0 */
             z-index: 1000;
             pointer-events: none; 
             display: flex;
             justify-content: center;
-            /* No background */
         }
 
-        .spray-text {
-            margin-top: 10px;
-            font-family: 'Impact', sans-serif;
-            font-size: 42px;
-            color: var(--gta-green);
-            text-transform: uppercase;
-            letter-spacing: -1px;
-            transform: rotate(-3deg);
-            
-            /* Spray Paint Blur & Glow */
-            filter: blur(0.4px);
-            text-shadow: 
-                0 0 10px rgba(46, 204, 113, 0.8),
-                0 0 20px rgba(46, 204, 113, 0.4),
-                2px 2px 0 #000;
-            
-            /* Stencil texture via mask (simulated) */
-            opacity: 0.95;
-            mix-blend-mode: normal; /* Keep it visible on top */
-        }
-        
-        /* Drips */
-        .drip {
+        .tape-strip {
             position: absolute;
-            background: var(--gta-green);
-            width: 4px;
-            border-radius: 2px;
-            box-shadow: 0 0 5px var(--gta-green);
-        }
-        .drip.d1 { left: 45%; top: 45px; height: 20px; animation: dripGrow 3s ease-in infinite; }
-        .drip.d2 { left: 52%; top: 50px; height: 35px; animation: dripGrow 4s ease-in infinite 0.5s; }
-        .drip.d3 { left: 48%; top: 48px; height: 15px; animation: dripGrow 2.5s ease-in infinite 1s; }
-        
-        @keyframes dripGrow {
-            0% { transform: scaleY(0.2); transform-origin: top; opacity: 0.8; }
-            40% { transform: scaleY(1); transform-origin: top; opacity: 0.9; }
-            80% { transform: scaleY(1.2); transform-origin: top; opacity: 0.5; }
-            100% { transform: scaleY(1.2); transform-origin: top; opacity: 0; }
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            /* Reflective Plastic Texture */
+            background-image: 
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(255,255,255,0.1) 0px,
+                    rgba(255,255,255,0.1) 1px,
+                    transparent 1px,
+                    transparent 40px
+                ),
+                linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.2) 100%);
         }
 
-        /* Reset Search Container */
-        .search-container {
-            margin-top: 60px; /* Push down to clear the spray paint */
-            margin-bottom: 15px;
-            background: rgba(0,0,0,0.7); /* Darker bg for contrast */
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 10px;
-            backdrop-filter: none;
+        /* Secondary Strip (Background - Decoration) */
+        .tape-strip.secondary {
+            top: 35px;
+            left: -10%;
+            width: 120%;
+            height: 30px;
+            background-color: #113311; /* Dark Forest Green */
+            border-top: 1px solid #fff;
+            border-bottom: 1px solid #000;
+            transform: rotate(-2deg);
+            opacity: 0.7;
+            z-index: 1;
+        }
+
+        /* Main Strip (Foreground - Text) */
+        .tape-strip.primary {
+            top: 15px;
+            left: -5%;
+            width: 110%;
+            height: 45px;
+            background-color: #006622; /* Vivid Police Green */
+            border-top: 2px solid rgba(255,255,255,0.9);
+            border-bottom: 2px solid rgba(0,0,0,0.5);
+            transform: rotate(1.5deg);
+            z-index: 2;
+            animation: tapeFloat 6s ease-in-out infinite;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+        }
+
+        .tape-text {
+            font-family: 'Impact', sans-serif;
+            font-size: 24px;
+            color: #fff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            text-shadow: 0 2px 0 #000;
+            padding: 0 20px;
+        }
+
+        @keyframes tapeFloat {
+            0%, 100% { transform: rotate(1.5deg) translateY(0); }
+            50% { transform: rotate(1.5deg) translateY(-3px); }
         }
         
-        /* Section Padding */
+        /* Search Bar Spacing */
+        .search-container {
+            margin-top: 75px; /* Clear the crossed tapes */
+            margin-bottom: 15px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            border: 1px solid #333;
+            padding: 10px;
+        }
+        
         .section {
-            padding-top: 10px; /* Reset default, rely on search-container margin */
+            padding-top: 10px;
         }
 
         /* Removed Old Headers */
-        .hood-header, .hood-header::before, .hud-line, .tape-header, .tape-strip, .tape-text, .street-sign-header, .sign-board, .radio-faceplate-header, .faceplate-body { display: none; }
+        .hood-header, .hood-header::before, .hud-line, .tape-header, .street-sign-header, .sign-board, .radio-faceplate-header, .faceplate-body, .spray-header, .spray-text, .drip { display: none; }
         .header-title { display: none; }
 
         /* Removed Old Headers */
@@ -2749,12 +2769,14 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Spray Paint Header -->
-    <div class="app-header spray-header" id="spray-header">
-        <div class="spray-text">LOS LITHUANIA</div>
-        <div class="drip d1"></div>
-        <div class="drip d2"></div>
-        <div class="drip d3"></div>
+    <!-- Police Tape Header V3 -->
+    <div class="app-header tape-header-v3" id="tape-header">
+        <!-- Background Strip (Angled Left) -->
+        <div class="tape-strip secondary"></div>
+        <!-- Main Strip (Angled Right) -->
+        <div class="tape-strip primary">
+            <span class="tape-text">STOP POLICIJA • STOP POLICIJA • STOP POLICIJA</span>
+        </div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3522,16 +3544,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Spray Paint)
-            const sprayText = document.querySelector('.spray-text');
+            // Update Header Zone (Police Tape V3)
+            const tapeText = document.querySelector('.tape-text');
             
-            if(sprayText) {
+            if(tapeText) {
                 let txt = "LOS LITHUANIA";
                 if(id === 'shop') txt = "AMMU-NATION";
-                if(id === 'map') txt = "LOS SANTOS";
-                if(id === 'stats') txt = "RESPECT";
+                if(id === 'map') txt = "LOS SANTOS MAP";
+                if(id === 'stats') txt = "PLAYER STATS";
                 
-                sprayText.innerText = txt;
+                tapeText.innerText = `STOP POLICIJA • ${txt} • STOP POLICIJA`;
             }
         }
 
