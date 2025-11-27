@@ -1647,6 +1647,7 @@
             align-items: center; justify-content: center;
             cursor: pointer;
             z-index: 100;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
         .pin-core {
@@ -1666,6 +1667,18 @@
             border: 2px solid rgba(0, 255, 0, 0.5);
             border-radius: 50%;
             animation: pulseRipple 2s infinite;
+            box-sizing: border-box;
+        }
+        
+        .pin-pulse::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%; height: 100%;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 50%;
+            animation: pulseRipple 2s infinite 0.6s;
             box-sizing: border-box;
         }
         
@@ -2759,20 +2772,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </svg>
                     
                             <!-- Signal Emitters -->
-                            <div class="city-pin" style="top: 70%; left: 70%;" onclick="zoomToCity('Vilnius', 70, 70)">
+                            <div class="city-pin" style="top: 72%; left: 74%;" onclick="zoomToCity('Vilnius', 72, 74)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: VILNIUS</div>
                             </div>
-                            <div class="city-pin" style="top: 55%; left: 50%;" onclick="zoomToCity('Kaunas', 55, 50)">
+                            <div class="city-pin" style="top: 58%; left: 52%;" onclick="zoomToCity('Kaunas', 58, 52)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: KAUNAS</div>
                             </div>
-                            <div class="city-pin" style="top: 30%; left: 15%;" onclick="zoomToCity('Klaipeda', 30, 15)">
+                            <div class="city-pin" style="top: 35%; left: 15%;" onclick="zoomToCity('Klaipeda', 35, 15)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: KLAIPEDA</div>
+                            </div>
+                            <div class="city-pin" style="top: 38%; left: 58%;" onclick="zoomToCity('Panevezys', 38, 58)">
+                                <div class="pin-core"></div>
+                                <div class="pin-pulse"></div>
+                                <div class="city-label">SIGNAL: PANEVEZYS</div>
                             </div>
                             
                             <!-- District Polygon Overlays -->
@@ -3477,6 +3495,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 {name: 'Senamiestis', type: 'vagos'},
                 {name: 'Baltija', type: 'ballas'},
                 {name: 'Pietinis', type: 'grove'}
+            ],
+            'Panevezys': [
+                {name: 'Centras', type: 'grove'},
+                {name: 'Pramone', type: 'ballas'},
+                {name: 'Tulpes', type: 'vagos'}
             ]
         };
 
@@ -4285,6 +4308,29 @@ const CHAR_ASSETS = {
         
         // Remove Metro Init
         function goToStation(){}; // Stub
+
+        // Apple Polish: Dynamic Parallax
+        const mapContainer = document.getElementById('map-container');
+        const satelliteView = document.querySelector('.satellite-view');
+        
+        if(mapContainer && satelliteView) {
+            mapContainer.addEventListener('mousemove', (e) => {
+                if(typeof isZoomed !== 'undefined' && isZoomed) return;
+                const rect = mapContainer.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width - 0.5;
+                const y = (e.clientY - rect.top) / rect.height - 0.5;
+                
+                // Subtle shift (20px max)
+                satelliteView.style.transform = `translate(${x * -20}px, ${y * -20}px)`;
+                satelliteView.style.backgroundPosition = `${50 + x * 5}% ${50 + y * 5}%`;
+            });
+            
+            mapContainer.addEventListener('mouseleave', () => {
+                if(typeof isZoomed !== 'undefined' && isZoomed) return;
+                satelliteView.style.transform = 'none';
+                satelliteView.style.backgroundPosition = 'center center';
+            });
+        }
     </script>
     <!-- BURNER PHONE UI -->
     <div id="burner-phone" class="phone-container">
