@@ -389,91 +389,74 @@
             z-index: 100;
         }
         
-        /* Hood Glass Header (Apple x GTA) */
+        /* Modern Retro GTA HUD Header */
         .hood-header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 54px;
+            height: 60px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            padding: 0 16px;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            padding: 0 20px;
+            /* Dark Glass with Green Tint */
+            background: rgba(5, 15, 5, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            /* HUD Border */
             border-bottom: 2px solid var(--gta-green);
+            box-shadow: 0 4px 30px rgba(46, 204, 113, 0.15);
             z-index: 1000;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            overflow: hidden;
         }
-        
-        .header-left, .header-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 90px;
+
+        /* Scanline Overlay for Header */
+        .hood-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(46, 204, 113, 0.05) 3px
+            );
+            pointer-events: none;
         }
-        .header-right { justify-content: flex-end; }
-        .header-center { flex-grow: 1; text-align: center; }
+
+        .header-center {
+            position: relative;
+            z-index: 2;
+        }
         
         .header-title {
             font-family: 'Pricedown', serif;
-            font-size: 26px;
+            font-size: 36px;
             color: #fff;
-            text-shadow: 0 2px 0 #000;
-            letter-spacing: 1px;
-            white-space: nowrap;
-        }
-        
-        .carrier-text, .clock-text {
-            font-family: 'ChaletComprime', sans-serif;
-            font-size: 14px;
-            color: #ccc;
-            letter-spacing: 0.5px;
+            letter-spacing: 2px;
+            /* Retro Glow */
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.8), 
+                         2px 2px 0px #000;
+            transition: all 0.3s ease;
         }
 
-        /* Retro Signal Bars */
-        .signal-bars {
-            display: flex;
-            align-items: flex-end;
-            gap: 2px;
-            height: 14px;
-        }
-        .bar { width: 3px; background: #444; border-radius: 1px; }
-        .bar.b1 { height: 4px; background: var(--gta-green); }
-        .bar.b2 { height: 7px; background: var(--gta-green); }
-        .bar.b3 { height: 10px; background: var(--gta-green); }
-        .bar.b4 { height: 14px; background: #444; }
-
-        /* Retro Battery */
-        .battery-icon {
-            display: flex;
-            align-items: center;
-            gap: 1px;
-        }
-        .bat-body {
-            width: 22px;
-            height: 11px;
-            border: 1px solid #ccc;
-            padding: 1px;
-            border-radius: 2px;
-            display: flex;
-        }
-        .bat-level {
-            width: 70%;
-            height: 100%;
-            background: var(--gta-green);
-        }
-        .bat-tip {
-            width: 2px;
-            height: 4px;
-            background: #ccc;
-            border-radius: 0 1px 1px 0;
+        /* Decorative HUD Lines */
+        .hud-line {
+            height: 2px;
+            flex-grow: 1;
+            background: linear-gradient(90deg, transparent, rgba(46, 204, 113, 0.5), transparent);
+            margin: 0 15px;
+            opacity: 0.6;
         }
 
-        .hood-text { display: none; } /* Hide old class if used */
-        .hood-accent { display: none; }
+        /* Unused specific classes */
+        .header-left, .header-right, .signal-bars, .carrier-text, .clock-text, .battery-icon, .bar, .bat-body, .bat-level, .bat-tip {
+            display: none;
+        }
             position: absolute;
             bottom: 0;
             left: 25%; 
@@ -2757,24 +2740,13 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Hood Glass Header -->
+    <!-- Hood Glass Header (Modern Retro HUD) -->
     <div class="app-header hood-header" id="hood-header">
-        <div class="header-left">
-            <div class="signal-bars">
-                <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
-            </div>
-            <span class="carrier-text">LIT-CELL</span>
-        </div>
+        <div class="hud-line left"></div>
         <div class="header-center">
             <span class="header-title" id="header-zone-text">LOS LITHUANIA</span>
         </div>
-        <div class="header-right">
-            <span class="clock-text" id="header-clock">12:00</span>
-            <div class="battery-icon">
-                <div class="bat-body"><div class="bat-level"></div></div>
-                <div class="bat-tip"></div>
-            </div>
-        </div>
+        <div class="hud-line right"></div>
     </div>
 
     <!-- Mission Passed Overlay -->
