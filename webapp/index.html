@@ -389,73 +389,53 @@
             z-index: 100;
         }
         
-        /* Pager Header (90s Tech) */
-        .pager-header {
-            height: 80px;
+        /* Vinewood Header (Parallax) */
+        .vinewood-header {
+            height: 100px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #2c3e50, #000);
+            border-bottom: 2px solid #fff;
+            z-index: 100;
+        }
+        
+        .layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        
+        .sky {
+            background: radial-gradient(circle at 50% 80%, rgba(255, 165, 0, 0.2), transparent 60%);
+        }
+        
+        .hills-back {
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNDQwIDMyMCI+PHBhdGggZmlsbD0iIzMzMyIgZmlsbC1vcGFjaXR5PSIwLjgiIGQ9Ik0wLDIyNEw0OCwyMTMuM0M5NiwyMDMsMTkyLDE4MSwyODgsMTgxLjNDMzg0LDE4MSw0ODAsMjAzLDU3NiwyMjRMNjcyLDI0NS4zQzc2OCwyNjcsODY0LDMwOSw5NjAsMzAzLjNDMTA1NiwyOTksMTE1MiwyNDUsMTI0OCwyMTMuM0wxMzQ0LDE4MUwxNDQwLDE2MFYzMjBIMWwwLDBWMjI0WiI+PC9wYXRoPjwvc3ZnPg==');
+            background-size: cover;
+            background-position: center bottom;
+            transform: translateY(20px) scale(1.1);
+        }
+        
+        .sign-text {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 42px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100;
-            pointer-events: none;
+            height: 100%;
+            z-index: 10;
+            transform: perspective(500px) rotateX(5deg) translateY(-5px);
+            letter-spacing: 2px;
         }
         
-        .pager-screen {
-            background: #1a2219;
-            width: 280px;
-            height: 50px;
-            border: 4px solid #333;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 15px;
-            box-shadow: 
-                0 0 0 2px #111,
-                0 5px 15px rgba(0,0,0,0.8),
-                inset 0 0 10px rgba(0,0,0,0.8);
-            position: relative;
-            overflow: hidden;
-            pointer-events: auto;
-            transform: rotate(-1deg);
-        }
-        
-        .pager-screen::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px),
-                radial-gradient(circle at 50% 50%, rgba(100,255,100,0.05) 0%, transparent 80%);
-            pointer-events: none;
-        }
-        
-        .pager-label {
-            font-family: Arial, sans-serif;
-            font-size: 8px;
-            color: #666;
-            position: absolute;
-            top: 3px; left: 6px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-        
-        .pager-text {
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 22px;
-            color: #4af626;
-            text-shadow: 0 0 5px rgba(74, 246, 38, 0.6);
-            letter-spacing: -1px;
-            flex: 1;
-            text-align: center;
-            z-index: 2;
-            margin-top: 4px;
-        }
-        
-        .pager-icon {
-            font-size: 18px;
-            filter: grayscale(100%) sepia(1) hue-rotate(50deg) saturate(5) brightness(0.8);
-            opacity: 0.8;
+        .hills-front {
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNDQwIDMyMCI+PHBhdGggZmlsbD0iIzAwMCIgZD0iTTAsMTkyTDQ4LDE5Ny4zQzk2LDIwMywxOTIsMjEzLDI4OCwyMjkuM0MzODQsMjQ1LDQ4MCwyNjcsNTc2LDI1MC43QzY3MiwyMzUsNzY4LDE4MSw4NjQsMTcwLjdDOTYwLDE2MCwxMDU2LDE5MiwxMTUyLDIwOC4zQzEyNDgsMjI0LDEzNDQsMjI0LDEzOTIsMjI0TDE0NDAsMjI0VjMyMEgwVjE5MloiPjwvcGF0aD48L3N2Zz4=');
+            background-size: cover;
+            background-position: center bottom;
+            z-index: 20;
+            transform: translateY(10px) scale(1.2);
         }
 
         /* Search Bar (LSPD Terminal - Minimal) */
@@ -2731,13 +2711,12 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Retro Pager Header -->
-    <div class="app-header pager-header">
-        <div class="pager-screen">
-            <div class="pager-label">MOTOROLA</div>
-            <div class="pager-text" id="header-zone-text">LOS LITHUANIA</div>
-            <div class="pager-icon">📟</div>
-        </div>
+    <!-- Vinewood Parallax Header -->
+    <div class="app-header vinewood-header" id="vinewood-header">
+        <div class="layer sky"></div>
+        <div class="layer hills-back"></div>
+        <div class="layer sign-text" id="header-zone-text">LOS LITHUANIA</div>
+        <div class="layer hills-front"></div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3314,15 +3293,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 ctx.resume();
             }
             
-            // 1. Pre-load Radio (Crucial for Mobile)
+            // 1. Pre-load Radio (Immediate Silent Play)
             if(audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
             const station = stations[1]; 
             audioPlayer = new Audio(station.src);
-            audioPlayer.volume = 0.5;
-            // Trick: Play then immediately pause to unlock 'Audio' element
-            const warmUp = audioPlayer.play();
-            if(warmUp !== undefined) {
-                warmUp.then(() => audioPlayer.pause()).catch(e => console.log("Audio Warmup", e));
+            audioPlayer.volume = 0; // Start silent
+            // Play immediately and KEEP playing to maintain session
+            const radioPromise = audioPlayer.play();
+            if(radioPromise !== undefined) {
+                radioPromise.catch(e => console.log("Radio Start Fail", e));
             }
             
             // Init Audio Locally
@@ -3383,10 +3362,22 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function performTransition() {
             log("performTransition called");
             try {
-                // Resume Radio (Pre-loaded)
+                // Fade In Radio
                 if(audioPlayer) {
                     audioPlayer.play().catch(e => console.log("Resume failed", e));
                     currentStation = 1; 
+                    
+                    // Fade In
+                    let vol = 0;
+                    const fade = setInterval(() => {
+                        vol += 0.05;
+                        if(vol >= 0.5) {
+                            vol = 0.5;
+                            clearInterval(fade);
+                        }
+                        if(audioPlayer) audioPlayer.volume = vol;
+                    }, 200);
+
                     const radioText = document.getElementById('radio-display');
                     if(radioText) {
                         radioText.innerText = stations[1].name;
