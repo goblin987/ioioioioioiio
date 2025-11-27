@@ -389,72 +389,133 @@
             z-index: 100;
         }
         
-        /* Lithuanian Police Tape Header */
-        .tape-header {
+        /* Grove Street Sign Header */
+        .street-sign-header {
             position: fixed;
-            top: 20px; 
-            left: -5%;
-            width: 110%;
-            height: 50px;
-            z-index: 1000;
-            pointer-events: none; 
-            transform: rotate(-1deg);
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .tape-strip {
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100%;
-            /* Lithuanian Police Style: Green/White or Silver/Green. 
-               Let's go with a Green base with White text for the 'App Theme' + Authenticity */
-            background: #005522; /* Police Green */
-            
-            /* Reflective Tape Texture */
-            background-image: 
-                repeating-linear-gradient(
-                    90deg,
-                    rgba(255,255,255,0.1) 0px,
-                    rgba(255,255,255,0.1) 2px,
-                    transparent 2px,
-                    transparent 50px
-                ),
-                linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(0,0,0,0.3) 100%);
-            
-            border-top: 2px solid rgba(255,255,255,0.8);
-            border-bottom: 2px solid rgba(0,0,0,0.5);
+            height: 0; /* Logical height 0 to not block clicks, visual elements absolute */
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        /* Top Metal Bar/Pole */
+        .sign-pole {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background: linear-gradient(to bottom, #333, #111);
+            border-bottom: 1px solid #555;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            z-index: 2;
+        }
+
+        .sign-chains {
+            position: absolute;
+            top: 0;
+            width: 240px; /* Distance between chains */
+            height: 30px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 1;
+        }
+        
+        .chain {
+            width: 4px;
+            height: 40px;
+            background: #666;
+            background-image: repeating-linear-gradient(to bottom, #444 0px, #444 2px, #888 2px, #888 4px);
+            margin-top: 5px;
+        }
+
+        /* The Sign Itself */
+        .sign-board {
+            position: relative;
+            top: 35px; /* Hang below chains */
+            background: #0a400a; /* Authentic Grove Street Green */
+            border: 2px solid #ddd;
+            border-radius: 2px;
+            padding: 4px 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.5);
+            transform-origin: top center;
+            animation: signSway 5s ease-in-out infinite;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-            animation: tapeSway 5s ease-in-out infinite;
+            min-width: 180px;
+        }
+        
+        /* Reflection sheen on sign */
+        .sign-board::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
         }
 
-        .tape-text {
-            font-family: 'Arial Black', 'Impact', sans-serif;
-            font-size: 26px;
+        .sign-text {
+            font-family: 'ChaletComprime', 'Impact', sans-serif;
+            font-size: 22px;
             color: #fff;
-            letter-spacing: 2px;
-            font-weight: 900;
-            white-space: nowrap;
             text-transform: uppercase;
-            text-shadow: 0 2px 0 #000;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0 #000;
+            white-space: nowrap;
         }
 
-        /* Search Container Fix - Push down below tape */
+        /* Textures */
+        .bullet-hole {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #111;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 1px #000, 0 0 0 1px rgba(255,255,255,0.2);
+        }
+        .bullet-hole.b1 { top: 8px; right: 12px; }
+        .bullet-hole.b2 { bottom: 8px; left: 15px; }
+        
+        .rust-spot {
+            position: absolute;
+            background: rgba(100, 50, 10, 0.5);
+            filter: blur(3px);
+            border-radius: 50%;
+        }
+        .rust-spot.r1 { top: 5px; left: 40px; width: 25px; height: 15px; }
+
+        @keyframes signSway {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(2deg); }
+            75% { transform: rotate(-2deg); }
+        }
+
+        /* Search Container Fix - Push down below hanging sign */
         .search-container {
-            margin-top: 60px; /* Added margin to clear the header */
+            margin-top: 90px; /* Significant margin to clear the 80px sign area */
             position: relative;
-            z-index: 50; /* Ensure it's clickable */
-            background: rgba(0,0,0,0.8); /* Enhance visibility */
-            padding: 10px;
-            border-bottom: 1px solid var(--gta-green);
+            z-index: 50; 
+            background: rgba(0,0,0,0.4);
+            padding: 8px;
+            border: 1px solid #333;
             display: flex;
             align-items: center;
+            border-radius: 4px;
         }
+        
+        /* Adjust section padding generally */
+        .section {
+            padding-top: 10px; /* Reset default section padding, rely on container margins */
+        }
+
+        /* Removed Old Headers */
+        .hood-header, .hood-header::before, .hud-line, .tape-header, .tape-strip, .tape-text { display: none; }
+        .header-title { display: none; }
             position: absolute;
             bottom: 0;
             left: 25%; 
@@ -2738,10 +2799,18 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Police Tape Header -->
-    <div class="app-header tape-header" id="tape-header">
-        <div class="tape-strip">
-            <span class="tape-text">LOS LITHUANIA • STOP POLICIJA • LOS LITHUANIA</span>
+    <!-- Grove Street Sign Header -->
+    <div class="app-header street-sign-header" id="sign-header">
+        <div class="sign-pole"></div>
+        <div class="sign-chains">
+            <div class="chain c-left"></div>
+            <div class="chain c-right"></div>
+        </div>
+        <div class="sign-board">
+            <span class="sign-text">LOS LITHUANIA</span>
+            <div class="bullet-hole b1"></div>
+            <div class="bullet-hole b2"></div>
+            <div class="rust-spot r1"></div>
         </div>
     </div>
 
@@ -3510,15 +3579,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Police Tape)
-            const tapeText = document.querySelector('.tape-text');
-            if(tapeText) {
+            // Update Header Zone (Grove Sign)
+            const signText = document.querySelector('.sign-text');
+            if(signText) {
                 let txt = "LOS LITHUANIA";
                 if(id === 'shop') txt = "AMMU-NATION";
                 if(id === 'map') txt = "LOS SANTOS MAP";
                 if(id === 'stats') txt = "PLAYER STATS";
                 
-                tapeText.innerText = `${txt} • STOP POLICIJA • ${txt}`;
+                signText.innerText = txt;
             }
         }
 
