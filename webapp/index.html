@@ -54,6 +54,8 @@
             display: flex;
             flex-direction: column;
             user-select: none;
+            overscroll-behavior: none;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* Background */
@@ -204,6 +206,8 @@
             padding: 20px;
             position: relative;
             z-index: 1;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
         }
 
         /* Sections */
@@ -345,33 +349,51 @@
             white-space: nowrap;
         }
 
-        /* Search Bar (Clean) */
+        /* Search Bar (LSPD Terminal - Minimal) */
         .search-container {
             margin-bottom: 15px;
-            padding: 0;
-            background: transparent;
-            border: none;
-            box-shadow: none;
+            border: 1px solid var(--gta-green);
+            background: #000;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 0 10px rgba(63, 165, 53, 0.1);
+            position: relative;
         }
         
-        .search-container::after { display: none; }
+        .search-container::after {
+            content: 'LSPD_DB';
+            position: absolute;
+            right: 5px; top: -8px;
+            background: #000;
+            font-size: 10px; 
+            color: var(--gta-green);
+            padding: 0 4px;
+            font-family: monospace;
+        }
         
         .search-input {
-            background: #111;
-            border: 1px solid #333;
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: transparent;
+            border: none;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
             font-size: 16px;
             width: 100%;
             outline: none;
-            padding: 12px;
-            border-radius: 12px;
-            text-transform: none;
-            font-weight: normal;
+            text-transform: uppercase;
+            font-weight: bold;
+            padding: 0;
+            border-radius: 0;
         }
+        .search-input::placeholder { color: #004400; }
         
         .search-label {
-            display: none;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
+            margin-right: 10px;
+            font-weight: bold;
+            display: block;
+            font-size: 14px;
         }
 
         /* Map Zoom */
@@ -2606,7 +2628,7 @@
             </div>
         </div>
         <div class="header-center">
-            <div class="zone-text small" id="header-zone-text">LOS SANTOS</div>
+            <div class="zone-text small" id="header-zone-text">LOS LITHUANIA</div>
         </div>
         <div class="header-right">
             <div class="money" id="money">$00000000</div>
@@ -3325,7 +3347,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const zoneText = document.getElementById('header-zone-text');
             if(zoneText) {
                 if(id === 'shop') zoneText.innerText = "AMMU-NATION";
-                if(id === 'map') zoneText.innerText = "LOS SANTOS";
+                if(id === 'map') zoneText.innerText = "LOS LITHUANIA";
                 if(id === 'stats') zoneText.innerText = "STATS";
             }
         }
