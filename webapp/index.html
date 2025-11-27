@@ -83,45 +83,20 @@
             opacity: 0.3;
         }
 
-        /* Retro Phone Bar */
-        .phone-status-bar {
+        /* App Header (Clean) */
+        .app-header {
             background: #000;
             border-bottom: 1px solid #333;
-            color: var(--gta-green);
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 12px;
-            padding: 4px 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 200;
-            letter-spacing: 1px;
-        }
-
-        /* App Header (HUD) */
-        .app-header {
-            background: rgba(0, 10, 0, 0.9);
-            border-bottom: 2px solid var(--gta-gold);
             padding: 5px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 100;
-            height: 60px;
+            height: 50px;
             box-sizing: border-box;
             position: relative;
-            overflow: hidden;
         }
         
-        .app-header::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
-            pointer-events: none;
-        }
-
         .header-left, .header-right {
             flex: 1;
             display: flex;
@@ -132,16 +107,14 @@
 
         .zone-text {
             font-family: 'Pricedown', sans-serif;
-            font-size: 28px;
+            font-size: 24px;
             color: #fff;
-            text-shadow: 2px 2px 0 #000;
-            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .money {
             color: var(--gta-green);
-            font-size: 24px;
-            text-shadow: 1px 1px 0 #000;
+            font-size: 20px;
             font-family: 'Pricedown', sans-serif;
         }
 
@@ -372,44 +345,33 @@
             white-space: nowrap;
         }
 
-        /* Search Bar (LSPD Terminal) */
+        /* Search Bar (Clean) */
         .search-container {
-            margin-bottom: 20px;
-            border: 2px solid var(--gta-green);
-            background: #000;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            box-shadow: 0 0 15px rgba(63, 165, 53, 0.15);
-            position: relative;
-        }
-        
-        .search-container::after {
-            content: '[REC]';
-            position: absolute;
-            right: 5px; top: 5px;
-            font-size: 10px; color: red;
-            animation: blink 1s infinite;
-        }
-        
-        .search-input {
+            margin-bottom: 15px;
+            padding: 0;
             background: transparent;
             border: none;
-            color: var(--gta-green);
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
+            box-shadow: none;
+        }
+        
+        .search-container::after { display: none; }
+        
+        .search-input {
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 16px;
             width: 100%;
             outline: none;
-            text-transform: uppercase;
-            font-weight: bold;
+            padding: 12px;
+            border-radius: 12px;
+            text-transform: none;
+            font-weight: normal;
         }
         
         .search-label {
-            color: var(--gta-green);
-            font-family: 'Courier New', monospace;
-            margin-right: 10px;
-            font-weight: bold;
-            text-shadow: 0 0 5px var(--gta-green);
+            display: none;
         }
 
         /* Map Zoom */
@@ -2636,22 +2598,15 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Retro Phone Status Bar -->
-    <div class="phone-status-bar">
-        <div class="status-left">SIGNAL <span class="blink">IIII</span></div>
-        <div class="status-center" id="phone-clock-header">12:00</div>
-        <div class="status-right">BATT <span style="color:var(--gta-green)">[====]</span></div>
-    </div>
-
-    <!-- App Header (HUD) -->
-    <div class="app-header">
+    <!-- App Header (Clean) -->
+    <div class="app-header clean">
         <div class="header-left">
             <div class="wanted-stars" id="stars">
                 <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
             </div>
         </div>
         <div class="header-center">
-            <div class="zone-text" id="header-zone-text">LOS SANTOS</div>
+            <div class="zone-text small" id="header-zone-text">LOS SANTOS</div>
         </div>
         <div class="header-right">
             <div class="money" id="money">$00000000</div>
