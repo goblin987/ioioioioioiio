@@ -389,132 +389,146 @@
             z-index: 100;
         }
         
-        /* Grove Street Sign Header */
-        .street-sign-header {
+        /* Car Radio Faceplate Header */
+        .radio-faceplate-header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 0; /* Logical height 0 to not block clicks, visual elements absolute */
+            height: 64px;
             z-index: 1000;
             display: flex;
             justify-content: center;
-            pointer-events: none;
+            background: #000;
+            border-bottom: 1px solid #333;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.9);
         }
 
-        /* Top Metal Bar/Pole */
-        .sign-pole {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .faceplate-body {
             width: 100%;
-            height: 12px;
-            background: linear-gradient(to bottom, #333, #111);
-            border-bottom: 1px solid #555;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
-            z-index: 2;
-        }
-
-        .sign-chains {
-            position: absolute;
-            top: 0;
-            width: 240px; /* Distance between chains */
-            height: 30px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 1;
-        }
-        
-        .chain {
-            width: 4px;
-            height: 40px;
-            background: #666;
-            background-image: repeating-linear-gradient(to bottom, #444 0px, #444 2px, #888 2px, #888 4px);
-            margin-top: 5px;
-        }
-
-        /* The Sign Itself */
-        .sign-board {
-            position: relative;
-            top: 35px; /* Hang below chains */
-            background: #0a400a; /* Authentic Grove Street Green */
-            border: 2px solid #ddd;
-            border-radius: 2px;
-            padding: 4px 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.5);
-            transform-origin: top center;
-            animation: signSway 5s ease-in-out infinite;
+            max-width: 100%; /* Full width on mobile */
+            height: 100%;
+            background: #151515;
+            /* Matte Plastic Texture */
+            background-image: 
+                radial-gradient(circle at 50% 50%, #1a1a1a 1px, transparent 1px),
+                linear-gradient(to bottom, #222 0%, #111 100%);
+            background-size: 3px 3px, 100% 100%;
             display: flex;
             align-items: center;
-            justify-content: center;
-            min-width: 180px;
+            padding: 0 8px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.8);
         }
-        
-        /* Reflection sheen on sign */
-        .sign-board::after {
+
+        .lcd-screen {
+            flex-grow: 1;
+            height: 42px;
+            background: #050505;
+            border: 2px solid #2a2a2a;
+            border-radius: 4px;
+            margin: 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Scanline/Grid for LCD */
+        .lcd-screen::before {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 2px, 3px 100%;
             pointer-events: none;
+            z-index: 2;
         }
 
-        .sign-text {
-            font-family: 'ChaletComprime', 'Impact', sans-serif;
+        .lcd-text {
+            font-family: 'Courier New', 'Monaco', monospace; 
             font-size: 22px;
-            color: #fff;
-            text-transform: uppercase;
+            color: #ff8800; /* Retro Amber */
+            text-shadow: 0 0 8px rgba(255, 136, 0, 0.6);
+            font-weight: bold;
             letter-spacing: 1px;
-            text-shadow: 1px 1px 0 #000;
             white-space: nowrap;
+            z-index: 1;
         }
 
-        /* Textures */
-        .bullet-hole {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #111;
+        .lcd-icon {
+            font-size: 9px;
+            color: #cc6600;
+            font-family: sans-serif;
+            border: 1px solid #cc6600;
+            padding: 2px 4px;
+            border-radius: 2px;
+            opacity: 0.8;
+            z-index: 1;
+        }
+
+        .knob {
+            width: 28px;
+            height: 28px;
+            background: radial-gradient(circle at 30% 30%, #333 0%, #000 80%);
             border-radius: 50%;
-            box-shadow: inset 1px 1px 1px #000, 0 0 0 1px rgba(255,255,255,0.2);
-        }
-        .bullet-hole.b1 { top: 8px; right: 12px; }
-        .bullet-hole.b2 { bottom: 8px; left: 15px; }
-        
-        .rust-spot {
-            position: absolute;
-            background: rgba(100, 50, 10, 0.5);
-            filter: blur(3px);
-            border-radius: 50%;
-        }
-        .rust-spot.r1 { top: 5px; left: 40px; width: 25px; height: 15px; }
-
-        @keyframes signSway {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(2deg); }
-            75% { transform: rotate(-2deg); }
-        }
-
-        /* Search Container Fix - Push down below hanging sign */
-        .search-container {
-            margin-top: 90px; /* Significant margin to clear the 80px sign area */
+            border: 1px solid #000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.8);
             position: relative;
-            z-index: 50; 
-            background: rgba(0,0,0,0.4);
-            padding: 8px;
-            border: 1px solid #333;
+        }
+        /* Grip lines on knob */
+        .knob::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 40%; height: 2px;
+            background: #555;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .btn-tiny {
+            width: 16px;
+            height: 8px;
+            background: #222;
+            margin: 3px 0;
+            border: 1px solid #000;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .eject-btn {
+            font-size: 10px;
+            color: #555;
+            margin-bottom: 6px;
+            text-shadow: 0 -1px 0 #000;
+        }
+
+        .faceplate-left, .faceplate-right {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            border-radius: 4px;
+            justify-content: center;
+            width: 40px;
+            flex-shrink: 0;
+        }
+
+        /* Search Container Reset */
+        .search-container {
+            margin-top: 20px; /* Standard spacing from header */
+            background: transparent; /* Remove extra bg from previous fix */
+            border: none;
         }
         
-        /* Adjust section padding generally */
+        /* Adjust section padding for solid header */
         .section {
-            padding-top: 10px; /* Reset default section padding, rely on container margins */
+            padding-top: 75px; 
         }
 
         /* Removed Old Headers */
-        .hood-header, .hood-header::before, .hud-line, .tape-header, .tape-strip, .tape-text { display: none; }
+        .hood-header, .hood-header::before, .hud-line, .tape-header, .tape-strip, .tape-text, .street-sign-header, .sign-board { display: none; }
         .header-title { display: none; }
             position: absolute;
             bottom: 0;
@@ -2799,18 +2813,22 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Grove Street Sign Header -->
-    <div class="app-header street-sign-header" id="sign-header">
-        <div class="sign-pole"></div>
-        <div class="sign-chains">
-            <div class="chain c-left"></div>
-            <div class="chain c-right"></div>
-        </div>
-        <div class="sign-board">
-            <span class="sign-text">LOS LITHUANIA</span>
-            <div class="bullet-hole b1"></div>
-            <div class="bullet-hole b2"></div>
-            <div class="rust-spot r1"></div>
+    <!-- Car Radio Faceplate Header -->
+    <div class="app-header radio-faceplate-header" id="faceplate-header">
+        <div class="faceplate-body">
+            <div class="faceplate-left">
+                <div class="knob"></div>
+                <div class="btn-tiny"></div>
+                <div class="btn-tiny"></div>
+            </div>
+            <div class="lcd-screen">
+                <span class="lcd-text" id="header-lcd">LOS LITHUANIA</span>
+                <div class="lcd-icon">FM 108.0</div>
+            </div>
+            <div class="faceplate-right">
+                <div class="eject-btn">▲</div>
+                <div class="knob"></div>
+            </div>
         </div>
     </div>
 
@@ -3579,15 +3597,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Grove Sign)
-            const signText = document.querySelector('.sign-text');
-            if(signText) {
+            // Update Header Zone (Car Radio)
+            const lcdText = document.querySelector('.lcd-text');
+            if(lcdText) {
                 let txt = "LOS LITHUANIA";
                 if(id === 'shop') txt = "AMMU-NATION";
                 if(id === 'map') txt = "LOS SANTOS MAP";
                 if(id === 'stats') txt = "PLAYER STATS";
                 
-                signText.innerText = txt;
+                lcdText.innerText = txt;
             }
         }
 
