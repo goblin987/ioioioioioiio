@@ -83,29 +83,66 @@
             opacity: 0.3;
         }
 
-        /* Header */
-        .header {
-            padding: 0 15px;
-            background: rgba(0, 0, 0, 0.9);
-            border-bottom: 2px solid var(--gta-gold);
+        /* Retro Phone Bar */
+        .phone-status-bar {
+            background: #000;
+            border-bottom: 1px solid #333;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 4px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 10;
-            height: 70px;
+            z-index: 200;
+            letter-spacing: 1px;
+        }
+
+        /* App Header (HUD) */
+        .app-header {
+            background: rgba(0, 10, 0, 0.9);
+            border-bottom: 2px solid var(--gta-gold);
+            padding: 5px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            height: 60px;
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .app-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
         }
 
-        .logo {
-            font-size: 32px;
-            color: var(--gta-gold);
+        .header-left, .header-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .header-right { justify-content: flex-end; }
+        .header-center { flex: 2; text-align: center; }
+
+        .zone-text {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 28px;
+            color: #fff;
             text-shadow: 2px 2px 0 #000;
+            text-transform: uppercase;
         }
-
+        
         .money {
             color: var(--gta-green);
-            font-size: 28px;
+            font-size: 24px;
             text-shadow: 1px 1px 0 #000;
+            font-family: 'Pricedown', sans-serif;
         }
 
         /* Wanted Level */
@@ -2599,15 +2636,26 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Header with Stars -->
-    <div class="header">
-        <div style="display: flex; flex-direction: column; justify-content: center;">
-            <div class="logo" style="font-size: 28px; line-height: 1; margin-bottom: 2px;">LOS SANTOS</div>
-            <div class="wanted-stars" id="stars" style="margin-top: 0;">
+    <!-- Retro Phone Status Bar -->
+    <div class="phone-status-bar">
+        <div class="status-left">SIGNAL <span class="blink">IIII</span></div>
+        <div class="status-center" id="phone-clock-header">12:00</div>
+        <div class="status-right">BATT <span style="color:var(--gta-green)">[====]</span></div>
+    </div>
+
+    <!-- App Header (HUD) -->
+    <div class="app-header">
+        <div class="header-left">
+            <div class="wanted-stars" id="stars">
                 <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
             </div>
         </div>
-        <div class="money" id="money">$00000000</div>
+        <div class="header-center">
+            <div class="zone-text" id="header-zone-text">LOS SANTOS</div>
+        </div>
+        <div class="header-right">
+            <div class="money" id="money">$00000000</div>
+        </div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3317,6 +3365,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
+            
+            // Update Header Zone
+            const zoneText = document.getElementById('header-zone-text');
+            if(zoneText) {
+                if(id === 'shop') zoneText.innerText = "AMMU-NATION";
+                if(id === 'map') zoneText.innerText = "LOS SANTOS";
+                if(id === 'stats') zoneText.innerText = "STATS";
+            }
         }
 
         async function loadProducts() {
@@ -4325,8 +4381,13 @@ const CHAR_ASSETS = {
         
         function updatePhoneTime() {
              const t = new Date();
+             const str = t.getHours().toString().padStart(2, '0') + ":" + t.getMinutes().toString().padStart(2, '0');
              const span = document.getElementById('phone-time');
-             if(span) span.innerText = t.getHours().toString().padStart(2, '0') + ":" + t.getMinutes().toString().padStart(2, '0');
+             if(span) span.innerText = str;
+             
+             // Header Clock
+             const headerClock = document.getElementById('phone-clock-header');
+             if(headerClock) headerClock.innerText = str;
         }
         
         function addPhoneContact(city, name, bars, index = 0) {
