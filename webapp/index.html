@@ -3286,13 +3286,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(audioPlayer) {
                 const station = stations[1]; 
                 audioPlayer.src = station.src;
-                audioPlayer.volume = 0.1; // Low volume to assert activity
-                audioPlayer.load();
+                audioPlayer.volume = 0; // Silent but PLAYING
+                currentStation = 1;     // Sync state
                 
                 const radioPromise = audioPlayer.play();
                 if(radioPromise !== undefined) {
-                    radioPromise.then(() => console.log("Radio Stream Unlocked"))
-                                .catch(e => console.error("Radio Stream Fail", e));
+                    radioPromise.then(() => console.log("Radio Playing Silently"))
+                                .catch(e => console.error("Radio Start Fail", e));
                 }
             }
             
@@ -3354,12 +3354,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function performTransition() {
             log("performTransition called");
             try {
-                // Fade In Radio
+                // Fade In Radio (It's already playing silenty!)
                 if(audioPlayer) {
-                    audioPlayer.play().catch(e => console.log("Resume failed", e));
-                    currentStation = 1; 
-                    
-                    // Fade In
+                    // Ensure volume fade starts from 0
                     let vol = 0;
                     const fade = setInterval(() => {
                         vol += 0.05;
@@ -3367,6 +3364,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                             vol = 0.5;
                             clearInterval(fade);
                         }
+                        // Only touch volume, nothing else
                         if(audioPlayer) audioPlayer.volume = vol;
                     }, 200);
 
@@ -3376,6 +3374,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         radioText.style.color = "var(--gta-green)";
                     }
                 } else {
+                    // If for some reason it's missing, try to start it
                     toggleRadio(true);
                 }
                 log("Radio toggled");
