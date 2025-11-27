@@ -3282,6 +3282,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function startApp() {
             log("startApp called");
             
+            // Unlock Audio Context
+            if(window.AudioContext || window.webkitAudioContext) {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                ctx.resume();
+            }
+            
             // Init Audio Locally
             const audioFx = new Audio('/webapp/ah_shit.mp3');
             audioFx.preload = 'auto';
@@ -3673,11 +3679,29 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
 
             if(station.src) {
+                // Visual: Tuning
+                if(radioText) radioText.innerText = "TUNING...";
+
                 try {
-                    if(audioPlayer) { audioPlayer.pause(); } 
+                    if(audioPlayer) { audioPlayer.pause(); audioPlayer.src = ""; } 
                     audioPlayer = new Audio(station.src);
-                    audioPlayer.crossOrigin = "anonymous";
+                    // Removed crossOrigin
                     audioPlayer.volume = 0.5;
+                    
+                    // Listeners
+                    audioPlayer.onplaying = () => {
+                        if(radioText) {
+                            radioText.innerText = station.name;
+                            radioText.style.color = "var(--gta-green)";
+                        }
+                    };
+                    audioPlayer.onerror = (e) => {
+                        console.error("Stream Error", e);
+                        if(radioText) {
+                            radioText.innerText = "SIGNAL LOST";
+                            radioText.style.color = "red";
+                        }
+                    };
                     
                     const playPromise = audioPlayer.play();
                     if (playPromise !== undefined) {
