@@ -109,15 +109,20 @@
 
         .zone-text {
             font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
+            font-size: 32px;
             color: #fff;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            text-shadow: 3px 3px 0 #000;
+            text-transform: uppercase;
+            transform: scaleY(1.1);
         }
         
         .money {
             color: var(--gta-green);
-            font-size: 20px;
+            font-size: 26px;
             font-family: 'Pricedown', sans-serif;
+            text-shadow: 2px 2px 0 #000;
+            letter-spacing: 1px;
         }
 
         /* Wanted Level */
@@ -313,41 +318,88 @@
         }
         
         .btn-buy:hover {
-            background: #fff;
+            background: var(--gta-green);
             color: #000;
+            filter: brightness(1.2);
             transform: translateY(-2px);
-            box-shadow: 0 5px 0 #000, 0 0 15px #fff;
+            box-shadow: 0 5px 0 #000, 0 0 15px var(--gta-green);
         }
         
         .btn-buy:active {
             transform: translateY(3px);
             box-shadow: 0 0 0 #000;
+            filter: brightness(0.8);
         }
 
         /* Radio */
         .radio-widget {
             position: fixed;
-            top: 80px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            border: 2px solid var(--gta-grey);
-            padding: 5px 10px;
-            z-index: 99;
-            text-align: right;
-            transition: 0.3s;
-            transform: translateX(90%); /* Hidden by default */
-            cursor: pointer;
+            bottom: 90px;
+            right: 15px;
+            left: 15px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 9999;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform: translateY(0);
         }
         
-        .radio-widget:hover, .radio-widget.active {
-            transform: translateX(0);
+        .radio-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
         }
         
-        .radio-text {
+        .radio-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .radio-label {
+            color: #666;
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+        
+        .radio-station {
+            color: #fff;
             font-size: 14px;
-            color: var(--gta-gold);
+            font-weight: bold;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+        
+        .radio-controls {
+            margin-left: 15px;
+        }
+        
+        .radio-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .radio-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
         /* Search Bar (LSPD Terminal - Minimal) */
         .search-container {
@@ -2613,8 +2665,16 @@
     </div>
 
     <!-- Audio Elements -->
-    <div class="radio-widget" onclick="toggleRadio()">
-        <div class="radio-text">📻 RADIO OFF</div>
+    <!-- Music Player Widget -->
+    <div class="radio-widget" id="music-player">
+        <div class="radio-icon">📻</div>
+        <div class="radio-info" onclick="toggleRadio()">
+            <div class="radio-label">FM TUNER</div>
+            <div class="radio-station radio-text">RADIO OFF</div>
+        </div>
+        <div class="radio-controls">
+            <button class="radio-btn" onclick="toggleRadio()">⏭</button>
+        </div>
     </div>
 
     <div class="bg"></div>
@@ -3246,8 +3306,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
 
                 // 4. Transition
-                log("Scheduling transition in 2.5s");
-                setTimeout(performTransition, 2500);
+                log("Scheduling transition in 1.6s");
+                setTimeout(performTransition, 1600);
 
             } catch (err) {
                 log("Start Crash: " + err);
@@ -3581,15 +3641,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
 
             const station = stations[currentStation];
-            const widget = document.querySelector('.radio-widget');
             
-            document.querySelector('.radio-text').innerText = "📻 " + station.name;
-            widget.classList.add('active');
-            setTimeout(() => widget.classList.remove('active'), 3000);
+            // Update Widget UI
+            const txt = document.querySelector('.radio-station');
+            if(txt) txt.innerText = station.name;
+            
+            const label = document.querySelector('.radio-label');
+            if(label) label.innerText = station.src ? "PLAYING FM" : "FM TUNER";
 
             if(station.src) {
                 try {
-                    if(audioPlayer) { audioPlayer.pause(); } // Safety check
+                    if(audioPlayer) { audioPlayer.pause(); } 
                     audioPlayer = new Audio(station.src);
                     audioPlayer.crossOrigin = "anonymous";
                     audioPlayer.volume = 0.5;
