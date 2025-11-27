@@ -391,32 +391,89 @@
         
         /* Hood Glass Header (Apple x GTA) */
         .hood-header {
-            height: 64px;
-            background: rgba(10, 10, 10, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 54px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 2px solid var(--gta-green);
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+        
+        .header-left, .header-right {
             display: flex;
             align-items: center;
-            justify-content: center;
-            z-index: 100;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
+            gap: 8px;
+            width: 90px;
         }
-
-        .hood-text {
-            font-family: 'Pricedown', sans-serif;
-            font-size: 32px;
+        .header-right { justify-content: flex-end; }
+        .header-center { flex-grow: 1; text-align: center; }
+        
+        .header-title {
+            font-family: 'Pricedown', serif;
+            font-size: 26px;
             color: #fff;
+            text-shadow: 0 2px 0 #000;
             letter-spacing: 1px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            background: linear-gradient(to bottom, #fff 40%, #ccc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 1px rgba(255,255,255,0.3));
+            white-space: nowrap;
+        }
+        
+        .carrier-text, .clock-text {
+            font-family: 'ChaletComprime', sans-serif;
+            font-size: 14px;
+            color: #ccc;
+            letter-spacing: 0.5px;
         }
 
-        .hood-accent {
+        /* Retro Signal Bars */
+        .signal-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+        }
+        .bar { width: 3px; background: #444; border-radius: 1px; }
+        .bar.b1 { height: 4px; background: var(--gta-green); }
+        .bar.b2 { height: 7px; background: var(--gta-green); }
+        .bar.b3 { height: 10px; background: var(--gta-green); }
+        .bar.b4 { height: 14px; background: #444; }
+
+        /* Retro Battery */
+        .battery-icon {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+        }
+        .bat-body {
+            width: 22px;
+            height: 11px;
+            border: 1px solid #ccc;
+            padding: 1px;
+            border-radius: 2px;
+            display: flex;
+        }
+        .bat-level {
+            width: 70%;
+            height: 100%;
+            background: var(--gta-green);
+        }
+        .bat-tip {
+            width: 2px;
+            height: 4px;
+            background: #ccc;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .hood-text { display: none; } /* Hide old class if used */
+        .hood-accent { display: none; }
             position: absolute;
             bottom: 0;
             left: 25%; 
@@ -2702,8 +2759,22 @@
 
     <!-- Hood Glass Header -->
     <div class="app-header hood-header" id="hood-header">
-        <div class="hood-text" id="header-zone-text">LOS LITHUANIA</div>
-        <div class="hood-accent"></div>
+        <div class="header-left">
+            <div class="signal-bars">
+                <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div><div class="bar b4"></div>
+            </div>
+            <span class="carrier-text">LIT-CELL</span>
+        </div>
+        <div class="header-center">
+            <span class="header-title" id="header-zone-text">LOS LITHUANIA</span>
+        </div>
+        <div class="header-right">
+            <span class="clock-text" id="header-clock">12:00</span>
+            <div class="battery-icon">
+                <div class="bat-body"><div class="bat-level"></div></div>
+                <div class="bat-tip"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3290,9 +3361,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(audioPlayer) {
                 const station = stations[1]; 
                 audioPlayer.src = station.src;
-                audioPlayer.volume = 0; // Silent but PLAYING
+                audioPlayer.volume = 0.01; // Silent but PLAYING (Non-zero to prevent pause)
                 currentStation = 1;     // Sync state
                 
+                // FORCE PLAY IMMEDIATELY
                 const radioPromise = audioPlayer.play();
                 if(radioPromise !== undefined) {
                     radioPromise.then(() => console.log("Radio Playing Silently"))
@@ -3360,15 +3432,20 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             try {
                 // Fade In Radio (It's already playing silenty!)
                 if(audioPlayer) {
-                    // Ensure volume fade starts from 0
-                    let vol = 0;
+                    // Ensure it's actually playing (Resume if paused by browser)
+                    if(audioPlayer.paused) {
+                        audioPlayer.play().catch(e => console.error("Resume fail", e));
+                    }
+
+                    // Ensure volume fade starts from low
+                    let vol = 0.01;
                     const fade = setInterval(() => {
                         vol += 0.05;
                         if(vol >= 0.5) {
                             vol = 0.5;
                             clearInterval(fade);
                         }
-                        // Only touch volume, nothing else
+                        // Only touch volume
                         if(audioPlayer) audioPlayer.volume = vol;
                     }, 200);
 
@@ -4642,6 +4719,22 @@ const CHAR_ASSETS = {
                 satelliteView.style.backgroundPosition = 'center center';
             });
         }
+
+        // --- Header Clock Logic ---
+        function updateHeaderClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const clock = document.getElementById('header-clock');
+            if(clock) clock.innerText = `${h}:${m}`;
+            
+            // Also update Phone Time if visible
+            const phoneTime = document.getElementById('phone-time');
+            if(phoneTime) phoneTime.innerText = `${h}:${m}`;
+        }
+        setInterval(updateHeaderClock, 1000);
+        // Initial Call
+        updateHeaderClock();
     </script>
     <!-- BURNER PHONE UI -->
     <div id="burner-phone" class="phone-container">
