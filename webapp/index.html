@@ -389,243 +389,66 @@
             z-index: 100;
         }
         
-        /* GTA 5 / Indie Game Style 3D Street Sign */
-        .street-sign-assembly {
+        /* GTA SA Zone Text Overlay (No Pole) */
+        .zone-text-overlay {
             position: fixed;
-            top: 0;
-            right: 0;
-            width: 340px;
-            height: 160px;
-            z-index: 10000;
-            pointer-events: none;
-            filter: drop-shadow(-10px 10px 20px rgba(0,0,0,0.8)); /* Deep realistic shadow */
-        }
-
-        .pole-group {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* 3D Realistic Pole Rendering */
-        .pole-vertical {
-            position: absolute;
-            right: 0;
-            top: -50px;
-            width: 40px;
-            height: 250px;
-            /* Chrome/Steel Cylinder Gradient */
-            background: linear-gradient(to right, #444, #888, #ccc, #888, #444);
-            z-index: 2;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8); /* Depth */
-        }
-
-        /* The Elbow Joint */
-        .pole-elbow {
-            position: absolute;
-            right: 0px;
             top: 15px;
-            width: 55px;
-            height: 55px;
-            /* Cast Iron Texture */
-            background: radial-gradient(circle at 30% 30%, #5a5a5a, #1a1a1a);
-            border-radius: 12px 0 0 12px;
-            z-index: 3;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-content: center;
-            gap: 5px;
-            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.1), 0 5px 10px rgba(0,0,0,0.5);
-            border-left: 1px solid #666;
-        }
-
-        /* Realistic Bolts */
-        .bolt {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #e6e6e6, #7f8c8d);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.8);
-            position: relative;
-        }
-        .bolt::after { /* Hex Screw Indent */
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50%; height: 50%;
-            background: #333;
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-        }
-
-        /* Horizontal Arm */
-        .pole-horizontal {
-            position: absolute;
-            right: 30px;
-            top: 25px;
-            width: 300px;
-            height: 35px;
-            /* Chrome/Steel Cylinder Gradient */
-            background: linear-gradient(to bottom, #444, #888, #ccc, #888, #444);
-            border-radius: 6px 0 0 6px;
-            z-index: 1;
-            transform: rotate(1.5deg);
-            transform-origin: right center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
-
-        .pole-cap {
-            position: absolute;
-            left: -6px;
-            top: 20px;
-            width: 12px;
-            height: 45px;
-            background: linear-gradient(to right, #333, #666, #333);
-            border-radius: 3px;
-            z-index: 2;
-            transform: rotate(1.5deg);
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-        }
-
-        /* Rust / Grime Details */
-        .rust-mark {
-            position: absolute;
-            background: radial-gradient(circle, #8e44ad 0%, transparent 70%); /* Oil stain color */
-            opacity: 0.4;
-            mix-blend-mode: multiply;
-            filter: blur(2px);
-        }
-        .r1 { top: 10px; left: 60px; width: 30px; height: 15px; background: #a0522d; /* Rust */ }
-        .r2 { bottom: 5px; left: 150px; width: 40px; height: 20px; background: #000; /* Grease */ }
-
-        /* Heavy Duty Clamps */
-        .sign-hanger {
-            position: absolute;
-            top: 55px;
-            right: 70px;
-            width: 220px;
-            transform-origin: top center;
-            animation: signSwayReal 6s ease-in-out infinite;
-        }
-
-        .metal-clamp {
-            position: absolute;
-            top: -25px;
-            width: 15px;
-            height: 35px;
-            background: linear-gradient(to right, #555, #aaa, #555);
-            border-radius: 4px;
-            z-index: 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
-            border: 1px solid #333;
-        }
-        .left-clamp { left: 25px; }
-        .right-clamp { right: 25px; }
-
-        /* Photorealistic Sign Box */
-        .gta-street-sign {
-            position: relative;
-            /* Retro Reflective Green Material */
-            background: 
-                linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.05) 100%),
-                radial-gradient(circle at center, #0e6628, #053312);
-            width: 100%;
-            padding: 6px;
-            border-radius: 8px;
-            box-shadow: 
-                inset 0 1px 1px rgba(255,255,255,0.3), /* Top Bevel */
-                inset 0 -1px 1px rgba(0,0,0,0.5),    /* Bottom Bevel */
-                0 10px 20px rgba(0,0,0,0.6);         /* Ambient Shadow */
-            border: 1px solid #0a4d1c;
-        }
-
-        .sign-inner-border {
-            border: 3px ridge rgba(220, 220, 220, 0.9); /* Reflective White Border (Double Ridge) */
-            border-radius: 5px;
-            padding: 5px 12px;
+            right: 20px; /* Align to right side */
             display: flex;
             flex-direction: column;
-            align-items: center;
-            box-shadow: 0 0 5px rgba(255,255,255,0.4); /* Enhanced Bloom */
-            backdrop-filter: brightness(1.1); /* Slight pop */
+            align-items: flex-end; /* Right align text */
+            z-index: 10000;
+            pointer-events: none;
         }
 
-        /* Authentic Typography */
-        .district-label {
-            font-family: 'Arial', sans-serif;
-            font-size: 11px;
-            color: #eee;
-            text-transform: uppercase;
-            font-weight: bold;
-            align-self: flex-start;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-            opacity: 0.9;
-        }
-
-        .street-name {
-            font-family: 'Impact', sans-serif;
-            font-size: 28px;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            /* Engraved Text Effect */
-            text-shadow: 
-                0 2px 0 #000,
-                0 0 10px rgba(255,255,255,0.2);
+        .zone-name {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 48px; /* Large and impactful */
+            line-height: 0.9;
+            color: #fff; /* Fallback */
+            
+            /* The Iconic GTA Gradient Text */
+            background: linear-gradient(to bottom, #f1c40f 20%, #d35400 80%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            
+            /* Heavy Drop Shadow mimicking Outline */
+            filter: drop-shadow(2px 2px 0 #000) drop-shadow(-1px -1px 0 #000) drop-shadow(1px -1px 0 #000) drop-shadow(-1px 1px 0 #000) drop-shadow(2px 4px 5px rgba(0,0,0,0.5));
+            
+            letter-spacing: 1px;
+            transform: scaleY(1.1); /* Stretch it like the game */
+            animation: slideInZone 1s ease-out forwards;
             white-space: nowrap;
-            line-height: 1.2;
-            transform: scaleY(1.1); /* Taller font like real signs */
         }
 
-        .block-num {
-            font-family: 'Arial', sans-serif;
-            font-size: 10px;
-            color: #eee;
-            align-self: flex-end;
-            font-weight: bold;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        .zone-subtext {
+            font-family: 'Chomsky', 'Diploma', serif; /* Gothic Font fallback */
+            font-size: 14px;
+            color: #2ecc71; /* Grove Green */
+            text-shadow: 1px 1px 0 #000;
+            margin-top: 2px;
+            margin-right: 5px;
+            opacity: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: fadeInSub 1s ease-out 0.5s forwards;
         }
 
-        /* Realistic Decals */
-        .graffiti-overlay {
-            position: absolute;
-            bottom: 5px;
-            right: 15px;
-            font-family: 'Brush Script MT', cursive;
-            font-size: 32px;
-            color: #2ecc71;
-            transform: rotate(-12deg);
-            opacity: 0.7;
-            mix-blend-mode: hard-light; /* Looks painted ON */
-            filter: blur(0.5px);
+        @keyframes slideInZone {
+            0% { transform: translateX(50px) scaleY(1.1); opacity: 0; }
+            100% { transform: translateX(0) scaleY(1.1); opacity: 1; }
         }
         
-        .sticker-overlay {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            width: 25px;
-            height: 25px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%23fff" opacity="0.8"/><text x="50" y="55" font-size="30" text-anchor="middle" fill="black">R</text></svg>');
-            background-size: contain;
-            transform: rotate(15deg);
-            opacity: 0.8;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-            mix-blend-mode: overlay;
+        @keyframes fadeInSub {
+            to { opacity: 1; }
         }
 
-        /* Physics Animation */
-        @keyframes signSwayReal {
-            0%, 100% { transform: rotate(1deg); }
-            50% { transform: rotate(-1deg); }
-        }
-
-        /* Search Container Adjustment */
+        /* Removed Old Headers */
+        .street-sign-assembly, .pole-group, .pole-vertical, .pole-elbow, .pole-horizontal, .pole-cap, .sign-hanger, .gta-street-sign { display: none; }
+        
+        /* Search Container Adjustment - Reset spacing */
         .search-container {
-            margin-top: 90px; /* More clearance */
+            margin-top: 80px; /* Standard spacing */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2918,44 +2741,10 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Detailed "Comic/Industrial" Street Sign -->
-    <div class="street-sign-assembly">
-        <div class="pole-group">
-            <!-- Vertical Pole -->
-            <div class="pole-vertical"></div>
-            
-            <!-- The Elbow Connector (The Detail) -->
-            <div class="pole-elbow">
-                <div class="bolt b1"></div>
-                <div class="bolt b2"></div>
-                <div class="bolt b3"></div>
-            </div>
-
-            <!-- Horizontal Arm -->
-            <div class="pole-horizontal">
-                <div class="rust-mark r1"></div>
-                <div class="rust-mark r2"></div>
-            </div>
-            
-            <!-- End Cap -->
-            <div class="pole-cap"></div>
-        </div>
-
-        <!-- Hanging Sign -->
-        <div class="sign-hanger">
-            <div class="metal-clamp left-clamp"></div>
-            <div class="metal-clamp right-clamp"></div>
-            
-            <div class="gta-street-sign" id="street-sign-box">
-                <div class="sign-inner-border">
-                    <div class="district-label">GANTON</div>
-                    <div class="street-name" id="header-zone-text">LOS LITHUANIA</div>
-                    <div class="block-num">400 BLK</div>
-                </div>
-                <div class="graffiti-overlay">GSF</div>
-                <div class="sticker-overlay"></div>
-            </div>
-        </div>
+    <!-- GTA SA Zone Text Overlay (No Pole) -->
+    <div class="zone-text-overlay" id="zone-text-overlay">
+        <span class="zone-name" id="header-zone-text">LOS LITHUANIA</span>
+        <span class="zone-subtext">GROVE ST. FAMILY</span>
     </div>
 
     <!-- Mission Passed Overlay -->
@@ -3723,26 +3512,32 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Wanted Level HUD)
+            // Update Header Zone (GTA Zone Overlay)
             const zoneText = document.getElementById('header-zone-text');
-            const stars = document.querySelectorAll('.hud-star');
+            const subText = document.querySelector('.zone-subtext');
             
             if(zoneText) {
                 let txt = "LOS LITHUANIA";
-                let starCount = 2;
-                if(id === 'shop') { txt = "AMMU-NATION"; starCount = 0; }
-                if(id === 'map') { txt = "LOS SANTOS MAP"; starCount = 1; }
-                if(id === 'stats') { txt = "PLAYER STATS"; starCount = 5; }
+                let sub = "GROVE ST. FAMILY";
+                
+                if(id === 'shop') { txt = "AMMU-NATION"; sub = "MARKET • DOWNTOWN"; }
+                if(id === 'map') { txt = "LOS SANTOS"; sub = "GPS SATELLITE VIEW"; }
+                if(id === 'stats') { txt = "CJ'S HOUSE"; sub = "GROVE STREET"; }
                 
                 zoneText.innerText = txt;
                 
-                // Update Stars
-                if(stars) {
-                    stars.forEach((s, i) => {
-                        if(i < starCount) s.classList.add('active');
-                        else s.classList.remove('active');
-                    });
+                if(subText) {
+                    subText.innerText = sub;
+                    // Reset animation
+                    subText.style.animation = 'none';
+                    subText.offsetHeight; /* trigger reflow */
+                    subText.style.animation = 'fadeInSub 1s ease-out 0.5s forwards';
                 }
+                
+                // Reset main animation
+                zoneText.style.animation = 'none';
+                zoneText.offsetHeight; /* trigger reflow */
+                zoneText.style.animation = 'slideInZone 1s ease-out forwards';
             }
         }
 
@@ -4411,13 +4206,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(skin === 'sweet') img.src = "https://static.wikia.nocookie.net/gtawiki/images/1/1b/Sweet-GTASA.png";
         }
 
-        // Navigation
-        function showSection(id) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`nav-${id}`).classList.add('active');
-        }
         
         function getProductEmoji(type, name = '') {
             // Check Name First (Specifics)
