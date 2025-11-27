@@ -389,63 +389,171 @@
             z-index: 100;
         }
         
-        /* Wanted Level Header */
-        .wanted-header {
+        /* Old Bent Pipe Street Sign */
+        .street-sign-assembly {
             position: fixed;
             top: 0;
-            left: 0;
+            right: 0;
+            width: 300px; /* Width to hold the arm */
+            height: 120px;
+            z-index: 10000;
+            pointer-events: none;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+
+        /* Rusty Pipes */
+        .pole-vertical {
+            position: absolute;
+            right: 0;
+            top: -20px;
+            width: 25px;
+            height: 200px;
+            background: linear-gradient(90deg, #2b2b2b, #5a5a5a, #2b2b2b);
+            border-left: 1px solid #111;
+            z-index: 2;
+        }
+
+        .pole-horizontal {
+            position: absolute;
+            right: 10px; /* Connect to vertical */
+            top: 15px;
+            width: 240px;
+            height: 18px;
+            background: linear-gradient(180deg, #3a3a3a, #6a6a6a, #3a3a3a);
+            border-radius: 10px 0 0 10px;
+            z-index: 1;
+            transform: rotate(-1deg); /* Slight bend */
+        }
+
+        .pole-cap {
+            position: absolute;
+            left: -4px;
+            top: -2px;
+            width: 12px;
+            height: 22px;
+            background: #222;
+            border-radius: 2px;
+        }
+
+        /* Hanging Mechanism */
+        .sign-hanger {
+            position: absolute;
+            top: 30px; /* Hang below arm */
+            right: 50px; /* Centered on arm */
+            width: 180px;
+            transform-origin: top center;
+            animation: signSway 6s ease-in-out infinite;
+        }
+
+        .chain-link {
+            position: absolute;
+            top: -15px; /* Connect to arm */
+            width: 4px;
+            height: 25px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #888 0px,
+                #888 4px,
+                transparent 4px,
+                transparent 6px
+            );
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+        }
+        .left-chain { left: 30px; }
+        .right-chain { right: 30px; }
+
+        /* The Green Sign */
+        .gta-street-sign {
+            position: relative;
+            background: #0a4d1c; /* Deep Street Sign Green */
             width: 100%;
-            height: 80px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 70%, transparent 100%);
-            z-index: 1000;
+            padding: 5px;
+            border-radius: 6px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.7), 0 5px 10px rgba(0,0,0,0.5);
+            border: 2px solid #d4d4d4;
+        }
+
+        .sign-border {
+            border: 2px solid #fff;
+            border-radius: 4px;
+            padding: 5px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding-top: 10px;
-            pointer-events: none; /* Click through */
+            background: transparent;
         }
 
-        .stars-container {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 0px;
-        }
-
-        .hud-star {
-            font-size: 20px;
-            color: #444; /* Empty star - Dark Grey */
-            text-shadow: 0 1px 2px #000;
-        }
-        .hud-star.active {
-            color: var(--gta-gold);
-            filter: drop-shadow(0 0 8px rgba(189, 147, 249, 0.2)); /* Subtle glow */
-            animation: starPulse 2s infinite alternate;
-        }
-
-        .zone-name {
-            font-family: 'Pricedown', sans-serif;
-            font-size: 32px;
+        /* Typography */
+        .district-label {
+            font-family: 'Arial', sans-serif;
+            font-size: 10px;
             color: #fff;
-            /* Classic GTA Text Border */
-            text-shadow: 
-                2px 2px 0 #000,
-                -1px -1px 0 #000,  
-                1px -1px 0 #000,
-                -1px 1px 0 #000,
-                1px 1px 0 #000;
+            text-transform: uppercase;
+            align-self: flex-start;
+            font-weight: bold;
             letter-spacing: 1px;
-            margin-top: 5px;
+            margin-bottom: 2px;
+            opacity: 0.9;
         }
 
-        @keyframes starPulse {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.1); opacity: 0.9; }
+        .street-name {
+            font-family: 'Arial Black', 'Impact', sans-serif;
+            font-size: 20px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-shadow: 1px 1px 0 #000;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+
+        .block-num {
+            font-family: 'Arial', sans-serif;
+            font-size: 9px;
+            color: #fff;
+            align-self: flex-end;
+            font-weight: bold;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        /* GSF Graffiti */
+        .graffiti-overlay {
+            position: absolute;
+            bottom: 8px;
+            right: 15px;
+            font-family: 'Brush Script MT', cursive; /* Messy font */
+            font-size: 28px;
+            color: #2ecc71; /* Bright Green Paint */
+            transform: rotate(-15deg);
+            text-shadow: 0 0 5px #000;
+            pointer-events: none;
+            opacity: 0.8;
+            font-weight: bold;
+        }
+        
+        .sticker-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        /* Animation */
+        @keyframes signSway {
+            0%, 100% { transform: rotate(2deg); }
+            50% { transform: rotate(-2deg); }
         }
 
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 85px; /* Clear the header */
+            margin-top: 80px; /* Adjusted for visibility */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.8);
             border: 1px solid var(--gta-green);
@@ -458,7 +566,7 @@
         }
 
         /* Removed Old Headers */
-        .hood-header, .street-sign-header, .radio-faceplate-header, .spray-header, .tape-header-v3, .tape-header, .tape-strip, .tape-text { display: none; }
+        .hood-header, .street-sign-header, .radio-faceplate-header, .spray-header, .tape-header-v3, .tape-header, .tape-strip, .tape-text, .wanted-header { display: none; }
         .header-title { display: none; }
 
         /* Search Bar (LSPD Terminal - Minimal) */
@@ -2737,16 +2845,32 @@
     <div class="bg"></div>
     <div class="scanlines"></div>
 
-    <!-- Wanted Level Header -->
-    <div class="app-header wanted-header" id="wanted-header">
-        <div class="stars-container">
-            <span class="hud-star active">★</span>
-            <span class="hud-star active">★</span>
-            <span class="hud-star">★</span>
-            <span class="hud-star">★</span>
-            <span class="hud-star">★</span>
+    <!-- Old Bent Pipe Street Sign (Right Side) -->
+    <div class="street-sign-assembly">
+        <!-- The Rusty Pipe Structure -->
+        <div class="pole-vertical"></div>
+        <div class="pole-horizontal">
+            <div class="pole-cap"></div>
         </div>
-        <div class="zone-name" id="header-zone-text">LOS LITHUANIA</div>
+
+        <!-- Hanging Mechanism -->
+        <div class="sign-hanger">
+            <div class="chain-link left-chain"></div>
+            <div class="chain-link right-chain"></div>
+            
+            <!-- The Green Street Sign -->
+            <div class="gta-street-sign" id="street-sign-box">
+                <div class="sign-border">
+                    <div class="district-label">GANTON</div>
+                    <div class="street-name" id="header-zone-text">LOS LITHUANIA</div>
+                    <div class="block-num">400 BLK</div>
+                </div>
+                
+                <!-- Wear & Tear Layers -->
+                <div class="graffiti-overlay">GSF</div>
+                <div class="sticker-overlay"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Mission Passed Overlay -->
