@@ -2456,6 +2456,31 @@
 
         /* Hide old digital avatar elements */
         .avatar-frame, .avatar-name { display: none !important; }
+        /* --- NEW POLISH --- */
+        .touch-ripple {
+            position: absolute;
+            width: 20px; height: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: rippleExpand 0.6s ease-out;
+            pointer-events: none;
+            z-index: 50;
+        }
+        @keyframes rippleExpand {
+            to { width: 200px; height: 200px; opacity: 0; }
+        }
+        
+        /* Film Grain */
+        .satellite-view::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            opacity: 0.3;
+            z-index: 4;
+        }
     </style>
 </head>
 <body>
@@ -2772,22 +2797,22 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </svg>
                     
                             <!-- Signal Emitters -->
-                            <div class="city-pin" style="top: 72%; left: 74%;" onclick="zoomToCity('Vilnius', 72, 74)">
+                            <div class="city-pin" style="top: 75%; left: 80%;" onclick="zoomToCity('Vilnius', 75, 80)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: VILNIUS</div>
                             </div>
-                            <div class="city-pin" style="top: 58%; left: 52%;" onclick="zoomToCity('Kaunas', 58, 52)">
+                            <div class="city-pin" style="top: 60%; left: 55%;" onclick="zoomToCity('Kaunas', 60, 55)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: KAUNAS</div>
                             </div>
-                            <div class="city-pin" style="top: 35%; left: 15%;" onclick="zoomToCity('Klaipeda', 35, 15)">
+                            <div class="city-pin" style="top: 35%; left: 10%;" onclick="zoomToCity('Klaipeda', 35, 10)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: KLAIPEDA</div>
                             </div>
-                            <div class="city-pin" style="top: 38%; left: 58%;" onclick="zoomToCity('Panevezys', 38, 58)">
+                            <div class="city-pin" style="top: 30%; left: 60%;" onclick="zoomToCity('Panevezys', 30, 60)">
                                 <div class="pin-core"></div>
                                 <div class="pin-pulse"></div>
                                 <div class="city-label">SIGNAL: PANEVEZYS</div>
@@ -2914,7 +2939,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let currentStation = 0;
         const stations = [
             { name: "RADIO OFF", src: null },
-            { name: "WEST COAST CLASSICS", src: "https://stream.zeno.fm/0r0xa792kwzuv" }, 
+            { name: "100.1 WEST COAST (SNOOP)", src: "https://stream.zeno.fm/6m1h151131zuv" }, 
             { name: "LO-FI CHILL", src: "https://ice2.somafm.com/groovesalad-128-mp3" }, 
             { name: "SF-UR UNDERGROUND", src: "https://ice2.somafm.com/defcon-128-mp3" } 
         ];
@@ -4097,27 +4122,37 @@ const CHAR_ASSETS = {
             isZoomed = true;
             currentZoomedCity = city;
             
+            // Haptics (Apple Feel)
+            if(navigator.vibrate) navigator.vibrate(15);
             if(window.sfx) sfx.select();
             
             const layer = document.getElementById('map-zoom-layer');
             const container = document.querySelector('.satellite-view');
-            const scanner = document.querySelector('.scanner-text');
             
-            if(scanner) scanner.innerText = "DECRYPTING SIGNAL SOURCE...";
+            // Screen Flash (Transition Mask)
+            const flash = document.createElement('div');
+            flash.style.position = 'fixed';
+            flash.style.top = '0'; flash.style.left = '0';
+            flash.style.width = '100vw'; flash.style.height = '100vh';
+            flash.style.background = '#fff';
+            flash.style.opacity = '0.3';
+            flash.style.pointerEvents = 'none';
+            flash.style.zIndex = '9999';
+            flash.style.transition = 'opacity 0.4s';
+            document.body.appendChild(flash);
             
-            container.classList.add('glitching');
-            setTimeout(() => container.classList.remove('glitching'), 500);
-            
+            requestAnimationFrame(() => { flash.style.opacity = '0'; });
+            setTimeout(() => flash.remove(), 400);
+
             container.classList.add('zoomed');
             
             layer.style.transformOrigin = `${leftP}% ${topP}%`;
-            layer.style.transform = 'scale(4)';
+            layer.style.transform = 'scale(3.5)';
             
-            // Direct Phone Open
+            // Fast Phone Open
             setTimeout(() => {
-                if(scanner) scanner.innerText = "CONNECTION ESTABLISHED";
                 openBurnerPhone(city);
-            }, 1000);
+            }, 800);
         }
 
         function resetSatelliteView() {
@@ -4314,6 +4349,18 @@ const CHAR_ASSETS = {
         const satelliteView = document.querySelector('.satellite-view');
         
         if(mapContainer && satelliteView) {
+            // Ripple on Click
+            mapContainer.addEventListener('click', (e) => {
+                if(typeof isZoomed !== 'undefined' && isZoomed) return;
+                const ripple = document.createElement('div');
+                ripple.className = 'touch-ripple';
+                const rect = mapContainer.getBoundingClientRect();
+                ripple.style.left = `${e.clientX - rect.left}px`;
+                ripple.style.top = `${e.clientY - rect.top}px`;
+                satelliteView.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+
             mapContainer.addEventListener('mousemove', (e) => {
                 if(typeof isZoomed !== 'undefined' && isZoomed) return;
                 const rect = mapContainer.getBoundingClientRect();
