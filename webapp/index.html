@@ -3108,10 +3108,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         const stations = [
             { name: "RADIO OFF", src: null },
             { name: "HOT 108 JAMZ", src: "https://ais-sa2.cdnstream1.com/2442_128.mp3" },
-            { name: "OLD SCHOOL", src: "https://stream.zeno.fm/f3wvbbqcd08uv" },
-            { name: "WEST COAST", src: "https://stream-mixtape-geo.ntslive.co.uk/mixtape2" }
+            { name: "NTS HIPHOP", src: "https://stream-mixtape-geo.ntslive.co.uk/mixtape2" },
+            { name: "GROOVE SALAD", src: "https://ice1.somafm.com/groovesalad-128-mp3" }
         ];
-        let audioPlayer = null;
+        // Use persistent player
+        let audioPlayer = document.getElementById('global-audio-player');
         let basket = [];
         let activePaymentId = null;
         let pollInterval = null;
@@ -3280,15 +3281,19 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 ctx.resume();
             }
             
-            // 1. Pre-load Radio (Immediate Silent Play)
-            if(audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
-            const station = stations[1]; 
-            audioPlayer = new Audio(station.src);
-            audioPlayer.volume = 0; // Start silent
-            // Play immediately and KEEP playing to maintain session
-            const radioPromise = audioPlayer.play();
-            if(radioPromise !== undefined) {
-                radioPromise.catch(e => console.log("Radio Start Fail", e));
+            // 1. Init Global Player (Persistent & Visible to DOM)
+            audioPlayer = document.getElementById('global-audio-player');
+            if(audioPlayer) {
+                const station = stations[1]; 
+                audioPlayer.src = station.src;
+                audioPlayer.volume = 0.1; // Low volume to assert activity
+                audioPlayer.load();
+                
+                const radioPromise = audioPlayer.play();
+                if(radioPromise !== undefined) {
+                    radioPromise.then(() => console.log("Radio Stream Unlocked"))
+                                .catch(e => console.error("Radio Stream Fail", e));
+                }
             }
             
             // Init Audio Locally
@@ -3680,70 +3685,60 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         // Radio - Native HTML5 Audio
+        // Radio - Persistent Player Logic
         function toggleRadio(forceStart = false) {
+            audioPlayer = document.getElementById('global-audio-player');
+            if(!audioPlayer) return;
+
             if(!forceStart) {
-                // Stop previous
-                if(audioPlayer) {
-                    audioPlayer.pause();
-                    audioPlayer.src = "";
-                    audioPlayer = null;
-                }
+                // Move to next station
                 currentStation = (currentStation + 1) % stations.length;
             } else {
-                // Start at station 1 (Los Santos)
+                // Reset to first station
                 currentStation = 1;
             }
 
             const station = stations[currentStation];
-            
-            // Update Radio Pill UI
             const radioText = document.getElementById('radio-display');
+            
+            // Update UI
             if(radioText) {
                 radioText.innerText = station.name;
-                radioText.style.color = "#fff";
+                radioText.style.color = "#fff"; 
                 setTimeout(() => radioText.style.color = "var(--gta-green)", 300);
             }
 
+            // Handle Logic
             if(station.src) {
-                // Visual: Tuning
+                // Visual Feedback
                 if(radioText) radioText.innerText = "TUNING...";
-
-                try {
-                    if(audioPlayer) { audioPlayer.pause(); audioPlayer.src = ""; } 
-                    audioPlayer = new Audio(station.src);
-                    // Removed crossOrigin
-                    audioPlayer.volume = 0.5;
-                    
-                    // Listeners
-                    audioPlayer.onplaying = () => {
-                        if(radioText) {
-                            radioText.innerText = station.name;
-                            radioText.style.color = "var(--gta-green)";
-                        }
-                    };
-                    audioPlayer.onerror = (e) => {
-                        console.error("Stream Error", e);
-                        if(radioText) {
-                            radioText.innerText = "SIGNAL LOST";
-                            radioText.style.color = "red";
-                        }
-                        // Auto-skip to next station on error
-                        setTimeout(() => toggleRadio(), 1000);
-                    };
-                    
-                    const playPromise = audioPlayer.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => {
-                            console.log("Radio Play Blocked: " + error);
-                            if(radioText) {
-                                radioText.innerText = "SIGNAL LOST";
-                                radioText.style.color = "red";
-                            }
-                        });
-                    }
-                } catch(e) {
-                    console.log("Audio Error: " + e);
+                
+                // Player Logic
+                audioPlayer.src = station.src;
+                audioPlayer.volume = 0.5;
+                
+                const p = audioPlayer.play();
+                if(p !== undefined) {
+                    p.then(() => {
+                         if(radioText) {
+                             radioText.innerText = station.name;
+                             radioText.style.color = "var(--gta-green)";
+                         }
+                    }).catch(e => {
+                         console.error("Play Error", e);
+                         if(radioText) {
+                             radioText.innerText = "SIGNAL LOST";
+                             radioText.style.color = "red";
+                         }
+                         // Auto-skip
+                         setTimeout(() => toggleRadio(), 2000);
+                    });
                 }
+            } else {
+                // RADIO OFF
+                audioPlayer.pause();
+                audioPlayer.src = ""; // Detach stream
+                if(radioText) radioText.innerText = "RADIO OFF";
             }
         }
 
@@ -4682,4 +4677,6 @@ const CHAR_ASSETS = {
             </div>
         </div>
     </div>
+    <!-- Global Audio Player (Persistent) -->
+    <audio id="global-audio-player" crossorigin="anonymous" playsinline preload="auto" style="display:none;"></audio>
 </body>
