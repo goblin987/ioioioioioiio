@@ -422,10 +422,10 @@
             position: relative;
         }
 
-        /* Street Sign Header - Weathered & Aged */
+        /* Street Sign Header - Pole Mounted & Damaged */
         .street-sign-container {
             position: absolute;
-            top: 10px;
+            top: 5px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10000;
@@ -435,84 +435,135 @@
             align-items: center;
         }
 
-        /* Hanging Chains - Rusty */
-        .sign-chains {
-            display: flex;
-            justify-content: space-between;
-            width: 180px;
-            height: 20px;
+        /* Metal Pole - Weathered */
+        .sign-pole {
+            width: 10px;
+            height: 25px;
+            background: linear-gradient(to right, 
+                #4a4a4a 0%, 
+                #6a6a6a 30%, 
+                #5a5a5a 50%,
+                #4a4a4a 100%
+            );
+            border-radius: 2px;
+            box-shadow: 2px 3px 6px rgba(0,0,0,0.4);
+            position: relative;
         }
 
-        .chain {
-            width: 3px;
-            height: 20px;
-            background: linear-gradient(to bottom, #6b5a4a 0%, #4a3a2a 50%, #5a4a3a 100%);
-            border-radius: 1px;
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        /* Rust spots on pole */
+        .sign-pole::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 2px;
+            width: 4px;
+            height: 8px;
+            background: rgba(139, 90, 43, 0.4);
+            border-radius: 50%;
+            filter: blur(1px);
         }
 
-        .chain:first-child {
-            transform: rotate(-2deg);
-        }
-        .chain:last-child {
-            transform: rotate(2deg);
+        /* Bracket */
+        .sign-bracket {
+            width: 12px;
+            height: 8px;
+            background: linear-gradient(to bottom, #5a5a5a 0%, #3a3a3a 100%);
+            border-radius: 0 0 2px 2px;
+            box-shadow: 1px 2px 3px rgba(0,0,0,0.3);
         }
 
-        /* The Sign Itself - WEATHERED */
+        /* The Sign Itself - DAMAGED */
         .street-sign {
-            /* Faded Green - 20 years of sun exposure */
+            /* Faded Green */
             background: linear-gradient(
-                135deg,
+                145deg,
                 #0d5c38 0%,
-                #0a5030 30%,
-                #084a2a 60%,
+                #0a5030 40%,
+                #084a2a 70%,
                 #0d5535 100%
             );
             
-            /* Dirty/Aged White Border */
-            border: 5px solid #c8c4b8;
-            border-radius: 10px;
-            padding: 14px 35px; /* BIGGER */
+            /* Dirty Border */
+            border: 4px solid #bfb8a8;
+            border-radius: 8px;
+            padding: 10px 28px;
             
             box-shadow: 
-                0 10px 30px rgba(0,0,0,0.6),
-                inset 0 2px 4px rgba(0,0,0,0.3),
-                inset 0 -2px 4px rgba(0,0,0,0.2);
+                0 8px 20px rgba(0,0,0,0.5),
+                inset 0 2px 4px rgba(0,0,0,0.2),
+                inset 0 -2px 4px rgba(0,0,0,0.15);
             
             transform-origin: top center;
-            animation: signSway 8s ease-in-out infinite;
+            animation: signSway 7s ease-in-out infinite;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
         }
 
-        /* Rust Stains from bolts */
-        .street-sign::before {
-            content: '';
+        /* Bullet Hole 1 */
+        .bullet-hole {
             position: absolute;
-            top: -5px;
-            left: 25px;
             width: 8px;
-            height: 25px;
-            background: linear-gradient(to bottom, 
-                transparent 0%,
-                rgba(139, 90, 43, 0.4) 20%,
-                rgba(139, 90, 43, 0.2) 100%
+            height: 8px;
+            background: radial-gradient(circle, 
+                #1a1a1a 0%, 
+                #2a2a2a 40%, 
+                transparent 60%
             );
             border-radius: 50%;
-            filter: blur(2px);
+            box-shadow: 
+                inset 0 1px 2px rgba(0,0,0,0.8),
+                0 0 0 1px rgba(80,80,80,0.5);
         }
 
-        /* Second Rust Stain */
-        .street-sign::after {
-            content: '';
-            position: absolute;
-            top: -5px;
-            right: 30px;
+        .bullet-hole.h1 {
+            top: 8px;
+            right: 15px;
+        }
+
+        .bullet-hole.h2 {
+            bottom: 12px;
+            left: 20px;
             width: 6px;
-            height: 20px;
+            height: 6px;
+        }
+
+        /* Small Graffiti Tag */
+        .graffiti-tag {
+            position: absolute;
+            bottom: 5px;
+            right: 8px;
+            font-family: 'Arial', sans-serif;
+            font-size: 8px;
+            font-weight: bold;
+            color: rgba(255, 50, 50, 0.7);
+            transform: rotate(-5deg);
+            text-shadow: 0 0 2px rgba(0,0,0,0.5);
+            letter-spacing: -1px;
+        }
+
+        /* Sticker Residue */
+        .sticker-residue {
+            position: absolute;
+            top: 6px;
+            left: 12px;
+            width: 12px;
+            height: 8px;
+            background: rgba(200, 180, 150, 0.3);
+            border-radius: 1px;
+            transform: rotate(3deg);
+        }
+
+        /* Rust Stain */
+        .rust-stain {
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 18px;
             background: linear-gradient(to bottom, 
                 transparent 0%,
-                rgba(120, 70, 30, 0.3) 30%,
+                rgba(139, 90, 43, 0.35) 30%,
                 rgba(100, 60, 25, 0.15) 100%
             );
             border-radius: 50%;
@@ -521,15 +572,13 @@
 
         .sign-text {
             font-family: 'Helvetica Neue', 'Arial', sans-serif;
-            font-size: 36px; /* BIGGER */
+            font-size: 28px;
             font-weight: bold;
-            /* Slightly faded/yellowed white */
-            color: #e8e4d8;
+            color: #e5e0d0;
             text-transform: uppercase;
-            letter-spacing: 3px;
-            /* Worn text shadow */
+            letter-spacing: 2px;
             text-shadow: 
-                2px 2px 4px rgba(0,0,0,0.5),
+                2px 2px 3px rgba(0,0,0,0.5),
                 -1px -1px 0 rgba(0,0,0,0.2);
             white-space: nowrap;
             position: relative;
@@ -537,29 +586,14 @@
         }
 
         .sign-text .st {
-            font-size: 28px; /* BIGGER */
-            margin-left: 6px;
+            font-size: 22px;
+            margin-left: 5px;
             opacity: 0.9;
         }
 
-        /* Scratches/Wear Overlay */
-        .sign-scratches {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                linear-gradient(45deg, transparent 40%, rgba(0,0,0,0.05) 45%, transparent 50%),
-                linear-gradient(-30deg, transparent 60%, rgba(255,255,255,0.03) 65%, transparent 70%),
-                linear-gradient(80deg, transparent 30%, rgba(0,0,0,0.04) 32%, transparent 35%);
-            pointer-events: none;
-            z-index: 2;
-        }
-
         @keyframes signSway {
-            0%, 100% { transform: rotate(-0.5deg); }
-            50% { transform: rotate(0.5deg); }
+            0%, 100% { transform: rotate(-0.3deg); }
+            50% { transform: rotate(0.3deg); }
         }
 
         /* Search Container Adjustment */
@@ -2980,14 +3014,16 @@
 
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
-            <!-- Street Sign Header - Weathered (Shop Only) -->
+            <!-- Street Sign Header - Pole Mounted (Shop Only) -->
             <div class="street-sign-container">
-                <div class="sign-chains">
-                    <div class="chain"></div>
-                    <div class="chain"></div>
-                </div>
+                <div class="sign-pole"></div>
+                <div class="sign-bracket"></div>
                 <div class="street-sign">
-                    <div class="sign-scratches"></div>
+                    <div class="rust-stain"></div>
+                    <div class="bullet-hole h1"></div>
+                    <div class="bullet-hole h2"></div>
+                    <div class="sticker-residue"></div>
+                    <span class="graffiti-tag">GSF</span>
                     <span class="sign-text">BALTIC<span class="st">ST</span></span>
                 </div>
             </div>
