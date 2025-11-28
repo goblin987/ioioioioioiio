@@ -3196,11 +3196,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         let currentStation = 0;
         const stations = [
             { name: "RADIO OFF", src: null },
-            { name: "RADIO LOS SANTOS", src: "https://ais-sa2.cdnstream1.com/2442_128.mp3" }, 
-            { name: "WEST COAST CLASSICS", src: "https://listen.181fm.com/181-old_128k.mp3" },
-            { name: "THE BEAT 102.7", src: "https://listen.181fm.com/181-beat_128k.mp3" },
-            { name: "HOT 108 JAMZ", src: "https://listen.181fm.com/181-jamz_128k.mp3" },
-            { name: "BOUNCE FM", src: "https://stream-mixtape-geo.ntslive.co.uk/mixtape2" }
+            { name: "RADIO LOS SANTOS", src: "https://listen.181fm.com/181-old_128k.mp3" }, 
+            { name: "WEST COAST CLASSICS", src: "https://listen.181fm.com/181-beat_128k.mp3" },
+            { name: "BOUNCE FM", src: "https://listen.181fm.com/181-truernb_128k.mp3" }
         ];
         // Use persistent player
         let audioPlayer = document.getElementById('global-audio-player');
@@ -3812,8 +3810,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                          if(radioViz) radioViz.classList.add('viz-active');
                     }).catch(e => {
                          console.error("Play Error", e);
-                         // DO NOT AUTO SKIP (Prevents loop of death)
-                         if(radioText) radioText.innerText = "TAP TO RETRY";
+                         // Silent Fail
                     });
                 }
             } else {
