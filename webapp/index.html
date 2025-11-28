@@ -425,94 +425,12 @@
         /* Street Sign Header - Full Scene */
         .street-sign-container {
             position: absolute;
-            top: 25px; /* Lowered to show shoes/bird better */
-            left: 20px; /* Moved right for breathing room */
-            z-index: 10000;
+            top: 25px; 
+            left: 20px; 
+            z-index: 40; /* Behind Search Bar (z-index 50) */
             pointer-events: none;
             display: flex;
             align-items: flex-start;
-        }
-
-        /* Hanging Sneakers */
-        .hanging-shoes {
-            position: absolute;
-            top: 40px;
-            left: -20px; /* Hang off the bracket/pole junction */
-            z-index: 5;
-            animation: shoeSway 5s ease-in-out infinite;
-            transform-origin: top center;
-        }
-
-        .laces-knot {
-            width: 4px;
-            height: 4px;
-            background: #ddd;
-            border-radius: 50%;
-            position: absolute;
-            top: 0;
-            left: 18px;
-        }
-
-        .laces {
-            width: 1px;
-            height: 50px;
-            background: rgba(200,200,200,0.8);
-            position: absolute;
-            top: 0;
-            left: 18px;
-            transform: rotate(-8deg);
-        }
-        
-        .laces.right {
-            transform: rotate(8deg);
-            height: 45px;
-        }
-
-        .shoe {
-            width: 26px;
-            height: 14px;
-            background: #2a2a2a;
-            position: absolute;
-            border-radius: 5px 10px 10px 5px;
-            box-shadow: 2px 5px 8px rgba(0,0,0,0.6);
-        }
-
-        .shoe::before { /* White Sole */
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: #e0e0e0;
-            border-radius: 0 0 10px 5px;
-        }
-        
-        .shoe::after { /* Laces detail */
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 6px;
-            width: 12px;
-            height: 6px;
-            border-top: 1px dashed #666;
-        }
-
-        .shoe.left {
-            left: -5px;
-            transform: rotate(85deg);
-            top: 45px;
-        }
-
-        .shoe.right {
-            left: 15px;
-            transform: rotate(95deg);
-            top: 40px;
-        }
-
-        @keyframes shoeSway {
-            0%, 100% { transform: rotate(-3deg); }
-            50% { transform: rotate(3deg); }
         }
 
         /* Vertical Metal Pole */
@@ -583,7 +501,7 @@
             
             border: 4px solid #bfb8a8;
             border-radius: 8px 8px 8px 3px; /* Bottom left bent */
-            padding: 10px 28px;
+            padding: 10px 50px; /* Longer sign */
             margin-top: 12px;
             
             box-shadow: 
@@ -3212,14 +3130,6 @@
         <div id="shop" class="section active">
             <!-- Street Sign Header - Full Scene (Shop Only) -->
             <div class="street-sign-container">
-                <!-- Hanging Sneakers -->
-                <div class="hanging-shoes">
-                    <div class="laces-knot"></div>
-                    <div class="laces"></div>
-                    <div class="laces right"></div>
-                    <div class="shoe left"></div>
-                    <div class="shoe right"></div>
-                </div>
                 <!-- Pole -->
                 <div class="sign-pole"></div>
                 <div class="sign-bracket"></div>
