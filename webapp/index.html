@@ -11,6 +11,7 @@
     <!-- assets.js removed, embedded inline -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
         @font-face {
             font-family: 'Pricedown';
@@ -421,94 +422,60 @@
             position: relative;
         }
 
-        /* Improved Police Tape Header */
-        .police-tape-container {
+        /* Graffiti Tag Header */
+        .graffiti-header {
             position: absolute;
-            top: 15px; /* Moved UP significantly */
+            top: 20px;
             left: 0;
             width: 100%;
-            height: 80px;
+            text-align: center;
             z-index: 10000;
             pointer-events: none;
-            overflow: hidden; /* Cut off edges internally to prevent scroll */
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        .tape {
-            position: absolute;
-            /* REALISTIC STRIPES + YELLOW */
-            background: #fbc531;
-            background-image: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0.6) 0%,
-                rgba(255,255,255,0.1) 40%,
-                rgba(0,0,0,0.05) 50%,
-                rgba(0,0,0,0.2) 100%
-            );
-            
-            color: #1e272e;
-            font-family: 'Helvetica Neue', 'Arial', sans-serif;
-            font-size: 24px;
-            font-weight: 900;
+        .graffiti-text {
+            font-family: 'Permanent Marker', 'Brush Script MT', cursive;
+            font-size: 52px;
+            color: #2ecc71; /* Grove Street Green */
             text-transform: uppercase;
-            letter-spacing: 4px;
-            padding: 15px 0;
-            backdrop-filter: blur(2px);
-            /* Soft Floating Shadow */
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            letter-spacing: 2px;
+            position: relative;
+            display: inline-block;
             
-            border-top: 1px solid rgba(255,255,255,0.8);
-            border-bottom: 1px solid rgba(0,0,0,0.3);
-            white-space: nowrap;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 140%;
+            /* Graffiti Outline Effect */
+            -webkit-text-stroke: 2px #000;
+            text-shadow: 
+                3px 3px 0 #000,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                0 0 20px rgba(46, 204, 113, 0.5);
             
-            /* Clean Edges */
-            clip-path: none;
+            transform: rotate(-3deg);
         }
 
-        .tape-1 {
-            transform: rotate(-3deg) translateY(-5px);
-            z-index: 2;
-            animation: sway1 6s ease-in-out infinite;
-        }
-
-        .tape-2 {
-            transform: rotate(3deg) translateY(5px);
-            z-index: 1;
-            filter: brightness(0.95);
-            animation: sway2 7s ease-in-out infinite;
-        }
-        
-        /* Realistic Plastic Shine Overlay */
-        .tape::after {
-            content: '';
+        /* Single Drip */
+        .graffiti-drip {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 40%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 100%);
-            pointer-events: none;
+            bottom: -5px;
+            right: 20px;
+            width: 4px;
+            height: 0;
+            background: #2ecc71;
+            border-radius: 0 0 2px 2px;
+            box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+            animation: drip 4s ease-in infinite;
         }
 
-        @keyframes sway1 {
-            0%, 100% { transform: rotate(-3deg) translateY(-5px); }
-            50% { transform: rotate(-4deg) translateY(-2px); }
-        }
-
-        @keyframes sway2 {
-            0%, 100% { transform: rotate(3deg) translateY(5px); }
-            50% { transform: rotate(2deg) translateY(8px); }
+        @keyframes drip {
+            0% { height: 0; opacity: 0; }
+            20% { opacity: 1; }
+            100% { height: 30px; opacity: 0; }
         }
 
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 110px !important; /* Reduced from 140px */
+            margin-top: 90px !important;
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2924,14 +2891,9 @@
 
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
-            <!-- Police Tape Header (Shop Only) -->
-            <div class="police-tape-container">
-                <div class="tape tape-1">
-                    <span>BALTIC STREET DO NOT CROSS &nbsp;&nbsp; BALTIC STREET DO NOT CROSS</span>
-                </div>
-                <div class="tape tape-2">
-                    <span>CRIME SCENE DO NOT ENTER &nbsp;&nbsp; BALTIC STREET</span>
-                </div>
+            <!-- Graffiti Tag Header (Shop Only) -->
+            <div class="graffiti-header">
+                <span class="graffiti-text">BALTIC STREET<span class="graffiti-drip"></span></span>
             </div>
 
             <!-- LSPD Search -->
