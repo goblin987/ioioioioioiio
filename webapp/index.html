@@ -391,39 +391,24 @@
         
         /* Spray Paint Header */
         .spray-header-container {
-            position: relative; /* Flows with content - Blocks nothing */
-            top: 0;
+            position: absolute;
+            top: 20px;
             width: 100%;
             text-align: center;
             z-index: 10000;
             pointer-events: none;
             mix-blend-mode: normal;
-            padding: 30px 0 40px 0;
-        }
-
-        .spray-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            transform: rotate(-2deg);
-        }
-
-        .spray-icon {
-            font-size: 36px;
-            color: #2ecc71;
-            text-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
-            animation: sprayFlicker 4s infinite reverse;
+            display: none; /* Hidden by default, controlled by JS */
         }
 
         .spray-text {
             font-family: 'Stencil', 'Impact', sans-serif;
-            font-size: 42px;
+            font-size: 48px;
             color: #2ecc71; /* Grove Green Paint */
             text-transform: uppercase;
             letter-spacing: 2px;
             margin: 0;
-            padding: 0;
+            padding: 10px;
             
             /* The "Sprayed" Effect */
             text-shadow: 
@@ -431,13 +416,14 @@
                 0 0 10px rgba(46, 204, 113, 0.5),
                 2px 2px 2px rgba(0,0,0,0.8); /* Hard Shadow */
             
+            transform: rotate(-2deg); /* Imperfect alignment */
             animation: sprayFlicker 3s infinite;
         }
 
         /* Drips */
         .drip-container {
             position: absolute;
-            top: 70%; /* Adjusted for relative height */
+            top: 50%;
             left: 50%;
             transform: translateX(-50%);
             width: 300px;
@@ -447,7 +433,7 @@
 
         .paint-drip {
             position: absolute;
-            top: 0;
+            top: 10px;
             width: 4px;
             background: #2ecc71;
             border-radius: 0 0 2px 2px;
@@ -471,11 +457,11 @@
         }
 
         /* Removed Old Headers */
-        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal { display: none; }
+        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal, .spray-wrapper, .spray-icon { display: none; }
         
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 0; /* No offset needed */
+            margin-top: 100px; /* Clear the text */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2874,11 +2860,8 @@
 
     <div class="content">
     <!-- Spray Paint Header -->
-    <div class="spray-header-container">
-        <div class="spray-wrapper">
-            <span class="spray-icon">👑</span>
-            <h1 class="spray-text" id="header-zone-text">LOS LITHUANIA</h1>
-        </div>
+    <div class="spray-header-container" id="main-header-spray">
+        <h1 class="spray-text" id="header-zone-text">LOS LITHUANIA</h1>
         <div class="drip-container">
             <div class="paint-drip d1"></div>
             <div class="paint-drip d2"></div>
@@ -3546,27 +3529,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Money Stack)
+            // Update Header Zone (Spray Paint) - Only on SHOP
+            const sprayHeader = document.getElementById('main-header-spray');
             const zoneText = document.getElementById('header-zone-text');
             
-            if(zoneText) {
-                let txt = "LOS LITHUANIA";
-                
-                if(id === 'shop') txt = "AMMU-NATION";
-                if(id === 'map') txt = "LOS SANTOS";
-                if(id === 'stats') txt = "CJ'S HOUSE";
-                
-                zoneText.innerText = txt;
-                
-                // Reset animation (Pop effect)
-                const stack = document.querySelector('.money-stack');
-                if(stack) {
-                    stack.style.transition = 'none';
-                    stack.style.transform = 'perspective(500px) rotateX(20deg) scale(0.95)';
-                    setTimeout(() => {
-                        stack.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                        stack.style.transform = 'perspective(500px) rotateX(20deg) scale(1)';
-                    }, 50);
+            if(sprayHeader) {
+                if(id === 'shop') {
+                    sprayHeader.style.display = 'block';
+                    if(zoneText) zoneText.innerText = "LOS LITHUANIA"; // Always this for Shop
+                } else {
+                    sprayHeader.style.display = 'none';
                 }
             }
         }
