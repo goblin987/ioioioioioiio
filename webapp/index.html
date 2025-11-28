@@ -422,7 +422,7 @@
             position: relative;
         }
 
-        /* Street Sign Header - Improved V3 (Textured & 3D) */
+        /* Street Sign Header - Weathered & Aged */
         .street-sign-container {
             position: absolute;
             top: 10px;
@@ -433,135 +433,138 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            perspective: 800px; /* 3D Perspective for sway */
         }
 
-        /* Realistic Chains */
+        /* Hanging Chains - Rusty */
         .sign-chains {
             display: flex;
             justify-content: space-between;
-            width: 120px;
-            height: 25px; /* Longer to hang lower */
-            margin-bottom: -2px; /* Connect to sign */
+            width: 180px;
+            height: 20px;
         }
 
         .chain {
-            width: 4px;
-            height: 100%;
-            /* Chain Link Pattern */
-            background: repeating-linear-gradient(
-                to bottom,
-                #999 0px,
-                #999 5px,  /* Silver Link */
-                transparent 5px,
-                transparent 7px /* Gap */
-            );
-            filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));
-            position: relative;
-        }
-        
-        /* Chain Hook at bottom */
-        .chain::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: -2px;
-            width: 8px;
-            height: 8px;
-            border: 2px solid #999;
-            border-radius: 50%;
+            width: 3px;
+            height: 20px;
+            background: linear-gradient(to bottom, #6b5a4a 0%, #4a3a2a 50%, #5a4a3a 100%);
+            border-radius: 1px;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
 
-        /* The Sign Itself - High Fidelity */
+        .chain:first-child {
+            transform: rotate(-2deg);
+        }
+        .chain:last-child {
+            transform: rotate(2deg);
+        }
+
+        /* The Sign Itself - WEATHERED */
         .street-sign {
-            /* Base Green + Lighting Gradient */
-            background: 
-                linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.1) 100%),
-                #0a6b3f; 
+            /* Faded Green - 20 years of sun exposure */
+            background: linear-gradient(
+                135deg,
+                #0d5c38 0%,
+                #0a5030 30%,
+                #084a2a 60%,
+                #0d5535 100%
+            );
             
-            /* Metallic Texture Overlay (Simulated with noise if no image, or URL) */
-            /* Using simple CSS noise via repeating gradient for reliability */
-            background-image: 
-                linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.1) 100%),
-                repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(0,0,0,0.05) 1px, transparent 2px),
-                linear-gradient(to bottom, #0a6b3f, #064225);
-
-            border: 3px solid #e0e0e0; /* White Reflective Border */
-            border-radius: 6px;
-            padding: 8px 25px;
+            /* Dirty/Aged White Border */
+            border: 5px solid #c8c4b8;
+            border-radius: 10px;
+            padding: 14px 35px; /* BIGGER */
             
-            /* 3D Thickness & Shadow */
-            border-bottom: 5px solid #04301b; /* Physical Bottom Edge */
             box-shadow: 
-                0 15px 30px rgba(0,0,0,0.6), /* Deep Drop Shadow */
-                inset 0 1px 0 rgba(255,255,255,0.4), /* Top Highlight */
-                inset 0 0 20px rgba(0,0,0,0.2); /* Inner Depth */
-                
+                0 10px 30px rgba(0,0,0,0.6),
+                inset 0 2px 4px rgba(0,0,0,0.3),
+                inset 0 -2px 4px rgba(0,0,0,0.2);
+            
             transform-origin: top center;
-            animation: signSway 5s ease-in-out infinite;
+            animation: signSway 8s ease-in-out infinite;
             position: relative;
             overflow: hidden;
         }
 
-        /* Reflective Sheen Animation */
+        /* Rust Stains from bolts */
         .street-sign::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -150%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                120deg,
-                transparent 30%,
-                rgba(255,255,255,0.4) 50%,
-                transparent 70%
+            top: -5px;
+            left: 25px;
+            width: 8px;
+            height: 25px;
+            background: linear-gradient(to bottom, 
+                transparent 0%,
+                rgba(139, 90, 43, 0.4) 20%,
+                rgba(139, 90, 43, 0.2) 100%
             );
-            transform: skewX(-20deg);
-            animation: shine 6s ease-in-out infinite;
+            border-radius: 50%;
+            filter: blur(2px);
         }
 
-        @keyframes shine {
-            0%, 40% { left: -150%; }
-            50% { left: 150%; } /* Flash */
-            100% { left: 150%; }
+        /* Second Rust Stain */
+        .street-sign::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            right: 30px;
+            width: 6px;
+            height: 20px;
+            background: linear-gradient(to bottom, 
+                transparent 0%,
+                rgba(120, 70, 30, 0.3) 30%,
+                rgba(100, 60, 25, 0.15) 100%
+            );
+            border-radius: 50%;
+            filter: blur(2px);
         }
 
         .sign-text {
-            font-family: 'Highway Gothic', 'Arial', sans-serif;
-            font-size: 28px;
-            font-weight: 800;
-            color: #ffffff;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-size: 36px; /* BIGGER */
+            font-weight: bold;
+            /* Slightly faded/yellowed white */
+            color: #e8e4d8;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            /* Embossed Text Shadow */
+            letter-spacing: 3px;
+            /* Worn text shadow */
             text-shadow: 
-                0px 2px 0px rgba(0,0,0,0.2),
-                0px 2px 4px rgba(0,0,0,0.4);
+                2px 2px 4px rgba(0,0,0,0.5),
+                -1px -1px 0 rgba(0,0,0,0.2);
             white-space: nowrap;
             position: relative;
             z-index: 1;
         }
 
         .sign-text .st {
-            font-size: 18px;
-            margin-left: 4px;
-            vertical-align: top;
-            margin-top: 4px;
-            display: inline-block;
+            font-size: 28px; /* BIGGER */
+            margin-left: 6px;
             opacity: 0.9;
         }
 
-        /* More Realistic Pendulum Sway */
+        /* Scratches/Wear Overlay */
+        .sign-scratches {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, transparent 40%, rgba(0,0,0,0.05) 45%, transparent 50%),
+                linear-gradient(-30deg, transparent 60%, rgba(255,255,255,0.03) 65%, transparent 70%),
+                linear-gradient(80deg, transparent 30%, rgba(0,0,0,0.04) 32%, transparent 35%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
         @keyframes signSway {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(1.5deg); }
-            75% { transform: rotate(-1.5deg); }
+            0%, 100% { transform: rotate(-0.5deg); }
+            50% { transform: rotate(0.5deg); }
         }
 
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 110px !important;
+            margin-top: 100px !important;
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2977,13 +2980,14 @@
 
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
-            <!-- Street Sign Header (Shop Only) -->
+            <!-- Street Sign Header - Weathered (Shop Only) -->
             <div class="street-sign-container">
                 <div class="sign-chains">
                     <div class="chain"></div>
                     <div class="chain"></div>
                 </div>
                 <div class="street-sign">
+                    <div class="sign-scratches"></div>
                     <span class="sign-text">BALTIC<span class="st">ST</span></span>
                 </div>
             </div>
