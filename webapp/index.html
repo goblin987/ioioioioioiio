@@ -392,13 +392,12 @@
         /* Spray Paint Header */
         .spray-header-container {
             position: absolute;
-            top: 20px;
+            top: 30px;
             width: 100%;
             text-align: center;
             z-index: 10000;
             pointer-events: none;
             mix-blend-mode: normal;
-            display: none; /* Hidden by default, controlled by JS */
         }
 
         .spray-text {
@@ -457,7 +456,7 @@
         }
 
         /* Removed Old Headers */
-        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal, .spray-wrapper, .spray-icon { display: none; }
+        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal { display: none; }
         
         /* Search Container Adjustment */
         .search-container {
@@ -2859,15 +2858,6 @@
     </div>
 
     <div class="content">
-    <!-- Spray Paint Header -->
-    <div class="spray-header-container" id="main-header-spray">
-        <h1 class="spray-text" id="header-zone-text">LOS LITHUANIA</h1>
-        <div class="drip-container">
-            <div class="paint-drip d1"></div>
-            <div class="paint-drip d2"></div>
-            <div class="paint-drip d3"></div>
-        </div>
-    </div>
         <!-- Video Intro -->
         <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99990; align-items:center; justify-content:center;">
             <div class="video-frame-overlay"></div> <!-- CINEMATIC OVERLAY -->
@@ -2881,6 +2871,16 @@
 
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
+            <!-- Spray Paint Header (Shop Only) -->
+            <div class="spray-header-container">
+                <h1 class="spray-text" id="header-zone-text">BALTIC STREET</h1>
+                <div class="drip-container">
+                    <div class="paint-drip d1"></div>
+                    <div class="paint-drip d2"></div>
+                    <div class="paint-drip d3"></div>
+                </div>
+            </div>
+
             <!-- LSPD Search -->
             <div class="search-container">
                 <span class="search-label">LSPD DATABASE > SEARCH:</span>
@@ -3528,19 +3528,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
-            
-            // Update Header Zone (Spray Paint) - Only on SHOP
-            const sprayHeader = document.getElementById('main-header-spray');
-            const zoneText = document.getElementById('header-zone-text');
-            
-            if(sprayHeader) {
-                if(id === 'shop') {
-                    sprayHeader.style.display = 'block';
-                    if(zoneText) zoneText.innerText = "LOS LITHUANIA"; // Always this for Shop
-                } else {
-                    sprayHeader.style.display = 'none';
-                }
-            }
         }
 
         async function loadProducts() {
