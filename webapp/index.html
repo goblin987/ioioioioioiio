@@ -3779,46 +3779,48 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const radioViz = document.getElementById('radio-viz');
             if(!audioPlayer) return;
 
-            // Play Static/Tuning Sound Effect
+            // Play Static Sound
             if(window.sfx && sfx.playTone) sfx.playTone(100, 'sawtooth', 0.1, 0.05); 
 
             if(!forceStart) {
                 currentStation = (currentStation + 1) % stations.length;
             } else {
-                currentStation = 1; // Default to RLS
+                currentStation = 1;
             }
 
             const station = stations[currentStation];
             const radioText = document.getElementById('radio-display');
             
-            // Update UI - INSTANT
+            // Update UI
             if(radioText) {
                 radioText.innerText = station.name;
-                radioText.style.color = "var(--gta-green)"; 
+                radioText.style.color = "#fff"; 
+                setTimeout(() => radioText.style.color = "var(--gta-green)", 300);
             }
 
+            // Stop Visualizer
+            if(radioViz) radioViz.classList.remove('viz-active');
+
             if(station.src) {
-                // Optimistic UI: Start Viz immediately
-                if(radioViz) radioViz.classList.add('viz-active');
-                
-                // Player Logic
                 audioPlayer.src = station.src;
                 audioPlayer.volume = 0.5;
                 
                 const p = audioPlayer.play();
                 if(p !== undefined) {
-                    p.catch(e => {
-                         console.error("Stream Error - Skipping", e);
-                         // Silent Skip
-                         toggleRadio();
+                    p.then(() => {
+                         // Success
+                         if(radioViz) radioViz.classList.add('viz-active');
+                    }).catch(e => {
+                         console.error("Play Error", e);
+                         // DO NOT AUTO SKIP (Prevents loop of death)
+                         if(radioText) radioText.innerText = "TAP TO RETRY";
                     });
                 }
             } else {
                 // RADIO OFF
                 audioPlayer.pause();
-                audioPlayer.src = ""; // Detach stream
+                audioPlayer.src = "";
                 if(radioText) radioText.innerText = "RADIO OFF";
-                if(radioViz) radioViz.classList.remove('viz-active');
             }
         }
 
