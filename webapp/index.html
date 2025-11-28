@@ -422,67 +422,99 @@
             position: relative;
         }
 
-        /* Street Sign Header */
+        /* Street Sign Header - Improved */
         .street-sign-container {
             position: absolute;
-            top: 10px;
-            left: 20px;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 10000;
             pointer-events: none;
             display: flex;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
         }
 
-        /* Metal Pole */
-        .sign-pole {
-            width: 8px;
-            height: 90px;
-            background: linear-gradient(to right, #5a5a5a 0%, #8a8a8a 50%, #5a5a5a 100%);
-            border-radius: 2px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+        /* Hanging Chains */
+        .sign-chains {
+            display: flex;
+            justify-content: space-between;
+            width: 120px;
+            height: 15px;
         }
 
-        /* Bracket connecting pole to sign */
-        .sign-bracket {
-            width: 25px;
-            height: 8px;
-            background: linear-gradient(to bottom, #7a7a7a 0%, #5a5a5a 100%);
-            margin-top: 15px;
-            box-shadow: 0 2px 3px rgba(0,0,0,0.3);
+        .chain {
+            width: 2px;
+            height: 15px;
+            background: linear-gradient(to bottom, #888 0%, #555 50%, #888 100%);
+            border-radius: 1px;
         }
 
         /* The Sign Itself */
         .street-sign {
-            background: #0a5f38; /* Official US Street Sign Green */
-            border: 3px solid #f0f0f0; /* White Border */
-            border-radius: 6px;
-            padding: 8px 20px;
-            margin-top: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-            transform-origin: left center;
-            animation: signSway 5s ease-in-out infinite;
+            background: #0a6b3f; /* Official US Street Sign Green */
+            border: 4px solid #e8e8e8; /* White Border */
+            border-radius: 8px;
+            padding: 10px 25px;
+            box-shadow: 
+                0 8px 25px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            transform-origin: top center;
+            animation: signSway 6s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Reflective Shine Effect */
+        .street-sign::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255,255,255,0.15) 50%,
+                transparent 100%
+            );
+            animation: shine 4s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0%, 100% { left: -100%; }
+            50% { left: 150%; }
         }
 
         .sign-text {
-            font-family: 'Highway Gothic', 'Arial Narrow', 'Arial', sans-serif;
-            font-size: 28px;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-size: 26px;
             font-weight: bold;
             color: #ffffff;
             text-transform: uppercase;
-            letter-spacing: 3px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
             white-space: nowrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sign-text .st {
+            font-size: 20px;
+            margin-left: 5px;
+            opacity: 0.95;
         }
 
         @keyframes signSway {
             0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(1deg); }
-            75% { transform: rotate(-1deg); }
+            25% { transform: rotate(0.5deg); }
+            75% { transform: rotate(-0.5deg); }
         }
 
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 110px !important;
+            margin-top: 100px !important;
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2900,10 +2932,12 @@
         <div id="shop" class="section active">
             <!-- Street Sign Header (Shop Only) -->
             <div class="street-sign-container">
-                <div class="sign-pole"></div>
-                <div class="sign-bracket"></div>
+                <div class="sign-chains">
+                    <div class="chain"></div>
+                    <div class="chain"></div>
+                </div>
                 <div class="street-sign">
-                    <span class="sign-text">BALTIC ST</span>
+                    <span class="sign-text">BALTIC<span class="st">ST</span></span>
                 </div>
             </div>
 
