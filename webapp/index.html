@@ -359,9 +359,34 @@
             border-color: var(--gta-green);
         }
         
-        .radio-icon-small {
-            font-size: 14px;
-            animation: pulse 2s infinite;
+        .radio-visualizer {
+            display: flex;
+            align-items: flex-end;
+            height: 14px;
+            gap: 2px;
+            margin-right: 8px;
+        }
+        
+        .viz-bar {
+            width: 3px;
+            background: var(--gta-green);
+            height: 20%;
+            transition: height 0.2s;
+        }
+        
+        /* Animate only when active */
+        .radio-visualizer.viz-active .viz-bar {
+            animation: vizEq 0.5s infinite ease-in-out;
+        }
+        
+        .viz-bar.b1 { animation-duration: 0.4s; }
+        .viz-bar.b2 { animation-duration: 0.6s; }
+        .viz-bar.b3 { animation-duration: 0.5s; }
+        .viz-bar.b4 { animation-duration: 0.7s; }
+        
+        @keyframes vizEq {
+            0%, 100% { height: 20%; opacity: 0.5; }
+            50% { height: 100%; opacity: 1; }
         }
         
         .radio-text-scroll {
@@ -2747,7 +2772,12 @@
     <!-- Audio Elements -->
     <!-- Minimal Radio Pill -->
     <div class="radio-pill" onclick="toggleRadio()">
-        <span class="radio-icon-small">🔊</span>
+        <div class="radio-visualizer">
+            <div class="viz-bar b1"></div>
+            <div class="viz-bar b2"></div>
+            <div class="viz-bar b3"></div>
+            <div class="viz-bar b4"></div>
+        </div>
         <span class="radio-text-scroll" id="radio-display">RADIO OFF</span>
     </div>
 
@@ -3748,14 +3778,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Radio - Persistent Player Logic
         function toggleRadio(forceStart = false) {
             audioPlayer = document.getElementById('global-audio-player');
+            const radioViz = document.getElementById('radio-viz');
             if(!audioPlayer) return;
 
+            // Play Static/Tuning Sound Effect
+            if(window.sfx && sfx.playTone) sfx.playTone(100, 'sawtooth', 0.1, 0.05); 
+
             if(!forceStart) {
-                // Move to next station
                 currentStation = (currentStation + 1) % stations.length;
             } else {
-                // Reset to first station
-                currentStation = 1;
+                currentStation = 1; // Default to RLS
             }
 
             const station = stations[currentStation];
@@ -3767,6 +3799,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 radioText.style.color = "#fff"; 
                 setTimeout(() => radioText.style.color = "var(--gta-green)", 300);
             }
+
+            // Stop Visualizer
+            if(radioViz) radioViz.classList.remove('viz-active');
 
             // Handle Logic
             if(station.src) {
@@ -3784,6 +3819,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                              radioText.innerText = station.name;
                              radioText.style.color = "var(--gta-green)";
                          }
+                         // Start Visualizer
+                         if(radioViz) radioViz.classList.add('viz-active');
                     }).catch(e => {
                          console.error("Play Error", e);
                          if(radioText) {
