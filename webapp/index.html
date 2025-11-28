@@ -439,28 +439,48 @@
         .tape {
             position: absolute;
             /* REALISTIC STRIPES + YELLOW */
-            background: #f1c40f; /* Base */
-            /* Subtle plastic texture */
+            background: #f1c40f;
             background-image: 
-                linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.05) 75%, transparent 75%, transparent);
-            background-size: 40px 40px;
+                repeating-linear-gradient(
+                    45deg,
+                    #f1c40f,
+                    #f1c40f 30px,
+                    #111 30px,
+                    #111 50px /* Black stripes */
+                );
+            /* Dirty Overlay */
+            background-blend-mode: overlay;
             
-            color: #000;
+            color: #f1c40f; /* Yellow Text on Black Stripes? No, Black text on yellow */
+            /* Wait, standard police tape is Yellow background with Black Text. */
+            
+            /* Let's do Standard: Yellow BG, Black Text. No stripes behind text usually. */
+            /* But "Crime Scene" tape often has stripes on edges or is solid yellow. */
+            /* Let's do Solid Yellow with Grunge. */
+            
+            background: #f1c40f url('https://www.transparenttextures.com/patterns/concrete-wall.png');
+            
+            color: #1a1a1a;
             font-family: 'Arial Black', 'Impact', sans-serif;
-            font-size: 26px;
+            font-size: 28px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: -1px; /* Tight like real tape */
+            letter-spacing: -1px;
             padding: 12px 0;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            border-top: 1px solid rgba(255,255,255,0.4);
-            border-bottom: 1px solid rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border-top: 1px solid rgba(255,255,255,0.3);
+            border-bottom: 1px solid rgba(0,0,0,0.3);
             white-space: nowrap;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 140%; /* Extra wide */
-            text-shadow: none; 
+            width: 140%;
+            
+            /* TORN EDGES (Jagged Polygon) */
+            clip-path: polygon(
+                0% 10%, 5% 0%, 95% 0%, 100% 10%, 
+                100% 90%, 95% 100%, 5% 100%, 0% 90%
+            );
         }
 
         .tape-1 {
@@ -3447,9 +3467,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // 4. Transition
                 log("Waiting for audio end...");
                 audioFx.onended = performTransition;
+                
+                // Fallback in case onended doesn't fire (browser policy) or file duration issues
                 setTimeout(() => {
-                    if(document.getElementById('welcome-screen')) performTransition();
-                }, 2000);
+                    // Only trigger if we haven't transitioned yet (Intro screen still visible)
+                    const intro = document.getElementById('intro-screen');
+                    if(intro && intro.style.opacity !== '0') {
+                         performTransition();
+                    }
+                }, 6000); // 6s (Clip is ~4.5s)
 
             } catch (err) {
                 log("Start Crash: " + err);
