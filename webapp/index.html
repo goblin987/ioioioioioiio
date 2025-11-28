@@ -88,6 +88,7 @@
 
         /* App Header (Minimal Authentic) */
         .app-header {
+            display: none !important; /* Hidden to use Custom Headers */
             background: #000;
             border-bottom: 2px solid #333;
             padding: 0;
@@ -710,35 +711,23 @@
             70% { transform: rotate(-0.5deg); }
         }
 
-        /* Search Container Adjustment */
-        .search-container {
-            margin-top: 100px !important;
-            margin-bottom: 20px;
-            background: rgba(0,0,0,0.85);
-            border: 1px solid var(--gta-green);
-            padding: 12px;
-            position: relative;
-            z-index: 50;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
+        /* Search Container Adjustment - Merged into Main Definition */
+        
         /* Removed Old Headers */
         .hood-header, .street-sign-header, .radio-faceplate-header, .spray-header, .tape-header-v3, .tape-header, .tape-strip, .tape-text, .wanted-header { display: none; }
         .header-title { display: none; }
 
         /* Search Bar (LSPD Terminal - Minimal) */
         .search-container {
-            margin-top: 80px; /* Override for Tape Header */
-            margin-bottom: 30px; /* Space for buttons */
+            margin-top: 100px; /* Fixed Gap for Street Sign Pole (105px + 25px = 130px end) - overlap desired? No, pole ends at 130. Search at 100 means 30px overlap. */
+            /* Wait, if pole is 130px long total (top 25 + height 105), and search starts at 100, the pole goes BEHIND search for 30px. This is good. */
+            margin-bottom: 30px; 
             border: 1px solid var(--gta-green);
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9); /* Darker bg to hide pole */
             padding: 10px;
             display: flex;
             align-items: center;
-            box-shadow: 0 0 10px rgba(63, 165, 53, 0.1);
+            box-shadow: 0 0 15px rgba(63, 165, 53, 0.2);
             position: relative;
             border-radius: 4px;
             z-index: 60; /* Higher than pole (40) */
