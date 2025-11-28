@@ -414,88 +414,80 @@
             z-index: 100;
         }
         
-        /* Photorealistic Police Tape Header */
+        /* Police Tape Header */
         .police-tape-container {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120%;
+            height: 100px;
+            z-index: 10000;
+            pointer-events: none;
+            overflow: visible;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tape {
+            position: absolute;
+            background: #f1c40f; /* Safety Yellow */
+            color: #1a1a1a; /* Black Text */
+            font-family: 'Impact', 'Oswald', sans-serif;
+            font-size: 22px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 8px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border-top: 2px solid rgba(255,255,255,0.3);
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+            white-space: nowrap;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 120%;
+            text-shadow: 0px 1px 0px rgba(255,255,255,0.2);
+        }
+
+        .tape-1 {
+            transform: rotate(-5deg) translateY(-10px);
+            z-index: 2;
+            animation: sway1 4s ease-in-out infinite;
+        }
+
+        .tape-2 {
+            transform: rotate(8deg) translateY(10px);
+            z-index: 1;
+            background: #f39c12;
+            animation: sway2 5s ease-in-out infinite;
+        }
+        
+        .tape::after {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 140px;
-            overflow: hidden;
-            z-index: 10000;
+            height: 50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
             pointer-events: none;
-            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
         }
 
-        .police-tape {
-            position: absolute;
-            width: 150%;
-            height: 48px;
-            left: -25%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            
-            /* Photorealistic Plastic Texture */
-            background-color: #eebb00;
-            background-image: 
-                linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.1) 100%),
-                repeating-linear-gradient(90deg, transparent 0, transparent 50px, rgba(0,0,0,0.05) 52px, transparent 54px); /* Wrinkles */
-                
-            border-top: 1px solid rgba(255,255,255,0.4);
-            border-bottom: 1px solid rgba(0,0,0,0.3);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-
-            font-family: 'Arial Black', sans-serif;
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            color: #1a1a1a;
-            text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+        @keyframes sway1 {
+            0%, 100% { transform: rotate(-5deg) translateY(-10px); }
+            50% { transform: rotate(-7deg) translateY(-5px); }
         }
 
-        /* Tape 1 - Top Left to Bottom Right */
-        .tape-1 {
-            top: 20px;
-            transform: rotate(-6deg);
-            animation: tapeSway1 4s ease-in-out infinite alternate;
+        @keyframes sway2 {
+            0%, 100% { transform: rotate(8deg) translateY(10px); }
+            50% { transform: rotate(6deg) translateY(15px); }
         }
 
-        /* Tape 2 - Top Right to Bottom Left */
-        .tape-2 {
-            top: 60px;
-            transform: rotate(4deg);
-            animation: tapeSway2 5s ease-in-out infinite alternate;
-        }
-
-        .tape-text {
-            white-space: nowrap;
-            display: flex;
-            gap: 100px;
-        }
-
-        .tape-text span {
-            display: inline-block;
-            min-width: 250px;
-            text-align: center;
-        }
-
-        @keyframes tapeSway1 {
-            0% { transform: rotate(-6deg) translateY(0); }
-            100% { transform: rotate(-5deg) translateY(5px); }
-        }
-
-        @keyframes tapeSway2 {
-            0% { transform: rotate(4deg) translateY(0); }
-            100% { transform: rotate(3deg) translateY(-5px); }
-        }
-
-        /* Removed Old Headers */
-        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal, .spray-header-container, .spray-text, .drip-container, .paint-drip { display: none; }
-        
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 130px; /* Clear the police tapes */
+            margin-top: 140px !important;
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -1298,7 +1290,7 @@
 
         .menu-header {
             font-family: 'Diploma', 'Old English Text MT', 'UnifrakturMaguntia', cursive;
-            font-size: 40px; /* Authentic Size */
+            font-size: 70px;
             color: #fff;
             text-shadow: 3px 3px 0 #000;
             position: absolute;
@@ -1321,7 +1313,7 @@
 
         .start-btn {
             font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: 24px; /* Reduced from 36px for authenticity */
+            font-size: 36px;
             color: #a0a0a0; /* Silver */
             background: none;
             border: none;
@@ -2913,23 +2905,11 @@
         <div id="shop" class="section active">
             <!-- Police Tape Header (Shop Only) -->
             <div class="police-tape-container">
-                <div class="police-tape tape-1">
-                    <div class="tape-text">
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                    </div>
+                <div class="tape tape-1">
+                    <span>BALTIC STREET DO NOT CROSS &nbsp;&nbsp; BALTIC STREET DO NOT CROSS</span>
                 </div>
-                <div class="police-tape tape-2">
-                    <div class="tape-text">
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                        <span>⚠ BALTIC STREET ⚠</span>
-                    </div>
+                <div class="tape tape-2">
+                    <span>CRIME SCENE DO NOT ENTER &nbsp;&nbsp; BALTIC STREET</span>
                 </div>
             </div>
 
@@ -3395,7 +3375,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // 1. Init Global Player (Persistent & Visible to DOM)
             audioPlayer = document.getElementById('global-audio-player');
-            /* 
             if(audioPlayer) {
                 const station = stations[1]; 
                 audioPlayer.src = station.src;
@@ -3408,8 +3387,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     radioPromise.then(() => console.log("Radio Playing Silently"))
                                 .catch(e => console.error("Radio Start Fail", e));
                 }
-            } 
-            */
+            }
             
             // Init Audio Locally
             const audioFx = new Audio('/webapp/ah_shit.mp3');
@@ -3469,15 +3447,34 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function performTransition() {
             log("performTransition called");
             try {
-                // START RADIO FRESH (Wait for Intro to End)
-                toggleRadio(true);
+                // Fade In Radio (It's already playing silenty!)
+                if(audioPlayer) {
+                    // Ensure it's actually playing (Resume if paused by browser)
+                    if(audioPlayer.paused) {
+                        audioPlayer.play().catch(e => console.error("Resume fail", e));
+                    }
 
-                const radioText = document.getElementById('radio-display');
-                if(radioText && stations[1]) {
-                    radioText.innerText = stations[1].name;
-                    radioText.style.color = "var(--gta-green)";
+                    // Ensure volume fade starts from low
+                    let vol = 0.01;
+                    const fade = setInterval(() => {
+                        vol += 0.05;
+                        if(vol >= 0.5) {
+                            vol = 0.5;
+                            clearInterval(fade);
+                        }
+                        // Only touch volume
+                        if(audioPlayer) audioPlayer.volume = vol;
+                    }, 200);
+
+                    const radioText = document.getElementById('radio-display');
+                    if(radioText) {
+                        radioText.innerText = stations[1].name;
+                        radioText.style.color = "var(--gta-green)";
+                    }
+                } else {
+                    // If for some reason it's missing, try to start it
+                    toggleRadio(true);
                 }
-                
                 log("Radio toggled");
 
                 // 1. Switch Content (Behind the Smoke Curtain)
@@ -3486,7 +3483,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
                 // DIRECT TO SHOP (No Emoji)
                 showSection('shop');
-                if(window.charSystem) charSystem.show('cj', "WELCOME TO THE SHOP!");
+                charSystem.show('cj', "WELCOME TO THE SHOP!");
                 log("Switched to Shop");
 
                 // 2. Trigger Wipe OUT (Reveal)
