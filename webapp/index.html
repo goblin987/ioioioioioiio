@@ -389,124 +389,78 @@
             z-index: 100;
         }
         
-        /* Money Stack Header */
-        .money-stack-container {
-            position: absolute; /* Scrolls with content */
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+        /* Spray Paint Header */
+        .spray-header-container {
+            position: absolute;
+            top: 30px;
+            width: 100%;
+            text-align: center;
             z-index: 10000;
             pointer-events: none;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6));
+            mix-blend-mode: normal;
         }
 
-        .money-stack {
-            position: relative;
-            width: 280px;
-            height: 70px; /* Thickness of stack */
-            background: #e8f5e9; /* Paper White/Green */
-            border-radius: 4px;
-            transform: perspective(500px) rotateX(20deg); /* 3D Tilt */
-            box-shadow: 
-                inset 0 -5px 10px rgba(0,0,0,0.1),
-                0 5px 0 #c8e6c9, /* 3D Sides */
-                0 10px 0 #a5d6a7,
-                0 15px 0 #81c784, /* Deep stack */
-                0 20px 20px rgba(0,0,0,0.5);
+        .spray-text {
+            font-family: 'Stencil', 'Impact', sans-serif;
+            font-size: 48px;
+            color: #2ecc71; /* Grove Green Paint */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            padding: 10px;
+            
+            /* The "Sprayed" Effect */
+            text-shadow: 
+                0 0 5px rgba(46, 204, 113, 0.8), /* Glow */
+                0 0 10px rgba(46, 204, 113, 0.5),
+                2px 2px 2px rgba(0,0,0,0.8); /* Hard Shadow */
+            
+            transform: rotate(-2deg); /* Imperfect alignment */
+            animation: sprayFlicker 3s infinite;
         }
 
-        /* Texture of stacked bills */
-        .bill-edges {
+        /* Drips */
+        .drip-container {
             position: absolute;
-            top: 0; left: -5px; right: -5px; bottom: -15px;
-            background: repeating-linear-gradient(
-                to bottom,
-                #e8f5e9 0px,
-                #e8f5e9 2px,
-                #c8e6c9 3px,
-                #c8e6c9 4px
-            );
-            z-index: -1;
-            border-radius: 4px;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 50px;
+            pointer-events: none;
         }
 
-        /* Top Face Detail */
-        .top-bill {
+        .paint-drip {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                radial-gradient(circle at center, transparent 40%, #a5d6a7 100%),
-                repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px);
-            border: 6px solid #81c784; /* Bill Border */
-            border-radius: 4px;
-            box-sizing: border-box;
-            overflow: hidden;
+            top: 10px;
+            width: 4px;
+            background: #2ecc71;
+            border-radius: 0 0 2px 2px;
+            opacity: 0.8;
+            box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+            animation: dripDown 4s infinite ease-in;
+        }
+        .d1 { left: 80px; height: 20px; animation-delay: 0s; }
+        .d2 { left: 160px; height: 35px; animation-delay: 1.5s; }
+        .d3 { left: 220px; height: 15px; animation-delay: 0.8s; }
+
+        @keyframes sprayFlicker {
+            0%, 100% { opacity: 1; filter: blur(0px); }
+            50% { opacity: 0.9; filter: blur(0.5px); } /* "Wet" breathing */
         }
 
-        .franklin-circle {
-            position: absolute;
-            left: 20px; top: 50%; transform: translateY(-50%);
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            border: 2px solid #4caf50;
-            background: rgba(76, 175, 80, 0.1);
-        }
-
-        .corner-num {
-            position: absolute;
-            top: 5px; right: 10px;
-            font-family: 'Courier New', serif;
-            font-weight: bold;
-            color: #2e7d32;
-            font-size: 14px;
-        }
-        .corner-num.bottom-right { top: auto; bottom: 5px; right: 10px; transform: rotate(180deg); }
-
-        /* The Purple Band */
-        .money-band {
-            position: absolute;
-            top: -5px; bottom: -5px;
-            left: 60px; right: 60px; /* Center strip */
-            background: #673ab7; /* Ballas Purple */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-top: 1px solid #9575cd;
-            border-bottom: 1px solid #4527a0;
-            /* Texture */
-            background-image: linear-gradient(to right, rgba(0,0,0,0.2) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.2) 100%);
-        }
-
-        .band-text {
-            color: #fff;
-            font-family: 'Pricedown', sans-serif;
-            font-size: 28px;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 0 #000;
-            white-space: nowrap;
-        }
-        
-        .band-seal {
-            position: absolute;
-            right: -15px;
-            width: 30px; height: 30px;
-            background: #ffd700; /* Gold Seal */
-            border-radius: 50%;
-            display: flex; 
-            align-items: center; justify-content: center;
-            font-weight: bold; color: #b8860b;
-            font-size: 10px;
-            border: 1px dashed #b8860b;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        @keyframes dripDown {
+            0% { height: 0; opacity: 0; }
+            20% { opacity: 1; }
+            100% { height: 40px; opacity: 0; }
         }
 
         /* Removed Old Headers */
-        .street-sign-assembly, .street-sign-sticker, .sticker-header-container { display: none; }
+        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal { display: none; }
         
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 110px; /* Clear the Money Stack */
+            margin-top: 100px; /* Clear the text */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2904,24 +2858,13 @@
     </div>
 
     <div class="content">
-    <!-- Money Stack Header (Scrollable) -->
-    <div class="money-stack-container">
-        <div class="money-stack">
-            <!-- The paper layers texture (Side of stack) -->
-            <div class="bill-edges"></div>
-            
-            <!-- The Top Bill Face -->
-            <div class="top-bill">
-                <div class="franklin-circle"></div>
-                <div class="corner-num">100</div>
-                <div class="corner-num bottom-right">100</div>
-            </div>
-
-            <!-- The Purple Band -->
-            <div class="money-band">
-                <span class="band-text" id="header-zone-text">LOS LITHUANIA</span>
-                <div class="band-seal">$$</div>
-            </div>
+    <!-- Spray Paint Header -->
+    <div class="spray-header-container">
+        <h1 class="spray-text" id="header-zone-text">LOS LITHUANIA</h1>
+        <div class="drip-container">
+            <div class="paint-drip d1"></div>
+            <div class="paint-drip d2"></div>
+            <div class="paint-drip d3"></div>
         </div>
     </div>
         <!-- Video Intro -->
