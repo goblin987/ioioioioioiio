@@ -439,36 +439,27 @@
         .tape {
             position: absolute;
             /* REALISTIC STRIPES + YELLOW */
-            background: #f1c40f;
-            background-image: 
-                repeating-linear-gradient(
-                    45deg,
-                    #f1c40f,
-                    #f1c40f 30px,
-                    #111 30px,
-                    #111 50px /* Black stripes */
-                );
-            /* Dirty Overlay */
-            background-blend-mode: overlay;
+            background: #fbc531;
+            background-image: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0.6) 0%,
+                rgba(255,255,255,0.1) 40%,
+                rgba(0,0,0,0.05) 50%,
+                rgba(0,0,0,0.2) 100%
+            );
             
-            color: #f1c40f; /* Yellow Text on Black Stripes? No, Black text on yellow */
-            /* Wait, standard police tape is Yellow background with Black Text. */
-            
-            /* Let's do Standard: Yellow BG, Black Text. No stripes behind text usually. */
-            /* But "Crime Scene" tape often has stripes on edges or is solid yellow. */
-            /* Let's do Solid Yellow with Grunge. */
-            
-            background: #f1c40f url('https://www.transparenttextures.com/patterns/concrete-wall.png');
-            
-            color: #1a1a1a;
-            font-family: 'Arial Black', 'Impact', sans-serif;
-            font-size: 28px;
+            color: #1e272e;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-size: 24px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: -1px;
-            padding: 12px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            border-top: 1px solid rgba(255,255,255,0.3);
+            letter-spacing: 4px;
+            padding: 15px 0;
+            backdrop-filter: blur(2px);
+            /* Soft Floating Shadow */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            
+            border-top: 1px solid rgba(255,255,255,0.8);
             border-bottom: 1px solid rgba(0,0,0,0.3);
             white-space: nowrap;
             display: flex;
@@ -476,11 +467,8 @@
             align-items: center;
             width: 140%;
             
-            /* TORN EDGES (Jagged Polygon) */
-            clip-path: polygon(
-                0% 10%, 5% 0%, 95% 0%, 100% 10%, 
-                100% 90%, 95% 100%, 5% 100%, 0% 90%
-            );
+            /* Clean Edges */
+            clip-path: none;
         }
 
         .tape-1 {
