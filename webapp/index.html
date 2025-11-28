@@ -1298,7 +1298,7 @@
 
         .menu-header {
             font-family: 'Diploma', 'Old English Text MT', 'UnifrakturMaguntia', cursive;
-            font-size: 70px;
+            font-size: 40px; /* Authentic Size */
             color: #fff;
             text-shadow: 3px 3px 0 #000;
             position: absolute;
@@ -1321,7 +1321,7 @@
 
         .start-btn {
             font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: 36px;
+            font-size: 24px; /* Reduced from 36px for authenticity */
             color: #a0a0a0; /* Silver */
             background: none;
             border: none;
@@ -3472,26 +3472,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // START RADIO FRESH (Wait for Intro to End)
                 toggleRadio(true);
 
-                /* Fade Logic Removed - We want instant start after intro */
-                /*
-                if(audioPlayer) {
-                    // Ensure it's actually playing (Resume if paused by browser)
-                    if(audioPlayer.paused) {
-                        audioPlayer.play().catch(e => console.error("Resume fail", e));
-                    }
-                    // ...
-                } 
-                */
-
-                    const radioText = document.getElementById('radio-display');
-                    if(radioText) {
-                        radioText.innerText = stations[1].name;
-                        radioText.style.color = "var(--gta-green)";
-                    }
-                } else {
-                    // If for some reason it's missing, try to start it
-                    toggleRadio(true);
+                const radioText = document.getElementById('radio-display');
+                if(radioText && stations[1]) {
+                    radioText.innerText = stations[1].name;
+                    radioText.style.color = "var(--gta-green)";
                 }
+                
                 log("Radio toggled");
 
                 // 1. Switch Content (Behind the Smoke Curtain)
@@ -3500,7 +3486,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
                 // DIRECT TO SHOP (No Emoji)
                 showSection('shop');
-                charSystem.show('cj', "WELCOME TO THE SHOP!");
+                if(window.charSystem) charSystem.show('cj', "WELCOME TO THE SHOP!");
                 log("Switched to Shop");
 
                 // 2. Trigger Wipe OUT (Reveal)
