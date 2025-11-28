@@ -391,23 +391,39 @@
         
         /* Spray Paint Header */
         .spray-header-container {
-            position: absolute;
-            top: 30px;
+            position: relative; /* Flows with content - Blocks nothing */
+            top: 0;
             width: 100%;
             text-align: center;
             z-index: 10000;
             pointer-events: none;
             mix-blend-mode: normal;
+            padding: 30px 0 40px 0;
+        }
+
+        .spray-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            transform: rotate(-2deg);
+        }
+
+        .spray-icon {
+            font-size: 36px;
+            color: #2ecc71;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+            animation: sprayFlicker 4s infinite reverse;
         }
 
         .spray-text {
             font-family: 'Stencil', 'Impact', sans-serif;
-            font-size: 48px;
+            font-size: 42px;
             color: #2ecc71; /* Grove Green Paint */
             text-transform: uppercase;
             letter-spacing: 2px;
             margin: 0;
-            padding: 10px;
+            padding: 0;
             
             /* The "Sprayed" Effect */
             text-shadow: 
@@ -415,14 +431,13 @@
                 0 0 10px rgba(46, 204, 113, 0.5),
                 2px 2px 2px rgba(0,0,0,0.8); /* Hard Shadow */
             
-            transform: rotate(-2deg); /* Imperfect alignment */
             animation: sprayFlicker 3s infinite;
         }
 
         /* Drips */
         .drip-container {
             position: absolute;
-            top: 50%;
+            top: 70%; /* Adjusted for relative height */
             left: 50%;
             transform: translateX(-50%);
             width: 300px;
@@ -432,7 +447,7 @@
 
         .paint-drip {
             position: absolute;
-            top: 10px;
+            top: 0;
             width: 4px;
             background: #2ecc71;
             border-radius: 0 0 2px 2px;
@@ -460,7 +475,7 @@
         
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 100px; /* Clear the text */
+            margin-top: 0; /* No offset needed */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2860,7 +2875,10 @@
     <div class="content">
     <!-- Spray Paint Header -->
     <div class="spray-header-container">
-        <h1 class="spray-text" id="header-zone-text">LOS LITHUANIA</h1>
+        <div class="spray-wrapper">
+            <span class="spray-icon">👑</span>
+            <h1 class="spray-text" id="header-zone-text">LOS LITHUANIA</h1>
+        </div>
         <div class="drip-container">
             <div class="paint-drip d1"></div>
             <div class="paint-drip d2"></div>
