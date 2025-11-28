@@ -414,79 +414,95 @@
             z-index: 100;
         }
         
-        /* Spray Paint Header */
-        .spray-header-container {
+        /* Police Tape Header - Crossing Tapes */
+        .police-tape-container {
             position: absolute;
-            top: 30px;
+            top: 0;
+            left: 0;
             width: 100%;
-            text-align: center;
+            height: 120px;
+            overflow: hidden;
             z-index: 10000;
             pointer-events: none;
-            mix-blend-mode: normal;
         }
 
-        .spray-text {
-            font-family: 'Stencil', 'Impact', sans-serif;
-            font-size: 36px; /* Reduced size to fit */
-            color: #2ecc71; /* Grove Green Paint */
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin: 0;
-            padding: 5px;
-            white-space: nowrap; /* Force single line */
-            
-            /* The "Sprayed" Effect */
-            text-shadow: 
-                0 0 5px rgba(46, 204, 113, 0.8), /* Glow */
-                0 0 10px rgba(46, 204, 113, 0.5),
-                2px 2px 2px rgba(0,0,0,0.8); /* Hard Shadow */
-            
-            transform: rotate(-2deg); /* Imperfect alignment */
-            animation: sprayFlicker 3s infinite;
-        }
-
-        /* Drips */
-        .drip-container {
+        .police-tape {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
+            width: 150%;
             height: 50px;
-            pointer-events: none;
+            left: -25%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #000;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+            box-shadow: 
+                0 2px 8px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                inset 0 -1px 0 rgba(0,0,0,0.3);
         }
 
-        .paint-drip {
-            position: absolute;
-            top: 10px;
-            width: 4px;
-            background: #2ecc71;
-            border-radius: 0 0 2px 2px;
-            opacity: 0.8;
-            box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
-            animation: dripDown 4s infinite ease-in;
-        }
-        .d1 { left: 80px; height: 20px; animation-delay: 0s; }
-        .d2 { left: 160px; height: 35px; animation-delay: 1.5s; }
-        .d3 { left: 220px; height: 15px; animation-delay: 0.8s; }
-
-        @keyframes sprayFlicker {
-            0%, 100% { opacity: 1; filter: blur(0px); }
-            50% { opacity: 0.9; filter: blur(0.5px); } /* "Wet" breathing */
+        /* Tape 1 - Top Left to Bottom Right */
+        .tape-1 {
+            top: 20px;
+            transform: rotate(-8deg);
+            background: repeating-linear-gradient(
+                90deg,
+                #FFD700 0px,
+                #FFD700 60px,
+                #000 60px,
+                #000 80px
+            );
+            animation: tapeSlideRight 25s linear infinite;
         }
 
-        @keyframes dripDown {
-            0% { height: 0; opacity: 0; }
-            20% { opacity: 1; }
-            100% { height: 40px; opacity: 0; }
+        /* Tape 2 - Top Right to Bottom Left */
+        .tape-2 {
+            top: 50px;
+            transform: rotate(8deg);
+            background: repeating-linear-gradient(
+                90deg,
+                #FFD700 0px,
+                #FFD700 60px,
+                #000 60px,
+                #000 80px
+            );
+            animation: tapeSlideLeft 25s linear infinite;
+        }
+
+        /* Tape Text Repeating */
+        .tape-text {
+            white-space: nowrap;
+            display: flex;
+            gap: 80px;
+        }
+
+        .tape-text span {
+            display: inline-block;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        @keyframes tapeSlideRight {
+            0% { transform: rotate(-8deg) translateX(0); }
+            100% { transform: rotate(-8deg) translateX(80px); }
+        }
+
+        @keyframes tapeSlideLeft {
+            0% { transform: rotate(8deg) translateX(0); }
+            100% { transform: rotate(8deg) translateX(-80px); }
         }
 
         /* Removed Old Headers */
-        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal { display: none; }
+        .money-stack-container, .money-stack, .bill-edges, .top-bill, .money-band, .band-text, .band-seal, .spray-header-container, .spray-text, .drip-container, .paint-drip { display: none; }
         
         /* Search Container Adjustment */
         .search-container {
-            margin-top: 100px; /* Clear the text */
+            margin-top: 130px; /* Clear the police tapes */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2902,13 +2918,25 @@
 
         <!-- SHOP SECTION -->
         <div id="shop" class="section active">
-            <!-- Spray Paint Header (Shop Only) -->
-            <div class="spray-header-container">
-                <h1 class="spray-text" id="header-zone-text">BALTIC STREET</h1>
-                <div class="drip-container">
-                    <div class="paint-drip d1"></div>
-                    <div class="paint-drip d2"></div>
-                    <div class="paint-drip d3"></div>
+            <!-- Police Tape Header (Shop Only) -->
+            <div class="police-tape-container">
+                <div class="police-tape tape-1">
+                    <div class="tape-text">
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                    </div>
+                </div>
+                <div class="police-tape tape-2">
+                    <div class="tape-text">
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                        <span>⚠ BALTIC STREET ⚠</span>
+                    </div>
                 </div>
             </div>
 
