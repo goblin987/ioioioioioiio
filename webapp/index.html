@@ -389,122 +389,124 @@
             z-index: 100;
         }
         
-        /* Centered Hanging Badge Header */
-        .sticker-header-container {
-            position: absolute;
+        /* Money Stack Header */
+        .money-stack-container {
+            position: absolute; /* Scrolls with content */
             top: 20px;
             left: 50%;
-            transform: translateX(-50%); /* Perfect Center */
+            transform: translateX(-50%);
             z-index: 10000;
             pointer-events: none;
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
-            width: auto;
-            display: flex;
-            justify-content: center;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6));
         }
 
-        /* The Hanger Rings */
-        .sticker-header-container::before,
-        .sticker-header-container::after {
-            content: '';
-            position: absolute;
-            top: -15px;
-            width: 8px;
-            height: 25px;
-            border: 2px solid #aaa;
-            border-radius: 10px;
-            background: transparent;
-            z-index: -1;
-        }
-        .sticker-header-container::before { left: 20px; }
-        .sticker-header-container::after { right: 20px; }
-
-        .street-sign-sticker {
-            background: #0a4d1c;
-            /* Cleaner Border */
-            border: 2px solid #f0f0f0;
-            border-radius: 6px;
-            padding: 4px;
-            /* Straighten Up */
-            transform: rotate(0deg);
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+        .money-stack {
             position: relative;
-            overflow: hidden;
-            min-width: 200px;
-        }
-
-        /* Adjust content for center alignment */
-        .sticker-content {
-            border: 1px solid rgba(255,255,255,0.6);
+            width: 280px;
+            height: 70px; /* Thickness of stack */
+            background: #e8f5e9; /* Paper White/Green */
             border-radius: 4px;
-            padding: 5px 20px;
-            align-items: center;
-            background: radial-gradient(circle at center, #0e6628, #053312);
-            display: flex;
-            flex-direction: column;
+            transform: perspective(500px) rotateX(20deg); /* 3D Tilt */
+            box-shadow: 
+                inset 0 -5px 10px rgba(0,0,0,0.1),
+                0 5px 0 #c8e6c9, /* 3D Sides */
+                0 10px 0 #a5d6a7,
+                0 15px 0 #81c784, /* Deep stack */
+                0 20px 20px rgba(0,0,0,0.5);
         }
 
-        /* Typography Tweaks */
-        .sticker-sub {
-            font-family: 'Arial', sans-serif;
-            font-size: 9px;
-            color: #fff;
-            font-weight: bold;
-            align-self: center;
-            margin-bottom: 0;
-            letter-spacing: 2px;
-            text-shadow: 0 1px 1px rgba(0,0,0,0.8);
-        }
-
-        .sticker-main {
-            font-family: 'Impact', sans-serif;
-            font-size: 26px;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-shadow: 1px 2px 0 #000;
-            white-space: nowrap;
-            line-height: 1.1;
-        }
-
-        .sticker-block {
-            font-family: 'Arial', sans-serif;
-            font-size: 8px;
-            color: #ddd;
-            align-self: center;
-            font-weight: bold;
-            margin-top: 0;
-            opacity: 0.7;
-        }
-
-        /* Sticker Gloss Shine */
-        .sticker-shine {
+        /* Texture of stacked bills */
+        .bill-edges {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.1) 100%);
-            pointer-events: none;
+            top: 0; left: -5px; right: -5px; bottom: -15px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #e8f5e9 0px,
+                #e8f5e9 2px,
+                #c8e6c9 3px,
+                #c8e6c9 4px
+            );
+            z-index: -1;
+            border-radius: 4px;
+        }
+
+        /* Top Face Detail */
+        .top-bill {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at center, transparent 40%, #a5d6a7 100%),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px);
+            border: 6px solid #81c784; /* Bill Border */
+            border-radius: 4px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .franklin-circle {
+            position: absolute;
+            left: 20px; top: 50%; transform: translateY(-50%);
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            border: 2px solid #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .corner-num {
+            position: absolute;
+            top: 5px; right: 10px;
+            font-family: 'Courier New', serif;
+            font-weight: bold;
+            color: #2e7d32;
+            font-size: 14px;
+        }
+        .corner-num.bottom-right { top: auto; bottom: 5px; right: 10px; transform: rotate(180deg); }
+
+        /* The Purple Band */
+        .money-band {
+            position: absolute;
+            top: -5px; bottom: -5px;
+            left: 60px; right: 60px; /* Center strip */
+            background: #673ab7; /* Ballas Purple */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid #9575cd;
+            border-bottom: 1px solid #4527a0;
+            /* Texture */
+            background-image: linear-gradient(to right, rgba(0,0,0,0.2) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.2) 100%);
+        }
+
+        .band-text {
+            color: #fff;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 28px;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 0 #000;
+            white-space: nowrap;
         }
         
-        /* Center Graffiti */
-        .sticker-graffiti {
+        .band-seal {
             position: absolute;
-            bottom: 5px;
-            right: 10px;
-            font-family: 'Brush Script MT', cursive;
-            font-size: 18px;
-            color: #2ecc71; /* Bright Green Paint */
-            transform: rotate(-5deg);
-            text-shadow: 0 1px 1px rgba(0,0,0,0.8);
-            opacity: 0.8;
-            mix-blend-mode: overlay;
+            right: -15px;
+            width: 30px; height: 30px;
+            background: #ffd700; /* Gold Seal */
+            border-radius: 50%;
+            display: flex; 
+            align-items: center; justify-content: center;
+            font-weight: bold; color: #b8860b;
+            font-size: 10px;
+            border: 1px dashed #b8860b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         /* Removed Old Headers */
-        .street-sign-assembly, .pole-group, .pole-vertical, .pole-elbow, .pole-horizontal, .pole-cap, .sign-hanger, .gta-street-sign, .zone-text-overlay { display: none; }
+        .street-sign-assembly, .street-sign-sticker, .sticker-header-container { display: none; }
         
-        /* Search Container Adjustment - Reset spacing */
+        /* Search Container Adjustment */
         .search-container {
-            margin-top: 100px; /* Increased for center badge */
+            margin-top: 110px; /* Clear the Money Stack */
             margin-bottom: 20px;
             background: rgba(0,0,0,0.85);
             border: 1px solid var(--gta-green);
@@ -2902,18 +2904,26 @@
     </div>
 
     <div class="content">
-        <!-- Street Sign Sticker Header (Scrolled) -->
-        <div class="sticker-header-container">
-            <div class="street-sign-sticker" id="street-sign-sticker">
-                <div class="sticker-content">
-                    <div class="sticker-sub">GROVE ST.</div>
-                    <div class="sticker-main" id="header-zone-text">LOS LITHUANIA</div>
-                    <div class="sticker-block">400 BLK</div>
-                </div>
-                <div class="sticker-shine"></div>
-                <div class="sticker-graffiti">GSF</div>
+    <!-- Money Stack Header (Scrollable) -->
+    <div class="money-stack-container">
+        <div class="money-stack">
+            <!-- The paper layers texture (Side of stack) -->
+            <div class="bill-edges"></div>
+            
+            <!-- The Top Bill Face -->
+            <div class="top-bill">
+                <div class="franklin-circle"></div>
+                <div class="corner-num">100</div>
+                <div class="corner-num bottom-right">100</div>
+            </div>
+
+            <!-- The Purple Band -->
+            <div class="money-band">
+                <span class="band-text" id="header-zone-text">LOS LITHUANIA</span>
+                <div class="band-seal">$$</div>
             </div>
         </div>
+    </div>
         <!-- Video Intro -->
         <div id="video-intro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99990; align-items:center; justify-content:center;">
             <div class="video-frame-overlay"></div> <!-- CINEMATIC OVERLAY -->
@@ -3575,20 +3585,28 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const nav = document.getElementById('nav-'+id);
             if(nav) nav.classList.add('active');
             
-            // Update Header Zone (Sticker)
+            // Update Header Zone (Money Stack)
             const zoneText = document.getElementById('header-zone-text');
-            const subText = document.querySelector('.sticker-sub');
             
             if(zoneText) {
                 let txt = "LOS LITHUANIA";
-                let sub = "GROVE ST.";
                 
-                if(id === 'shop') { txt = "AMMU-NATION"; sub = "MARKET"; }
-                if(id === 'map') { txt = "LOS SANTOS"; sub = "GPS"; }
-                if(id === 'stats') { txt = "CJ'S HOUSE"; sub = "GROVE ST."; }
+                if(id === 'shop') txt = "AMMU-NATION";
+                if(id === 'map') txt = "LOS SANTOS";
+                if(id === 'stats') txt = "CJ'S HOUSE";
                 
                 zoneText.innerText = txt;
-                if(subText) subText.innerText = sub;
+                
+                // Reset animation (Pop effect)
+                const stack = document.querySelector('.money-stack');
+                if(stack) {
+                    stack.style.transition = 'none';
+                    stack.style.transform = 'perspective(500px) rotateX(20deg) scale(0.95)';
+                    setTimeout(() => {
+                        stack.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        stack.style.transform = 'perspective(500px) rotateX(20deg) scale(1)';
+                    }, 50);
+                }
             }
         }
 
