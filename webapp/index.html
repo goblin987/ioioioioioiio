@@ -864,27 +864,26 @@
         /* --- GTA SA SATELLITE MAP THEME --- */
         .map-container {
             position: relative;
-            height: 75vh; /* Fills most of the screen */
+            height: 100vh; /* Full Screen */
             width: 100%;
-            background-color: #0a1016; /* Darker, sleeker */
+            background-color: #0a1016;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
+            border: none;
+            border-radius: 0;
             font-family: 'Courier New', monospace;
-            box-shadow: 0 0 30px rgba(0,0,0,0.9);
         }
 
         /* 1. Grid Overlay (Moving) */
         .map-grid {
             position: absolute;
             top: -50%; left: -50%;
-            width: 250%; height: 250%; /* Ensure full coverage */
+            width: 300%; height: 300%; /* Massive coverage */
             background-image: 
                 linear-gradient(rgba(46, 204, 113, 0.05) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(46, 204, 113, 0.05) 1px, transparent 1px);
-            background-size: 50px 50px;
+            background-size: 60px 60px;
             transform: perspective(500px) rotateX(20deg);
-            animation: gridPan 20s linear infinite;
+            animation: gridPan 30s linear infinite;
             pointer-events: none;
             z-index: 1;
         }
@@ -3401,7 +3400,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         
                         <div class="sat-hud">
                             <div class="hud-coords">SAT-LINK: ACTIVE</div>
-                            <button class="hud-reset" onclick="resetSatelliteView()">RESET VIEW</button>
                         </div>
                     </div>
 
@@ -3409,7 +3407,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div id="district-panel" class="district-panel">
                         <div class="panel-header" id="panel-header">SELECT ZONE</div>
                         <div class="panel-list" id="panel-list"></div>
-                        <button class="panel-close-btn" onclick="closePanel()">X</button>
                     </div>
                 </div>
                 <!-- Removed Redundant Button -->
