@@ -3109,278 +3109,356 @@
     </div>
 
     <style>
-    <!-- Modern "Next-Gen" Cart Modal -->
-    <div id="basket-modal" class="modern-cart-modal" style="display:none;">
-        <div class="cart-blur-bg"></div>
+    <!-- Tactical Inventory Cart Modal -->
+    <div id="basket-modal" class="inventory-modal" style="display:none;">
+        <div class="inventory-overlay"></div>
+        <div class="inventory-grid-bg"></div>
         
-        <div class="cart-window">
-            <div class="cart-header">
-                <div class="header-title">
-                    <span class="icon">🛒</span>
-                    <span>YOUR STASH</span>
+        <div class="inventory-container">
+            <!-- Header HUD -->
+            <div class="inventory-header">
+                <div class="inv-title">
+                    <span class="inv-icon">🎒</span>
+                    <span>TACTICAL SUPPLY STASH</span>
                 </div>
-                <button class="close-btn" onclick="closeBasket()">✕</button>
+                <div class="inv-stats">
+                    <span id="inv-count">0 ITEMS</span>
+                    <span class="divider">|</span>
+                    <span id="inv-weight">CAPACITY: OK</span>
+                </div>
+                <button class="inv-close-btn" onclick="closeBasket()">✕</button>
             </div>
             
-            <div class="cart-content">
-                <div id="basket-items" class="cart-items-list">
-                    <!-- Items go here -->
+            <!-- Main Content Area -->
+            <div class="inventory-body">
+                <div id="basket-items" class="inventory-grid">
+                    <!-- Items injected as cards here -->
                 </div>
             </div>
 
-            <div class="cart-footer">
-                <!-- Discount Input -->
-                <div class="promo-container">
-                    <input type="text" id="discount-input" placeholder="ENTER PROMO CODE" class="promo-input">
-                    <button onclick="applyDiscount()" class="promo-btn">→</button>
-                </div>
-                <div id="discount-msg" class="promo-status"></div>
-
-                <!-- Totals -->
-                <div class="price-summary">
-                    <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span id="basket-subtotal">$0.00</span>
+            <!-- Footer Command Bar -->
+            <div class="inventory-footer">
+                <div class="inv-promo-section">
+                    <div class="inv-input-group">
+                        <span class="input-label">PROMO CODE:</span>
+                        <input type="text" id="discount-input" placeholder="ENTER CODE" class="inv-input">
+                        <button onclick="applyDiscount()" class="inv-btn-small">APPLY</button>
                     </div>
-                    <div id="discount-line-container"></div>
-                    <div class="summary-row total">
-                        <span>Total</span>
-                        <span id="basket-total" class="glow-text">$0.00</span>
-                    </div>
+                    <div id="discount-msg" class="inv-msg"></div>
                 </div>
 
-                <!-- Action Button -->
-                <button class="checkout-btn" onclick="initCheckout()">
-                    <span>CONFIRM ORDER</span>
-                    <span class="btn-icon">💳</span>
-                </button>
+                <div class="inv-checkout-section">
+                    <div class="inv-totals">
+                        <div class="inv-row sub">
+                            <span>SUBTOTAL</span>
+                            <span id="basket-subtotal">$0.00</span>
+                        </div>
+                        <div id="discount-line-container"></div>
+                        <div class="inv-row total">
+                            <span>TOTAL</span>
+                            <span id="basket-total">$0.00</span>
+                        </div>
+                    </div>
+                    <button class="inv-checkout-btn" onclick="initCheckout()">
+                        <span>INITIATE TRANSFER</span>
+                        <span class="btn-arrow">➜</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <style>
-        /* MODERN CART UI */
+        /* TACTICAL INVENTORY STYLES */
         :root {
-            --cart-bg: #121212;
-            --cart-surface: #1e1e1e;
-            --cart-accent: #2ecc71; /* GTA Green */
-            --cart-gold: #f1c40f;
-            --cart-text: #ffffff;
-            --cart-text-dim: #aaaaaa;
+            --inv-bg: #0b1116; /* Deep dark blue-grey */
+            --inv-card-bg: rgba(30, 41, 59, 0.7);
+            --inv-accent: #00e5ff; /* Cyan tech blue */
+            --inv-gold: #ffd700; /* Gold highlights */
+            --inv-danger: #ef4444;
+            --inv-text: #e2e8f0;
+            --inv-border: rgba(255, 255, 255, 0.1);
         }
 
-        .modern-cart-modal {
+        .inventory-modal {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
             z-index: 30000;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            perspective: 1000px;
+            flex-direction: column;
+            color: var(--inv-text);
+            font-family: 'Rajdhani', 'Inter', sans-serif; /* Tech font */
         }
 
-        .cart-blur-bg {
+        .inventory-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
+            background: rgba(11, 17, 22, 0.95);
+            backdrop-filter: blur(10px);
             z-index: 1;
-            animation: fadeIn 0.3s ease;
         }
 
-        .cart-window {
-            width: 90%; max-width: 500px;
-            height: 80vh; max-height: 700px;
-            background: var(--cart-bg);
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        .inventory-grid-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .inventory-container {
+            position: relative;
+            z-index: 10;
+            width: 100%; height: 100%;
             display: flex;
             flex-direction: column;
-            z-index: 10;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid rgba(255,255,255,0.1);
-            animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeInScale 0.3s ease-out;
         }
 
-        .cart-header {
-            padding: 20px 25px;
+        /* Header */
+        .inventory-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--inv-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(255,255,255,0.03);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(11, 17, 22, 0.8);
         }
 
-        .header-title {
+        .inv-title {
+            font-size: 24px;
+            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 10px;
-            font-family: 'Inter', sans-serif;
-            font-weight: 800;
-            font-size: 18px;
-            color: var(--cart-text);
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            color: var(--inv-accent);
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
         }
 
-        .close-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: var(--cart-text);
-            width: 32px; height: 32px;
+        .inv-stats {
+            font-size: 14px;
+            color: #94a3b8;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .inv-stats .divider { color: #334155; }
+
+        .inv-close-btn {
+            background: transparent;
+            border: 1px solid var(--inv-border);
+            color: var(--inv-text);
+            width: 40px; height: 40px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.2s;
+            font-size: 18px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 14px;
         }
 
-        .close-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
+        .inv-close-btn:hover {
+            background: var(--inv-danger);
+            border-color: var(--inv-danger);
+            transform: rotate(90deg);
+        }
 
-        .cart-content {
+        /* Body & Grid */
+        .inventory-body {
             flex: 1;
             overflow-y: auto;
             padding: 20px;
         }
         
-        .cart-content::-webkit-scrollbar { width: 4px; }
-        .cart-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .inventory-body::-webkit-scrollbar { width: 6px; }
+        .inventory-body::-webkit-scrollbar-thumb { background: var(--inv-accent); border-radius: 3px; }
 
-        .cart-items-list {
-            display: flex;
-            flex-direction: column;
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
             gap: 15px;
         }
 
-        .cart-item-card {
-            background: var(--cart-surface);
-            border-radius: 16px;
+        .inv-card {
+            background: var(--inv-card-bg);
+            border: 1px solid var(--inv-border);
+            border-radius: 8px;
             padding: 15px;
             display: flex;
-            justify-content: space-between;
+            gap: 15px;
             align-items: center;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid transparent;
+            transition: all 0.2s;
             position: relative;
             overflow: hidden;
         }
 
-        .cart-item-card:hover {
+        .inv-card::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: var(--inv-gold);
+            opacity: 0.5;
+        }
+
+        .inv-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            border-color: rgba(46, 204, 113, 0.3);
+            background: rgba(30, 41, 59, 0.9);
+            border-color: var(--inv-accent);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
-        .cart-item-card.removing {
-            animation: slideOutRight 0.3s forwards;
-        }
+        .inv-card:hover::before { background: var(--inv-accent); opacity: 1; }
+        .inv-card.removing { transform: scale(0.9); opacity: 0; transition: 0.3s; }
 
-        .item-info { display: flex; flex-direction: column; gap: 4px; }
-        .item-name { color: var(--cart-text); font-weight: 600; font-size: 15px; }
-        .item-meta { color: var(--cart-text-dim); font-size: 12px; }
-        
-        .item-actions { display: flex; align-items: center; gap: 15px; }
-        .item-price { color: var(--cart-accent); font-weight: bold; font-size: 16px; }
-        
-        .delete-btn {
-            background: rgba(231, 76, 60, 0.1);
-            color: #e74c3c;
-            border: none;
-            width: 30px; height: 30px;
-            border-radius: 8px;
-            cursor: pointer;
+        .inv-card-img {
+            width: 60px; height: 60px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            font-size: 30px;
+            border: 1px solid var(--inv-border);
         }
-        
-        .delete-btn:hover { background: #e74c3c; color: #fff; }
 
-        .cart-footer {
-            background: var(--cart-surface);
-            padding: 25px;
-            border-top: 1px solid rgba(255,255,255,0.05);
+        .inv-card-details { flex: 1; }
+        .inv-card-name { font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 4px; }
+        .inv-card-price { color: var(--inv-gold); font-weight: 600; letter-spacing: 1px; }
+
+        .inv-card-actions {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 5px;
         }
 
-        .promo-container {
+        .inv-delete-btn {
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--inv-danger);
+            width: 30px; height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .inv-delete-btn:hover {
+            background: var(--inv-danger);
+            color: #fff;
+            border-color: var(--inv-danger);
+        }
+
+        /* Footer */
+        .inventory-footer {
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid var(--inv-border);
+            padding: 20px;
             display: flex;
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 5px;
-            border: 1px solid rgba(255,255,255,0.05);
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 20px;
+            backdrop-filter: blur(10px);
         }
 
-        .promo-input {
+        .inv-promo-section {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .inv-input-group {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--inv-border);
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .input-label {
+            font-size: 12px; color: #94a3b8; padding: 0 10px; font-weight: bold;
+        }
+
+        .inv-input {
             flex: 1;
             background: transparent;
             border: none;
-            color: var(--cart-text);
-            padding: 10px 15px;
-            font-size: 14px;
+            color: var(--inv-accent);
             outline: none;
-        }
-        
-        .promo-btn {
-            background: var(--cart-accent);
-            color: #000;
-            border: none;
-            width: 40px;
-            border-radius: 8px;
-            cursor: pointer;
+            font-family: 'Rajdhani', monospace;
+            text-transform: uppercase;
             font-weight: bold;
         }
 
-        .promo-status { font-size: 12px; min-height: 15px; margin-top: -15px; text-align: right; }
-
-        .price-summary { display: flex; flex-direction: column; gap: 8px; }
-        
-        .summary-row {
-            display: flex; justify-content: space-between;
-            color: var(--cart-text-dim);
-            font-size: 14px;
-        }
-        
-        .summary-row.total {
-            color: var(--cart-text);
-            font-size: 20px;
-            font-weight: 800;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px dashed rgba(255,255,255,0.1);
-        }
-        
-        .glow-text { text-shadow: 0 0 15px rgba(46, 204, 113, 0.4); color: var(--cart-accent); }
-
-        .checkout-btn {
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            color: white;
+        .inv-btn-small {
+            background: var(--inv-border);
+            color: #fff;
             border: none;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 800;
+            padding: 5px 10px;
+            border-radius: 2px;
             cursor: pointer;
-            display: flex; justify-content: center; align-items: center; gap: 10px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.2);
+            font-size: 12px;
+            font-weight: bold;
         }
         
-        .checkout-btn:hover {
+        .inv-btn-small:hover { background: var(--inv-accent); color: #000; }
+        .inv-msg { font-size: 12px; margin-top: 5px; height: 15px; color: var(--inv-accent); }
+
+        .inv-checkout-section {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .inv-totals {
+            text-align: right;
+            display: flex; flex-direction: column; gap: 5px;
+        }
+
+        .inv-row { display: flex; gap: 20px; justify-content: flex-end; }
+        .inv-row.sub { font-size: 14px; color: #94a3b8; }
+        .inv-row.total { 
+            font-size: 24px; color: var(--inv-gold); font-weight: 800; 
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .inv-checkout-btn {
+            background: linear-gradient(135deg, #00e5ff 0%, #0284c7 100%);
+            border: none;
+            padding: 15px 30px;
+            color: #000;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            text-transform: uppercase;
+            cursor: pointer;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .inv-checkout-btn:hover {
+            background: #fff;
             transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(46, 204, 113, 0.3);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
         }
 
-        .checkout-btn:active { transform: scale(0.98); }
+        .btn-arrow { font-size: 20px; transition: transform 0.2s; }
+        .inv-checkout-btn:hover .btn-arrow { transform: translateX(5px); }
 
-        @keyframes slideUpFade {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        @media (max-width: 768px) {
+            .inventory-footer { flex-direction: column; align-items: stretch; }
+            .inv-checkout-section { flex-direction: column; align-items: stretch; }
+            .inv-totals { text-align: center; padding-bottom: 10px; border-bottom: 1px dashed var(--inv-border); margin-bottom: 10px; }
+            .inv-row { justify-content: space-between; }
+            .inv-promo-section { max-width: 100%; }
         }
-        
-        @keyframes slideOutRight {
-            to { transform: translateX(100%); opacity: 0; }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
         }
     </style>
 
@@ -4551,47 +4629,47 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const discountLine = document.getElementById('discount-line-container');
             const discountMsg = document.getElementById('discount-msg');
             
+            // Header Stats
+            const countEl = document.getElementById('inv-count');
+            const weightEl = document.getElementById('inv-weight');
+            if(countEl) countEl.innerText = `${basket.length} ITEMS`;
+            if(weightEl) weightEl.innerText = basket.length > 5 ? "CAPACITY: HIGH" : "CAPACITY: OK";
+            if(weightEl) weightEl.style.color = basket.length > 5 ? "var(--inv-gold)" : "var(--inv-accent)";
+            
             list.innerHTML = '';
             let subtotal = 0;
             
             if(basket.length === 0) {
                 list.innerHTML = `
-                    <div style="text-align:center; padding:50px 20px; color:var(--cart-text-dim);">
-                        <div style="font-size:40px; margin-bottom:10px;">🛒</div>
-                        <div>Your stash is empty.</div>
-                        <div style="font-size:12px; margin-top:5px;">Go add some gear!</div>
+                    <div style="grid-column: 1 / -1; text-align:center; padding:50px; color:#94a3b8; font-family:'Rajdhani';">
+                        <div style="font-size:40px; opacity:0.5;">🎒</div>
+                        <div style="font-size:20px; margin-top:10px;">INVENTORY EMPTY</div>
+                        <div style="font-size:14px;">ACQUIRE MORE ASSETS</div>
                     </div>`;
             }
             
             basket.forEach((item, index) => {
                 subtotal += item.price;
-                const row = document.createElement('div');
-                row.className = 'cart-item-card';
-                row.id = `basket-item-${index}`;
-                row.style.animationDelay = `${index * 0.05}s`; // Staggered entry
+                const card = document.createElement('div');
+                card.className = 'inv-card';
+                card.id = `basket-item-${index}`;
+                card.style.animation = `fadeInScale 0.3s ease-out ${index * 0.05}s forwards`;
+                card.style.opacity = '0'; // For animation
                 
-                // Get emoji based on name/type if possible, else default
                 let emoji = '📦';
-                if(typeof getProductEmoji === 'function') {
-                     emoji = getProductEmoji(item.type || 'misc', item.name);
-                }
+                if(typeof getProductEmoji === 'function') emoji = getProductEmoji(item.type || 'misc', item.name);
                 
-                row.innerHTML = `
-                    <div style="display:flex; gap:15px; align-items:center;">
-                        <div style="background:rgba(255,255,255,0.05); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">
-                            ${emoji}
-                        </div>
-                        <div class="item-info">
-                            <span class="item-name">${item.name}</span>
-                            <span class="item-meta">Unit Price: $${item.price.toFixed(2)}</span>
-                        </div>
+                card.innerHTML = `
+                    <div class="inv-card-img">${emoji}</div>
+                    <div class="inv-card-details">
+                        <div class="inv-card-name">${item.name}</div>
+                        <div class="inv-card-price">$${item.price.toFixed(2)}</div>
                     </div>
-                    <div class="item-actions">
-                        <span class="item-price">$${item.price.toFixed(2)}</span>
-                        <button class="delete-btn" onclick="removeFromBasket(${index})">✕</button>
+                    <div class="inv-card-actions">
+                        <button class="inv-delete-btn" onclick="removeFromBasket(${index})">✕</button>
                     </div>
                 `;
-                list.appendChild(row);
+                list.appendChild(card);
             });
             
             if(subtotalEl) subtotalEl.innerText = `$${subtotal.toFixed(2)}`;
@@ -4600,18 +4678,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if (currentDiscount) {
                 let html = '';
                 if (currentDiscount.reseller_discount > 0) {
-                    html += `<div class="summary-row" style="color:#3498db;"><span>Reseller Discount</span><span>-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
+                    html += `<div class="inv-row sub" style="color:var(--inv-accent);"><span>RESELLER</span><span>-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
                 }
                 if (currentDiscount.code_discount > 0) {
-                    html += `<div class="summary-row" style="color:#e74c3c;"><span>Promo Code (${currentDiscount.code})</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
+                    html += `<div class="inv-row sub" style="color:var(--inv-gold);"><span>PROMO (${currentDiscount.code})</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
                 }
                 
                 if(discountLine) discountLine.innerHTML = html;
                 if(totalEl) totalEl.innerText = `$${currentDiscount.final_total.toFixed(2)}`;
                 
                 if(discountMsg) {
-                    discountMsg.innerText = `Code "${currentDiscount.code}" applied successfully!`;
-                    discountMsg.style.color = "var(--cart-accent)";
+                    discountMsg.innerText = `>> CODE ACCEPTED`;
+                    discountMsg.style.color = "var(--inv-accent)";
                 }
             } else {
                 if(discountLine) discountLine.innerHTML = "";
