@@ -3047,68 +3047,6 @@
     </div>
 
 
-    <!-- LSPD Evidence Terminal Modal -->
-    <div id="basket-modal" class="lspd-terminal-modal" style="display:none;">
-        <div class="crt-overlay"></div>
-        <div class="scanlines"></div>
-        
-        <div class="lspd-window">
-            <div class="lspd-header">
-                <span class="lspd-title">LSPD EVIDENCE LOCKER // CASE #<span id="case-number">8492</span></span>
-                <button class="lspd-close-btn" onclick="closeBasket()">[ABORT]</button>
-            </div>
-            
-            <div class="lspd-content">
-                <div class="lspd-sidebar">
-                    <div class="lspd-logo"></div>
-                    <div class="lspd-stats">
-                        <div>OFFICER: <span style="color:#fff;">TENPENNY</span></div>
-                        <div>DATE: <span id="lspd-date">--/--/--</span></div>
-                        <div>STATUS: <span class="blink-text" style="color:#e74c3c;">PENDING</span></div>
-                    </div>
-                </div>
-                
-                <div class="lspd-main">
-                    <div class="evidence-list-header">
-                        <span style="width:50%;">ITEM DESCRIPTION</span>
-                        <span style="width:25%;">VALUE</span>
-                        <span style="width:25%;">ACTION</span>
-                    </div>
-                    <div id="basket-items" class="evidence-list">
-                        <!-- Items injected here -->
-                    </div>
-                    
-                    <div class="lspd-footer">
-                        <div class="terminal-input-line">
-                            <span>>> OVERRIDE CODE:</span>
-                            <input type="text" id="discount-input" class="lspd-input" placeholder="_">
-                            <button onclick="applyDiscount()" class="lspd-action-btn small">EXEC</button>
-                        </div>
-                        <div id="discount-msg" class="cmd-response"></div>
-                        
-                        <div class="total-block">
-                            <div class="total-row">
-                                <span>SUBTOTAL:</span>
-                                <span id="basket-subtotal">$0.00</span>
-                            </div>
-                            <div id="discount-line-container"></div>
-                            <div class="total-row final">
-                                <span>TOTAL BAIL:</span>
-                                <span id="basket-total">$0.00</span>
-                            </div>
-                        </div>
-                        
-                        <div class="action-bar">
-                            <button class="lspd-action-btn danger" onclick="basket=[]; renderBasketContent(); updateBasketUI(); closeBasket();">CLEAR EVIDENCE</button>
-                            <button class="lspd-action-btn primary" onclick="initCheckout()">PROCESS BAIL</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
     <!-- Tactical Inventory Cart Modal -->
     <div id="basket-modal" class="inventory-modal" style="display:none;">
         <div class="inventory-overlay"></div>
