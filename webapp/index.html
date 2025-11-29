@@ -3047,55 +3047,79 @@
     </div>
 
 
-    <!-- Black Market Ledger Modal -->
-    <div id="basket-modal" class="black-market-modal" style="display:none;">
-        <div class="wood-overlay"></div>
-        <div class="clipboard-container">
-            <div class="metal-clip">
-                <div class="clip-logo">LOS LITHUANIA</div>
+    <!-- LSPD Evidence Terminal Modal -->
+    <div id="basket-modal" class="lspd-terminal-modal" style="display:none;">
+        <div class="crt-overlay"></div>
+        <div class="scanlines"></div>
+        
+        <div class="lspd-window">
+            <div class="lspd-header">
+                <span class="lspd-title">LSPD EVIDENCE LOCKER // CASE #<span id="case-number">8492</span></span>
+                <button class="lspd-close-btn" onclick="closeBasket()">[ABORT]</button>
             </div>
-            <div class="legal-pad-paper">
-                <div class="paper-header">
-                    <span style="color:#c0392b;">ORDER LIST</span>
-                    <span style="font-size:14px; color:#555;">DATE: <span id="ledger-date">--/--</span></span>
+            
+            <div class="lspd-content">
+                <div class="lspd-sidebar">
+                    <div class="lspd-logo"></div>
+                    <div class="lspd-stats">
+                        <div>OFFICER: <span style="color:#fff;">TENPENNY</span></div>
+                        <div>DATE: <span id="lspd-date">--/--/--</span></div>
+                        <div>STATUS: <span class="blink-text" style="color:#e74c3c;">PENDING</span></div>
+                    </div>
                 </div>
                 
-                <div id="basket-items" class="ledger-lines">
-                    <!-- Items go here -->
-                </div>
-
-                <div class="ledger-summary">
-                    <div class="summary-line">
-                        <span>SUBTOTAL:</span>
-                        <span id="basket-subtotal">$0</span>
+                <div class="lspd-main">
+                    <div class="evidence-list-header">
+                        <span style="width:50%;">ITEM DESCRIPTION</span>
+                        <span style="width:25%;">VALUE</span>
+                        <span style="width:25%;">ACTION</span>
                     </div>
-                    <div id="discount-line-container"></div>
-                    <div class="summary-line total">
-                        <span style="color:#c0392b;">TOTAL CASH:</span>
-                        <span id="basket-total">$0</span>
+                    <div id="basket-items" class="evidence-list">
+                        <!-- Items injected here -->
                     </div>
-                </div>
-
-                <!-- Promo Code Scribble Area -->
-                <div class="promo-scribble">
-                    <input type="text" id="discount-input" placeholder="CODE?" class="scribble-input">
-                    <button onclick="applyDiscount()" class="scribble-btn">OK</button>
-                </div>
-                <div id="discount-msg" class="scribble-msg"></div>
-
-                <div class="action-area">
-                    <button class="handwritten-btn cancel" onclick="closeBasket()">SCRAP IT</button>
-                    <button class="handwritten-btn buy" onclick="initCheckout()">DEAL IT</button>
+                    
+                    <div class="lspd-footer">
+                        <div class="terminal-input-line">
+                            <span>>> OVERRIDE CODE:</span>
+                            <input type="text" id="discount-input" class="lspd-input" placeholder="_">
+                            <button onclick="applyDiscount()" class="lspd-action-btn small">EXEC</button>
+                        </div>
+                        <div id="discount-msg" class="cmd-response"></div>
+                        
+                        <div class="total-block">
+                            <div class="total-row">
+                                <span>SUBTOTAL:</span>
+                                <span id="basket-subtotal">$0.00</span>
+                            </div>
+                            <div id="discount-line-container"></div>
+                            <div class="total-row final">
+                                <span>TOTAL BAIL:</span>
+                                <span id="basket-total">$0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="action-bar">
+                            <button class="lspd-action-btn danger" onclick="basket=[]; renderBasketContent(); updateBasketUI(); closeBasket();">CLEAR EVIDENCE</button>
+                            <button class="lspd-action-btn primary" onclick="initCheckout()">PROCESS BAIL</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <style>
-        /* BLACK MARKET LEDGER STYLES */
-        @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+        /* LSPD TERMINAL STYLES */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
-        .black-market-modal {
+        :root {
+            --lspd-blue: #00a8ff;
+            --lspd-bg: #001525;
+            --lspd-dark: #000a12;
+            --lspd-text: #a4b0be;
+        }
+
+        .lspd-terminal-modal {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
@@ -3103,250 +3127,231 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            perspective: 1000px;
+            background: rgba(0, 10, 18, 0.85);
+            backdrop-filter: blur(8px);
+            font-family: 'VT323', monospace;
+        }
+
+        .crt-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.6) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 3;
+            animation: scanlineScroll 10s linear infinite;
+        }
+
+        .lspd-window {
+            width: 95%; max-width: 800px;
+            height: 85vh;
+            background: var(--lspd-bg);
+            border: 2px solid var(--lspd-blue);
+            box-shadow: 0 0 20px var(--lspd-blue), inset 0 0 30px rgba(0, 168, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            animation: crtTurnOn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
             overflow: hidden;
         }
 
-        .wood-overlay {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #2d1b0e;
-            background-image: 
-                radial-gradient(circle at 50% 50%, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%),
-                repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 2px, transparent 2px, transparent 10px);
-            z-index: 1;
-            animation: fadeInWood 0.5s ease;
-        }
-
-        .clipboard-container {
-            position: relative;
-            width: 90%;
-            max-width: 450px;
-            height: 85vh;
-            background: #8d6e63;
-            border-radius: 10px;
-            z-index: 10;
-            box-shadow: 0 30px 70px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            padding-top: 60px;
-            transform-origin: bottom center;
-            animation: slideUpClipboard 0.6s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-
-        .metal-clip {
-            position: absolute;
-            top: -10px;
-            width: 140px;
-            height: 60px;
-            background: linear-gradient(180deg, #bdc3c7 0%, #7f8c8d 100%);
-            border-radius: 5px;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.4);
-            z-index: 20;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .clip-logo {
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 10px;
-            color: #333;
-            border: 1px solid #555;
-            padding: 2px 5px;
-            background: rgba(255,255,255,0.3);
-        }
-
-        .legal-pad-paper {
-            width: 90%;
-            height: 94%;
-            background-color: #fdfbf7;
-            background-image: 
-                linear-gradient(90deg, transparent 39px, #ff8a80 40px, transparent 42px), /* Red margin */
-                repeating-linear-gradient(transparent, transparent 29px, #b0bec5 30px); /* Blue lines */
-            background-size: 100% 30px; /* Match line height */
-            background-attachment: local;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            font-family: 'Permanent Marker', cursive;
-            color: #2c3e50;
-            padding: 30px 10px 20px 50px; /* Left pad clears red margin */
-            box-sizing: border-box;
-            overflow-y: auto;
-            position: relative;
-            transform: rotate(-0.5deg);
-        }
-
-        /* Scrollbar hidden for paper feel */
-        .legal-pad-paper::-webkit-scrollbar { width: 0; }
-
-        .paper-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 30px; /* Skip one line */
-            border-bottom: 2px solid #2c3e50;
-            padding-bottom: 5px;
-            transform: rotate(-1deg);
-        }
-
-        .ledger-lines {
-            min-height: 200px;
-        }
-
-        .ledger-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 30px; /* Matches line height */
-            line-height: 30px;
-            font-size: 16px;
-            margin-bottom: 0;
-            cursor: pointer;
-            transition: transform 0.2s, opacity 0.3s;
-            position: relative;
-        }
-
-        .ledger-item:hover {
-            color: #000;
-            transform: scale(1.02) translateX(5px);
-        }
-
-        .ledger-item.crossed-out {
-            position: relative;
-            opacity: 0.6;
-        }
-
-        .ledger-item.crossed-out::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 0; width: 100%; height: 3px;
-            background: #c0392b;
-            transform: rotate(-1deg);
-            animation: strikeThrough 0.3s ease-out forwards;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .ledger-summary {
-            margin-top: 30px;
-            border-top: 3px solid #2c3e50;
-            padding-top: 10px;
-            transform: rotate(1deg);
-        }
-
-        .summary-line {
-            display: flex;
-            justify-content: space-between;
-            height: 30px;
-            line-height: 30px;
-        }
-
-        .summary-line.total {
-            font-size: 24px;
-            height: 40px;
-            margin-top: 10px;
-        }
-
-        .promo-scribble {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            transform: rotate(-2deg);
-        }
-
-        .scribble-input {
-            background: none;
-            border: none;
-            border-bottom: 2px dashed #7f8c8d;
-            font-family: 'Permanent Marker', cursive;
-            font-size: 16px;
-            width: 120px;
-            color: #2c3e50;
-            outline: none;
-        }
-
-        .scribble-btn {
-            background: none;
-            border: 2px solid #2c3e50;
-            border-radius: 50%;
-            width: 35px; height: 35px;
-            font-family: 'Permanent Marker', cursive;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .scribble-btn:hover {
-            background: #2c3e50;
-            color: #fff;
-            transform: scale(1.1);
-        }
-
-        .scribble-msg {
-            font-size: 12px;
-            color: #c0392b;
-            height: 20px;
-            margin-left: 10px;
-        }
-
-        .action-area {
-            margin-top: 30px;
-            display: flex;
-            justify-content: space-around;
-            padding-bottom: 20px;
-        }
-
-        .handwritten-btn {
-            font-family: 'Permanent Marker', cursive;
+        .lspd-header {
+            background: var(--lspd-blue);
+            color: var(--lspd-dark);
+            padding: 5px 15px;
             font-size: 20px;
-            background: none;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .lspd-close-btn {
+            background: transparent;
             border: none;
+            color: var(--lspd-dark);
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s;
-            padding: 10px;
-        }
-
-        .handwritten-btn.cancel {
-            color: #7f8c8d;
-            text-decoration: underline;
-        }
-
-        .handwritten-btn.buy {
-            color: #c0392b;
-            border: 3px solid #c0392b;
-            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; /* Hand-drawn circle look */
-            padding: 10px 30px;
-            transform: rotate(-3deg);
-        }
-
-        .handwritten-btn.buy:hover {
-            background: #c0392b;
-            color: #fff;
-            transform: rotate(0deg) scale(1.1);
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-        }
-
-        .handwritten-btn.cancel:hover {
-            color: #c0392b;
-            transform: scale(1.1);
-        }
-
-        @keyframes slideUpClipboard {
-            0% { transform: translateY(100%) rotate(5deg); opacity: 0; }
-            70% { transform: translateY(-20px) rotate(-2deg); opacity: 1; }
-            100% { transform: translateY(0) rotate(0deg); opacity: 1; }
-        }
-
-        @keyframes strikeThrough {
-            from { width: 0; }
-            to { width: 100%; }
         }
         
-        @keyframes fadeInWood {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .lspd-close-btn:hover { background: #fff; }
+
+        .lspd-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
         }
+
+        .lspd-sidebar {
+            width: 200px;
+            border-right: 1px solid rgba(0, 168, 255, 0.3);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 20, 40, 0.5);
+        }
+
+        .lspd-logo {
+            width: 100px; height: 100px;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Los_Angeles_Police_Department_Logo.svg/1200px-Los_Angeles_Police_Department_Logo.svg.png') no-repeat center center;
+            background-size: contain;
+            margin: 0 auto 20px auto;
+            filter: grayscale(100%) sepia(100%) hue-rotate(170deg) saturate(300%) brightness(0.8); /* Blue tint */
+            opacity: 0.8;
+        }
+
+        .lspd-stats {
+            font-size: 18px;
+            color: var(--lspd-text);
+            line-height: 1.6;
+        }
+
+        .lspd-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .evidence-list-header {
+            display: flex;
+            border-bottom: 1px solid var(--lspd-blue);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            color: var(--lspd-blue);
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+
+        .evidence-list {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 20px;
+            color: #fff;
+            padding-right: 5px;
+        }
+        
+        .evidence-list::-webkit-scrollbar { width: 8px; }
+        .evidence-list::-webkit-scrollbar-track { background: #000; }
+        .evidence-list::-webkit-scrollbar-thumb { background: var(--lspd-blue); }
+
+        .evidence-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(0, 168, 255, 0.2);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .evidence-item:hover {
+            background: rgba(0, 168, 255, 0.1);
+            text-shadow: 2px 0 var(--lspd-blue), -2px 0 red; /* Glitch effect */
+        }
+
+        .evidence-item.typing span {
+            border-right: .15em solid var(--lspd-blue);
+            animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+        }
+
+        .evidence-name { width: 50%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .evidence-price { width: 25%; color: var(--lspd-blue); }
+        .evidence-remove { 
+            width: 25%; color: #e74c3c; cursor: pointer; 
+            text-align: center; border: 1px solid transparent;
+        }
+        .evidence-remove:hover { border: 1px solid #e74c3c; background: rgba(231, 76, 60, 0.1); }
+
+        .lspd-footer {
+            margin-top: 20px;
+            border-top: 2px solid var(--lspd-blue);
+            padding-top: 15px;
+        }
+
+        .terminal-input-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: var(--lspd-blue);
+            font-size: 18px;
+        }
+
+        .lspd-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--lspd-blue);
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            width: 150px;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        .total-block {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin: 15px 0;
+            font-size: 22px;
+        }
+
+        .total-row { display: flex; gap: 20px; color: var(--lspd-text); }
+        .total-row.final { color: var(--lspd-blue); font-size: 28px; font-weight: bold; text-shadow: 0 0 5px var(--lspd-blue); }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .lspd-action-btn {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--lspd-blue);
+            color: var(--lspd-blue);
+            padding: 10px;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        
+        .lspd-action-btn.small { padding: 2px 10px; flex: initial; font-size: 16px; }
+        .lspd-action-btn:hover { background: var(--lspd-blue); color: #000; box-shadow: 0 0 15px var(--lspd-blue); }
+        .lspd-action-btn.danger { border-color: #e74c3c; color: #e74c3c; }
+        .lspd-action-btn.danger:hover { background: #e74c3c; color: #fff; box-shadow: 0 0 15px #e74c3c; }
+
+        .cmd-response { height: 20px; font-size: 16px; color: #f1c40f; margin-bottom: 5px; }
+
+        @media (max-width: 600px) {
+            .lspd-sidebar { display: none; } /* Hide sidebar on mobile */
+            .lspd-window { height: 95vh; width: 98%; }
+        }
+
+        @keyframes scanlineScroll { 0% { background-position: 0 0; } 100% { background-position: 0 100%; } }
+        @keyframes crtTurnOn { 
+            0% { transform: scaleY(0.01) scaleX(0); opacity: 0; }
+            50% { transform: scaleY(0.01) scaleX(1); opacity: 1; }
+            100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+        }
+        @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: var(--lspd-blue); } }
+        .blink-text { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
     </style>
 
     <!-- District Selection Modal (New) -->
@@ -3806,6 +3811,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             },
             wasted: function() { this.playTone(50, 'sawtooth', 1.0, 0.3); },
             spray: function() { this.playTone(400, 'sawtooth', 0.2, 0.05); },
+            type: function() { this.playTone(1800, 'square', 0.03, 0.03); },
+            glitch: function() { 
+                this.playTone(100, 'sawtooth', 0.1, 0.2);
+                setTimeout(() => this.playTone(500, 'square', 0.05, 0.1), 50);
+            },
             scratch: function() {
                 this.init();
                 if(this.ctx.state === 'suspended') this.ctx.resume();
@@ -4501,8 +4511,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const modal = document.getElementById('basket-modal');
             renderBasketContent();
             modal.style.display = 'flex';
-            const paper = document.querySelector('.legal-pad-paper');
-            if(paper) paper.scrollTop = 0;
+            const caseNum = document.getElementById('case-number');
+            if(caseNum) caseNum.innerText = Math.floor(Math.random() * 9000) + 1000;
             checkDiscounts();
         }
         
@@ -4512,31 +4522,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const subtotalEl = document.getElementById('basket-subtotal');
             const discountLine = document.getElementById('discount-line-container');
             const discountMsg = document.getElementById('discount-msg');
+            const dateEl = document.getElementById('lspd-date');
             
-            // Set Date
-            const dateEl = document.getElementById('ledger-date');
             if(dateEl) dateEl.innerText = new Date().toLocaleDateString();
             
             list.innerHTML = '';
             let subtotal = 0;
             
             if(basket.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding-top:30px; color:#999; font-family:\'Permanent Marker\'; transform:rotate(-2deg);">NOTHING HERE...</div>';
+                list.innerHTML = '<div style="text-align:center; padding-top:50px; color:#444;">// NO EVIDENCE FOUND //</div>';
             }
             
             basket.forEach((item, index) => {
                 subtotal += item.price;
                 const row = document.createElement('div');
-                row.className = 'ledger-item';
+                row.className = 'evidence-item typing'; 
                 row.id = `basket-item-${index}`;
                 row.innerHTML = `
-                    <span style="flex:1;">- ${item.name}</span>
-                    <div style="display:flex; gap:15px; align-items:center;">
-                        <span>$${item.price.toFixed(2)}</span>
-                        <span style="color:#c0392b; font-size:24px; cursor:pointer;" onclick="removeFromBasket(${index})">X</span>
-                    </div>
+                    <span class="evidence-name">> ${item.name}</span>
+                    <span class="evidence-price">$${item.price.toFixed(2)}</span>
+                    <span class="evidence-remove" onclick="removeFromBasket(${index})">[DELETE]</span>
                 `;
                 list.appendChild(row);
+                
+                // Play typing sound for each item with slight delay
+                setTimeout(() => { if(sfx.type) sfx.type(); }, index * 150);
             });
             
             if(subtotalEl) subtotalEl.innerText = `$${subtotal.toFixed(2)}`;
@@ -4545,23 +4555,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if (currentDiscount) {
                 let html = '';
                 if (currentDiscount.reseller_discount > 0) {
-                    html += `<div class="summary-line" style="color:#7f8c8d;"><span>RESELLER:</span><span>-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
+                    html += `<div class="total-row" style="color:#f1c40f;"><span>RESELLER DISC:</span><span>-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
                 }
                 if (currentDiscount.code_discount > 0) {
-                    html += `<div class="summary-line" style="color:#c0392b;"><span>CODE (${currentDiscount.code}):</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
+                    html += `<div class="total-row" style="color:#e74c3c;"><span>OVERRIDE (${currentDiscount.code}):</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
                 }
                 
                 if(discountLine) discountLine.innerHTML = html;
                 if(totalEl) totalEl.innerText = `$${currentDiscount.final_total.toFixed(2)}`;
                 
                 if(discountMsg) {
-                    discountMsg.innerText = currentDiscount.message || "VALID CODE!";
-                    discountMsg.style.color = "#27ae60";
+                    discountMsg.innerText = `>> CODE "${currentDiscount.code}" ACCEPTED`;
+                    discountMsg.style.color = "#2ecc71";
                 }
             } else {
                 if(discountLine) discountLine.innerHTML = "";
                 if(totalEl) totalEl.innerText = `$${subtotal.toFixed(2)}`;
-                if(discountMsg) discountMsg.innerText = "";
+                if(discountMsg) discountMsg.innerText = ">> WAITING FOR INPUT...";
             }
         }
         
@@ -4572,16 +4582,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function removeFromBasket(index) {
             const row = document.getElementById(`basket-item-${index}`);
             if(row) {
-                row.classList.add('crossed-out');
-                if(sfx.scratch) sfx.scratch();
-                else if(sfx.select) sfx.select();
+                // Glitch effect
+                row.style.textShadow = "2px 0 red, -2px 0 blue";
+                row.style.transform = "skewX(20deg)";
+                if(sfx.glitch) sfx.glitch();
                 
                 setTimeout(() => {
                     basket.splice(index, 1);
                     currentDiscount = null; 
                     renderBasketContent();
                     updateBasketUI();
-                }, 400);
+                }, 200);
             } else {
                 basket.splice(index, 1);
                 currentDiscount = null;
