@@ -3048,359 +3048,569 @@
 
 
     <!-- Tactical Inventory Cart Modal -->
-    <div id="basket-modal" class="inventory-modal" style="display:none;">
-        <div class="inventory-overlay"></div>
-        <div class="inventory-grid-bg"></div>
+    <!-- PREMIUM CART - Apple Quality + GTA Aesthetic -->
+    <div id="basket-modal" class="cart-modal" style="display:none;">
+        <div class="cart-backdrop"></div>
         
-        <div class="inventory-container">
-            <!-- Header HUD -->
-            <div class="inventory-header">
-                <div class="inv-title">
-                    <span class="inv-icon">🎒</span>
-                    <span>TACTICAL SUPPLY STASH</span>
+        <div class="cart-sheet">
+            <!-- Drag Handle -->
+            <div class="cart-handle"><div class="handle-bar"></div></div>
+            
+            <!-- Header -->
+            <div class="cart-header">
+                <div class="cart-title-group">
+                    <div class="cart-icon-wrap">
+                        <svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M6 6L5 3H2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="cart-title">YOUR STASH</h2>
+                        <p class="cart-subtitle" id="inv-count">0 items</p>
+                    </div>
                 </div>
-                <div class="inv-stats">
-                    <span id="inv-count">0 ITEMS</span>
-                    <span class="divider">|</span>
-                    <span id="inv-weight">CAPACITY: OK</span>
-                </div>
-                <button class="inv-close-btn" onclick="closeBasket()">✕</button>
+                <button class="cart-close" onclick="closeBasket()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
             </div>
             
-            <!-- Main Content Area -->
-            <div class="inventory-body">
-                <div id="basket-items" class="inventory-grid">
-                    <!-- Items injected as cards here -->
+            <!-- Items Container -->
+            <div class="cart-body">
+                <div id="basket-items" class="cart-items">
+                    <!-- Items rendered here -->
+                </div>
+                
+                <!-- Empty State -->
+                <div class="cart-empty" id="cart-empty-state">
+                    <div class="empty-icon">🛒</div>
+                    <p class="empty-title">Nothing here yet</p>
+                    <p class="empty-sub">Add items from the shop to get started</p>
                 </div>
             </div>
-
-            <!-- Footer Command Bar -->
-            <div class="inventory-footer">
-                <div class="inv-promo-section">
-                    <div class="inv-input-group">
-                        <span class="input-label">PROMO CODE:</span>
-                        <input type="text" id="discount-input" placeholder="ENTER CODE" class="inv-input">
-                        <button onclick="applyDiscount()" class="inv-btn-small">APPLY</button>
+            
+            <!-- Footer -->
+            <div class="cart-footer">
+                <!-- Promo Code -->
+                <div class="promo-row">
+                    <div class="promo-input-wrap">
+                        <input type="text" id="discount-input" placeholder="Promo code" class="promo-input">
+                        <button onclick="applyDiscount()" class="promo-btn">Apply</button>
                     </div>
-                    <div id="discount-msg" class="inv-msg"></div>
+                    <div id="discount-msg" class="promo-msg"></div>
                 </div>
-
-                <div class="inv-checkout-section">
-                    <div class="inv-totals">
-                        <div class="inv-row sub">
-                            <span>SUBTOTAL</span>
-                            <span id="basket-subtotal">$0.00</span>
-                        </div>
-                        <div id="discount-line-container"></div>
-                        <div class="inv-row total">
-                            <span>TOTAL</span>
-                            <span id="basket-total">$0.00</span>
-                        </div>
+                
+                <!-- Totals -->
+                <div class="cart-totals">
+                    <div class="total-row">
+                        <span class="total-label">Subtotal</span>
+                        <span class="total-value" id="basket-subtotal">$0.00</span>
                     </div>
-                    <button class="inv-checkout-btn" onclick="initCheckout()">
-                        <span>INITIATE TRANSFER</span>
-                        <span class="btn-arrow">➜</span>
-                    </button>
+                    <div id="discount-line-container"></div>
+                    <div class="total-row total-final">
+                        <span class="total-label">Total</span>
+                        <span class="total-value" id="basket-total">$0.00</span>
+                    </div>
                 </div>
+                
+                <!-- Checkout Button -->
+                <button class="checkout-btn" onclick="initCheckout()">
+                    <span class="checkout-text">Checkout</span>
+                    <span class="checkout-arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </span>
+                </button>
+                
+                <p class="cart-secure">🔒 Secure transaction powered by Solana</p>
             </div>
         </div>
     </div>
 
     <style>
-        /* TACTICAL INVENTORY STYLES - GTA UNIFIED */
-        :root {
-            --inv-bg: #000000;
-            --inv-card-bg: rgba(20, 20, 20, 0.9);
-            --inv-accent: var(--gta-green);
-            --inv-gold: var(--gta-gold);
-            --inv-danger: #e74c3c;
-            --inv-text: #ffffff;
-            --inv-border: #333333;
-        }
-
-        .inventory-modal {
+        /* ═══════════════════════════════════════════════════════════════════
+           PREMIUM CART STYLES - Apple Quality + GTA San Andreas Aesthetic
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .cart-modal {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            inset: 0;
             z-index: 30000;
             display: flex;
-            flex-direction: column;
-            color: var(--inv-text);
-            font-family: 'Courier New', monospace;
-        }
-
-        .inventory-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(5px);
-            z-index: 1;
-        }
-
-        .inventory-grid-bg {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
-                linear-gradient(rgba(63, 165, 53, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(63, 165, 53, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        .inventory-container {
-            position: relative;
-            z-index: 10;
-            width: 100%; height: 100%;
-            display: flex;
-            flex-direction: column;
-            max-width: 1200px;
-            margin: 0 auto;
-            animation: fadeInScale 0.3s ease-out;
-        }
-
-        /* Header */
-        .inventory-header {
-            padding: 20px;
-            border-bottom: 2px solid var(--inv-accent);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.95);
-        }
-
-        .inv-title {
-            font-family: 'Pricedown', 'Impact', sans-serif;
-            font-size: 32px;
-            font-weight: 400;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            letter-spacing: 1px;
-            color: var(--inv-gold);
-            text-shadow: 2px 2px 0 #000;
-        }
-
-        .inv-stats {
-            font-size: 16px;
-            color: #ccc;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
+            align-items: flex-end;
+            justify-content: center;
         }
         
-        .inv-stats .divider { color: #555; }
-
-        .inv-close-btn {
-            background: transparent;
-            border: 2px solid var(--inv-border);
-            color: var(--inv-text);
-            width: 40px; height: 40px;
-            border-radius: 0;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 20px;
-            display: flex; align-items: center; justify-content: center;
+        .cart-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            animation: fadeIn 0.3s ease;
         }
-
-        .inv-close-btn:hover {
-            background: var(--inv-danger);
-            border-color: var(--inv-danger);
+        
+        .cart-sheet {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            max-height: 92vh;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+            border-radius: 24px 24px 0 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 
+                0 -10px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            overflow: hidden;
+        }
+        
+        .cart-handle {
+            padding: 12px 0 8px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .handle-bar {
+            width: 36px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        /* Header */
+        .cart-header {
+            padding: 8px 20px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .cart-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        
+        .cart-icon-wrap {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--gta-green) 0%, #2d8a2d 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 4px 12px rgba(63, 165, 53, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .cart-icon {
+            width: 24px;
+            height: 24px;
             color: #fff;
         }
-
-        /* Body & Grid */
-        .inventory-body {
+        
+        .cart-title {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 26px;
+            font-weight: 400;
+            color: #fff;
+            letter-spacing: 1px;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cart-subtitle {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            margin: 2px 0 0;
+            font-weight: 500;
+        }
+        
+        .cart-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .cart-close svg {
+            width: 16px;
+            height: 16px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .cart-close:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .cart-close:hover svg {
+            color: #fff;
+        }
+        
+        /* Body */
+        .cart-body {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 16px 20px;
+            min-height: 200px;
         }
         
-        .inventory-body::-webkit-scrollbar { width: 6px; }
-        .inventory-body::-webkit-scrollbar-thumb { background: var(--inv-accent); border-radius: 0; }
-
-        .inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
-            gap: 15px;
-        }
-
-        .inv-card {
-            background: var(--inv-card-bg);
-            border: 2px solid var(--inv-border);
-            border-radius: 0;
-            padding: 15px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-        }
-
-        .inv-card::before {
-            content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 4px;
-            background: var(--inv-accent);
-            opacity: 0.7;
-        }
-
-        .inv-card:hover {
-            transform: translate(-2px, -2px);
-            background: rgba(20, 20, 20, 1);
-            border-color: var(--inv-accent);
-            box-shadow: 6px 6px 0 rgba(0,0,0,0.8);
+        .cart-body::-webkit-scrollbar { width: 4px; }
+        .cart-body::-webkit-scrollbar-thumb { 
+            background: var(--gta-green); 
+            border-radius: 2px; 
         }
         
-        .inv-card:hover::before { opacity: 1; box-shadow: 0 0 10px var(--inv-accent); }
-        .inv-card.removing { transform: scale(0.9); opacity: 0; transition: 0.3s; }
-
-        .inv-card-img {
-            width: 60px; height: 60px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 0;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 30px;
-            border: 1px solid var(--inv-border);
-        }
-
-        .inv-card-details { flex: 1; }
-        .inv-card-name { font-family: 'Impact', sans-serif; font-size: 18px; color: #fff; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-        .inv-card-price { color: var(--inv-accent); font-family: 'Pricedown', sans-serif; font-size: 24px; }
-
-        .inv-card-actions {
+        .cart-items {
             display: flex;
             flex-direction: column;
-            gap: 5px;
-        }
-
-        .inv-delete-btn {
-            background: transparent;
-            border: 1px solid var(--inv-danger);
-            color: var(--inv-danger);
-            width: 30px; height: 30px;
-            border-radius: 0;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        .inv-delete-btn:hover {
-            background: var(--inv-danger);
-            color: #fff;
-        }
-
-        /* Footer */
-        .inventory-footer {
-            background: #000;
-            border-top: 2px solid var(--inv-accent);
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 20px;
-        }
-
-        .inv-promo-section {
-            flex: 1;
-            max-width: 300px;
-        }
-
-        .inv-input-group {
-            display: flex;
-            align-items: center;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--inv-border);
-            border-radius: 0;
-            padding: 5px;
-        }
-
-        .input-label {
-            font-size: 12px; color: #ccc; padding: 0 10px; font-weight: bold; font-family: 'Courier New';
-        }
-
-        .inv-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--inv-gold);
-            outline: none;
-            font-family: 'Courier New', monospace;
-            text-transform: uppercase;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .inv-btn-small {
-            background: var(--inv-border);
-            color: #fff;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 0;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-            font-family: 'Impact'; letter-spacing: 1px;
+            gap: 12px;
         }
         
-        .inv-btn-small:hover { background: var(--inv-accent); color: #000; }
-        .inv-msg { font-size: 12px; margin-top: 5px; height: 15px; color: var(--inv-accent); font-family: 'Courier New'; }
-
-        .inv-checkout-section {
-            flex: 1;
+        /* Item Card - Premium Design */
+        .cart-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 14px;
             display: flex;
-            gap: 20px;
-            justify-content: flex-end;
             align-items: center;
+            gap: 14px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
         }
-
-        .inv-totals {
-            text-align: right;
-            display: flex; flex-direction: column; gap: 5px;
+        
+        .cart-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--gta-green);
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-
-        .inv-row { display: flex; gap: 20px; justify-content: flex-end; font-family: 'Courier New'; }
-        .inv-row.sub { font-size: 14px; color: #ccc; }
-        .inv-row.total { 
-            font-size: 28px; color: var(--inv-gold); font-family: 'Pricedown', sans-serif;
-            text-shadow: 1px 1px 0 #000;
+        
+        .cart-item:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(63, 165, 53, 0.3);
+            transform: translateX(2px);
         }
-
-        .inv-checkout-btn {
-            background: var(--inv-accent);
-            border: 2px solid #000;
-            padding: 15px 30px;
-            color: #000;
-            font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
-            text-transform: uppercase;
+        
+        .cart-item:hover::before {
+            opacity: 1;
+        }
+        
+        .cart-item.removing {
+            animation: itemRemove 0.3s ease forwards;
+        }
+        
+        .item-emoji {
+            width: 52px;
+            height: 52px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            flex-shrink: 0;
+        }
+        
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .item-name {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            margin: 0 0 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .item-meta {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.45);
+        }
+        
+        .item-price {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 22px;
+            color: var(--gta-green);
+            text-shadow: 0 0 20px rgba(63, 165, 53, 0.3);
+            margin-right: 8px;
+        }
+        
+        .item-delete {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
-            display: flex; align-items: center; gap: 10px;
-            box-shadow: 4px 4px 0 var(--inv-gold);
-            clip-path: none;
+            flex-shrink: 0;
         }
-
-        .inv-checkout-btn:hover {
-            background: var(--inv-gold);
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0 var(--inv-accent);
+        
+        .item-delete:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #fff;
+            transform: scale(1.05);
         }
-
-        .btn-arrow { font-size: 20px; transition: transform 0.2s; font-family: 'Arial'; }
-        .inv-checkout-btn:hover .btn-arrow { transform: translateX(5px); }
-
-        @media (max-width: 768px) {
-            .inventory-footer { flex-direction: column; align-items: stretch; }
-            .inv-checkout-section { flex-direction: column; align-items: stretch; }
-            .inv-totals { text-align: center; padding-bottom: 10px; border-bottom: 1px dashed var(--inv-border); margin-bottom: 10px; }
-            .inv-row { justify-content: space-between; }
-            .inv-promo-section { max-width: 100%; }
+        
+        /* Empty State */
+        .cart-empty {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
         }
-
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
+        
+        .cart-empty.show {
+            display: flex;
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        
+        .empty-title {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0 0 8px;
+        }
+        
+        .empty-sub {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.35);
+            margin: 0;
+        }
+        
+        /* Footer */
+        .cart-footer {
+            padding: 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Promo */
+        .promo-row {
+            margin-bottom: 20px;
+        }
+        
+        .promo-input-wrap {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .promo-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        .promo-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .promo-input:focus {
+            border-color: var(--gta-green);
+            background: rgba(63, 165, 53, 0.08);
+        }
+        
+        .promo-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .promo-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .promo-msg {
+            font-size: 12px;
+            margin-top: 8px;
+            color: var(--gta-green);
+            min-height: 16px;
+        }
+        
+        /* Totals */
+        .cart-totals {
+            margin-bottom: 16px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+        
+        .total-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .total-value {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+        
+        .total-final {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            padding-top: 16px;
+        }
+        
+        .total-final .total-label {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 20px;
+            color: #fff;
+        }
+        
+        .total-final .total-value {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 28px;
+            color: var(--gta-gold);
+            text-shadow: 0 0 20px rgba(207, 169, 54, 0.3);
+        }
+        
+        /* Checkout Button */
+        .checkout-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gta-green) 0%, #2d8a2d 100%);
+            border: none;
+            border-radius: 14px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+            box-shadow: 
+                0 4px 20px rgba(63, 165, 53, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .checkout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 30px rgba(63, 165, 53, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .checkout-btn:active {
+            transform: translateY(0);
+        }
+        
+        .checkout-text {
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 22px;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .checkout-arrow {
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s;
+        }
+        
+        .checkout-arrow svg {
+            width: 20px;
+            height: 20px;
+            color: #fff;
+        }
+        
+        .checkout-btn:hover .checkout-arrow {
+            transform: translateX(4px);
+        }
+        
+        .cart-secure {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.35);
+            margin: 16px 0 0;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(100%); 
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0); 
+            }
+        }
+        
+        @keyframes itemRemove {
+            to {
+                opacity: 0;
+                transform: translateX(-100%);
+                height: 0;
+                padding: 0;
+                margin: 0;
+            }
+        }
+        
+        /* Desktop Enhancement */
+        @media (min-width: 600px) {
+            .cart-sheet {
+                max-height: 85vh;
+                border-radius: 24px;
+                margin-bottom: 20px;
+            }
         }
     </style>
 
@@ -4570,46 +4780,45 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const subtotalEl = document.getElementById('basket-subtotal');
             const discountLine = document.getElementById('discount-line-container');
             const discountMsg = document.getElementById('discount-msg');
+            const emptyState = document.getElementById('cart-empty-state');
             
             // Header Stats
             const countEl = document.getElementById('inv-count');
-            const weightEl = document.getElementById('inv-weight');
-            if(countEl) countEl.innerText = `${basket.length} ITEMS`;
-            if(weightEl) weightEl.innerText = basket.length > 5 ? "CAPACITY: HIGH" : "CAPACITY: OK";
-            if(weightEl) weightEl.style.color = basket.length > 5 ? "var(--inv-gold)" : "var(--inv-accent)";
+            if(countEl) countEl.innerText = `${basket.length} item${basket.length !== 1 ? 's' : ''}`;
             
             list.innerHTML = '';
             let subtotal = 0;
             
+            // Show/hide empty state
             if(basket.length === 0) {
-                list.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align:center; padding:50px; color:#94a3b8; font-family:'Rajdhani';">
-                        <div style="font-size:40px; opacity:0.5;">🎒</div>
-                        <div style="font-size:20px; margin-top:10px;">INVENTORY EMPTY</div>
-                        <div style="font-size:14px;">ACQUIRE MORE ASSETS</div>
-                    </div>`;
+                if(emptyState) emptyState.classList.add('show');
+                list.style.display = 'none';
+            } else {
+                if(emptyState) emptyState.classList.remove('show');
+                list.style.display = 'flex';
             }
             
             basket.forEach((item, index) => {
                 subtotal += item.price;
                 const card = document.createElement('div');
-                card.className = 'inv-card';
+                card.className = 'cart-item';
                 card.id = `basket-item-${index}`;
-                card.style.animation = `fadeInScale 0.3s ease-out ${index * 0.05}s forwards`;
-                card.style.opacity = '0'; // For animation
+                card.style.animation = `slideUp 0.3s ease-out ${index * 0.05}s forwards`;
+                card.style.opacity = '0';
                 
                 let emoji = '📦';
                 if(typeof getProductEmoji === 'function') emoji = getProductEmoji(item.type || 'misc', item.name);
                 
                 card.innerHTML = `
-                    <div class="inv-card-img">${emoji}</div>
-                    <div class="inv-card-details">
-                        <div class="inv-card-name">${item.name}</div>
-                        <div class="inv-card-price">$${item.price.toFixed(2)}</div>
+                    <div class="item-emoji">${emoji}</div>
+                    <div class="item-info">
+                        <p class="item-name">${item.name}</p>
+                        <p class="item-meta">${item.city || ''} ${item.district ? '• ' + item.district : ''}</p>
                     </div>
-                    <div class="inv-card-actions">
-                        <button class="inv-delete-btn" onclick="removeFromBasket(${index})">✕</button>
-                    </div>
+                    <span class="item-price">$${item.price.toFixed(2)}</span>
+                    <button class="item-delete" onclick="removeFromBasket(${index})" title="Remove">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
                 `;
                 list.appendChild(card);
             });
@@ -4620,18 +4829,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if (currentDiscount) {
                 let html = '';
                 if (currentDiscount.reseller_discount > 0) {
-                    html += `<div class="inv-row sub" style="color:var(--inv-accent);"><span>RESELLER</span><span>-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
+                    html += `<div class="total-row"><span class="total-label" style="color:var(--gta-green);">Reseller Discount</span><span class="total-value" style="color:var(--gta-green);">-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
                 }
                 if (currentDiscount.code_discount > 0) {
-                    html += `<div class="inv-row sub" style="color:var(--inv-gold);"><span>PROMO (${currentDiscount.code})</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
+                    html += `<div class="total-row"><span class="total-label" style="color:var(--gta-gold);">Promo (${currentDiscount.code})</span><span class="total-value" style="color:var(--gta-gold);">-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
                 }
                 
                 if(discountLine) discountLine.innerHTML = html;
                 if(totalEl) totalEl.innerText = `$${currentDiscount.final_total.toFixed(2)}`;
                 
                 if(discountMsg) {
-                    discountMsg.innerText = `>> CODE ACCEPTED`;
-                    discountMsg.style.color = "var(--inv-accent)";
+                    discountMsg.innerText = `✓ Code applied`;
+                    discountMsg.style.color = "var(--gta-green)";
                 }
             } else {
                 if(discountLine) discountLine.innerHTML = "";
