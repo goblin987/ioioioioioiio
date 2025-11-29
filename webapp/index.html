@@ -3107,15 +3107,15 @@
     </div>
 
     <style>
-        /* TACTICAL INVENTORY STYLES */
+        /* TACTICAL INVENTORY STYLES - GTA UNIFIED */
         :root {
-            --inv-bg: #0b1116; /* Deep dark blue-grey */
-            --inv-card-bg: rgba(30, 41, 59, 0.7);
-            --inv-accent: #00e5ff; /* Cyan tech blue */
-            --inv-gold: #ffd700; /* Gold highlights */
-            --inv-danger: #ef4444;
-            --inv-text: #e2e8f0;
-            --inv-border: rgba(255, 255, 255, 0.1);
+            --inv-bg: #000000;
+            --inv-card-bg: rgba(20, 20, 20, 0.9);
+            --inv-accent: var(--gta-green);
+            --inv-gold: var(--gta-gold);
+            --inv-danger: #e74c3c;
+            --inv-text: #ffffff;
+            --inv-border: #333333;
         }
 
         .inventory-modal {
@@ -3126,21 +3126,21 @@
             display: flex;
             flex-direction: column;
             color: var(--inv-text);
-            font-family: 'Rajdhani', 'Inter', sans-serif; /* Tech font */
+            font-family: 'Courier New', monospace;
         }
 
         .inventory-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(11, 17, 22, 0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
             z-index: 1;
         }
 
         .inventory-grid-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: 
-                linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+                linear-gradient(rgba(63, 165, 53, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(63, 165, 53, 0.05) 1px, transparent 1px);
             background-size: 40px 40px;
             z-index: 2;
             pointer-events: none;
@@ -3160,50 +3160,53 @@
         /* Header */
         .inventory-header {
             padding: 20px;
-            border-bottom: 1px solid var(--inv-border);
+            border-bottom: 2px solid var(--inv-accent);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(11, 17, 22, 0.8);
+            background: rgba(0, 0, 0, 0.95);
         }
 
         .inv-title {
-            font-size: 24px;
-            font-weight: 700;
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 32px;
+            font-weight: 400;
             display: flex;
             align-items: center;
             gap: 10px;
-            letter-spacing: 2px;
-            color: var(--inv-accent);
-            text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+            letter-spacing: 1px;
+            color: var(--inv-gold);
+            text-shadow: 2px 2px 0 #000;
         }
 
         .inv-stats {
-            font-size: 14px;
-            color: #94a3b8;
+            font-size: 16px;
+            color: #ccc;
             display: flex;
             gap: 10px;
             align-items: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
         }
         
-        .inv-stats .divider { color: #334155; }
+        .inv-stats .divider { color: #555; }
 
         .inv-close-btn {
             background: transparent;
-            border: 1px solid var(--inv-border);
+            border: 2px solid var(--inv-border);
             color: var(--inv-text);
             width: 40px; height: 40px;
-            border-radius: 50%;
+            border-radius: 0;
             cursor: pointer;
             transition: all 0.2s;
-            font-size: 18px;
+            font-size: 20px;
             display: flex; align-items: center; justify-content: center;
         }
 
         .inv-close-btn:hover {
             background: var(--inv-danger);
             border-color: var(--inv-danger);
-            transform: rotate(90deg);
+            color: #fff;
         }
 
         /* Body & Grid */
@@ -3214,7 +3217,7 @@
         }
         
         .inventory-body::-webkit-scrollbar { width: 6px; }
-        .inventory-body::-webkit-scrollbar-thumb { background: var(--inv-accent); border-radius: 3px; }
+        .inventory-body::-webkit-scrollbar-thumb { background: var(--inv-accent); border-radius: 0; }
 
         .inventory-grid {
             display: grid;
@@ -3224,8 +3227,8 @@
 
         .inv-card {
             background: var(--inv-card-bg);
-            border: 1px solid var(--inv-border);
-            border-radius: 8px;
+            border: 2px solid var(--inv-border);
+            border-radius: 0;
             padding: 15px;
             display: flex;
             gap: 15px;
@@ -3233,36 +3236,37 @@
             transition: all 0.2s;
             position: relative;
             overflow: hidden;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
         }
 
         .inv-card::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-            background: var(--inv-gold);
-            opacity: 0.5;
+            content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 4px;
+            background: var(--inv-accent);
+            opacity: 0.7;
         }
 
         .inv-card:hover {
-            transform: translateY(-2px);
-            background: rgba(30, 41, 59, 0.9);
+            transform: translate(-2px, -2px);
+            background: rgba(20, 20, 20, 1);
             border-color: var(--inv-accent);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 6px 6px 0 rgba(0,0,0,0.8);
         }
         
-        .inv-card:hover::before { background: var(--inv-accent); opacity: 1; }
+        .inv-card:hover::before { opacity: 1; box-shadow: 0 0 10px var(--inv-accent); }
         .inv-card.removing { transform: scale(0.9); opacity: 0; transition: 0.3s; }
 
         .inv-card-img {
             width: 60px; height: 60px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 6px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 0;
             display: flex; align-items: center; justify-content: center;
             font-size: 30px;
             border: 1px solid var(--inv-border);
         }
 
         .inv-card-details { flex: 1; }
-        .inv-card-name { font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 4px; }
-        .inv-card-price { color: var(--inv-gold); font-weight: 600; letter-spacing: 1px; }
+        .inv-card-name { font-family: 'Impact', sans-serif; font-size: 18px; color: #fff; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .inv-card-price { color: var(--inv-accent); font-family: 'Pricedown', sans-serif; font-size: 24px; }
 
         .inv-card-actions {
             display: flex;
@@ -3272,10 +3276,10 @@
 
         .inv-delete-btn {
             background: transparent;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            border: 1px solid var(--inv-danger);
             color: var(--inv-danger);
             width: 30px; height: 30px;
-            border-radius: 4px;
+            border-radius: 0;
             cursor: pointer;
             transition: all 0.2s;
             display: flex; align-items: center; justify-content: center;
@@ -3284,19 +3288,17 @@
         .inv-delete-btn:hover {
             background: var(--inv-danger);
             color: #fff;
-            border-color: var(--inv-danger);
         }
 
         /* Footer */
         .inventory-footer {
-            background: rgba(15, 23, 42, 0.95);
-            border-top: 1px solid var(--inv-border);
+            background: #000;
+            border-top: 2px solid var(--inv-accent);
             padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
             gap: 20px;
-            backdrop-filter: blur(10px);
         }
 
         .inv-promo-section {
@@ -3309,23 +3311,24 @@
             align-items: center;
             background: rgba(255,255,255,0.05);
             border: 1px solid var(--inv-border);
-            border-radius: 4px;
+            border-radius: 0;
             padding: 5px;
         }
 
         .input-label {
-            font-size: 12px; color: #94a3b8; padding: 0 10px; font-weight: bold;
+            font-size: 12px; color: #ccc; padding: 0 10px; font-weight: bold; font-family: 'Courier New';
         }
 
         .inv-input {
             flex: 1;
             background: transparent;
             border: none;
-            color: var(--inv-accent);
+            color: var(--inv-gold);
             outline: none;
-            font-family: 'Rajdhani', monospace;
+            font-family: 'Courier New', monospace;
             text-transform: uppercase;
             font-weight: bold;
+            font-size: 16px;
         }
 
         .inv-btn-small {
@@ -3333,14 +3336,15 @@
             color: #fff;
             border: none;
             padding: 5px 10px;
-            border-radius: 2px;
+            border-radius: 0;
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
+            font-family: 'Impact'; letter-spacing: 1px;
         }
         
         .inv-btn-small:hover { background: var(--inv-accent); color: #000; }
-        .inv-msg { font-size: 12px; margin-top: 5px; height: 15px; color: var(--inv-accent); }
+        .inv-msg { font-size: 12px; margin-top: 5px; height: 15px; color: var(--inv-accent); font-family: 'Courier New'; }
 
         .inv-checkout-section {
             flex: 1;
@@ -3355,35 +3359,35 @@
             display: flex; flex-direction: column; gap: 5px;
         }
 
-        .inv-row { display: flex; gap: 20px; justify-content: flex-end; }
-        .inv-row.sub { font-size: 14px; color: #94a3b8; }
+        .inv-row { display: flex; gap: 20px; justify-content: flex-end; font-family: 'Courier New'; }
+        .inv-row.sub { font-size: 14px; color: #ccc; }
         .inv-row.total { 
-            font-size: 24px; color: var(--inv-gold); font-weight: 800; 
-            text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+            font-size: 28px; color: var(--inv-gold); font-family: 'Pricedown', sans-serif;
+            text-shadow: 1px 1px 0 #000;
         }
 
         .inv-checkout-btn {
-            background: linear-gradient(135deg, #00e5ff 0%, #0284c7 100%);
-            border: none;
+            background: var(--inv-accent);
+            border: 2px solid #000;
             padding: 15px 30px;
             color: #000;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 800;
-            font-size: 18px;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 24px;
             text-transform: uppercase;
             cursor: pointer;
-            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
             transition: all 0.2s;
             display: flex; align-items: center; gap: 10px;
+            box-shadow: 4px 4px 0 var(--inv-gold);
+            clip-path: none;
         }
 
         .inv-checkout-btn:hover {
-            background: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+            background: var(--inv-gold);
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 var(--inv-accent);
         }
 
-        .btn-arrow { font-size: 20px; transition: transform 0.2s; }
+        .btn-arrow { font-size: 20px; transition: transform 0.2s; font-family: 'Arial'; }
         .inv-checkout-btn:hover .btn-arrow { transform: translateX(5px); }
 
         @media (max-width: 768px) {
