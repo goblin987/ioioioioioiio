@@ -3098,16 +3098,7 @@
                     <div id="discount-line-container"></div>
                     <div class="cart-total-line cart-total-final">
                         <span>TOTAL</span>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span id="basket-total">$0.00</span>
-                            <div class="wanted-stars" id="wanted-stars">
-                                <span class="wanted-star">★</span>
-                                <span class="wanted-star">★</span>
-                                <span class="wanted-star">★</span>
-                                <span class="wanted-star">★</span>
-                                <span class="wanted-star">★</span>
-                            </div>
-                        </div>
+                        <span id="basket-total">$0.00</span>
                     </div>
                 </div>
                 
@@ -3486,57 +3477,44 @@
             color: #fff;
         }
         
-        /* Holographic Checkout Button */
+        /* Retro Checkout Button (Unified with Shop) */
         .cart-checkout-btn {
             width: 100%;
-            padding: 15px;
+            padding: 10px 0;
+            margin-top: 10px;
             font-family: 'Pricedown', 'Impact', sans-serif;
-            font-size: 24px;
-            color: #000;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
+            font-size: 22px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-top: 15px;
+            cursor: pointer;
+            border: none;
             
-            /* Holographic Effect */
-            background: linear-gradient(90deg, var(--gta-green), #2ecc71, var(--gta-green));
-            background-size: 200% 200%;
-            animation: holograph 3s ease infinite;
+            /* Retro Green Style */
+            background: var(--gta-green);
+            color: #000;
             position: relative;
             overflow: hidden;
+            transition: all 0.1s;
+            box-shadow: 0 3px 0 #1e5626; /* Retro 3D press effect */
+            border-radius: 2px;
         }
-
-        @keyframes holograph {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .cart-checkout-btn::before {
+        
+        .cart-checkout-btn::after {
             content: '';
             position: absolute;
-            top: 0; left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transform: skewX(-25deg);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            100% { left: 200%; }
-        }
-
-        .cart-checkout-btn:hover {
-            transform: scale(1.02);
-            box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
         }
 
         .cart-checkout-btn:active {
-            transform: scale(0.98);
+            transform: translateY(3px);
+            box-shadow: 0 0 0 #1e5626;
         }
+
+        /* Removed Wanted Stars Styles */
+        .wanted-stars { display: none; }
         
         .cart-secure-text {
             text-align: center;
@@ -3684,29 +3662,128 @@
                 but mainly we rely on the footer section padding */
         }
         
+        /* ═══════════════════════════════════════════════════════════════════
+           CART SUMMARY POLISH - RETRO MINIMALIST
+           ═══════════════════════════════════════════════════════════════════ */
+        
         .cart-checkout-section {
-            /* Safe Zone for Floating Nav */
-            padding-bottom: 130px !important; 
-            background: linear-gradient(to bottom, #0a0a0a, #000);
-            border-top: 1px solid #222;
-            box-shadow: 0 -20px 50px rgba(0,0,0,0.8);
+            padding: 15px 20px 130px; /* Top/Side padding reduced, Bottom kept for nav */
+            background: #000;
+            border-top: 2px solid #333;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
             position: relative;
             z-index: 20;
         }
 
-        /* Empty State Button Polish */
-        .empty-btn {
-            background: #000 !important;
-            border: 1px solid var(--gta-gold) !important;
-            color: var(--gta-gold) !important;
-            font-family: 'Impact', sans-serif;
-            letter-spacing: 1px;
-            transition: all 0.3s;
+        /* Compact Promo Area */
+        .cart-promo {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
         }
-        .empty-btn:hover {
-            background: var(--gta-gold) !important;
-            color: #000 !important;
-            box-shadow: 0 0 20px rgba(240, 195, 48, 0.4);
+
+        .cart-promo-input {
+            flex: 1;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 2px; /* Sharper corners for retro feel */
+            padding: 8px 10px;
+            color: var(--gta-green);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            outline: none;
+            height: 36px;
+        }
+        
+        .cart-promo-input::placeholder { color: #444; }
+
+        .cart-promo-btn {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 2px;
+            color: #ccc;
+            font-family: 'Impact', sans-serif;
+            font-size: 12px;
+            padding: 0 15px;
+            height: 36px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cart-promo-btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Compact Totals Box */
+        .cart-totals-box {
+            background: transparent;
+            border: 1px dashed #333;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .cart-total-line {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .cart-total-final {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #333;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .cart-total-final span:first-child {
+            font-family: 'Impact', sans-serif;
+            font-size: 18px;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        #basket-total {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+            color: var(--gta-green);
+            margin: 0;
+            letter-spacing: 0;
+        }
+
+        /* Retro Checkout Button (Matches Shop Green Button) */
+        .cart-checkout-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--gta-green);
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 20px;
+            color: #000;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+        }
+
+        .cart-checkout-btn:hover {
+            background: #fff;
+            box-shadow: 0 0 15px #fff;
+            transform: scale(1.02);
+        }
+
+        .cart-checkout-btn:active {
+            transform: scale(0.98);
         }
 
         @media (max-width: 600px) {
@@ -5070,24 +5147,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             document.getElementById('basket-count').innerText = basket.length;
         }
         
-        function updateWantedLevel(total) {
-            const stars = document.querySelectorAll('.wanted-star');
-            let level = 0;
-            if(total > 0) level = 1;
-            if(total > 20) level = 2;
-            if(total > 50) level = 3;
-            if(total > 100) level = 4;
-            if(total > 200) level = 5;
-            
-            stars.forEach((s, i) => {
-                if(i < level) {
-                    s.classList.add('active');
-                } else {
-                    s.classList.remove('active');
-                }
-            });
-        }
-
         function openBasket() {
             const modal = document.getElementById('basket-modal');
             renderBasketContent();
@@ -5166,7 +5225,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(discountLine) discountLine.innerHTML = html;
                 if(totalEl) {
                     totalEl.innerText = `$${currentDiscount.final_total.toFixed(2)}`;
-                    updateWantedLevel(currentDiscount.final_total);
                 }
                 
                 if(discountMsg) {
@@ -5177,7 +5235,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(discountLine) discountLine.innerHTML = "";
                 if(totalEl) {
                     totalEl.innerText = `$${subtotal.toFixed(2)}`;
-                    updateWantedLevel(subtotal);
                 }
                 if(discountMsg) discountMsg.innerText = "";
             }
