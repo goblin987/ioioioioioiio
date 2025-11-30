@@ -2576,11 +2576,11 @@ def webapp_create_invoice():
         
         c.execute("""
             INSERT INTO pending_deposits 
-            (user_id, payment_id, amount_eur, pay_currency, pay_amount_crypto, 
-             pay_address, status, created_at, is_purchase, basket_snapshot_json)
-            VALUES (%s, %s, %s, %s, %s, %s, 'pending', NOW(), 1, %s)
-        """, (user_id, order_id, float(final_total), 'SOL', float(payment_res['pay_amount']), 
-              payment_res['pay_address'], json.dumps(basket_snapshot)))
+            (user_id, payment_id, currency, target_eur_amount, expected_crypto_amount, 
+             created_at, is_purchase, basket_snapshot_json)
+            VALUES (%s, %s, %s, %s, %s, NOW(), TRUE, %s)
+        """, (user_id, order_id, 'SOL', float(final_total), float(payment_res['pay_amount']), 
+              json.dumps(basket_snapshot)))
         
         conn.commit()
         conn.close()
