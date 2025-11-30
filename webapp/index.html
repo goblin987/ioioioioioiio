@@ -3237,111 +3237,109 @@
         .cart-grid {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 0; /* No gap for stats list style */
         }
         
-        /* Cart Item - Like Product Card */
+        /* ═══════════════════════════════════════════════════════════════════
+           GTA SA "STATS MENU" STYLE ITEMS
+           ═══════════════════════════════════════════════════════════════════ */
         .cart-item {
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid #333;
-            padding: 12px;
+            background: transparent;
+            border-bottom: 1px solid #222;
+            padding: 15px 5px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            transition: all 0.2s;
+            gap: 15px;
+            transition: background 0.2s;
             position: relative;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.5);
         }
-        
-        .cart-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--gta-green);
-            opacity: 0.5;
-        }
-        
+
         .cart-item:hover {
-            border-color: var(--gta-green);
-            transform: translateY(-2px);
-            box-shadow: 0 0 20px rgba(63, 165, 53, 0.2);
-            background: rgba(10, 20, 10, 0.9);
-        }
-        
-        .cart-item:hover::before {
-            opacity: 1;
-            box-shadow: 0 0 10px var(--gta-green);
+            background: rgba(255, 255, 255, 0.1);
         }
         
         .cart-item.removing {
             animation: itemRemove 0.3s ease forwards;
         }
-        
+
         .item-emoji {
-            font-size: 36px;
-            width: 50px;
+            font-size: 20px;
+            filter: grayscale(100%);
+            width: 30px;
             text-align: center;
         }
-        
+
         .item-info {
             flex: 1;
-            min-width: 0;
         }
-        
+
         .item-name {
             font-family: 'Impact', sans-serif;
+            font-weight: normal;
             font-size: 16px;
-            color: #fff;
+            color: #999; /* Inactive menu item color */
             text-transform: uppercase;
+            margin-bottom: 2px;
             letter-spacing: 1px;
-            margin: 0 0 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            transition: color 0.2s;
         }
         
+        .cart-item:hover .item-name {
+            color: #fff; /* Active menu item color */
+        }
+
         .item-meta {
             font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #888;
+            font-size: 10px;
+            color: #555;
         }
-        
+
         .item-price {
-            font-size: 22px;
+            font-family: 'Pricedown', sans-serif;
+            font-size: 24px;
             color: var(--gta-green);
             text-shadow: 1px 1px 0 #000;
-            font-family: 'Pricedown', sans-serif;
+            margin-right: 10px;
         }
-        
+
+        /* Spray Delete Button */
         .item-delete {
-            background: rgba(192, 57, 43, 0.1);
-            border: 1px solid #c0392b;
-            color: #c0392b;
-            width: 32px;
-            height: 32px;
+            background: transparent;
+            border: none;
+            color: #444;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
             cursor: pointer;
-            transition: all 0.1s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            border-radius: 2px;
-            box-shadow: 0 2px 0 rgba(192, 57, 43, 0.3);
+            padding: 5px;
+            transition: all 0.2s;
         }
-        
+
         .item-delete:hover {
-            background: #c0392b;
-            color: #fff;
-            box-shadow: 0 0 15px #c0392b;
-            transform: translateY(-1px);
+            color: #c0392b;
+            text-shadow: 0 0 5px #c0392b;
+            transform: scale(1.2);
         }
         
-        .item-delete:active {
-            transform: translateY(1px);
-            box-shadow: none;
+        /* RESPECT + Animation */
+        @keyframes respectSlide {
+            0% { opacity: 0; transform: translateX(-20px); }
+            20% { opacity: 1; transform: translateX(0); }
+            80% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(0); }
+        }
+
+        .respect-plus {
+            font-family: 'Pricedown', sans-serif;
+            color: var(--gta-green);
+            font-size: 24px;
+            animation: respectSlide 3s ease forwards;
+            position: absolute;
+            right: 0;
+            top: -30px;
+            text-shadow: 1px 1px 0 #000;
+            pointer-events: none;
+            z-index: 100;
         }
         
         /* Empty State */
@@ -5149,6 +5147,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         function openBasket() {
             const modal = document.getElementById('basket-modal');
+            
+            // Fix Input Obstruction (Hide nav when typing)
+            const dInput = document.getElementById('discount-input');
+            const bNav = document.querySelector('.bottom-nav');
+            if(dInput && bNav) {
+                dInput.onfocus = () => bNav.style.display = 'none';
+                dInput.onblur = () => bNav.style.display = 'flex';
+            }
+
             renderBasketContent();
             modal.style.display = 'flex';
             checkDiscounts();
@@ -5306,6 +5313,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         if (data.code_valid) {
                             msg.innerText = data.message;
                             msg.style.color = "var(--gta-green)";
+                            
+                            // RESPECT +
+                            if(window.sfx) sfx.cash();
+                            const promoBox = document.querySelector('.cart-promo');
+                            if(promoBox) {
+                                const rp = document.createElement('div');
+                                rp.className = 'respect-plus';
+                                rp.innerText = 'RESPECT +';
+                                promoBox.appendChild(rp);
+                                setTimeout(() => rp.remove(), 3000);
+                            }
                         } else if (code) {
                             msg.innerText = data.message || "INVALID CODE";
                             msg.style.color = "#f00";
