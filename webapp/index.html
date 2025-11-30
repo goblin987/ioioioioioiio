@@ -3130,7 +3130,123 @@
 
     <style>
         /* ═══════════════════════════════════════════════════════════════════
-           CART STYLES - Shop Menu Style (GTA San Andreas)
+        /* ═══════════════════════════════════════════════════════════════════
+           REMASTERED SHOP UI (Apple x GTA)
+           ═══════════════════════════════════════════════════════════════════ */
+
+        /* 1. TACTICAL HORIZONTAL FILTERS */
+        #city-filters {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin: 0 -15px 15px -15px; /* Negative margin to scroll full width */
+            padding-left: 15px; /* Padding to align with content */
+            padding-right: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(to bottom, #000 80%, transparent);
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        
+        #city-filters::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .filter-btn {
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px; /* Pill Shape */
+            font-family: 'Impact', sans-serif;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn.active {
+            background: var(--gta-green);
+            color: #000;
+            border-color: var(--gta-green);
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* 2. HOLOGRAPHIC GLASS CARDS */
+        .product-card {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+        }
+
+        .product-card:active {
+            transform: scale(0.96);
+            background: rgba(40, 40, 40, 0.8);
+        }
+        
+        .product-card:active::before {
+            left: 150%;
+            transition: 0.5s;
+        }
+
+        /* 3. FLY-TO-CART ANIMATION */
+        @keyframes flyToCart {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.2);
+            }
+        }
+
+        .flying-item {
+            position: fixed;
+            z-index: 99999;
+            pointer-events: none;
+            animation: flyToCart 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            font-size: 40px;
+        }
+        
+        .cart-thump {
+            animation: thump 0.3s ease;
+        }
+        
+        @keyframes thump {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); filter: drop-shadow(0 0 10px var(--gta-gold)); }
+            100% { transform: scale(1); }
+        }
+
+        /* CART STYLES - Shop Menu Style (GTA San Andreas)
            ═══════════════════════════════════════════════════════════════════ */
         
         /* Modern Cart Item (Apple Polish + GTA) */
@@ -5218,7 +5334,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>
                     <div class="product-price">€${p.price.toFixed(2)}</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick="sfx.select(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price})">ADD</button>
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick="sfx.select(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price}, event)">ADD</button>
                         <button class="btn-buy" style="flex:2;" onmouseover="sfx.tick()" onclick="sfx.select(); buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
                     </div>
                 `;
@@ -5481,14 +5597,58 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // --- Basket Logic ---
         let currentDiscount = null; 
 
-        function addToBasket(id, name, price) {
+        function addToBasket(id, name, price, event) {
+             // Fly Animation
+            if(event) {
+                const btn = event.target;
+                const card = btn.closest('.product-card');
+                if(card) {
+                    const emoji = card.querySelector('.product-emoji');
+                    
+                    if(emoji) {
+                        const flyer = emoji.cloneNode(true);
+                        flyer.classList.add('flying-item');
+                        
+                        const startRect = emoji.getBoundingClientRect();
+                        const cartNav = document.querySelector('#nav-basket .nav-icon');
+                        
+                        if(cartNav) {
+                            const endRect = cartNav.getBoundingClientRect();
+                            
+                            flyer.style.left = startRect.left + 'px';
+                            flyer.style.top = startRect.top + 'px';
+                            
+                            const tx = (endRect.left + endRect.width/2) - (startRect.left + startRect.width/2);
+                            const ty = (endRect.top + endRect.height/2) - (startRect.top + startRect.height/2);
+                            
+                            flyer.style.setProperty('--tx', `${tx}px`);
+                            flyer.style.setProperty('--ty', `${ty}px`);
+                            
+                            document.body.appendChild(flyer);
+                            
+                            setTimeout(() => {
+                                flyer.remove();
+                                // Thump effect on cart icon
+                                cartNav.classList.remove('cart-thump');
+                                void cartNav.offsetWidth; // trigger reflow
+                                cartNav.classList.add('cart-thump');
+                            }, 600);
+                        } else {
+                             flyer.remove();
+                        }
+                    }
+                }
+            }
+
             basket.push({id, name, price});
             updateBasketUI();
             currentDiscount = null; // Reset on change
-            charSystem.show('cj', 'NICE CHOICE!');
+            if(window.charSystem && Math.random() > 0.7) charSystem.show('cj', 'NICE CHOICE!');
             const nav = document.getElementById('nav-basket');
-            nav.style.color = '#fff';
-            setTimeout(() => nav.style.color = '', 200);
+            if(nav) {
+                nav.style.color = '#fff';
+                setTimeout(() => nav.style.color = '', 200);
+            }
         }
         
         function updateBasketUI() {
