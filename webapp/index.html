@@ -3133,6 +3133,117 @@
            CART STYLES - Shop Menu Style (GTA San Andreas)
            ═══════════════════════════════════════════════════════════════════ */
         
+        /* Modern Cart Item (Apple Polish + GTA) */
+        .cart-item-modern {
+            display: flex;
+            align-items: center;
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .cart-item-modern:hover {
+            transform: scale(1.02);
+            background: rgba(30, 30, 30, 0.8);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .cart-item-modern.removing {
+            transform: translateX(100%);
+            opacity: 0;
+            height: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border: none;
+        }
+
+        .cim-icon-box {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .cim-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cim-name {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            color: #fff;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cim-meta {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cim-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .cim-price {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 18px;
+            color: var(--gta-green);
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+        }
+
+        .cim-delete {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #555;
+            padding: 4px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cim-delete:hover {
+            background: rgba(255, 50, 50, 0.15);
+            color: #ff4444;
+            transform: rotate(90deg);
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
         .cart-modal {
             position: fixed;
             inset: 0;
@@ -5416,6 +5527,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(cartNavCount) {
                 cartNavCount.innerText = basket.length;
                 cartNavCount.style.display = basket.length > 0 ? 'block' : 'none';
+                cartNavCount.style.color = basket.length > 0 ? 'var(--gta-gold)' : '#666';
             }
             
             list.innerHTML = '';
@@ -5423,7 +5535,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // Show/hide empty state
             if(basket.length === 0) {
-                if(emptyState) emptyState.classList.add('show');
+                if(emptyState) {
+                    emptyState.classList.add('show');
+                    emptyState.style.transform = 'scale(1)';
+                }
                 list.style.display = 'none';
             } else {
                 if(emptyState) emptyState.classList.remove('show');
@@ -5433,22 +5548,31 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             basket.forEach((item, index) => {
                 subtotal += item.price;
                 const card = document.createElement('div');
-                card.className = 'cart-item';
+                card.className = 'cart-item-modern';
                 card.id = `basket-item-${index}`;
-                card.style.animation = `slideUp 0.2s ease-out ${index * 0.03}s forwards`;
-                card.style.opacity = '0';
+                // Apple Polish: Staggered Entry
+                card.style.animation = `slideInRight 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.05}s forwards`;
+                card.style.opacity = '0'; // Start hidden
                 
                 let emoji = '📦';
                 if(typeof getProductEmoji === 'function') emoji = getProductEmoji(item.type || 'misc', item.name);
                 
                 card.innerHTML = `
-                    <div class="item-emoji">${emoji}</div>
-                    <div class="item-info">
-                        <div class="item-name">${item.name}</div>
-                        <div class="item-meta">${item.city || ''} ${item.district ? '• ' + item.district : ''}</div>
+                    <div class="cim-icon-box">
+                        <span class="cim-emoji">${emoji}</span>
                     </div>
-                    <span class="item-price">€${item.price.toFixed(2)}</span>
-                    <button class="item-delete" onclick="removeFromBasket(${index})" title="Remove">✕</button>
+                    <div class="cim-details">
+                        <div class="cim-name">${item.name}</div>
+                        <div class="cim-meta">
+                            ${item.city || 'LSPD'} • <span style="color:var(--gta-green)">${item.district ? item.district.toUpperCase() : 'STOCK'}</span>
+                        </div>
+                    </div>
+                    <div class="cim-actions">
+                        <div class="cim-price">€${item.price.toFixed(2)}</div>
+                        <button class="cim-delete" onclick="removeFromBasket(${index})" title="Remove">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
                 `;
                 list.appendChild(card);
             });
@@ -5468,18 +5592,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(discountLine) discountLine.innerHTML = html;
                 if(totalEl) {
                     totalEl.innerText = `€${currentDiscount.final_total.toFixed(2)}`;
+                    totalEl.style.color = "var(--gta-green)";
                 }
                 
                 if(discountMsg) {
-                    discountMsg.innerText = `>> CODE ACCEPTED`;
-                    discountMsg.style.color = "var(--gta-green)";
+                    discountMsg.innerText = `CODE APPLIED`;
+                    discountMsg.className = "cart-promo-msg success";
                 }
             } else {
                 if(discountLine) discountLine.innerHTML = "";
                 if(totalEl) {
                     totalEl.innerText = `€${subtotal.toFixed(2)}`;
+                    totalEl.style.color = "#fff";
                 }
-                if(discountMsg) discountMsg.innerText = "";
+                if(discountMsg) {
+                    discountMsg.innerText = "";
+                    discountMsg.className = "cart-promo-msg";
+                }
             }
         }
         
