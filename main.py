@@ -34,7 +34,6 @@ from utils import (
     TOKEN, BOT_TOKENS, ADMIN_ID, init_db, load_all_data, LANGUAGES, THEMES,
     SUPPORT_USERNAME, BASKET_TIMEOUT, clear_all_expired_baskets,
     SECONDARY_ADMIN_IDS, WEBHOOK_URL,
-    NOWPAYMENTS_IPN_SECRET,
     get_db_connection,
     get_pending_deposit, remove_pending_deposit, FEE_ADJUSTMENT,
     send_message_with_retry,
@@ -1921,20 +1920,9 @@ async def retry_purchase_finalization(user_id: int, basket_snapshot: list, disco
     return False
 
 
-# --- Flask Webhook Routes ---
-def verify_nowpayments_signature(request_data_bytes, signature_header, secret_key):
-    if not secret_key or not signature_header:
-        logger.warning("IPN Secret Key or signature header missing. Cannot verify webhook.")
-        return False
-    try:
-        # Ensure request_data_bytes is used directly if it's already the raw body
-        # If you need to re-order, parse then re-serialize
-        ordered_data = json.dumps(json.loads(request_data_bytes), sort_keys=True, separators=(',', ':'))
-        hmac_hash = hmac.new(secret_key.encode('utf-8'), ordered_data.encode('utf-8'), hashlib.sha512).hexdigest()
-        return hmac.compare_digest(hmac_hash, signature_header)
-    except Exception as e:
-        logger.error(f"Error during signature verification: {e}", exc_info=True)
-        return False
+# --- Flask Webhook Routes (SOL-Only) ---
+# Note: SOL payments are monitored via check_solana_deposits background task
+# No webhook endpoint needed for SOL-only system
 
 # --- Improved Payment Processing with Retry ---
 async def process_payment_with_retry(user_id: int, basket_snapshot: list, discount_code_used: str | None, payment_id: str, context: ContextTypes.DEFAULT_TYPE, max_retries: int = 3):
@@ -1988,42 +1976,10 @@ async def process_payment_with_retry(user_id: int, basket_snapshot: list, discou
 
 @flask_app.route("/webhook", methods=['POST'])
 def nowpayments_webhook():
-    global telegram_app, main_loop, NOWPAYMENTS_IPN_SECRET
-    
-    # CRITICAL: Log every webhook attempt
-    logger.info("🔍 WEBHOOK RECEIVED: NOWPayments webhook endpoint accessed")
-    logger.info(f"🔍 WEBHOOK DEBUG: Request method: {request.method}")
-    logger.info(f"🔍 WEBHOOK DEBUG: Request headers: {dict(request.headers)}")
-    logger.info(f"🔍 WEBHOOK DEBUG: Content length: {request.content_length}")
-    logger.info(f"🔍 WEBHOOK DEBUG: Remote address: {request.remote_addr}")
-    
-    if not telegram_app or not main_loop:
-        logger.error("Webhook received but Telegram app or event loop not initialized.")
-        return Response(status=503)
-
-    # Check request size limit
-    content_length = request.content_length
-    if content_length and content_length > 10240:  # 10KB limit
-        logger.warning(f"Webhook request too large: {content_length} bytes")
-        return Response("Request too large", status=413)
-
-    raw_body = request.get_data() # Get raw body once
-    signature = request.headers.get('x-nowpayments-sig')
-
-    # BULLETPROOF: MANDATORY signature verification for security and reliability
-    if not NOWPAYMENTS_IPN_SECRET:
-        logger.critical("❌ CRITICAL SECURITY ERROR: NOWPAYMENTS_IPN_SECRET not configured! Rejecting all webhooks for security.")
-        return Response("IPN Secret not configured", status=500)
-    
-    if not signature:
-        logger.warning("❌ SECURITY REJECTION: No signature header received from webhook. Rejecting for security.")
-        return Response("Missing signature header", status=400)
-    
-    if not verify_nowpayments_signature(raw_body, signature, NOWPAYMENTS_IPN_SECRET):
-        logger.warning("❌ SECURITY REJECTION: NOWPayments signature verification FAILED - webhook is fake or corrupted")
-        return Response("Invalid signature", status=400)
-    
-    logger.info("✅ NOWPayments signature verification PASSED - webhook is authentic")
+    # SOL-only payment system - NOWPayments webhook disabled
+    # Webhooks are not used for Solana payments (monitored via background task)
+    logger.info("Webhook received but ignored (SOL-only system active)")
+    return Response("Webhook disabled", status=200)
 
     logger.info(f"NOWPayments IPN Received (signature verification {'PASSED' if NOWPAYMENTS_IPN_SECRET and signature else 'SKIPPED'})")
     
@@ -2376,6 +2332,41 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Headers: {dict(request.headers)}")
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
+
+@flask_app.route("/webapp/api/locations", methods=['GET'])
+def webapp_get_locations():
+    """API endpoint to fetch cities and districts from database for the Web App"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Fetch all cities
+        c.execute("SELECT id, name FROM cities ORDER BY name")
+        cities_rows = c.fetchall()
+        
+        locations = {}
+        for city_row in cities_rows:
+            city_id = city_row['id']
+            city_name = city_row['name']
+            
+            # Fetch districts for this city
+            c.execute("SELECT id, name FROM districts WHERE city_id = %s ORDER BY name", (city_id,))
+            districts_rows = c.fetchall()
+            
+            locations[city_name] = [
+                {'id': d['id'], 'name': d['name']} 
+                for d in districts_rows
+            ]
+        
+        conn.close()
+        
+        response = jsonify({'success': True, 'locations': locations})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error fetching locations for webapp: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
@@ -2769,8 +2760,8 @@ def main() -> None:
             
             # Build application with this token
             app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
-            app_builder.post_init(post_init)
-            app_builder.post_shutdown(post_shutdown)
+    app_builder.post_init(post_init)
+    app_builder.post_shutdown(post_shutdown)
             temp_app = app_builder.build()
             
             # Test token validity (will fail if token is invalid)
