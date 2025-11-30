@@ -3097,7 +3097,16 @@
                     <div id="discount-line-container"></div>
                     <div class="cart-total-line cart-total-final">
                         <span>TOTAL</span>
-                        <span id="basket-total">$0.00</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span id="basket-total">$0.00</span>
+                            <div class="wanted-stars" id="wanted-stars">
+                                <span class="wanted-star">★</span>
+                                <span class="wanted-star">★</span>
+                                <span class="wanted-star">★</span>
+                                <span class="wanted-star">★</span>
+                                <span class="wanted-star">★</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -3109,20 +3118,19 @@
                 <div class="cart-secure-text">🔒 SECURE • SOLANA NETWORK</div>
             </div>
             
-            <!-- Bottom Navigation -->
-            <div class="cart-nav-bar">
-                <div class="cart-nav-btn" onclick="closeBasket(); sfx.select(); showSection('shop')">
-                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM10 4h4v2h-4V4zm10 13H4V8h16v9z"/></svg>
+            <!-- Bottom Navigation (Unified Shop Style) -->
+            <div class="bottom-nav" style="position: sticky; bottom: 0; width: 100%; border-top: 2px solid #333; background: #000; z-index: 100; border-radius: 0;">
+                <div class="nav-item" onclick="closeBasket(); sfx.select(); showSection('shop')">
+                    <div class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM10 4h4v2h-4V4zm10 13H4V8h16v9z"/></svg></div>
                     <span>SHOP</span>
                 </div>
-                <div class="cart-nav-btn" onclick="closeBasket(); sfx.select(); showSection('map')">
-                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                <div class="nav-item" onclick="closeBasket(); sfx.select(); showSection('map')">
+                    <div class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
                     <span>MAP</span>
                 </div>
-                <div class="cart-nav-btn active">
-                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 15H5V8h14v10z"/></svg>
-                    <span>CART</span>
-                    <span class="cart-nav-badge" id="cart-nav-count">0</span>
+                <div class="nav-item active">
+                    <div class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 15H5V8h14v10z"/></svg></div>
+                    <span>CART <span id="cart-nav-count" style="color:var(--gta-gold)">(0)</span></span>
                 </div>
             </div>
         </div>
@@ -3477,11 +3485,56 @@
             color: #fff;
         }
         
-        /* Checkout Button - Like btn-buy */
+        /* Holographic Checkout Button */
         .cart-checkout-btn {
             width: 100%;
-            padding: 14px;
-            font-size: 20px;
+            padding: 15px;
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 24px;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+            
+            /* Holographic Effect */
+            background: linear-gradient(90deg, var(--gta-green), #2ecc71, var(--gta-green));
+            background-size: 200% 200%;
+            animation: holograph 3s ease infinite;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes holograph {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .cart-checkout-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-25deg);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            100% { left: 200%; }
+        }
+
+        .cart-checkout-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .cart-checkout-btn:active {
+            transform: scale(0.98);
         }
         
         .cart-secure-text {
@@ -3491,6 +3544,23 @@
             color: #555;
             margin-top: 10px;
             letter-spacing: 1px;
+        }
+
+        /* Wanted Level Stars */
+        .wanted-stars {
+            display: flex;
+            gap: 2px;
+            margin-left: auto;
+            align-self: center;
+        }
+        .wanted-star {
+            color: #333;
+            font-size: 18px;
+            transition: color 0.3s;
+        }
+        .wanted-star.active {
+            color: var(--gta-gold);
+            text-shadow: 0 0 5px var(--gta-gold);
         }
         
         /* Bottom Navigation - Shop Style */
@@ -4729,6 +4799,24 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             document.getElementById('basket-count').innerText = basket.length;
         }
         
+        function updateWantedLevel(total) {
+            const stars = document.querySelectorAll('.wanted-star');
+            let level = 0;
+            if(total > 0) level = 1;
+            if(total > 20) level = 2;
+            if(total > 50) level = 3;
+            if(total > 100) level = 4;
+            if(total > 200) level = 5;
+            
+            stars.forEach((s, i) => {
+                if(i < level) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        }
+
         function openBasket() {
             const modal = document.getElementById('basket-modal');
             renderBasketContent();
@@ -4801,7 +4889,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
                 
                 if(discountLine) discountLine.innerHTML = html;
-                if(totalEl) totalEl.innerText = `$${currentDiscount.final_total.toFixed(2)}`;
+                if(totalEl) {
+                    totalEl.innerText = `$${currentDiscount.final_total.toFixed(2)}`;
+                    updateWantedLevel(currentDiscount.final_total);
+                }
                 
                 if(discountMsg) {
                     discountMsg.innerText = `>> CODE ACCEPTED`;
@@ -4809,7 +4900,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
             } else {
                 if(discountLine) discountLine.innerHTML = "";
-                if(totalEl) totalEl.innerText = `$${subtotal.toFixed(2)}`;
+                if(totalEl) {
+                    totalEl.innerText = `$${subtotal.toFixed(2)}`;
+                    updateWantedLevel(subtotal);
+                }
                 if(discountMsg) discountMsg.innerText = "";
             }
         }
