@@ -5240,14 +5240,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         // Filters
         function renderFilters(products) {
-            // Use appLocations if available (shows ALL admin-added cities)
-            // Otherwise fallback to cities from products
-            let cities = [];
-            if(appLocations && Object.keys(appLocations).length > 0) {
-                cities = Object.keys(appLocations).sort();
-            } else {
-                cities = [...new Set(products.map(p => p.city))];
-            }
+            // Only show cities that have products
+            const cities = [...new Set(products.map(p => p.city))];
             
             const container = document.getElementById('city-filters');
             container.innerHTML = '<button class="filter-btn active" onclick="filterProducts(\'all\')">ALL ZONES</button>';
@@ -5272,14 +5266,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
 
-            // Filter for the selected city first
-            let cityProducts = allProducts.filter(p => p.city === city);
+            // Filter for the selected city first (case-insensitive)
+            let cityProducts = allProducts.filter(p => p.city && p.city.toLowerCase() === city.toLowerCase());
             
             // 1. Update Product Grid
             let displayProducts = cityProducts;
             if (district) {
-                const dTerm = district.toLowerCase();
-                displayProducts = cityProducts.filter(p => p.district && p.district.toLowerCase().includes(dTerm));
+                // Case-insensitive exact match for district
+                const dTerm = district.toLowerCase().trim();
+                displayProducts = cityProducts.filter(p => p.district && p.district.toLowerCase().trim() === dTerm);
             }
             renderProducts(displayProducts);
 
