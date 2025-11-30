@@ -86,6 +86,47 @@
             opacity: 0.3;
         }
 
+        /* --- iFruit OS Status Bar --- */
+        .status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            z-index: 9999;
+            pointer-events: none;
+            mix-blend-mode: difference;
+            box-sizing: border-box;
+        }
+
+        .sb-time { letter-spacing: 0.5px; }
+        .sb-right { display: flex; gap: 8px; align-items: center; }
+        
+        .sb-notch {
+            width: 120px;
+            height: 30px;
+            background: #000;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Adjust body/containers for status bar */
+        .street-sign-container, .cart-header-bar, .panel-header {
+            padding-top: 44px !important;
+        }
+
         /* App Header (Minimal Authentic) */
         .app-header {
             display: none !important; /* Hidden to use Custom Headers */
@@ -2977,6 +3018,15 @@
     </style>
 </head>
 <body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="sb-left"><span id="sb-time">12:00</span></div>
+        <div class="sb-center"><div class="sb-notch"></div></div>
+        <div class="sb-right">
+            <span class="sb-signal">5G</span>
+            <span class="sb-battery">100%</span>
+        </div>
+    </div>
     <!-- Wasted Overlay -->
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
         <div class="wasted-text">WASTED</div>
@@ -3686,8 +3736,10 @@
         
         .cart-checkout-section {
             /* Add padding so the checkout button sits ABOVE the floating nav */
-            padding-bottom: 90px !important; 
-            background: rgba(0, 0, 0, 0.95); /* Opaque background to hide scrolling content behind */
+            padding-bottom: 150px !important; 
+            background: linear-gradient(to top, #000 20%, rgba(0,0,0,0.95) 100%);
+            position: relative;
+            z-index: 50;
         }
 
         @media (max-width: 600px) {
@@ -5130,7 +5182,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     html += `<div class="cart-total-line" style="color:var(--gta-green);"><span>RESELLER</span><span>-$${currentDiscount.reseller_discount.toFixed(2)}</span></div>`;
                 }
                 if (currentDiscount.code_discount > 0) {
-                    html += `<div class="cart-total-line" style="color:var(--gta-gold);"><span>PROMO (${currentDiscount.code})</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
+                    const codeText = currentDiscount.code ? currentDiscount.code : 'SPECIAL';
+                    html += `<div class="cart-total-line" style="color:var(--gta-gold);"><span>PROMO (${codeText})</span><span>-$${currentDiscount.code_discount.toFixed(2)}</span></div>`;
                 }
                 
                 if(discountLine) discountLine.innerHTML = html;
@@ -5912,6 +5965,10 @@ const CHAR_ASSETS = {
             // Also update Phone Time if visible
             const phoneTime = document.getElementById('phone-time');
             if(phoneTime) phoneTime.innerText = `${h}:${m}`;
+
+            // Update Status Bar Time
+            const sbTime = document.getElementById('sb-time');
+            if(sbTime) sbTime.innerText = `${h}:${m}`;
         }
         setInterval(updateHeaderClock, 1000);
         // Initial Call
