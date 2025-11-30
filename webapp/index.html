@@ -3045,6 +3045,7 @@
         <div class="mp-text">MISSION PASSED!</div>
         <div class="mp-sub">RESPECT +</div>
     </div>
+    <audio id="mp-sound" src="https://www.myinstants.com/media/sounds/gta-san-andreas-mission-passed-sound.mp3" preload="auto"></audio>
 
 
     <!-- CART - Shop Style -->
@@ -3632,6 +3633,80 @@
         #basket-count, #cart-nav-count {
             color: var(--gta-gold) !important;
             font-weight: bold;
+        }
+
+        /* MISSION PASSED OVERLAY */
+        .mission-passed-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .mp-text {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 60px;
+            color: var(--gta-gold);
+            text-shadow: 3px 3px 0 #000;
+            opacity: 0;
+            transform: scale(2);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .mp-sub {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 30px;
+            color: #fff;
+            margin-top: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease 0.5s;
+        }
+
+        .mp-active .mp-text {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .mp-active .mp-sub {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* MOBILE OPTIMIZATION & CHECKOUT FIX */
+        .cart-content {
+             /* Ensure content scrolls behind the fixed footer area if needed, 
+                but mainly we rely on the footer section padding */
+        }
+        
+        .cart-checkout-section {
+            /* Add padding so the checkout button sits ABOVE the floating nav */
+            padding-bottom: 90px !important; 
+            background: rgba(0, 0, 0, 0.95); /* Opaque background to hide scrolling content behind */
+        }
+
+        @media (max-width: 600px) {
+            .cart-container {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100% !important;
+                max-height: 100% !important;
+                border: none !important;
+                border-radius: 0 !important;
+            }
+            
+            .cart-header-bar {
+                padding-top: max(15px, env(safe-area-inset-top));
+            }
+            
+            .mp-text {
+                font-size: 40px;
+            }
         }
 
         /* ═══════════════════════════════════════════════════════════════════
@@ -5276,18 +5351,25 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             closeInvoice();
             basket = []; // Clear basket
             updateBasketUI();
-            sfx.cash(); // Cash Sound!
-            charSystem.show('smoke', 'RESPECT +');
             
             // Play Mission Passed Logic
             const overlay = document.getElementById('mp-overlay');
+            const sound = document.getElementById('mp-sound');
+            
             overlay.style.display = 'flex';
+            if(sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Audio play failed", e));
+            }
+            
             // Force reflow
             void overlay.offsetWidth;
             overlay.classList.add('mp-active');
             
             // Show Review after 4 seconds
             setTimeout(() => {
+                overlay.classList.remove('mp-active');
+                overlay.style.display = 'none';
                 document.getElementById('review-modal').style.display = 'flex';
             }, 4000);
         }
