@@ -3119,7 +3119,7 @@
             </div>
             
             <!-- Bottom Navigation (Unified Shop Style) -->
-            <div class="bottom-nav" style="position: sticky; bottom: 0; width: 100%; border-top: 2px solid #333; background: #000; z-index: 100; border-radius: 0;">
+            <div class="bottom-nav">
                 <div class="nav-item" onclick="closeBasket(); sfx.select(); showSection('shop')">
                     <div class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM10 4h4v2h-4V4zm10 13H4V8h16v9z"/></svg></div>
                     <span>SHOP</span>
@@ -3546,21 +3546,191 @@
             letter-spacing: 1px;
         }
 
-        /* Wanted Level Stars */
+        /* Wanted Level Stars (Red Glow) */
         .wanted-stars {
             display: flex;
-            gap: 2px;
+            gap: 4px;
             margin-left: auto;
             align-self: center;
         }
         .wanted-star {
             color: #333;
-            font-size: 18px;
-            transition: color 0.3s;
+            font-size: 20px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .wanted-star.active {
-            color: var(--gta-gold);
-            text-shadow: 0 0 5px var(--gta-gold);
+            color: #e74c3c;
+            text-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+            transform: scale(1.1);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           NAVIGATION BAR - Floating Capsule (Apple + GTA Style)
+           ═══════════════════════════════════════════════════════════════════ */
+        .bottom-nav {
+            position: fixed !important;
+            bottom: 30px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 90% !important;
+            max-width: 350px !important;
+            height: 65px !important;
+            background: rgba(0, 0, 0, 0.9) !important;
+            backdrop-filter: blur(10px) !important;
+            border: 1px solid #333 !important;
+            border-radius: 40px !important;
+            display: flex !important;
+            justify-content: space-evenly !important;
+            align-items: center !important;
+            z-index: 20000 !important;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6) !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #555;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .nav-item.active {
+            color: #fff !important;
+        }
+        
+        .nav-item.active .nav-icon {
+            transform: translateY(-3px);
+        }
+
+        .nav-item.active .nav-icon svg {
+            fill: #fff !important;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.4));
+        }
+        
+        .nav-item span {
+            font-family: 'Impact', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+            margin-top: 3px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+        
+        .nav-item.active span {
+            opacity: 1;
+            color: #fff;
+        }
+
+        /* Cart Counter */
+        #basket-count, #cart-nav-count {
+            color: var(--gta-gold) !important;
+            font-weight: bold;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           CART SUMMARY POLISH ("Gear" / Apple Quality)
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        /* Promo Input Area */
+        .cart-promo {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            background: transparent;
+            padding: 0;
+            border: none;
+        }
+
+        .cart-promo-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 12px 15px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            text-transform: uppercase;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .cart-promo-input:focus {
+            border-color: #666;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+        }
+
+        .cart-promo-btn {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #eee;
+            font-family: 'Impact', sans-serif;
+            letter-spacing: 1px;
+            padding: 0 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cart-promo-btn:hover {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        /* Totals Box - Clean & Modern */
+        .cart-totals-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .cart-total-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .cart-total-final {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #333;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .cart-total-final span:first-child {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 700;
+            font-size: 28px;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        #basket-total {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            font-size: 28px;
+            color: #fff;
+            margin-left: auto;
+            margin-right: 15px;
+            letter-spacing: -0.5px;
         }
         
         /* Bottom Navigation - Shop Style */
