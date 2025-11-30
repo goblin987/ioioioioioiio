@@ -5484,8 +5484,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // --- Apple-Quality Fly-to-Cart Animation ---
         function flyToCart(e) {
             const btn = e.target;
-            const navItems = document.querySelectorAll('.nav-item');
-            const cartIcon = navItems[2]; // 0:Shop, 1:Map, 2:Cart
+            // FIX: Target the MAIN navigation basket icon (id="nav-basket")
+            const cartIcon = document.getElementById('nav-basket');
             
             if(!cartIcon) return;
 
@@ -5543,8 +5543,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     setTimeout(() => icon.style.transform = 'scale(1)', 150);
                 }
                 
-                // Flash Count
-                const countBadge = document.getElementById('cart-nav-count');
+                // Flash Count (Main Nav)
+                const countBadge = document.getElementById('basket-count');
                 if(countBadge) {
                     countBadge.style.color = '#fff';
                     countBadge.style.transform = 'scale(1.5)';
