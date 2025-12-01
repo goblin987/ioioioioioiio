@@ -3106,7 +3106,7 @@
                         <span>TOTAL</span>
                         <span id="basket-total">€0.00</span>
                     </div>
-                    <div class="cart-total-line" style="margin-top:5px; padding-top:5px; border-top:1px solid rgba(255,255,255,0.1); color:#555;">
+                    <div class="cart-total-line" style="margin-top:5px; color:#555;">
                         <span>WALLET</span>
                         <span>€0.00</span>
                     </div>
@@ -3345,8 +3345,8 @@
             flex: 1;
             overflow-y: auto;
             padding: 15px;
-            min-height: 150px;
-            max-height: 40vh;
+            min-height: 200px;
+            max-height: 55vh;
         }
         
         .cart-content::-webkit-scrollbar { width: 6px; }
@@ -3988,9 +3988,9 @@
         .cart-totals-box {
             background: transparent;
             border: none;
-            border-top: 1px solid #222;
+            border-top: none;
             border-radius: 0;
-            padding: 10px 5px 0 5px;
+            padding: 5px 5px 0 5px;
             margin-bottom: 5px;
             box-shadow: none;
         }
@@ -4006,9 +4006,9 @@
         }
 
         .cart-total-final {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px dashed #333;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: none;
             margin-bottom: 0;
             display: flex;
             align-items: center;
@@ -5608,9 +5608,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // 2. Get full product details from allProducts
-            const product = allProducts.find(p => p.ids && p.ids.includes(id));
+            // 2. Get full product details from allProducts (search by individual product ID)
+            const product = allProducts.find(p => p.id === id);
             if(!product) {
+                console.error('Product not found:', id, 'Available products:', allProducts);
                 tg.showAlert('⚠️ Product not found');
                 return;
             }
@@ -5624,7 +5625,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 price: price,
                 city: product.city || 'Unknown',
                 district: product.district || 'Unknown',
-                type: product.product_type || 'misc'
+                type: product.type || 'misc'
             });
             
             updateBasketUI();
@@ -5730,9 +5731,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     totalEl.innerText = `€${currentDiscount.final_total.toFixed(2)}`;
                     totalEl.style.color = "var(--gta-green)";
                 }
+                // Remove "CODE APPLIED" message - just show green price
                 if(discountMsg) {
-                    discountMsg.innerText = `CODE APPLIED`;
-                    discountMsg.className = "cart-promo-msg success";
+                    discountMsg.innerText = "";
+                    discountMsg.className = "cart-promo-msg";
                 }
             } else {
                 if(totalEl) {
