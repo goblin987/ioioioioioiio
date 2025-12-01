@@ -5191,9 +5191,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
+            // Filter out sold-out products (available = 0)
+            const availableProducts = products.filter(p => p.available > 0);
+            
+            if(availableProducts.length === 0) {
+                grid.innerHTML = '<div class="loading">NO PRODUCTS AVAILABLE</div>';
+                return;
+            }
+            
             // Group products by Cleaned Name + Type + City + Size + Price
             const groups = {};
-            products.forEach(p => {
+            availableProducts.forEach(p => {
                 // CLEAN NAME: Remove any sequence of 6+ digits/underscores (IDs)
                 // This handles cases where ID is stuck to the name in DB
                 let cleanName = p.name.replace(/[\d_]{6,}.*/g, '').trim();
@@ -5251,16 +5259,19 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function filterSearch(query) {
             const term = query.toLowerCase();
             const filtered = allProducts.filter(p => 
-                p.name.toLowerCase().includes(term) || 
-                p.city.toLowerCase().includes(term)
+                p.available > 0 && (
+                    p.name.toLowerCase().includes(term) || 
+                    p.city.toLowerCase().includes(term)
+                )
             );
             renderProducts(filtered);
         }
 
         // Filters
         function renderFilters(products) {
-            // Only show cities that have products
-            const cities = [...new Set(products.map(p => p.city))];
+            // Only show cities that have available products
+            const availableProducts = products.filter(p => p.available > 0);
+            const cities = [...new Set(availableProducts.map(p => p.city))];
             
             const container = document.getElementById('city-filters');
             container.innerHTML = '<button class="filter-btn active" onclick="filterProducts(\'all\')">ALL ZONES</button>';
@@ -5285,8 +5296,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
 
-            // Filter for the selected city first (case-insensitive)
-            let cityProducts = allProducts.filter(p => p.city && p.city.toLowerCase() === city.toLowerCase());
+            // Filter for the selected city first (case-insensitive) AND available products only
+            let cityProducts = allProducts.filter(p => p.available > 0 && p.city && p.city.toLowerCase() === city.toLowerCase());
             
             // 1. Update Product Grid
             let displayProducts = cityProducts;
@@ -5298,7 +5309,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             renderProducts(displayProducts);
 
             // 2. Update Filter Bar (Show Districts)
-            // Get unique districts for this city from the PRODUCTS list
+            // Get unique districts for this city from the AVAILABLE PRODUCTS list
             const districts = [...new Set(cityProducts.map(p => p.district).filter(d => d))].sort();
             
             container.innerHTML = '';
