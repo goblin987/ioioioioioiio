@@ -2201,7 +2201,7 @@ def webapp_create_invoice():
             p_id = item.get('id')
             c.execute("""
                 SELECT id, name, price, product_type, available, size, city, district, 
-                       original_text_pickup 
+                       original_text 
                 FROM products WHERE id = %s
             """, (p_id,))
             row = c.fetchone()
@@ -2332,13 +2332,11 @@ def webapp_create_refill():
         if not user_id or amount_eur <= 0:
             return jsonify({'error': 'Invalid data'}), 400
 
-        # Get SOL price
+        # Get SOL price (synchronous function)
         from payment_solana import get_sol_price_eur
-        loop = main_loop if main_loop else asyncio.new_event_loop()
         
         try:
-            price_future = asyncio.run_coroutine_threadsafe(get_sol_price_eur(), loop)
-            sol_price = price_future.result(timeout=10)
+            sol_price = get_sol_price_eur()
         except Exception as e:
             logger.error(f"Error getting SOL price: {e}")
             return jsonify({'error': 'Could not get crypto price'}), 500
@@ -2355,6 +2353,7 @@ def webapp_create_refill():
         order_id = f"WEBAPP_REFILL_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
         
         from payment import create_solana_payment
+        loop = main_loop if main_loop else asyncio.new_event_loop()
         payment_res = asyncio.run_coroutine_threadsafe(
             create_solana_payment(user_id, order_id, amount_sol), 
             loop
