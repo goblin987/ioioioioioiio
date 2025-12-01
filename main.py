@@ -2152,7 +2152,7 @@ def webapp_validate_discount():
             if is_valid and details:
                 code_discount_amount = Decimal(str(details['discount_amount']))
                 message = msg
-                else:
+            else:
                 message = msg # Error message
         
         final_total = base_total_after_reseller - code_discount_amount
