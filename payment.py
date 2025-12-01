@@ -544,7 +544,7 @@ async def process_successful_refill(user_id: int, amount_to_add_eur: Decimal, pa
 
 
 # --- HELPER: Finalize Purchase (Send Caption Separately) ---
-async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_used: str | None, context: ContextTypes.DEFAULT_TYPE) -> bool:
+async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_used: str | None, context: ContextTypes.DEFAULT_TYPE, payment_id: str = None) -> bool:
     """
     Shared logic to finalize a purchase after payment confirmation (balance or crypto).
     Decrements stock, adds purchase record, sends media first, then text separately,
@@ -1087,16 +1087,22 @@ To receive your products securely via encrypted chat, please:
                             except Exception as close_e: logger.warning(f"Error closing file handle during final cleanup: {close_e}")
 
                 # --- Final Message to User ---
-                leave_review_button = lang_data.get("leave_review_button", "Leave a Review")
-                keyboard = [[InlineKeyboardButton(f"✍️ {leave_review_button}", callback_data="leave_review_now")]]
+                # Skip post-purchase messages for webapp users (they see Mission Passed in the app)
+                is_webapp_order = payment_id and payment_id.startswith("WEBAPP_")
                 
-                # Send review prompt via bot (not userbot)
-                if use_userbot_delivery:
-                    # For userbot delivery, send review prompt via bot
-                    await send_message_with_retry(context.bot, chat_id, "✅ Your order has been delivered securely!\n\n💬 How was your experience?", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+                if not is_webapp_order:
+                    leave_review_button = lang_data.get("leave_review_button", "Leave a Review")
+                    keyboard = [[InlineKeyboardButton(f"✍️ {leave_review_button}", callback_data="leave_review_now")]]
+                    
+                    # Send review prompt via bot (not userbot)
+                    if use_userbot_delivery:
+                        # For userbot delivery, send review prompt via bot
+                        await send_message_with_retry(context.bot, chat_id, "✅ Your order has been delivered securely!\n\n💬 How was your experience?", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+                    else:
+                        # For bot delivery, send standard message
+                        await send_message_with_retry(context.bot, chat_id, "Thank you for your purchase!", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
                 else:
-                    # For bot delivery, send standard message
-                    await send_message_with_retry(context.bot, chat_id, "Thank you for your purchase!", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+                    logger.info(f"Skipping post-purchase messages for webapp user {user_id} (payment {payment_id})")
                 
             except Exception as media_error:
                 logger.critical(f"🚨 CRITICAL: Media delivery failed for user {user_id} after successful payment! Error: {media_error}")
@@ -1215,7 +1221,7 @@ async def process_purchase_with_balance(user_id: int, amount_to_deduct: Decimal,
     if db_balance_deducted:
         logger.info(f"Calling _finalize_purchase for user {user_id} after balance deduction.")
         # Now call the shared finalization logic
-        finalize_success = await _finalize_purchase(user_id, basket_snapshot, discount_code_used, context)
+        finalize_success = await _finalize_purchase(user_id, basket_snapshot, discount_code_used, context, payment_id)
         if not finalize_success:
             # Critical issue: Balance deducted but finalization failed.
             logger.critical(f"CRITICAL: Balance deducted for user {user_id} but _finalize_purchase FAILED! Attempting to refund.")
@@ -1291,7 +1297,7 @@ async def process_successful_crypto_purchase(user_id: int, basket_snapshot: list
         return False # Cannot proceed
 
     # Call the shared finalization logic
-    finalize_success = await _finalize_purchase(user_id, basket_snapshot, discount_code_used, context)
+    finalize_success = await _finalize_purchase(user_id, basket_snapshot, discount_code_used, context, payment_id)
 
     if finalize_success:
         # _finalize_purchase now handles the user-facing confirmation messages

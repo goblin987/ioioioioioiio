@@ -5120,7 +5120,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         // --- Refill Logic ---
         function openRefill() {
-            document.getElementById('refill-modal').style.display = 'flex';
+            const modal = document.getElementById('refill-modal');
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'flex-end';
+            modal.style.justifyContent = 'center';
         }
         
         function closeRefill() {
