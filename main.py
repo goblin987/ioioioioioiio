@@ -2590,21 +2590,17 @@ def webapp_create_invoice():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Store basket snapshot WITH discount info
-        basket_snapshot = {
-            'items': items,
-            'discounts': discount_info,
-            'original_total': float(total_eur),
-            'final_total': float(final_total)
-        }
+        # Store basket snapshot as LIST (matching bot format) - items already have full product details
+        # Items format: [{'product_id': X, 'name': Y, 'price': Z, 'city': A, 'district': B, ...}, ...]
+        basket_snapshot = items  # Items already contain all needed product details
         
         c.execute("""
             INSERT INTO pending_deposits 
             (user_id, payment_id, currency, target_eur_amount, expected_crypto_amount, 
-             created_at, is_purchase, basket_snapshot_json)
-            VALUES (%s, %s, %s, %s, %s, NOW(), TRUE, %s)
+             created_at, is_purchase, basket_snapshot_json, discount_code_used)
+            VALUES (%s, %s, %s, %s, %s, NOW(), TRUE, %s, %s)
         """, (user_id, order_id, 'SOL', float(final_total), float(payment_res['pay_amount']), 
-              json.dumps(basket_snapshot)))
+              json.dumps(basket_snapshot), discount_code if discount_code else None))
         
         conn.commit()
         conn.close()
