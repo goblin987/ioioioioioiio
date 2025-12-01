@@ -5126,6 +5126,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
+        function safeAlert(msg) {
+            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+                window.Telegram.WebApp.showAlert(msg);
+            } else {
+                alert(msg);
+            }
+        }
+
         async function initRefill(amount) {
             const btns = document.querySelectorAll('.refill-btn');
             btns.forEach(b => b.disabled = true);
@@ -5168,10 +5176,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     if(pollInterval) clearInterval(pollInterval);
                     pollInterval = setInterval(() => pollPayment(data.payment_id), 3000);
                 } else {
-                    tg.showAlert("⚠️ " + (data.error || "Error creating refill"));
+                    safeAlert("⚠️ " + (data.error || "Error creating refill"));
                 }
             } catch(e) {
-                tg.showAlert("Network Error: " + e.message);
+                safeAlert("Network Error: " + e.message);
             } finally {
                 btns.forEach(b => b.disabled = false);
             }
@@ -5233,6 +5241,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 rInput.addEventListener('input', () => {
                     const btn = rInput.nextElementSibling; // The PAY button
                     if(btn) {
+                        // Bind click explicitly to ensure it works
+                        btn.onclick = initCustomRefill;
+                        
                         const val = parseFloat(rInput.value);
                         if(val && val > 0) {
                             btn.style.background = 'var(--gta-green)';
