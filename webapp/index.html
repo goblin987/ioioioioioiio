@@ -3088,6 +3088,9 @@
                     <button class="btn-buy empty-btn" onclick="closeBasket(); showSection('shop');">
                         GO TO SHOP
                     </button>
+                    <button class="refill-btn-small" style="margin-top: 15px; background: rgba(255,255,255,0.1); width: auto; display: inline-flex; font-size: 12px; padding: 8px 16px;" onclick="openRefill()">
+                        💰 TOP UP WALLET
+                    </button>
                 </div>
             </div>
             
@@ -3110,7 +3113,7 @@
                             <div class="mt-label">WALLET</div>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div class="mt-value-sm">€0.00</div>
-                                <button class="refill-mini-btn" onclick="openRefill()">+</button>
+                                <button class="refill-btn-small" onclick="openRefill()">+ REFILL</button>
                             </div>
                         </div>
                         <div class="mt-right">
@@ -3856,22 +3859,25 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         
-        .refill-mini-btn {
-            width: 24px; height: 24px;
-            border-radius: 50%;
-            background: rgba(46, 204, 113, 0.2);
-            border: 1px solid rgba(46, 204, 113, 0.5);
+        .refill-btn-small {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid rgba(46, 204, 113, 0.4);
             color: #2ecc71;
-            display: flex; align-items: center; justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 16px;
-            padding: 0;
             transition: all 0.2s;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+            margin-left: 5px;
         }
-        .refill-mini-btn:hover {
+        .refill-btn-small:hover {
             background: #2ecc71;
             color: #000;
-            transform: scale(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(46, 204, 113, 0.3);
         }
 
         /* Refill Modal Styles */
