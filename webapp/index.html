@@ -3057,7 +3057,7 @@
         <div class="mp-text">MISSION PASSED!</div>
         <div class="mp-sub">RESPECT +</div>
     </div>
-    <audio id="mp-sound" src="https://www.myinstants.com/media/sounds/gta-san-andreas-mission-passed-sound.mp3" preload="auto"></audio>
+    <audio id="mp-sound" src="https://ia800501.us.archive.org/33/items/GTASAMissionPassed/GTA%20SA%20Mission%20Passed.mp3" preload="auto"></audio>
 
 
     <!-- CART - Shop Style -->
@@ -5186,18 +5186,35 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function startApp() {
             log("startApp called");
             
-            // Fix Input Obstruction
+            // Fix Input Obstruction - Move nav bar down when typing
             const dInput = document.getElementById('discount-input');
+            const rInput = document.getElementById('custom-refill');
+            const nav = document.querySelector('.bottom-nav');
+            
+            function handleInputFocus(inputElement) {
+                if(nav) {
+                    nav.style.transform = 'translateY(200px)'; // Move down out of view
+                    nav.style.transition = 'transform 0.3s ease';
+                }
+                setTimeout(() => {
+                    if(inputElement) inputElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+                }, 100);
+            }
+            
+            function handleInputBlur() {
+                if(nav) {
+                    nav.style.transform = 'translateY(0)'; // Move back to original position
+                }
+            }
+            
             if(dInput) {
-                dInput.addEventListener('focus', () => {
-                    const nav = document.querySelector('.bottom-nav');
-                    if(nav) nav.style.display = 'none';
-                    setTimeout(() => dInput.scrollIntoView({behavior: 'smooth', block: 'center'}), 300);
-                });
-                dInput.addEventListener('blur', () => {
-                    const nav = document.querySelector('.bottom-nav');
-                    if(nav) nav.style.display = 'flex';
-                });
+                dInput.addEventListener('focus', () => handleInputFocus(dInput));
+                dInput.addEventListener('blur', handleInputBlur);
+            }
+            
+            if(rInput) {
+                rInput.addEventListener('focus', () => handleInputFocus(rInput));
+                rInput.addEventListener('blur', handleInputBlur);
             }
             
             // Unlock Audio Context
