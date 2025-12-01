@@ -157,9 +157,9 @@ class UserbotPool:
         
         # Try all userbots starting from last used
         for _ in range(len(userbot_ids)):
-        self._last_used_index = (self._last_used_index + 1) % len(userbot_ids)
-        userbot_id = userbot_ids[self._last_used_index]
-        
+            self._last_used_index = (self._last_used_index + 1) % len(userbot_ids)
+            userbot_id = userbot_ids[self._last_used_index]
+            
             # Check flood cooldown
             if userbot_id in self.flooded_until:
                 if datetime.now(timezone.utc) < self.flooded_until[userbot_id]:
@@ -169,18 +169,18 @@ class UserbotPool:
                     # Cooldown expired
                     del self.flooded_until[userbot_id]
             
-        client = self.clients.get(userbot_id)
-        secret_chat_manager = self.secret_chat_managers.get(userbot_id)
-        
-        if client and secret_chat_manager:
+            client = self.clients.get(userbot_id)
+            secret_chat_manager = self.secret_chat_managers.get(userbot_id)
+            
+            if client and secret_chat_manager:
                 # Check connection
                 if not client.is_connected:
                     try:
                         asyncio.create_task(client.connect())
                     except: pass
                 
-            logger.info(f"🎯 Selected userbot #{userbot_id} for delivery (round-robin)")
-            return userbot_id, client, secret_chat_manager
+                logger.info(f"🎯 Selected userbot #{userbot_id} for delivery (round-robin)")
+                return userbot_id, client, secret_chat_manager
         
         logger.warning("⚠️ All userbots are flooded or unavailable")
         return None

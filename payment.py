@@ -943,27 +943,16 @@ To receive your products securely via encrypted chat, please:
                                 input_media = None
                                 
                                 # 🚀 YOLO FIX: 3-tier fallback for maximum reliability
-                                # 1. Try telegram_file_id (fastest, Telegram cloud storage)
-                                # 2. Try binary data from PostgreSQL (RENDER-SAFE!)
+                                # 1. Try binary data from PostgreSQL FIRST (most reliable for Render)
+                                # 2. Try telegram_file_id as fallback
                                 # 3. Fail gracefully
                                 
                                 file_id = item.get('id')
                                 media_binary = item.get('binary')  # PostgreSQL BYTEA data
+                                input_media = None
                                 
-                                if file_id:
-                                    logger.debug(f"Using Telegram file_id for P{prod_id}: {file_id[:20]}...")
-                                    try:
-                                        if item['type'] == 'photo': 
-                                            input_media = InputMediaPhoto(media=file_id)
-                                        elif item['type'] == 'video': 
-                                            input_media = InputMediaVideo(media=file_id)
-                                        logger.debug(f"✅ Created InputMedia for P{prod_id} from file_id")
-                                    except Exception as media_err:
-                                        logger.warning(f"file_id failed for P{prod_id}, trying PostgreSQL backup: {media_err}")
-                                        input_media = None
-                                
-                                # Fallback to PostgreSQL binary data
-                                if not input_media and media_binary:
+                                # PRIMARY: Use PostgreSQL binary data (most reliable)
+                                if media_binary:
                                     logger.info(f"🔄 Using PostgreSQL binary data for P{prod_id} ({len(media_binary)} bytes)")
                                     try:
                                         # Convert binary data to file-like object
@@ -978,6 +967,19 @@ To receive your products securely via encrypted chat, please:
                                         logger.info(f"✅ Created InputMedia for P{prod_id} from PostgreSQL binary")
                                     except Exception as binary_err:
                                         logger.error(f"PostgreSQL binary failed for P{prod_id}: {binary_err}")
+                                        input_media = None
+                                
+                                # FALLBACK: Try telegram_file_id if binary failed
+                                if not input_media and file_id:
+                                    logger.debug(f"Trying Telegram file_id for P{prod_id}: {file_id[:20]}...")
+                                    try:
+                                        if item['type'] == 'photo': 
+                                            input_media = InputMediaPhoto(media=file_id)
+                                        elif item['type'] == 'video': 
+                                            input_media = InputMediaVideo(media=file_id)
+                                        logger.debug(f"✅ Created InputMedia for P{prod_id} from file_id")
+                                    except Exception as media_err:
+                                        logger.warning(f"file_id also failed for P{prod_id}: {media_err}")
                                         input_media = None
                                 
                                 if not input_media:
@@ -1009,11 +1011,20 @@ To receive your products securely via encrypted chat, please:
                                         # Add to retry queue for 100% delivery guarantee
                                         try:
                                             from media_retry_queue import media_retry_queue
+                                            # Convert InputMedia objects to serializable format
+                                            serializable_media = []
+                                            for idx, media_item in enumerate(photo_video_group_details):
+                                                serializable_media.append({
+                                                    'type': media_item.get('type'),
+                                                    'file_id': media_item.get('id'),
+                                                    'has_binary': bool(media_item.get('binary'))
+                                                })
+                                            
                                             await media_retry_queue.add_failed_delivery(
                                                 user_id=user_id,
                                                 order_id=f"P{prod_id}",
                                                 media_type='media_group',
-                                                media_data={'media_group': media_group_input},
+                                                media_data={'media_items': serializable_media, 'product_id': prod_id},
                                                 error_message="Failed after 5 retry attempts"
                                             )
                                             logger.info(f"📋 Added failed media group to retry queue for user {user_id}")
