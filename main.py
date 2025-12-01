@@ -2317,8 +2317,76 @@ def webapp_create_invoice():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
 
-                     except Exception as e:
+    except Exception as e:
         logger.error(f"Error creating invoice: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@flask_app.route("/webapp/api/create_refill", methods=['POST'])
+def webapp_create_refill():
+    """Create a refill invoice for balance top-up"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        amount_eur = float(data.get('amount', 0))
+        
+        if not user_id or amount_eur <= 0:
+            return jsonify({'error': 'Invalid data'}), 400
+
+        # Get SOL price
+        from payment_solana import get_sol_price_eur
+        loop = main_loop if main_loop else asyncio.new_event_loop()
+        
+        try:
+            price_future = asyncio.run_coroutine_threadsafe(get_sol_price_eur(), loop)
+            sol_price = price_future.result(timeout=10)
+        except Exception as e:
+            logger.error(f"Error getting SOL price: {e}")
+            return jsonify({'error': 'Could not get crypto price'}), 500
+        
+        if not sol_price or sol_price <= Decimal('0'):
+            return jsonify({'error': 'Invalid crypto price'}), 500
+            
+        # Calculate SOL amount with safety buffer (1%) to ensure it covers EUR amount
+        # Actually, no buffer for exact calculation, but we check for underpayment later
+        amount_sol = Decimal(str(amount_eur)) / sol_price
+        amount_sol = amount_sol.quantize(Decimal("0.000001")) # Precision
+
+        # Create Payment
+        order_id = f"WEBAPP_REFILL_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
+        
+        from payment import create_solana_payment
+        payment_res = asyncio.run_coroutine_threadsafe(
+            create_solana_payment(user_id, order_id, amount_sol), 
+            loop
+        ).result(timeout=10)
+        
+        if 'error' in payment_res:
+            return jsonify(payment_res), 500
+            
+        # Store in DB
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO pending_deposits 
+            (user_id, payment_id, currency, target_eur_amount, expected_crypto_amount, 
+             created_at, is_purchase, basket_snapshot_json)
+            VALUES (%s, %s, %s, %s, %s, NOW(), FALSE, NULL)
+        """, (user_id, order_id, 'SOL', amount_eur, float(payment_res['pay_amount'])))
+        conn.commit()
+        conn.close()
+        
+        response = jsonify({
+            'success': True,
+            'payment_id': order_id,
+            'pay_address': payment_res['pay_address'],
+            'pay_amount': payment_res['pay_amount'],
+            'amount_eur': amount_eur
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error creating refill: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
