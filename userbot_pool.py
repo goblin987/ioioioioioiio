@@ -197,12 +197,12 @@ class UserbotPool:
         attempt_errors = []
         
         for attempt in range(3):
-        userbot_info = self.get_available_userbot()
-        if not userbot_info:
+            userbot_info = self.get_available_userbot()
+            if not userbot_info:
                 return False, f"No available userbots. Errors: {attempt_errors}"
-        
-        userbot_id, client, secret_chat_manager = userbot_info
-        
+            
+            userbot_id, client, secret_chat_manager = userbot_info
+            
             try:
                 return await self._attempt_delivery(
                     userbot_id, client, secret_chat_manager,

@@ -2152,7 +2152,7 @@ def webapp_validate_discount():
             if is_valid and details:
                 code_discount_amount = Decimal(str(details['discount_amount']))
                 message = msg
-            else:
+                else:
                 message = msg # Error message
         
         final_total = base_total_after_reseller - code_discount_amount
@@ -2234,7 +2234,7 @@ def webapp_create_invoice():
                 'size': row.get('size', ''),
                 'city': row.get('city', ''),
                 'district': row.get('district', ''),
-                'original_text': row.get('original_text_pickup', '')
+                'original_text': row.get('original_text', '')  # Fixed: use 'original_text' not 'original_text_pickup'
             })
         
         conn.close()
@@ -2317,7 +2317,7 @@ def webapp_create_invoice():
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
 
-    except Exception as e:
+                        except Exception as e:
         logger.error(f"Error creating invoice: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
@@ -2552,8 +2552,8 @@ def main() -> None:
             
             # Build application with this token
             app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
-            app_builder.post_init(post_init)
-            app_builder.post_shutdown(post_shutdown)
+    app_builder.post_init(post_init)
+    app_builder.post_shutdown(post_shutdown)
             temp_app = app_builder.build()
             
             # Test token validity (will fail if token is invalid)

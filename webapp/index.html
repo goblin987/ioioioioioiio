@@ -5186,35 +5186,52 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function startApp() {
             log("startApp called");
             
-            // Fix Input Obstruction - Move nav bar down when typing
+            // Fix Input Obstruction - Add padding and hide nav when keyboard opens
             const dInput = document.getElementById('discount-input');
             const rInput = document.getElementById('custom-refill');
             const nav = document.querySelector('.bottom-nav');
             
-            function handleInputFocus(inputElement) {
+            function handleInputFocus(inputElement, parentModal) {
                 if(nav) {
-                    nav.style.transform = 'translateY(200px)'; // Move down out of view
-                    nav.style.transition = 'transform 0.3s ease';
+                    // Hide nav completely when typing
+                    nav.style.opacity = '0';
+                    nav.style.pointerEvents = 'none';
+                    nav.style.transition = 'opacity 0.2s ease';
+                }
+                // Add padding to modal content to prevent keyboard overlap
+                if(parentModal) {
+                    parentModal.style.paddingBottom = '350px';
+                    parentModal.style.transition = 'padding-bottom 0.3s ease';
                 }
                 setTimeout(() => {
-                    if(inputElement) inputElement.scrollIntoView({behavior: 'smooth', block: 'center'});
-                }, 100);
+                    if(inputElement) {
+                        inputElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    }
+                }, 150);
             }
             
-            function handleInputBlur() {
+            function handleInputBlur(parentModal) {
                 if(nav) {
-                    nav.style.transform = 'translateY(0)'; // Move back to original position
+                    // Show nav again
+                    nav.style.opacity = '1';
+                    nav.style.pointerEvents = 'auto';
+                }
+                // Remove padding
+                if(parentModal) {
+                    parentModal.style.paddingBottom = '0';
                 }
             }
             
             if(dInput) {
-                dInput.addEventListener('focus', () => handleInputFocus(dInput));
-                dInput.addEventListener('blur', handleInputBlur);
+                const cartContainer = document.querySelector('.cart-container');
+                dInput.addEventListener('focus', () => handleInputFocus(dInput, cartContainer));
+                dInput.addEventListener('blur', () => handleInputBlur(cartContainer));
             }
             
             if(rInput) {
-                rInput.addEventListener('focus', () => handleInputFocus(rInput));
-                rInput.addEventListener('blur', handleInputBlur);
+                const refillSheet = document.querySelector('#refill-modal .invoice-sheet');
+                rInput.addEventListener('focus', () => handleInputFocus(rInput, refillSheet));
+                rInput.addEventListener('blur', () => handleInputBlur(refillSheet));
             }
             
             // Unlock Audio Context

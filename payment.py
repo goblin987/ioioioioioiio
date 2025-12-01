@@ -891,10 +891,11 @@ To receive your products securely via encrypted chat, please:
                         item_original_text = item_details['text'] or "(No specific pickup details provided)"
                         product_type = item_details['type'] # <<< USE TYPE FROM SNAPSHOT DATA
                         product_emoji = PRODUCT_TYPES.get(product_type, DEFAULT_PRODUCT_EMOJI)
-                        item_header = f"--- Item: {product_emoji} {item_name} {item_size} ---"
+                        # Clean header without product ID
+                        item_header = f"{product_emoji} {item_name} {item_size}"
 
-                    # Prepare combined text caption
-                    combined_caption = f"{item_header}\n\n{item_original_text}"
+                    # Prepare combined text caption (just the pickup details, no extra formatting)
+                    combined_caption = item_original_text
                     if len(combined_caption) > 4090: combined_caption = combined_caption[:4090] + "..." # Adjust for send_message limit
 
                     media_items_for_product = media_details.get(prod_id, [])
