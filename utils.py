@@ -75,8 +75,7 @@ BOT_TOKENS = [t for t in BOT_TOKENS if t]
 
 # Set TOKEN to first available for backward compatibility
 TOKEN = BOT_TOKENS[0] if BOT_TOKENS else ""
-NOWPAYMENTS_API_KEY = os.environ.get("NOWPAYMENTS_API_KEY", "") # NOWPayments API Key
-NOWPAYMENTS_IPN_SECRET = os.environ.get("NOWPAYMENTS_IPN_SECRET", "")
+# SOL-only payment system - no third-party API keys needed
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "") # Base URL for Render app (e.g., https://app-name.onrender.com)
 ADMIN_ID_RAW = os.environ.get("ADMIN_ID", None)
 PRIMARY_ADMIN_IDS_STR = os.environ.get("PRIMARY_ADMIN_IDS", "")
@@ -128,14 +127,14 @@ if len(token_parts) != 2 or not token_parts[0].isdigit() or len(token_parts[1]) 
 
 logger.info(f"TOKEN validation passed. Bot ID: {token_parts[0]}")
 
-if not NOWPAYMENTS_API_KEY: logger.critical("CRITICAL ERROR: NOWPAYMENTS_API_KEY environment variable is missing."); raise SystemExit("NOWPAYMENTS_API_KEY not set.")
-if not NOWPAYMENTS_IPN_SECRET: logger.info("NOWPayments webhook signature verification is disabled by configuration.")
+# SOL payment system doesn't require third-party API keys
+logger.info("Using SOL-only payment system")
 if not WEBHOOK_URL: logger.critical("CRITICAL ERROR: WEBHOOK_URL environment variable is missing."); raise SystemExit("WEBHOOK_URL not set.")
 if not PRIMARY_ADMIN_IDS: logger.warning("No primary admin IDs configured. Primary admin features disabled.")
 logger.info(f"Loaded {len(PRIMARY_ADMIN_IDS)} primary admin ID(s): {PRIMARY_ADMIN_IDS}")
 logger.info(f"Loaded {len(SECONDARY_ADMIN_IDS)} secondary admin ID(s): {SECONDARY_ADMIN_IDS}")
 logger.info(f"Basket timeout set to {BASKET_TIMEOUT // 60} minutes.")
-logger.info(f"NOWPayments IPN expected at: {WEBHOOK_URL}/webhook")
+# Solana payments are monitored by background checker
 logger.info(f"Telegram webhook expected at: {WEBHOOK_URL}/telegram/{TOKEN}")
 
 
@@ -326,10 +325,10 @@ LANGUAGES = {
         "error_displaying_review": "Error displaying review",
         "error_updating_review_list": "Error updating review list.",
 
-        # --- Refill / NOWPayments ---
-        "payment_amount_too_low_api": "❌ Payment Amount Too Low: The equivalent of {target_eur_amount} EUR in {currency} \\({crypto_amount}\\) is below the minimum required by the payment provider \\({min_amount} {currency}\\)\\. Please try a higher EUR amount\\.",
-        "payment_amount_too_low_with_min_eur": "❌ Payment Amount Too Low: {target_eur_amount} EUR is below the minimum for {currency} payments \\(minimum: {min_eur_amount} EUR\\)\\. Please try a higher amount or select a different cryptocurrency\\.",
-        "error_min_amount_fetch": "❌ Error: Could not retrieve minimum payment amount for {currency}\\. Please try again later or select a different currency\\.",
+        # --- Refill / Crypto Payments ---
+        "payment_amount_too_low_api": "❌ Payment Amount Too Low: The equivalent of {target_eur_amount} EUR in {currency} \\({crypto_amount}\\) is below the minimum required \\({min_amount} {currency}\\)\\. Please try a higher EUR amount\\.",
+        "payment_amount_too_low_with_min_eur": "❌ Payment Amount Too Low: {target_eur_amount} EUR is below the minimum for {currency} payments \\(minimum: {min_eur_amount} EUR\\)\\. Please try a higher amount\\.",
+        "error_min_amount_fetch": "❌ Error: Could not retrieve minimum payment amount for {currency}\\. Please try again later\\.",
         "invoice_title_refill": "*Top\\-Up Invoice Created*",
         "invoice_title_purchase": "*Payment Invoice Created*", # <<< NEW
         "min_amount_label": "*Minimum Amount:*",
@@ -342,8 +341,7 @@ LANGUAGES = {
         "invoice_amount_label_text": "Amount",
         "invoice_send_following_amount": "Please send the following amount:",
         "invoice_payment_deadline": "Payment must be completed within 20 minutes of invoice creation.",
-            "error_estimate_failed": "❌ Error: Could not estimate crypto amount. Please try again or select a different currency.",
-    "error_estimate_currency_not_found": "❌ Error: Currency {currency} not supported for estimation. Please select a different currency.",
+            "error_estimate_failed": "❌ Error: Could not estimate SOL amount. Please try again.",
     "error_discount_invalid_payment": "❌ Your discount code is no longer valid: {reason}. Please return to your basket to continue without the discount.",
     "error_discount_mismatch_payment": "❌ Payment amount mismatch detected. Please return to your basket and try again.",
         "crypto_payment_disabled": "Top Up is currently disabled.",
@@ -364,9 +362,7 @@ LANGUAGES = {
         "top_up_success_title": "✅ Top Up Successful!",
         "amount_added_label": "Amount Added",
         "new_balance_label": "Your new balance",
-        "error_nowpayments_api": "❌ Payment API Error: Could not create payment. Please try again later or contact support.",
-        "error_invalid_nowpayments_response": "❌ Payment API Error: Invalid response received. Please contact support.",
-        "error_nowpayments_api_key": "❌ Payment API Error: Invalid API key. Please contact support.",
+        "error_sol_api": "❌ Payment Error: Could not create SOL payment. Please try again later or contact support.",
         "payment_pending_db_error": "❌ Database Error: Could not record pending payment. Please contact support.",
         "payment_cancelled_or_expired": "Payment Status: Your payment ({payment_id}) was cancelled or expired.",
         "webhook_processing_error": "Webhook Error: Could not process payment update {payment_id}.",
@@ -669,10 +665,10 @@ LANGUAGES = {
         "error_displaying_review": "Klaida rodant atsiliepimą",
         "error_updating_review_list": "Klaida atnaujinant atsiliepimų sąrašą.",
 
-        # --- Refill / NOWPayments ---
-        "payment_amount_too_low_api": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR atitikmuo {currency} \\({crypto_amount}\\) yra mažesnis už minimalų reikalaujamą mokėjimo teikėjo \\({min_amount} {currency}\\)\\. Bandykite didesnę EUR sumą\\.",
-        "payment_amount_too_low_with_min_eur": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR yra mažesnė už minimalų {currency} mokėjimų sumą \\(minimalus: {min_eur_amount} EUR\\)\\. Bandykite didesnę sumą arba pasirinkite kitą kriptovaliutą\\.",
-        "error_min_amount_fetch": "❌ Klaida: Nepavyko gauti minimalios mokėjimo sumos {currency}\\. Bandykite vėliau arba pasirinkite kitą valiutą\\.",
+        # --- Refill / Crypto Payments ---
+        "payment_amount_too_low_api": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR atitikmuo {currency} \\({crypto_amount}\\) yra mažesnis už minimalų reikalaujamą \\({min_amount} {currency}\\)\\. Bandykite didesnę EUR sumą\\.",
+        "payment_amount_too_low_with_min_eur": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR yra mažesnė už minimalų {currency} mokėjimų sumą \\(minimalus: {min_eur_amount} EUR\\)\\. Bandykite didesnę sumą\\.",
+        "error_min_amount_fetch": "❌ Klaida: Nepavyko gauti minimalios mokėjimo sumos {currency}\\. Bandykite vėliau\\.",
         "invoice_title_refill": "*Sąskaita Papildymui Sukurta*",
         "invoice_title_purchase": "*Sąskaita Pirkimui Sukurta*",
         "min_amount_label": "*Minimali Suma:*",
@@ -707,9 +703,7 @@ LANGUAGES = {
         "top_up_success_title": "✅ Papildymas Sėkmingas!",
         "amount_added_label": "Pridėta suma",
         "new_balance_label": "Jūsų naujas balansas",
-        "error_nowpayments_api": "❌ Mokėjimo API Klaida: Nepavyko sukurti mokėjimo. Bandykite vėliau arba susisiekite su pagalba.",
-        "error_invalid_nowpayments_response": "❌ Mokėjimo API Klaida: Gautas neteisingas atsakymas. Susisiekite su pagalba.",
-        "error_nowpayments_api_key": "❌ Mokėjimo API Klaida: Neteisingas API raktas. Susisiekite su pagalba.",
+        "error_sol_api": "❌ Mokėjimo Klaida: Nepavyko sukurti SOL mokėjimo. Bandykite vėliau arba susisiekite su pagalba.",
         "payment_pending_db_error": "❌ Duomenų Bazės Klaida: Nepavyko įrašyti laukiančio mokėjimo. Susisiekite su pagalba.",
         "payment_cancelled_or_expired": "Mokėjimo Būsena: Jūsų mokėjimas ({payment_id}) buvo atšauktas arba baigėsi galiojimas.",
         "webhook_processing_error": "Webhook Klaida: Nepavyko apdoroti mokėjimo atnaujinimo {payment_id}.",
@@ -1012,10 +1006,10 @@ LANGUAGES = {
         "error_displaying_review": "Ошибка отображения отзыва",
         "error_updating_review_list": "Ошибка обновления списка отзывов.",
 
-        # --- Refill / NOWPayments ---
-        "payment_amount_too_low_api": "❌ Сумма Платежа Слишком Мала: Эквивалент {target_eur_amount} EUR в {currency} \\({crypto_amount}\\) ниже минимума, требуемого платежной системой \\({min_amount} {currency}\\)\\. Попробуйте большую сумму EUR\\.",
-        "payment_amount_too_low_with_min_eur": "❌ Сумма Платежа Слишком Мала: {target_eur_amount} EUR ниже минимума для {currency} платежей \\(минимум: {min_eur_amount} EUR\\)\\. Попробуйте большую сумму или выберите другую криптовалюту\\.",
-        "error_min_amount_fetch": "❌ Ошибка: Не удалось получить минимальную сумму платежа для {currency}\\. Попробуйте позже или выберите другую валюту\\.",
+        # --- Refill / Crypto Payments ---
+        "payment_amount_too_low_api": "❌ Сумма Платежа Слишком Мала: Эквивалент {target_eur_amount} EUR в {currency} \\({crypto_amount}\\) ниже минимума \\({min_amount} {currency}\\)\\. Попробуйте большую сумму EUR\\.",
+        "payment_amount_too_low_with_min_eur": "❌ Сумма Платежа Слишком Мала: {target_eur_amount} EUR ниже минимума для {currency} платежей \\(минимум: {min_eur_amount} EUR\\)\\. Попробуйте большую сумму\\.",
+        "error_min_amount_fetch": "❌ Ошибка: Не удалось получить минимальную сумму платежа для {currency}\\. Попробуйте позже\\.",
         "invoice_title_refill": "*Счет на Пополнение Создан*",
         "invoice_title_purchase": "*Счет на Оплату Создан*",
         "min_amount_label": "*Минимальная Сумма:*",
@@ -1050,9 +1044,7 @@ LANGUAGES = {
         "top_up_success_title": "✅ Баланс Успешно Пополнен!",
         "amount_added_label": "Добавлено",
         "new_balance_label": "Ваш новый баланс",
-        "error_nowpayments_api": "❌ Ошибка API Платежей: Не удалось создать платеж. Попробуйте позже или обратитесь в поддержку.",
-        "error_invalid_nowpayments_response": "❌ Ошибка API Платежей: Получен неверный ответ. Обратитесь в поддержку.",
-        "error_nowpayments_api_key": "❌ Ошибка API Платежей: Неверный ключ API. Обратитесь в поддержку.",
+        "error_sol_api": "❌ Ошибка Платежа: Не удалось создать SOL платеж. Попробуйте позже или обратитесь в поддержку.",
         "payment_pending_db_error": "❌ Ошибка Базы Данных: Не удалось записать ожидающий платеж. Обратитесь в поддержку.",
         "payment_cancelled_or_expired": "Статус Платежа: Ваш платеж ({payment_id}) был отменен или истек.",
         "webhook_processing_error": "Ошибка Webhook: Не удалось обработать обновление платежа {payment_id}.",
@@ -1077,7 +1069,7 @@ LANGUAGES = {
 DEFAULT_WELCOME_MESSAGE = LANGUAGES['en']['welcome']
 
 MIN_DEPOSIT_EUR = Decimal('5.00') # Minimum deposit amount in EUR
-NOWPAYMENTS_API_URL = "https://api.nowpayments.io"
+# SOL-only payment system - no external API URLs needed
 COINGECKO_API_URL = "https://api.coingecko.com/api/v3"
 FEE_ADJUSTMENT = Decimal('1.0')
 
@@ -1992,7 +1984,7 @@ def _get_lang_data(context: ContextTypes.DEFAULT_TYPE) -> tuple[str, dict]:
     """Gets the current language code and corresponding language data dictionary."""
     lang = "en"
     if getattr(context, 'user_data', None) is not None:
-        lang = context.user_data.get("lang", "en")
+    lang = context.user_data.get("lang", "en")
     
     # Uses LANGUAGES dict defined above in this file
     lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
@@ -2810,100 +2802,10 @@ def get_crypto_price_eur(currency_code: str) -> Decimal | None:
 # Global cache for available currencies
 available_currencies_cache = {'currencies': None, 'timestamp': 0}
 
-def get_nowpayments_available_currencies() -> list | None:
-    """
-    Gets the list of available currencies from NOWPayments API.
-    Returns None if the currencies cannot be fetched.
-    """
-    global available_currencies_cache
-    now = time.time()
-    
-    # Check cache first (cache for 1 hour)
-    if (available_currencies_cache['currencies'] is not None and 
-        now - available_currencies_cache['timestamp'] < 3600):
-        logger.debug("Cache hit for available currencies")
-        return available_currencies_cache['currencies']
-    
-    if not NOWPAYMENTS_API_KEY:
-        logger.error("NOWPayments API key is missing, cannot fetch available currencies.")
-        return None
-    
-    try:
-        url = f"{NOWPAYMENTS_API_URL}/v1/currencies"
-        headers = {'x-api-key': NOWPAYMENTS_API_KEY}
-        logger.debug(f"Fetching available currencies from {url}")
-        response = requests.get(url, headers=headers, timeout=10)
-        logger.debug(f"NOWPayments currencies response status: {response.status_code}, content: {response.text[:200]}")
-        response.raise_for_status()
-        data = response.json()
-        
-        if 'currencies' in data and isinstance(data['currencies'], list):
-            currencies = [currency.lower() for currency in data['currencies']]
-            available_currencies_cache['currencies'] = currencies
-            available_currencies_cache['timestamp'] = now
-            logger.info(f"Fetched {len(currencies)} available currencies from NOWPayments (cached for 1 hour).")
-            return currencies
-        else:
-            logger.warning(f"Invalid currencies response structure: {data}")
-            return None
-            
-    except requests.exceptions.Timeout:
-        logger.error("Timeout fetching available currencies from NOWPayments.")
-        return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching available currencies from NOWPayments: {e}")
-        if e.response is not None:
-            logger.error(f"NOWPayments currencies error response ({e.response.status_code}): {e.response.text}")
-        return None
-    except (KeyError, ValueError, json.JSONDecodeError) as e:
-        logger.error(f"Error parsing NOWPayments currencies response: {e}")
-        return None
-
+# SOL-only payment system - no currency validation needed
 def is_currency_supported(currency_code: str) -> bool:
-    """
-    Checks if a currency is supported by NOWPayments.
-    """
-    available_currencies = get_nowpayments_available_currencies()
-    if available_currencies is None:
-        # Fallback to hardcoded list if API fails
-        logger.warning("Using fallback currency validation")
-        fallback_currencies = ['btc', 'eth', 'ltc', 'sol', 'ton', 'usdttrc20', 'usdterc20', 'usdtbsc', 'usdtsol']
-        return currency_code.lower() in fallback_currencies
-    
-    return currency_code.lower() in available_currencies
-
-def get_nowpayments_min_amount(currency_code: str) -> Decimal | None:
-    currency_code_lower = currency_code.lower()
-    now = time.time()
-    
-    # First check if currency is supported
-    if not is_currency_supported(currency_code_lower):
-        logger.error(f"Currency {currency_code_lower} is not supported by NOWPayments")
-        return None
-    
-    if currency_code_lower in min_amount_cache:
-        min_amount, timestamp = min_amount_cache[currency_code_lower]
-        if now - timestamp < CACHE_EXPIRY_SECONDS * 2: logger.debug(f"Cache hit for {currency_code_lower} min amount: {min_amount}"); return min_amount
-    if not NOWPAYMENTS_API_KEY: logger.error("NOWPayments API key is missing, cannot fetch minimum amount."); return None
-    try:
-        url = f"{NOWPAYMENTS_API_URL}/v1/min-amount"; params = {'currency_from': currency_code_lower}; headers = {'x-api-key': NOWPAYMENTS_API_KEY}
-        logger.debug(f"Fetching min amount for {currency_code_lower} from {url} with params {params}")
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        logger.debug(f"NOWPayments min-amount response status: {response.status_code}, content: {response.text[:200]}")
-        response.raise_for_status()
-        data = response.json()
-        min_amount_key = 'min_amount'
-        if min_amount_key in data and data[min_amount_key] is not None:
-            min_amount = Decimal(str(data[min_amount_key])); min_amount_cache[currency_code_lower] = (min_amount, now)
-            logger.info(f"Fetched minimum amount for {currency_code_lower}: {min_amount} from NOWPayments (cached for {CACHE_EXPIRY_SECONDS * 2}s).")
-            return min_amount
-        else: logger.warning(f"Could not find '{min_amount_key}' key or it was null for {currency_code_lower} in NOWPayments response: {data}"); return None
-    except requests.exceptions.Timeout: logger.error(f"Timeout fetching minimum amount for {currency_code_lower} from NOWPayments."); return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching minimum amount for {currency_code_lower} from NOWPayments: {e}")
-        if e.response is not None: logger.error(f"NOWPayments min-amount error response ({e.response.status_code}): {e.response.text}")
-        return None
-    except (KeyError, ValueError, json.JSONDecodeError) as e: logger.error(f"Error parsing NOWPayments min amount response for {currency_code_lower}: {e}"); return None
+    """SOL-only system: only SOL is supported"""
+    return currency_code.lower() == 'sol'
 
 def format_expiration_time(expiration_date_str: str | None) -> str:
     if not expiration_date_str: return "N/A"

@@ -21,7 +21,7 @@ from utils import (
     WEBHOOK_URL, # <<< Added WEBHOOK_URL
     format_currency, get_progress_bar, send_message_with_retry, format_discount_value,
     clear_expired_basket, fetch_last_purchases, get_user_status, fetch_reviews,
-    NOWPAYMENTS_API_KEY, # Check if NOWPayments is configured
+    # SOL-only payment system
     get_db_connection, MEDIA_DIR, # Import helper and MEDIA_DIR
     DEFAULT_PRODUCT_EMOJI, # Import default emoji
     load_active_welcome_message, # <<< Import welcome message loader (though we'll modify its usage)
@@ -82,10 +82,8 @@ EMOJI_SHOP = "🛍️"
 EMOJI_DISCOUNT = "🏷️"
 EMOJI_PAY_NOW = "💳" # <<< ADDED Emoji for Pay Now
 
-# --- NEW: Define Supported Crypto Assets with Network Specificity ---
-# Key: NOWPayments API currency code (lowercase)
-# Value: User-friendly display name for the button
-# NOTE: This list will be dynamically validated against NOWPayments API
+# --- Define Supported Crypto Assets ---
+# SOL-only payment system
 SUPPORTED_CRYPTO = {
     'btc': 'BTC',
     'ltc': 'LTC',
@@ -101,7 +99,7 @@ SUPPORTED_CRYPTO = {
     # 'usdcerc20': 'USDC (ERC20)' - May not be supported or has different code
     # 'usdcsol': 'USDC (SOL)' - May not be supported or has different code
     # Add other verified currencies here as needed
-    # IMPORTANT: Ensure the keys EXACTLY match the codes NOWPayments expects!
+    # SOL-only payment system
 }
 # --------------------------------------------------------------------
 
@@ -2857,11 +2855,7 @@ async def handle_refill(update: Update, context: ContextTypes.DEFAULT_TYPE, para
     chat_id = query.message.chat_id
     lang, lang_data = _get_lang_data(context)
 
-    if not NOWPAYMENTS_API_KEY:
-        crypto_disabled_msg = lang_data.get("crypto_payment_disabled", "Top Up is currently disabled.")
-        await query.answer(crypto_disabled_msg, show_alert=True)
-        logger.warning(f"User {user_id} tried to refill, but NOWPAYMENTS_API_KEY is not set.")
-        return
+    # SOL payment system is always available (no API keys needed)
 
     context.user_data['state'] = 'awaiting_refill_amount'
     logger.info(f"User {user_id} initiated refill process. State -> awaiting_refill_amount.")
@@ -2937,18 +2931,15 @@ async def handle_refill_amount_message(update: Update, context: ContextTypes.DEF
         # BETTER APPROACH: Since we are in a message handler, we can't easily use a callback handler that relies on `query.edit_message_text`.
         # We should replicate the logic of handle_select_refill_crypto but for message context.
         
-        # ... OR ... we create a new state `awaiting_refill_confirmation`? No, user just wants to pay.
-        
-        # Let's call create_nowpayments_payment directly here, similar to handle_select_refill_crypto logic.
-        
+        # Create SOL payment invoice
         preparing_invoice_msg = lang_data.get("preparing_invoice", "⏳ Preparing your payment invoice...")
         await send_message_with_retry(context.bot, chat_id, preparing_invoice_msg, parse_mode=None)
         
-        from payment import create_nowpayments_payment, display_nowpayments_invoice
+        from payment import create_sol_payment, display_sol_invoice
         
-        # Call payment creation
-        payment_result = await create_nowpayments_payment(
-            user_id, refill_eur_amount_decimal, 'sol',
+        # Call SOL payment creation
+        payment_result = await create_sol_payment(
+            user_id, refill_eur_amount_decimal,
             is_purchase=False # Explicitly False for refill
         )
         
@@ -2963,21 +2954,7 @@ async def handle_refill_amount_message(update: Update, context: ContextTypes.DEF
             context.user_data.pop('refill_eur_amount', None)
             context.user_data.pop('state', None)
             
-            # We need to mock a query object for display_nowpayments_invoice because it uses query.message.chat_id
-            # But wait, display_nowpayments_invoice uses query.message.chat_id. 
-            # If update.callback_query is None, it might fail.
-            
-            # Let's modify display_nowpayments_invoice to be robust or handle it here.
-            # Actually display_nowpayments_invoice expects a callback update.
-            # We can just send the invoice message manually here or refactor display_nowpayments_invoice.
-            
-            # Let's use a hack: set `update.callback_query` on the update object if we can, or just copy the display logic.
-            # Copying display logic is safest to avoid breaking other things.
-            
-            # ...Actually, let's just try to pass a dummy query object or modify display_nowpayments_invoice to handle message updates.
-            # But since I can't easily modify payment.py display logic without risk, I will implement the display here for this specific case.
-            
-            # -- Display Logic for Message Context --
+            # Display SOL invoice
             pay_address = payment_result.get('pay_address')
             pay_amount = payment_result.get('pay_amount')
             pay_currency = 'SOL'

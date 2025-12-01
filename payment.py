@@ -343,8 +343,8 @@ async def display_sol_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE
         target_eur_orig = payment_data.get('target_eur_amount_orig')
         expiration_date_str = payment_data.get('expiration_estimate_date')
 
-        if not pay_address or not pay_amount_str or not payment_id: # <<< Check payment_id too
-            logger.error(f"Missing critical data in NOWPayments response for display: {payment_data}")
+        if not pay_address or not pay_amount_str or not payment_id:
+            logger.error(f"Missing critical data in payment response for display: {payment_data}")
             raise ValueError("Missing payment address, amount, or ID")
 
         # --- Store payment_id in user_data for cancellation (if available) ---
@@ -495,7 +495,7 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
                 parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True
             )
     except (ValueError, KeyError, TypeError) as e:
-        logger.error(f"Error formatting or displaying NOWPayments invoice: {e}. Data: {payment_data}", exc_info=True)
+        logger.error(f"Error formatting or displaying payment invoice: {e}. Data: {payment_data}", exc_info=True)
         error_display_msg = lang_data.get("error_preparing_payment", "❌ An error occurred while preparing the payment details. Please try again later.")
         # Determine correct back button on error too (fallback if cancel fails)
         back_button_text = lang_data.get("back_basket_button", "Back to Basket") if is_purchase_invoice else lang_data.get("back_profile_button", "Back to Profile")
@@ -504,10 +504,10 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
         try: await query.edit_message_text(error_display_msg, reply_markup=back_button_markup, parse_mode=None)
         except Exception: pass
     except telegram_error.BadRequest as e:
-        if "message is not modified" not in str(e).lower(): logger.error(f"Error editing NOWPayments invoice message: {e}. Attempted message (unescaped for logging): {msg.strip()}")
+        if "message is not modified" not in str(e).lower(): logger.error(f"Error editing payment invoice message: {e}. Attempted message (unescaped for logging): {msg.strip()}")
         else: await query.answer()
     except Exception as e:
-         logger.error(f"Unexpected error in display_nowpayments_invoice: {e}", exc_info=True)
+         logger.error(f"Unexpected error in display_sol_invoice: {e}", exc_info=True)
          error_display_msg = lang_data.get("error_preparing_payment", "❌ An unexpected error occurred while preparing the payment details.")
          back_button_text = lang_data.get("back_basket_button", "Back to Basket") if is_purchase_invoice else lang_data.get("back_profile_button", "Back to Profile")
          back_callback = "view_basket" if is_purchase_invoice else "profile"
