@@ -2316,8 +2316,8 @@ def webapp_create_invoice():
         })
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
-
-                        except Exception as e:
+    
+    except Exception as e:
         logger.error(f"Error creating invoice: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
