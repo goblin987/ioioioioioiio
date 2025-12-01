@@ -3093,28 +3093,34 @@
             
             <!-- Footer / Checkout Section -->
             <div class="cart-checkout-section">
-                <!-- Promo Code -->
-                <div class="cart-promo">
-                    <input type="text" id="discount-input" placeholder="PROMO CODE" class="cart-promo-input">
-                    <button onclick="applyDiscount()" class="cart-promo-btn">APPLY</button>
-                </div>
-                <div id="discount-msg" class="cart-promo-msg"></div>
                 
-                <!-- Totals -->
-                <div class="cart-totals-box">
-                    <div class="cart-total-line cart-total-final">
-                        <span>TOTAL</span>
-                        <span id="basket-total">€0.00</span>
+                <!-- Integrated Checkout Module -->
+                <div class="checkout-module">
+                    
+                    <!-- 1. Promo Field -->
+                    <div class="promo-field-group">
+                        <input type="text" id="discount-input" placeholder="ENTER PROMO CODE" class="modern-input">
+                        <button onclick="applyDiscount()" class="modern-apply-btn">APPLY</button>
                     </div>
-                    <div class="cart-total-line" style="margin-top:5px; color:#555;">
-                        <span>WALLET</span>
-                        <span>€0.00</span>
+                    <div id="discount-msg" class="cart-promo-msg"></div>
+
+                    <!-- 2. Totals Row -->
+                    <div class="modern-totals">
+                        <div class="mt-left">
+                            <div class="mt-label">WALLET</div>
+                            <div class="mt-value-sm">€0.00</div>
+                        </div>
+                        <div class="mt-right">
+                            <div class="mt-label">TOTAL</div>
+                            <div class="mt-value-lg" id="basket-total">€0.00</div>
+                        </div>
                     </div>
+
                 </div>
                 
                 <!-- Checkout Button -->
                 <button class="btn-buy cart-checkout-btn" onclick="initCheckout()">
-                    CHECKOUT →
+                    CHECKOUT
                 </button>
                 
                 <div class="cart-secure-text">🔒 SECURE • SOLANA NETWORK</div>
@@ -3834,12 +3840,96 @@
             color: #000;
         }
 
-        /* Compact Totals Box */
-        .cart-totals-box {
-            background: transparent;
-            border: 1px dashed #333;
-            padding: 10px;
+        /* Modern Integrated Checkout */
+        .checkout-module {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 15px;
             margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .promo-field-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .modern-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        
+        .modern-input:focus {
+            border-color: var(--gta-green);
+        }
+
+        .modern-apply-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            letter-spacing: 0.5px;
+        }
+        
+        .modern-apply-btn:hover {
+            background: var(--gta-green);
+            color: #000;
+        }
+
+        .modern-totals {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mt-left, .mt-right {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mt-right {
+            align-items: flex-end;
+        }
+
+        .mt-label {
+            font-size: 10px;
+            color: #555;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .mt-value-sm {
+            font-size: 14px;
+            color: #777;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+
+        .mt-value-lg {
+            font-size: 26px;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .cart-total-line {
