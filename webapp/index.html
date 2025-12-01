@@ -5177,7 +5177,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const rInput = document.getElementById('custom-refill');
             const nav = document.querySelector('.bottom-nav');
             
-            function handleInputFocus(inputElement, parentModal) {
+            function handleInputFocus(inputElement, parentModal, isRefill = false) {
                 if(nav) {
                     // Hide nav completely when typing
                     nav.style.opacity = '0';
@@ -5185,7 +5185,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     nav.style.transition = 'opacity 0.2s ease';
                 }
                 // Add padding to modal content to prevent keyboard overlap
-                if(parentModal) {
+                // BUT ONLY for Cart (isRefill=false). Refill sheet auto-adjusts or breaks with padding.
+                if(parentModal && !isRefill) {
                     parentModal.style.paddingBottom = '350px';
                     parentModal.style.transition = 'padding-bottom 0.3s ease';
                 }
@@ -5210,13 +5211,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             if(dInput) {
                 const cartContainer = document.querySelector('.cart-container');
-                dInput.addEventListener('focus', () => handleInputFocus(dInput, cartContainer));
+                dInput.addEventListener('focus', () => handleInputFocus(dInput, cartContainer, false));
                 dInput.addEventListener('blur', () => handleInputBlur(cartContainer));
             }
             
             if(rInput) {
                 const refillSheet = document.querySelector('#refill-modal .invoice-sheet');
-                rInput.addEventListener('focus', () => handleInputFocus(rInput, refillSheet));
+                // Pass isRefill = true
+                rInput.addEventListener('focus', () => handleInputFocus(rInput, refillSheet, true));
                 rInput.addEventListener('blur', () => handleInputBlur(refillSheet));
             }
             
@@ -6284,6 +6286,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             basket = []; // Clear basket
             updateBasketUI();
             
+            // Pause Radio for Mission Passed
+            if(audioPlayer && !audioPlayer.paused) {
+                audioPlayer.pause();
+            }
+            
             // Play Mission Passed Logic
             const overlay = document.getElementById('mp-overlay');
             const sound = document.getElementById('mp-sound');
@@ -6292,6 +6299,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(sound) {
                 sound.currentTime = 0;
                 sound.play().catch(e => console.log("Audio play failed", e));
+                
+                // Resume radio after sound (approx 8s)
+                setTimeout(() => {
+                    if(audioPlayer && audioPlayer.paused) audioPlayer.play().catch(e => console.log("Radio resume failed", e));
+                }, 8000);
             }
             
             // Force reflow
