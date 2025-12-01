@@ -3840,61 +3840,82 @@
             color: #000;
         }
 
-        /* Modern Integrated Checkout */
+        /* Modern Integrated Checkout - Polished */
         .checkout-module {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(30, 30, 30, 0.6) 0%, rgba(20, 20, 20, 0.8) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .promo-field-group {
             display: flex;
-            gap: 10px;
-            margin-bottom: 5px;
+            gap: 0;
+            margin-bottom: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 4px;
+            transition: border-color 0.2s;
+        }
+        
+        .promo-field-group:focus-within {
+            border-color: var(--gta-green);
+            box-shadow: 0 0 10px rgba(106, 180, 70, 0.2);
         }
 
         .modern-input {
             flex: 1;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            border: none;
             color: #fff;
-            padding: 12px;
-            border-radius: 8px;
+            padding: 10px 12px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 14px;
+            font-size: 13px;
             outline: none;
-            transition: border 0.2s;
+            letter-spacing: 0.5px;
+        }
+        
+        .modern-input::placeholder {
+            color: #555;
+            font-weight: 500;
         }
         
         .modern-input:focus {
-            border-color: var(--gta-green);
+            border-color: transparent;
         }
 
         .modern-apply-btn {
             background: rgba(255, 255, 255, 0.1);
-            color: #fff;
+            color: #aaa;
             border: none;
-            padding: 0 20px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 0 16px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s;
-            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            margin: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .modern-apply-btn:hover {
             background: var(--gta-green);
             color: #000;
+            box-shadow: 0 0 10px var(--gta-green);
         }
 
         .modern-totals {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
+            align-items: flex-end;
+            margin-top: 20px;
             padding-top: 15px;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
@@ -3909,27 +3930,41 @@
         }
 
         .mt-label {
-            font-size: 10px;
-            color: #555;
-            letter-spacing: 1px;
-            font-weight: 700;
-            margin-bottom: 4px;
+            font-size: 9px;
+            color: #666;
+            letter-spacing: 2px;
+            font-weight: 800;
+            margin-bottom: 6px;
             text-transform: uppercase;
         }
 
         .mt-value-sm {
             font-size: 14px;
-            color: #777;
+            color: #888;
             font-family: 'Courier New', monospace;
             font-weight: 600;
+            background: rgba(255,255,255,0.05);
+            padding: 4px 8px;
+            border-radius: 4px;
         }
 
         .mt-value-lg {
-            font-size: 26px;
+            font-size: 32px;
             color: #fff;
             font-weight: 700;
-            letter-spacing: -0.5px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: -1px;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+        
+        /* Checkout Button Glow */
+        .cart-checkout-btn {
+            box-shadow: 0 0 20px rgba(106, 180, 70, 0.4);
+            border: 1px solid rgba(106, 180, 70, 0.5);
+        }
+        
+        .cart-checkout-btn:active {
+             box-shadow: 0 0 10px rgba(106, 180, 70, 0.6);
         }
 
         .cart-total-line {
