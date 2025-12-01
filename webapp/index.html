@@ -276,74 +276,49 @@
             box-shadow: 0 0 10px var(--gta-green);
         }
 
-        /* Holographic Product Display */
+        /* GTA V Weapon Wheel Style (Clean Vector Look) */
         .product-emoji {
-            font-size: 42px;
-            margin: 15px auto;
+            font-size: 52px;
+            margin: 10px auto;
             cursor: pointer;
             
-            /* Holographic Container */
-            width: 80px;
-            height: 80px;
+            /* Weapon Wheel Slot Container */
+            width: 90px;
+            height: 90px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle at center, rgba(46, 204, 113, 0.1) 0%, transparent 70%);
-            border: 1px solid rgba(46, 204, 113, 0.2);
-            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%; /* Circular slot */
+            border: 2px solid rgba(255,255,255,0.1);
+            
+            /* Vector Art Simulation */
+            /* Heavy black outline to mimic illustrative style */
+            text-shadow: 
+                2px 0 0 #000, -2px 0 0 #000,  
+                0 2px 0 #000, 0 -2px 0 #000,
+                1px 1px 0 #000, -1px -1px 0 #000, 
+                1px -1px 0 #000, -1px 1px 0 #000;
+            
+            /* Popping Colors */
+            filter: contrast(1.15) saturate(1.2);
+            
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
-            overflow: hidden;
-            
-            /* Digital Look */
-            filter: drop-shadow(0 0 2px rgba(46, 204, 113, 0.4));
-            animation: holoFloat 4s ease-in-out infinite;
-            
-            /* Tech Grid Background */
-            background-image: 
-                linear-gradient(rgba(46, 204, 113, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(46, 204, 113, 0.05) 1px, transparent 1px);
-            background-size: 10px 10px;
-        }
-
-        /* Scanline */
-        .product-emoji::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent 40%, rgba(46, 204, 113, 0.2) 50%, transparent 60%);
-            background-size: 100% 200%;
-            animation: scanDown 3s linear infinite;
-            pointer-events: none;
-        }
-
-        /* Corner Accents (Tactical) */
-        .product-emoji::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            background: 
-                linear-gradient(to right, var(--gta-green) 2px, transparent 2px) 0 0,
-                linear-gradient(to bottom, var(--gta-green) 2px, transparent 2px) 0 0,
-                linear-gradient(to left, var(--gta-green) 2px, transparent 2px) 100% 0,
-                linear-gradient(to bottom, var(--gta-green) 2px, transparent 2px) 100% 0,
-                linear-gradient(to right, var(--gta-green) 2px, transparent 2px) 0 100%,
-                linear-gradient(to top, var(--gta-green) 2px, transparent 2px) 0 100%,
-                linear-gradient(to left, var(--gta-green) 2px, transparent 2px) 100% 100%,
-                linear-gradient(to top, var(--gta-green) 2px, transparent 2px) 100% 100%;
-            background-size: 6px 6px;
-            background-repeat: no-repeat;
-            opacity: 0.6;
-        }
-
-        @keyframes holoFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
+            z-index: 2;
         }
         
-        @keyframes scanDown {
-            0% { background-position: 0 -100%; }
-            100% { background-position: 0 200%; }
+        /* Active Slot Effect */
+        .product-emoji:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+
+        /* Remove Holographic Effects */
+        .product-emoji::after, .product-emoji::before {
+            display: none;
         }
 
         .product-name {
