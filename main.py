@@ -2497,6 +2497,10 @@ def webapp_create_invoice():
         
         if not user_id or not items:
             return jsonify({'error': 'Invalid data'}), 400
+        
+        # Enforce basket limit (10 items max)
+        if len(items) > 10:
+            return jsonify({'error': 'Maximum 10 items per order'}), 400
 
         conn = get_db_connection()
         c = conn.cursor()
@@ -2504,22 +2508,42 @@ def webapp_create_invoice():
         reseller_discount_total = Decimal('0.0')
         
         # Validate items and calculate total
+        unavailable_items = []
         for item in items:
             p_id = item.get('id')
-            c.execute("SELECT price, product_type FROM products WHERE id = %s", (p_id,))
+            c.execute("SELECT price, product_type, available FROM products WHERE id = %s", (p_id,))
             row = c.fetchone()
-            if row:
-                price = Decimal(str(row['price']))
-                p_type = row['product_type']
-                total_eur += price
+            if not row:
+                unavailable_items.append(f"Product ID {p_id} not found")
+                continue
+            
+            # Check if product is available (available > 0)
+            if row.get('available', 0) <= 0:
+                c.execute("SELECT name FROM products WHERE id = %s", (p_id,))
+                name_row = c.fetchone()
+                product_name = name_row['name'] if name_row else f"Product {p_id}"
+                unavailable_items.append(f"{product_name} is out of stock")
+                continue
                 
-                # Calculate reseller discount for this item
-                r_disc_percent = get_reseller_discount(user_id, p_type)
-                if r_disc_percent > 0:
-                    item_discount = (price * r_disc_percent) / Decimal('100.0')
-                    reseller_discount_total += item_discount
+            price = Decimal(str(row['price']))
+            p_type = row['product_type']
+            total_eur += price
+            
+            # Calculate reseller discount for this item
+            r_disc_percent = get_reseller_discount(user_id, p_type)
+            if r_disc_percent > 0:
+                item_discount = (price * r_disc_percent) / Decimal('100.0')
+                reseller_discount_total += item_discount
         
         conn.close()
+        
+        # If any items are unavailable, return error
+        if unavailable_items:
+            return jsonify({
+                'success': False,
+                'error': 'Some items are unavailable',
+                'details': unavailable_items
+            }), 400
         
         if total_eur == 0:
              return jsonify({'error': 'Empty basket'}), 400

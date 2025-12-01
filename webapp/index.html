@@ -5590,9 +5590,40 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function addToBasket(id, name, price, e) {
+            // 1. Check basket limit (10 products max to prevent reservation exploits)
+            if(basket.length >= 10) {
+                if(window.charSystem) charSystem.show('cj', 'BASKET FULL! MAX 10 ITEMS.');
+                tg.showAlert('⚠️ Maximum 10 items per order');
+                return;
+            }
+            
+            // 2. Prevent duplicate products (same ID)
+            const alreadyInBasket = basket.find(item => item.id === id);
+            if(alreadyInBasket) {
+                if(window.charSystem) charSystem.show('cj', 'ALREADY IN BASKET!');
+                tg.showAlert('⚠️ This product is already in your basket');
+                return;
+            }
+            
+            // 3. Get full product details from allProducts
+            const product = allProducts.find(p => p.ids && p.ids.includes(id));
+            if(!product) {
+                tg.showAlert('⚠️ Product not found');
+                return;
+            }
+            
+            // 4. Add to basket with full metadata
             if(e) flyToCart(e);
             
-            basket.push({id, name, price});
+            basket.push({
+                id: id,
+                name: name,
+                price: price,
+                city: product.city || 'Unknown',
+                district: product.district || 'Unknown',
+                type: product.product_type || 'misc'
+            });
+            
             updateBasketUI();
             currentDiscount = null; // Reset on change
             if(window.charSystem) charSystem.show('cj', 'NICE CHOICE!');
@@ -5884,13 +5915,26 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     if(pollInterval) clearInterval(pollInterval);
                     pollInterval = setInterval(() => pollPayment(data.payment_id), 3000);
                 } else {
-                    tg.showAlert("Error: " + (data.error || "Unknown"));
+                    // Handle errors (including stock issues)
+                    let errorMsg = data.error || "Unknown error";
+                    if(data.details && Array.isArray(data.details)) {
+                        errorMsg = data.details.join('\n');
+                    }
+                    tg.showAlert("⚠️ " + errorMsg);
+                    
+                    // If items are unavailable, reload products to refresh availability
+                    if(errorMsg.includes('unavailable') || errorMsg.includes('out of stock')) {
+                        await loadProducts();
+                        renderBasketContent(); // Re-render to show updated availability
+                    }
                 }
             } catch(e) {
                 tg.showAlert("Network Error: " + e.message);
             } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
+                if(btn) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
             }
         }
         
