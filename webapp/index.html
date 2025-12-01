@@ -1385,25 +1385,7 @@
             flex-direction: column;
         }
         
-        .mp-text {
-            font-family: 'Pricedown', sans-serif;
-            font-size: 80px;
-            color: var(--gta-gold);
-            text-shadow: 4px 4px 0 #000;
-            transform: scale(0);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .mp-sub {
-            font-size: 32px;
-            color: #fff;
-            margin-top: 10px;
-            opacity: 0;
-            transition: opacity 0.5s delay 0.5s;
-        }
-        
-        .mp-active .mp-text { transform: scale(1); }
-        .mp-active .mp-sub { opacity: 1; }
+        /* Mission Passed Overlay - Consolidated below */
         
         /* Map & Stats */
         .placeholder-box {
@@ -3759,17 +3741,17 @@
 
         .mp-text {
             font-family: 'Pricedown', sans-serif;
-            font-size: 80px;
-            color: #C4A000; /* Authentic Amber */
+            font-size: 90px;
+            color: #C4A000; /* Authentic Gold */
             text-shadow: 
-                3px 3px 0 #000,
+                4px 4px 0 #000,
                 -1px -1px 0 #000,  
                 1px -1px 0 #000,
                 -1px 1px 0 #000,
                 1px 1px 0 #000;
             transform: scale(3); /* Start larger */
             opacity: 0;
-            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1); /* Slam effect */
+            transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1); /* Slam effect */
         }
         
         .mp-active .mp-text {
@@ -3779,17 +3761,18 @@
 
         .mp-sub {
             font-family: 'Pricedown', sans-serif;
-            font-size: 30px;
+            font-size: 40px;
             color: #fff;
-            margin-top: 20px;
+            text-shadow: 
+                2px 2px 0 #000,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000;
+            margin-top: 10px;
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.5s ease 0.5s;
-        }
-
-        .mp-active .mp-text {
-            opacity: 1;
-            transform: scale(1);
         }
 
         .mp-active .mp-sub {
