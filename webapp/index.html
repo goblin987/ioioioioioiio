@@ -278,32 +278,18 @@
             box-shadow: 0 0 10px var(--gta-green);
         }
 
-        /* Standard Emoji Style */
+        /* Clean Emoji Style (No Slot) */
         .product-emoji {
-            font-size: 48px;
-            width: 90px;
-            height: 90px;
-            margin: 10px auto;
+            font-size: 60px;
+            margin: 15px 0;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            
-            /* Weapon Wheel Slot */
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.1);
-            
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            z-index: 2;
+            text-align: center;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
         .product-emoji:hover {
-            transform: scale(1.1);
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+            transform: scale(1.2);
         }
 
         .product-name {
@@ -3950,6 +3936,7 @@
         .cart-promo {
             display: flex;
             gap: 5px;
+            margin-top: 40px; /* Added Separation */
             margin-bottom: 10px;
             background: transparent;
             padding: 0;
@@ -4007,7 +3994,7 @@
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid #222;
             border-radius: 4px;
-            padding: 12px;
+            padding: 8px 12px; /* Extra compact */
             margin-bottom: 10px;
             box-shadow: none;
         }
