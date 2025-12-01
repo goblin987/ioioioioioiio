@@ -5742,7 +5742,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // 3. Add to basket with full metadata (allow duplicates for multiple purchases)
+            // 3. Check stock availability - count how many of this product are already in basket
+            const countInBasket = basket.filter(item => item.id === id).length;
+            if(countInBasket >= product.available) {
+                if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
+                tg.showAlert(`⚠️ Only ${product.available} available. You already have ${countInBasket} in basket.`);
+                return;
+            }
+            
+            // 4. Add to basket with full metadata (allow duplicates for multiple purchases)
             if(e) flyToCart(e);
             
             basket.push({
