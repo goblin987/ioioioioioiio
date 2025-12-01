@@ -5115,7 +5115,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         function initCustomRefill() {
             const val = document.getElementById('custom-refill').value;
-            if(val && val > 0) initRefill(val);
+            if(val && val > 0) {
+                const btn = document.querySelector('.refill-custom .modern-apply-btn');
+                if(btn) btn.innerText = '...';
+                initRefill(val).then(() => {
+                    if(btn) btn.innerText = 'PAY';
+                }).catch(() => {
+                    if(btn) btn.innerText = 'PAY';
+                });
+            }
         }
 
         async function initRefill(amount) {
@@ -5220,6 +5228,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // Pass isRefill = true
                 rInput.addEventListener('focus', () => handleInputFocus(rInput, refillSheet, true));
                 rInput.addEventListener('blur', () => handleInputBlur(refillSheet));
+                
+                // Visual Feedback for Amount
+                rInput.addEventListener('input', () => {
+                    const btn = rInput.nextElementSibling; // The PAY button
+                    if(btn) {
+                        const val = parseFloat(rInput.value);
+                        if(val && val > 0) {
+                            btn.style.background = 'var(--gta-green)';
+                            btn.style.color = '#000';
+                            btn.style.boxShadow = '0 0 10px var(--gta-green)';
+                        } else {
+                            btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                            btn.style.color = '#aaa';
+                            btn.style.boxShadow = 'none';
+                        }
+                    }
+                });
             }
             
             // Unlock Audio Context
