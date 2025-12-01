@@ -2507,11 +2507,17 @@ def webapp_create_invoice():
         total_eur = Decimal('0.0')
         reseller_discount_total = Decimal('0.0')
         
-        # Validate items and calculate total
+        # Validate items and calculate total, also build proper basket snapshot
         unavailable_items = []
+        enriched_items = []  # Will contain items with all required fields for payment processing
+        
         for item in items:
             p_id = item.get('id')
-            c.execute("SELECT price, product_type, available FROM products WHERE id = %s", (p_id,))
+            c.execute("""
+                SELECT id, name, price, product_type, available, size, city, district, 
+                       original_text_pickup 
+                FROM products WHERE id = %s
+            """, (p_id,))
             row = c.fetchone()
             if not row:
                 unavailable_items.append(f"Product ID {p_id} not found")
@@ -2519,9 +2525,7 @@ def webapp_create_invoice():
             
             # Check if product is available (available > 0)
             if row.get('available', 0) <= 0:
-                c.execute("SELECT name FROM products WHERE id = %s", (p_id,))
-                name_row = c.fetchone()
-                product_name = name_row['name'] if name_row else f"Product {p_id}"
+                product_name = row.get('name', f"Product {p_id}")
                 unavailable_items.append(f"{product_name} is out of stock")
                 continue
                 
@@ -2534,6 +2538,18 @@ def webapp_create_invoice():
             if r_disc_percent > 0:
                 item_discount = (price * r_disc_percent) / Decimal('100.0')
                 reseller_discount_total += item_discount
+            
+            # Build enriched item with all fields needed for payment processing
+            enriched_items.append({
+                'product_id': row['id'],  # KEY FIELD for payment processing
+                'name': row['name'],
+                'price': float(row['price']),
+                'product_type': p_type,
+                'size': row.get('size', ''),
+                'city': row.get('city', ''),
+                'district': row.get('district', ''),
+                'original_text': row.get('original_text_pickup', '')
+            })
         
         conn.close()
         
@@ -2590,9 +2606,9 @@ def webapp_create_invoice():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Store basket snapshot as LIST (matching bot format) - items already have full product details
+        # Store basket snapshot as LIST (matching bot format) with enriched product details
         # Items format: [{'product_id': X, 'name': Y, 'price': Z, 'city': A, 'district': B, ...}, ...]
-        basket_snapshot = items  # Items already contain all needed product details
+        basket_snapshot = enriched_items  # Use enriched items with product_id field
         
         c.execute("""
             INSERT INTO pending_deposits 
