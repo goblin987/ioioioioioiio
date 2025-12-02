@@ -2062,17 +2062,19 @@ def webapp_get_locations():
 
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
-    """API endpoint to fetch available products for the Web App"""
+    """API endpoint to fetch available products for the Web App (Excluding Reserved)"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
         # Fetch products grouped by city/district
-        # We want to show available products
+        # Show available AND NOT RESERVED products
+        # (reserved_until < NOW() means expired/free)
         c.execute("""
             SELECT id, name, price, size, product_type, city, district, available
             FROM products
             WHERE available > 0
+            AND (reserved_until IS NULL OR reserved_until < CURRENT_TIMESTAMP)
             ORDER BY city, district, product_type, price
         """)
         
@@ -2100,6 +2102,55 @@ def webapp_get_products():
         
     except Exception as e:
         logger.error(f"Error fetching products for webapp: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@flask_app.route("/webapp/api/reserve", methods=['POST'])
+def webapp_reserve_item():
+    """Reserves an item for 15 minutes (High Concurrency Safe)"""
+    try:
+        data = request.json
+        ids = data.get('ids', []) # List of candidate IDs
+        user_id = data.get('user_id')
+        
+        if not ids or not user_id:
+            return jsonify({'success': False, 'error': 'Missing IDs or User ID'}), 400
+            
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN") # Start transaction
+        
+        # Find first available (not reserved)
+        # FOR UPDATE SKIP LOCKED prevents two users grabbing the same row simultaneously
+        placeholders = ','.join(['%s'] * len(ids))
+        query = f"""
+            SELECT id FROM products 
+            WHERE id IN ({placeholders}) 
+            AND available > 0 
+            AND (reserved_until IS NULL OR reserved_until < CURRENT_TIMESTAMP)
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+        """
+        c.execute(query, ids)
+        row = c.fetchone()
+        
+        if not row:
+            conn.rollback()
+            conn.close()
+            return jsonify({'success': False, 'error': 'All items reserved or sold'}), 409
+            
+        reserved_id = row['id']
+        
+        # Reserve it
+        expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
+        c.execute("UPDATE products SET reserved_until = %s, reserved_by = %s WHERE id = %s", (expiry, user_id, reserved_id))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'reserved_id': reserved_id, 'expires_at': expiry.isoformat()})
+        
+    except Exception as e:
+        logger.error(f"Reservation error: {e}")
+        if 'conn' in locals() and conn: conn.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @flask_app.route("/webapp/api/validate_discount", methods=['POST'])
@@ -2437,83 +2488,105 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: SUPER INJECTION v4.3 (End of Body Injection) =====
+            # ===== HOTFIX: SUPER INJECTION v4.4 (Reservation System) =====
             
             super_injection = '''
             <script>
-                console.log("DEBUG: Loaded v4.3-END-BODY-INJECTION");
+                console.log("DEBUG: Loaded v4.4-RESERVATION-SYSTEM");
                 
-                // OVERRIDE addToBasket - UNLIMITED MODE
-                // We use window.addToBasket to ensure we overwrite any existing function
+                // OVERRIDE addToBasket - ASYNC RESERVATION
                 window.addToBasket = function(ids, name, price, e) {
-                    console.log("v4.3 addToBasket called with:", ids);
-                    
-                    // 1. Pick an ID
-                    let id = ids;
-                    if(Array.isArray(ids)) {
-                        const basketIds = basket.map(i => String(i.id));
-                        // Find first candidate not in basket
-                        const availableId = ids.find(candidate => !basketIds.includes(String(candidate)));
-                        if(availableId) {
-                            id = availableId;
-                        } else {
-                            // Fallback: Reuse first ID (duplicates allowed)
-                            id = ids[0]; 
-                        }
-                    }
-
-                    // 2. Check basket limit (10 items)
+                    // 1. Check limit
                     if(basket.length >= 10) {
                         tg.showAlert('⚠️ Maximum 10 items per order');
                         return;
                     }
-                    
-                    // 3. Get details - Robust lookup
-                    let product = allProducts.find(p => p.id === id);
-                    if(!product && Array.isArray(ids)) {
-                         // If specific ID not found, use first ID for details
-                         product = allProducts.find(p => p.id === ids[0]);
+
+                    // 2. RESERVE ON SERVER
+                    const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
+                    if(!user_id) { 
+                        // Fallback for testing outside Telegram
+                        console.warn("User ID missing, using fallback 0"); 
                     }
                     
-                    if(!product) {
-                        console.error('Product not found:', id);
-                        tg.showAlert('⚠️ Product not found');
-                        return;
+                    // Show visual feedback
+                    const btn = e ? e.currentTarget : null; // currentTarget is safer
+                    const originalText = btn ? btn.innerText : '';
+                    if(btn) { 
+                        btn.innerText = '⏳'; 
+                        btn.style.opacity = '0.7';
+                        btn.disabled = true; 
                     }
                     
-                    // 4. BYPASS STOCK CHECK
-                    // We purposely skip the "countInBasket >= available" check to allow duplicates
-                    // validation will happen on server if needed, but for now we trust the "x9" badge
+                    const payload = { 
+                        ids: Array.isArray(ids) ? ids : [ids], 
+                        user_id: user_id || 0
+                    };
                     
-                    // 5. Add to basket
-                    if(e) flyToCart(e);
-                    
-                    basket.push({
-                        id: id,
-                        name: name,
-                        price: price,
-                        city: product.city || 'Unknown',
-                        district: product.district || 'Unknown',
-                        type: product.type || 'misc'
+                    fetch('api/reserve', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if(btn) { 
+                            btn.innerText = originalText; 
+                            btn.style.opacity = '1';
+                            btn.disabled = false; 
+                        }
+                        
+                        if(data.success) {
+                            const reserved_id = data.reserved_id;
+                            console.log("Reserved ID:", reserved_id);
+                            
+                            // 3. Add to Basket (Local)
+                            if(e) flyToCart(e);
+                            
+                            // Find details
+                            let product = allProducts.find(p => p.id === reserved_id);
+                            if(!product && Array.isArray(ids)) product = allProducts.find(p => p.id === ids[0]);
+                            
+                            basket.push({
+                                id: reserved_id,
+                                name: name,
+                                price: price,
+                                city: product ? (product.city || 'Unknown') : 'Unknown',
+                                district: product ? (product.district || 'Unknown') : 'Unknown',
+                                type: product ? (product.type || 'misc') : 'misc'
+                            });
+                            
+                            updateBasketUI();
+                            
+                            // Update the badge locally to reflect -1 available
+                            // This is purely visual until next refresh
+                            // (Optional refinement)
+                            
+                        } else {
+                            tg.showAlert('⚠️ ' + (data.error || 'Item reserved or sold out!'));
+                            // Refresh grid to show real state
+                            if(window.loadProducts) window.loadProducts(); 
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Reservation error:", err);
+                        if(btn) { 
+                            btn.innerText = originalText; 
+                            btn.style.opacity = '1';
+                            btn.disabled = false; 
+                        }
+                        tg.showAlert('⚠️ Network error. Try again.');
                     });
-                    
-                    updateBasketUI();
-                    currentDiscount = null;
-                    const nav = document.getElementById('nav-basket');
-                    if(nav) {
-                        nav.style.color = '#fff';
-                        setTimeout(() => nav.style.color = '', 200);
-                    }
                 };
                 
-                // OVERRIDE renderProducts
+                // OVERRIDE renderProducts - Hide Reserved Items
                 window.renderProducts = function(products) {
-                    console.log("Render Products v4.3 (Injected)");
+                    console.log("Render Products v4.4 (Injected)");
                     const grid = document.getElementById('product-grid');
                     grid.innerHTML = '';
                     
+                    // STRICT FILTER: available > 0 (Server already filters reserved, but good to be safe)
                     if(!products) return;
-                    // STRICTLY HIDE SOLD OUT
                     const availableProducts = products.filter(p => p.available > 0);
                     
                     if(availableProducts.length === 0) {
@@ -2605,11 +2678,12 @@ def webapp_index():
             '''
             content = content.replace('</body>', super_injection + '</body>')
             
-            # ===== HOTFIX: Ensure v4.3 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
-            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
+            # ===== HOTFIX: Ensure v4.4 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
+            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
+            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
+            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
