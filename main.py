@@ -2480,6 +2480,31 @@ def debug_find():
                 matches.append(os.path.join(root, filename))
     return jsonify({"matches": matches, "cwd": os.getcwd(), "search_root": search_root})
 
+@flask_app.route("/debug/index-version", methods=['GET'])
+def debug_index_version():
+    """Check what version of index.html is actually on disk"""
+    import os
+    webapp_path = os.path.join(os.getcwd(), 'webapp', 'index.html')
+    if os.path.exists(webapp_path):
+        with open(webapp_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            # Extract title line
+            title_line = 'NOT FOUND'
+            for line in content.split('\n'):
+                if '<title>' in line:
+                    title_line = line.strip()
+                    break
+            return jsonify({
+                "file_exists": True,
+                "path": webapp_path,
+                "title_line": title_line,
+                "file_size": len(content),
+                "has_no_stock_check": "NO STOCK CHECK" in content,
+                "has_v23": "v2.3" in content or "v2.2" in content
+            })
+    else:
+        return jsonify({"file_exists": False, "path": webapp_path})
+
 @flask_app.route("/", methods=['GET'])
 def root():
     """Root endpoint to verify server is running"""
