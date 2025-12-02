@@ -3902,6 +3902,16 @@
         .refill-custom {
             display: flex;
             gap: 10px;
+            position: relative;
+            z-index: 99999;
+            pointer-events: auto;
+        }
+        
+        .refill-custom input,
+        .refill-custom button {
+            position: relative;
+            z-index: 99999;
+            pointer-events: auto !important;
         }
 
         .promo-field-group {
@@ -4405,7 +4415,8 @@
                 z-index: 30001;
                 animation: slideUpSheet 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 padding-bottom: env(safe-area-inset-bottom);
-                overflow: hidden;
+                overflow: visible; /* Changed from hidden to allow clicks */
+                pointer-events: auto; /* Ensure clicks work */
             }
 
             @media (min-width: 600px) {
@@ -4582,9 +4593,9 @@
                     <button class="refill-btn" onclick="initRefill(50)">€50</button>
                 </div>
                 
-                <div class="refill-custom">
-                     <input type="number" id="custom-refill" placeholder="CUSTOM AMOUNT (€)" class="modern-input" style="text-align:center;">
-                     <button id="refill-pay-btn" class="modern-apply-btn" onclick="initCustomRefill()">PAY</button>
+                <div class="refill-custom" style="position: relative; z-index: 99999;">
+                     <input type="number" id="custom-refill" placeholder="CUSTOM AMOUNT (€)" class="modern-input" style="text-align:center; position: relative; z-index: 99999;">
+                     <button id="refill-pay-btn" class="modern-apply-btn" style="position: relative; z-index: 99999; pointer-events: auto !important;" onclick="initCustomRefill()">PAY</button>
                 </div>
             </div>
         </div>
