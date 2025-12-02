@@ -871,12 +871,17 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
     update_breadcrumb(context, "Bot UI", "admin_bot_ui_menu")
     breadcrumb = get_breadcrumb_text(context)
     
-    from utils import is_daily_rewards_enabled
+    from utils import is_daily_rewards_enabled, get_bot_setting
     
     daily_rewards_on = is_daily_rewards_enabled()
+    ui_mode = get_bot_setting("ui_mode", "bot")  # "bot" or "miniapp"
     
     msg = f"{breadcrumb}\n\n🎨 **Bot UI Management**\n\nManage bot interface, themes, and media:"
     keyboard = [
+        [InlineKeyboardButton(
+            f"{'📱 Using: Mini App Only' if ui_mode == 'miniapp' else '🤖 Using: Bot UI'}",
+            callback_data=f"toggle_ui_mode|{'bot' if ui_mode == 'miniapp' else 'miniapp'}"
+        )],
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
         [InlineKeyboardButton(
@@ -912,6 +917,35 @@ async def handle_toggle_daily_rewards_button(update: Update, context: ContextTyp
     elif action == 'disable':
         set_bot_setting("show_daily_rewards_button", "false")
         await query.answer("❌ Daily Rewards button disabled", show_alert=True)
+    else:
+        await query.answer("Invalid action", show_alert=True)
+        return
+    
+    # Refresh the Bot UI menu to show updated state
+    await handle_admin_bot_ui_menu(update, context)
+
+async def handle_toggle_ui_mode(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Toggle between Bot UI and Mini App only mode"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        await query.answer("Access denied", show_alert=True)
+        return
+    
+    from utils import set_bot_setting
+    
+    # Parse action from params or callback_data
+    action = None
+    if params and isinstance(params, list) and len(params) > 0:
+        action = params[0]
+    elif '|' in query.data:
+        action = query.data.split('|', 1)[1]
+    
+    if action == 'miniapp':
+        set_bot_setting("ui_mode", "miniapp")
+        await query.answer("📱 Switched to Mini App Only mode!\n\nUsers will be prompted to open the mini app when they /start", show_alert=True)
+    elif action == 'bot':
+        set_bot_setting("ui_mode", "bot")
+        await query.answer("🤖 Switched to Bot UI mode!\n\nUsers will see the traditional bot menu", show_alert=True)
     else:
         await query.answer("Invalid action", show_alert=True)
         return
