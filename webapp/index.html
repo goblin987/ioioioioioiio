@@ -3138,25 +3138,26 @@
            CART STYLES - Shop Menu Style (GTA San Andreas)
            ═══════════════════════════════════════════════════════════════════ */
         
-        /* Minimalist Cart Item - BRIGHT & VISIBLE */
+        /* Minimalist Cart Item - VERY BRIGHT */
         .cart-item-modern {
             display: flex;
             align-items: center;
-            background: rgba(30, 30, 30, 0.95); /* Brighter background */
-            border: 1px solid #444; /* Brighter border */
+            background: rgba(50, 50, 50, 1); /* BRIGHT background */
+            border: 1px solid #555; /* BRIGHT border */
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 10px;
-            transition: background 0.2s, border-color 0.2s;
+            transition: all 0.2s;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* Add subtle shadow */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         }
 
         .cart-item-modern:hover {
-            background: rgba(45, 45, 45, 1);
+            background: rgba(60, 60, 60, 1);
             border-color: var(--gta-green);
-            box-shadow: 0 4px 12px rgba(63, 165, 53, 0.2);
+            box-shadow: 0 4px 12px rgba(63, 165, 53, 0.3);
+            transform: translateX(2px);
         }
 
         .cart-item-modern.removing {
@@ -3344,8 +3345,8 @@
             width: 95%;
             max-width: 500px;
             max-height: 90vh;
-            background: #1a1a1a; /* Brighter background - matches checkout module */
-            border: 2px solid #333;
+            background: #222; /* BRIGHT background */
+            border: 2px solid #444;
             display: flex;
             flex-direction: column;
             box-shadow: 0 10px 50px rgba(0,0,0,0.9);
@@ -3355,12 +3356,13 @@
         
         /* Header Bar - BRIGHT & CLEAR */
         .cart-header-bar {
-            background: #000; /* Solid black like checkout */
+            background: #1a1a1a; /* BRIGHTER background */
             border-bottom: 3px solid var(--gta-green);
             padding: 15px 20px;
             display: flex;
             align-items: center;
             gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
         
         .cart-header-title {
@@ -3416,7 +3418,7 @@
             padding: 15px 20px;
             min-height: 200px;
             max-height: 60vh;
-            background: #1a1a1a; /* Brighter background */
+            background: #222; /* BRIGHT background - matches container */
         }
         
         .cart-content::-webkit-scrollbar { width: 6px; }
