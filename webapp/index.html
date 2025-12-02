@@ -5281,12 +5281,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     nav.style.pointerEvents = 'none';
                     nav.style.transition = 'opacity 0.2s ease';
                 }
-                // Add padding to modal content to prevent keyboard overlap
-                // BUT ONLY for Cart (isRefill=false). Refill sheet auto-adjusts or breaks with padding.
-                if(parentModal && !isRefill) {
+                
+                if(isRefill && parentModal) {
+                    // FORCE LIFT UP for Refill Modal to clear keyboard
+                    parentModal.style.transform = 'translateY(-250px)'; 
+                    parentModal.style.transition = 'transform 0.3s ease';
+                } else if (parentModal) {
+                    // Add padding to modal content to prevent keyboard overlap (Cart)
                     parentModal.style.paddingBottom = '350px';
                     parentModal.style.transition = 'padding-bottom 0.3s ease';
                 }
+                
                 setTimeout(() => {
                     if(inputElement) {
                         inputElement.scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -5300,9 +5305,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     nav.style.opacity = '1';
                     nav.style.pointerEvents = 'auto';
                 }
-                // Remove padding
+                // Remove padding and reset transform
                 if(parentModal) {
                     parentModal.style.paddingBottom = '0';
+                    parentModal.style.transform = '';
                 }
             }
             
