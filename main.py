@@ -2468,6 +2468,20 @@ def root():
 
 def main() -> None:
     global telegram_app, main_loop
+    
+    # RENDER FIX: Ensure webapp files are present
+    import subprocess
+    webapp_dir = os.path.join(os.getcwd(), 'webapp')
+    if os.path.exists(webapp_dir):
+        files_in_webapp = os.listdir(webapp_dir)
+        if not files_in_webapp or len(files_in_webapp) == 0:
+            logger.warning("⚠️ Webapp folder is empty! Attempting to restore from Git...")
+            try:
+                subprocess.run(['git', 'checkout', 'HEAD', '--', 'webapp/'], check=True, cwd=os.getcwd())
+                logger.info("✅ Webapp files restored from Git")
+            except Exception as e:
+                logger.error(f"❌ Failed to restore webapp files: {e}")
+    
     logger.info("🔧 Starting bot...")
     logger.info("🔧 Initializing database...")
     init_db()
