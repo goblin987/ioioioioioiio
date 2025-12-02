@@ -2436,31 +2436,21 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: Patch the JavaScript to remove stock check =====
-            # This fixes the "Only 1 available" error by removing the stock check
-            old_stock_check = '''// 3. Check stock availability - count how many of this product are already in basket
-            const countInBasket = basket.filter(item => item.id === id).length;
-            if(countInBasket >= product.available) {
-                if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
-                tg.showAlert(`⚠️ Only ${product.available} available. You already have ${countInBasket} in basket.`);
-                return;
-            }'''
-            
-            new_stock_check = '''// 3. Stock check REMOVED - server validates on checkout
-            // Users can add same product multiple times (up to 10 total items)'''
-            
-            content = content.replace(old_stock_check, new_stock_check)
+            # ===== HOTFIX: Remove stock check that blocks duplicates =====
+            # Find and remove the stock check code block
+            import re
+            stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
+            content = re.sub(stock_check_pattern, '// 3. Stock check REMOVED - allows duplicates', content, flags=re.DOTALL)
             
             # ===== HOTFIX: Brighten cart items =====
             content = content.replace('background: rgba(26, 26, 26, 0.9)', 'background: #3a3a3a')
             content = content.replace('background: rgba(30, 30, 30, 0.95)', 'background: #3a3a3a')
             content = content.replace('border: 1px solid rgba(255, 255, 255, 0.1)', 'border: 1px solid #555')
-            content = content.replace('color: #aaa', 'color: #ccc')
             content = content.replace('background: #0a0a0a', 'background: #222')
             content = content.replace('background: #1a1a1a', 'background: #2a2a2a')
             
             # Update title to show hotfix is applied
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.0-HOTFIX</title>')
+            content = content.replace('Los Santos Shop v2.1', 'Los Santos Shop v3.0-HOTFIX')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
