@@ -2437,54 +2437,169 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: STRICT STOCK CHECK + DEBUGGING + UI FIX =====
+            # ===== HOTFIX: SUPER INJECTION (Logic + UI) =====
+            # We inject the NEW JS Logic + CSS directly to override file content
             
-            import re
-            # Replace stock check with DEBUGGING version
-            stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
-            new_check_logic = '''// 3. Debug Stock Check
-            const count = basket.filter(i => i.id === id).length;
-            console.log(`Stock Check: ID ${id}, Count ${count}, Available ${product.available}`);
-            
-            // STRICT CHECK: Stop if we reached the limit
-            if(count >= product.available) {
-                if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
-                tg.showAlert(`⚠️ Max stock reached! (${product.available} available)`);
-                return;
-            }'''
-            
-            content = re.sub(stock_check_pattern, new_check_logic, content, flags=re.DOTALL)
-            
-            debug_script = '''
+            super_injection = '''
             <script>
-                console.log("DEBUG: Loaded v3.6-STRICT-DEBUG");
+                console.log("DEBUG: Loaded v4.1-SUPER-INJECTION");
+                
+                // OVERRIDE addToBasket with Smart Logic
+                window.addToBasket = function(ids, name, price, e) {
+                    // 1. Smart ID Selection
+                    let id = ids;
+                    if(Array.isArray(ids)) {
+                        // Get basket IDs as strings for safe comparison
+                        const basketIds = basket.map(i => String(i.id));
+                        // Find first candidate not in basket
+                        const availableId = ids.find(candidate => !basketIds.includes(String(candidate)));
+                        
+                        if(availableId) {
+                            id = availableId;
+                        } else {
+                            id = ids[0]; // Fallback
+                        }
+                    }
+
+                    // 2. Check basket limit
+                    if(basket.length >= 10) {
+                        tg.showAlert('⚠️ Maximum 10 items per order');
+                        return;
+                    }
+                    
+                    // 3. Get details
+                    const product = allProducts.find(p => p.id === id);
+                    if(!product) {
+                        console.error('Product not found:', id);
+                        tg.showAlert('⚠️ Product not found');
+                        return;
+                    }
+                    
+                    // 4. Check stock availability
+                    const countInBasket = basket.filter(item => item.id === id).length;
+                    if(countInBasket >= product.available) {
+                        if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
+                        if(Array.isArray(ids)) {
+                             tg.showAlert(`⚠️ Max stock reached! (${ids.length} total available)`);
+                        } else {
+                             tg.showAlert(`⚠️ Only ${product.available} available.`);
+                        }
+                        return;
+                    }
+                    
+                    // 5. Add to basket
+                    if(e) flyToCart(e);
+                    
+                    basket.push({
+                        id: id,
+                        name: name,
+                        price: price,
+                        city: product.city || 'Unknown',
+                        district: product.district || 'Unknown',
+                        type: product.type || 'misc'
+                    });
+                    
+                    updateBasketUI();
+                    currentDiscount = null;
+                    const nav = document.getElementById('nav-basket');
+                    if(nav) {
+                        nav.style.color = '#fff';
+                        setTimeout(() => nav.style.color = '', 200);
+                    }
+                };
+                
+                // OVERRIDE renderProducts to pass arrays
+                window.renderProducts = function(products) {
+                    console.log("Render Products v4.1 (Injected)");
+                    const grid = document.getElementById('product-grid');
+                    grid.innerHTML = '';
+                    
+                    if(!products || products.length === 0) {
+                        grid.innerHTML = '<div class="loading">NO PRODUCTS AVAILABLE</div>';
+                        return;
+                    }
+                    
+                    const availableProducts = products.filter(p => p.available > 0);
+                    if(availableProducts.length === 0) {
+                        grid.innerHTML = '<div class="loading">NO PRODUCTS AVAILABLE</div>';
+                        return;
+                    }
+                    
+                    const groups = {};
+                    availableProducts.forEach(p => {
+                        let cleanName = p.name.replace(/[\\d_]{6,}.*/g, '').trim();
+                        cleanName = cleanName.replace(/\\s\\d+$/, '').trim();
+                        const key = `${cleanName.toLowerCase()}|${p.type}|${p.city}|${p.size}|${p.price}`;
+                        
+                        if(!groups[key]) {
+                            groups[key] = { 
+                                ...p, 
+                                display_name: cleanName, 
+                                count: 0, 
+                                ids: [] 
+                            };
+                        }
+                        groups[key].count++;
+                        groups[key].ids.push(p.id);
+                    });
+                    
+                    const uniqueProducts = Object.values(groups);
+                    
+                    uniqueProducts.forEach((p, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'product-card';
+                        card.style.animationDelay = `${index * 0.05}s`;
+                        
+                        const countBadge = p.count > 1 ? `<div style="position:absolute; top:5px; right:5px; background:var(--gta-gold); color:#000; padding:2px 6px; font-size:12px; border-radius:4px; font-weight:bold;">x${p.count}</div>` : '';
+                        
+                        // PASS IDS AS ARRAY STRING
+                        const idsJson = JSON.stringify(p.ids);
+                        const cleanName = p.display_name.replace(/"/g, '&quot;');
+                        
+                        card.innerHTML = `
+                            ${countBadge}
+                            <div class="product-emoji">${getProductEmoji(p.type, p.display_name)}</div>
+                            <div class="product-name">${p.display_name}</div>
+                            <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>
+                            <div class="product-price">€${p.price.toFixed(2)}</div>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick='sfx.select(); addToBasket(${idsJson}, "${cleanName}", ${p.price}, event)'>ADD</button>
+                                <button class="btn-buy" style="flex:2;" onmouseover="sfx.tick()" onclick='sfx.select(); buyNow(${idsJson}, "${cleanName}", ${p.price})'>BUY</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                };
             </script>
-            '''
-            content = content.replace('<head>', '<head>' + debug_script)
-            
-            # 2. Force UI Brightness via CSS Injection
-            brightness_css = '''
             <style>
-                /* FORCE BRIGHT CART UI with GRID */
+                /* FORCE PROFESSIONAL DARK THEME (GTA Style) */
                 .cart-container { 
-                    background: #222 !important; 
-                    border: 2px solid #555 !important; 
+                    background: #111 !important; 
+                    border: 1px solid #333 !important; 
                     height: auto !important;
                     max-height: 90vh !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    z-index: 10001 !important; /* Top z-index */
+                    z-index: 10001 !important;
                     position: relative !important;
+                    box-shadow: 0 0 50px rgba(0,0,0,0.9) !important;
+                    border-radius: 12px !important; /* Smooth corners */
+                    overflow: hidden !important;
                 }
+                
+                /* Header - Solid Black (Matches Footer) */
                 .cart-header-bar { 
-                    background: #2a2a2a !important; 
-                    border-bottom: 2px solid #444 !important; 
+                    background: #000 !important; 
+                    border-bottom: 1px solid #333 !important; 
                     flex-shrink: 0 !important; 
                     z-index: 10002 !important;
+                    padding: 15px 20px !important;
                 }
+                
+                /* Content - Dark Grey with Subtle Grid */
                 .cart-content { 
-                    background-color: #1a1a1a !important;
-                    background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px) !important;
+                    background-color: #111 !important;
+                    background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px) !important;
                     background-size: 20px 20px !important;
                     flex: 1 !important;
                     overflow-y: auto !important;
@@ -2492,61 +2607,70 @@ def webapp_index():
                     z-index: 10002 !important;
                 }
                 
-                /* FORCE BRIGHT ITEMS */
+                /* Items - High Contrast Card */
                 .cart-item-modern {
                     display: flex !important;
                     justify-content: space-between !important;
                     align-items: center !important;
-                    background: #2a2a2a !important; /* Slightly darker than items for contrast */
-                    border: 1px solid #444 !important;
-                    border-radius: 12px !important;
+                    background: #1a1a1a !important;
+                    border: 1px solid #333 !important;
+                    border-radius: 8px !important;
                     padding: 12px 15px !important;
-                    margin-bottom: 12px !important;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+                    margin-bottom: 10px !important;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
                     opacity: 1 !important;
                     height: auto !important;
-                    min-height: 80px !important;
+                    min-height: 70px !important;
                     color: #fff !important;
                 }
                 
                 .cart-item-modern:hover {
                     border-color: var(--gta-green) !important;
-                    background: #333 !important;
+                    background: #222 !important;
                 }
                 
-                /* Inner Layout overrides */
+                /* Inner Layout */
                 .cim-left { display: flex !important; align-items: center !important; gap: 15px !important; flex: 1 !important; }
                 .cim-right { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; }
                 
-                /* Text brightness */
-                .cim-name { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; text-shadow: 0 1px 3px #000 !important; }
-                .cim-details { color: #ccc !important; font-weight: 600 !important; }
-                .cim-price { color: var(--gta-green) !important; font-size: 22px !important; font-family: 'Pricedown', sans-serif !important; text-shadow: 1px 1px 0 #000 !important; }
+                /* Typography */
+                .cim-name { color: #fff !important; font-size: 16px !important; font-weight: 700 !important; letter-spacing: 0.5px !important; }
+                .cim-details { color: #888 !important; font-family: 'Courier New', monospace !important; font-size: 12px !important; }
+                .cim-price { color: var(--gta-green) !important; font-size: 20px !important; font-family: 'Pricedown', sans-serif !important; text-shadow: 1px 1px 0 #000 !important; }
                 
-                /* Remove Button */
+                /* Remove Button - Red Trash Icon Style */
                 .cim-remove-btn {
-                    background: #800 !important;
-                    color: #fff !important;
-                    border: 1px solid #f00 !important;
-                    padding: 5px 12px !important;
-                    border-radius: 6px !important;
+                    background: #300 !important;
+                    color: #f55 !important;
+                    border: 1px solid #600 !important;
+                    padding: 6px 10px !important;
+                    border-radius: 4px !important;
                     display: flex !important;
                     align-items: center !important;
-                    gap: 5px !important;
+                    gap: 6px !important;
                     font-weight: bold !important;
+                    font-size: 11px !important;
                     cursor: pointer !important;
                     z-index: 10005 !important;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+                    transition: all 0.2s !important;
                 }
                 
-                .cart-backdrop { background: rgba(0,0,0,0.85) !important; z-index: 10000 !important; }
+                .cim-remove-btn:hover {
+                    background: #600 !important;
+                    color: #fff !important;
+                    border-color: #f00 !important;
+                }
+                
+                .cart-backdrop { background: rgba(0,0,0,0.9) !important; z-index: 10000 !important; }
             </style>
             '''
-            content = content.replace('</head>', brightness_css + '</head>')
+            content = content.replace('</head>', super_injection + '</head>')
             
-            # ===== HOTFIX: Ensure v3.9 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.9-POLISHED</title>')
-            content = content.replace('<title>Los Santos Shop v3.7-GRID</title>', '<title>Los Santos Shop v3.9-POLISHED</title>')
+            # ===== HOTFIX: Ensure v4.1 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.1-SUPER-INJECTION</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.1-SUPER-INJECTION</title>')
+            content = content.replace('<title>Los Santos Shop v3.9-POLISHED</title>', '<title>Los Santos Shop v4.1-SUPER-INJECTION</title>')
+            content = content.replace('<title>Los Santos Shop v3.7-GRID</title>', '<title>Los Santos Shop v4.1-SUPER-INJECTION</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
