@@ -3945,21 +3945,27 @@
             background: rgba(255, 255, 255, 0.1);
             color: #aaa;
             border: none;
-            padding: 0 16px;
-            border-radius: 6px;
-            font-size: 11px;
+            padding: 14px 24px; /* Much larger touch target */
+            border-radius: 8px;
+            font-size: 14px; /* Bigger text */
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             margin: 2px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            min-height: 48px; /* iOS recommended touch target */
+            min-width: 80px;
         }
         
         .modern-apply-btn:hover {
             background: var(--gta-green);
             color: #000;
             box-shadow: 0 0 10px var(--gta-green);
+        }
+        
+        .modern-apply-btn:active {
+            transform: scale(0.95); /* Visual feedback on tap */
         }
 
         .modern-totals {
