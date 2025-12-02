@@ -2437,24 +2437,27 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: SUPER INJECTION v4.2 (Body Injection + Unlimited) =====
+            # ===== HOTFIX: SUPER INJECTION v4.3 (End of Body Injection) =====
             
             super_injection = '''
             <script>
-                console.log("DEBUG: Loaded v4.2-BODY-INJECTION");
+                console.log("DEBUG: Loaded v4.3-END-BODY-INJECTION");
                 
-                // OVERRIDE addToBasket - UNLIMITED MODE (Bypass stock check to fix "1 available" error)
+                // OVERRIDE addToBasket - UNLIMITED MODE
+                // We use window.addToBasket to ensure we overwrite any existing function
                 window.addToBasket = function(ids, name, price, e) {
-                    // 1. Pick an ID (Smart-ish, but fallbacks allowed)
+                    console.log("v4.3 addToBasket called with:", ids);
+                    
+                    // 1. Pick an ID
                     let id = ids;
                     if(Array.isArray(ids)) {
                         const basketIds = basket.map(i => String(i.id));
-                        // Try to find distinct ID
+                        // Find first candidate not in basket
                         const availableId = ids.find(candidate => !basketIds.includes(String(candidate)));
                         if(availableId) {
                             id = availableId;
                         } else {
-                            // If all unique IDs used, REUSE the first one (allow duplicates)
+                            // Fallback: Reuse first ID (duplicates allowed)
                             id = ids[0]; 
                         }
                     }
@@ -2465,22 +2468,22 @@ def webapp_index():
                         return;
                     }
                     
-                    // 3. Get details
-                    const product = allProducts.find(p => p.id === id);
-                    if(!product) {
-                        // Try to find ANY product from the list to get details
-                        if(Array.isArray(ids)) {
-                             const fallback = allProducts.find(p => p.id === ids[0]);
-                             if(fallback) {
-                                 // Proceed with fallback details but original ID
-                                 // Actually, better to use the fallback ID if the target is missing
-                                 id = ids[0]; 
-                             }
-                        }
+                    // 3. Get details - Robust lookup
+                    let product = allProducts.find(p => p.id === id);
+                    if(!product && Array.isArray(ids)) {
+                         // If specific ID not found, use first ID for details
+                         product = allProducts.find(p => p.id === ids[0]);
                     }
                     
-                    // 4. NO STOCK CHECK - Allow adding even if "available" says 1
-                    // This fixes the "Only 1 available" bug caused by DB/Frontend mismatch
+                    if(!product) {
+                        console.error('Product not found:', id);
+                        tg.showAlert('⚠️ Product not found');
+                        return;
+                    }
+                    
+                    // 4. BYPASS STOCK CHECK
+                    // We purposely skip the "countInBasket >= available" check to allow duplicates
+                    // validation will happen on server if needed, but for now we trust the "x9" badge
                     
                     // 5. Add to basket
                     if(e) flyToCart(e);
@@ -2489,9 +2492,9 @@ def webapp_index():
                         id: id,
                         name: name,
                         price: price,
-                        city: product ? (product.city || 'Unknown') : 'Unknown',
-                        district: product ? (product.district || 'Unknown') : 'Unknown',
-                        type: product ? (product.type || 'misc') : 'misc'
+                        city: product.city || 'Unknown',
+                        district: product.district || 'Unknown',
+                        type: product.type || 'misc'
                     });
                     
                     updateBasketUI();
@@ -2503,14 +2506,14 @@ def webapp_index():
                     }
                 };
                 
-                // OVERRIDE renderProducts - Ensure sold out are HIDDEN
+                // OVERRIDE renderProducts
                 window.renderProducts = function(products) {
-                    console.log("Render Products v4.2 (Injected)");
+                    console.log("Render Products v4.3 (Injected)");
                     const grid = document.getElementById('product-grid');
                     grid.innerHTML = '';
                     
-                    // STRICT FILTER: available > 0
                     if(!products) return;
+                    // STRICTLY HIDE SOLD OUT
                     const availableProducts = products.filter(p => p.available > 0);
                     
                     if(availableProducts.length === 0) {
@@ -2569,90 +2572,44 @@ def webapp_index():
                     border-radius: 12px !important; /* Smooth corners */
                     overflow: hidden !important;
                 }
-                
-                /* Header - Solid Black (Matches Footer) */
+                /* Header - Solid Black */
                 .cart-header-bar { 
                     background: #000 !important; 
                     border-bottom: 1px solid #333 !important; 
-                    flex-shrink: 0 !important; 
-                    z-index: 10002 !important;
                     padding: 15px 20px !important;
+                    z-index: 10002 !important;
                 }
-                
                 /* Content - Dark Grey with Subtle Grid */
                 .cart-content { 
                     background-color: #111 !important;
                     background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px) !important;
                     background-size: 20px 20px !important;
-                    flex: 1 !important;
-                    overflow-y: auto !important;
-                    position: relative !important;
                     z-index: 10002 !important;
                 }
-                
-                /* Items - High Contrast Card */
+                /* Items */
                 .cart-item-modern {
-                    display: flex !important;
-                    justify-content: space-between !important;
-                    align-items: center !important;
                     background: #1a1a1a !important;
                     border: 1px solid #333 !important;
-                    border-radius: 8px !important;
-                    padding: 12px 15px !important;
-                    margin-bottom: 10px !important;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
-                    opacity: 1 !important;
-                    height: auto !important;
-                    min-height: 70px !important;
                     color: #fff !important;
                 }
-                
-                .cart-item-modern:hover {
-                    border-color: var(--gta-green) !important;
-                    background: #222 !important;
-                }
-                
-                /* Inner Layout */
-                .cim-left { display: flex !important; align-items: center !important; gap: 15px !important; flex: 1 !important; }
-                .cim-right { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; }
-                
-                /* Typography */
-                .cim-name { color: #fff !important; font-size: 16px !important; font-weight: 700 !important; letter-spacing: 0.5px !important; }
-                .cim-details { color: #888 !important; font-family: 'Courier New', monospace !important; font-size: 12px !important; }
-                .cim-price { color: var(--gta-green) !important; font-size: 20px !important; font-family: 'Pricedown', sans-serif !important; text-shadow: 1px 1px 0 #000 !important; }
-                
-                /* Remove Button - Red Trash Icon Style */
+                .cim-name { color: #fff !important; font-weight: 700 !important; }
+                .cim-details { color: #888 !important; }
+                .cim-price { color: var(--gta-green) !important; font-family: 'Pricedown', sans-serif !important; }
                 .cim-remove-btn {
                     background: #300 !important;
                     color: #f55 !important;
                     border: 1px solid #600 !important;
-                    padding: 6px 10px !important;
-                    border-radius: 4px !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 6px !important;
-                    font-weight: bold !important;
-                    font-size: 11px !important;
-                    cursor: pointer !important;
-                    z-index: 10005 !important;
-                    transition: all 0.2s !important;
                 }
-                
-                .cim-remove-btn:hover {
-                    background: #600 !important;
-                    color: #fff !important;
-                    border-color: #f00 !important;
-                }
-                
                 .cart-backdrop { background: rgba(0,0,0,0.9) !important; z-index: 10000 !important; }
             </style>
             '''
-            content = content.replace('<body>', '<body>' + super_injection)
+            content = content.replace('</body>', super_injection + '</body>')
             
-            # ===== HOTFIX: Ensure v4.2 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.2-BODY-INJECTION</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.2-BODY-INJECTION</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.2-BODY-INJECTION</title>')
+            # ===== HOTFIX: Ensure v4.3 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
+            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
+            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.3-END-INJECTION</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
