@@ -1335,6 +1335,19 @@ def init_db():
                 else:
                     logger.warning(f"⚠️ Could not add added_by_worker_id column: {e}")
                 conn.rollback()
+                
+            # Add reserved_until and reserved_by columns for Reservation System
+            try:
+                c.execute("ALTER TABLE products ADD COLUMN reserved_until TIMESTAMP DEFAULT NULL")
+                c.execute("ALTER TABLE products ADD COLUMN reserved_by BIGINT DEFAULT NULL")
+                conn.commit()
+                logger.info(f"✅ Reservation columns (reserved_until, reserved_by) added to products table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ Reservation columns already exist in products table")
+                else:
+                    logger.warning(f"⚠️ Could not add reservation columns: {e}")
+                conn.rollback()
             
             # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
             # will be added later when needed to avoid startup delays
