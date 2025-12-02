@@ -5107,6 +5107,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             modal.style.display = 'flex';
             modal.style.alignItems = 'flex-end';
             modal.style.justifyContent = 'center';
+            
+            // FORCE bind the button when modal opens
+            setTimeout(() => {
+                const btn = document.getElementById('refill-pay-btn');
+                if(btn) {
+                    btn.onclick = function() {
+                        alert("Button clicked!"); // Test if click works AT ALL
+                        initCustomRefill();
+                    };
+                }
+            }, 100);
         }
         
         function closeRefill() {
@@ -5114,45 +5125,28 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
         
         function initCustomRefill() {
-            try {
-                console.log("initCustomRefill called");
-                
-                const input = document.getElementById('custom-refill');
-                const btn = document.getElementById('refill-pay-btn');
-                
-                console.log("Input:", input, "Value:", input?.value);
-                console.log("Button:", btn);
-                
-                if(!input) { 
-                    safeAlert("Input not found"); 
-                    return; 
-                }
-                
-                const val = input.value;
-                
-                if(!val || parseFloat(val) <= 0) {
-                    console.log("Invalid value:", val);
-                    input.style.border = '2px solid red';
-                    setTimeout(() => input.style.border = '', 500);
-                    safeAlert("Please enter a valid amount (minimum €1)");
-                    return;
-                }
-                
-                console.log("Calling initRefill with:", val);
-                if(btn) btn.innerText = '...';
-                
-                initRefill(val).then(() => {
-                    console.log("initRefill completed");
-                    if(btn) setTimeout(() => btn.innerText = 'PAY', 1000);
-                }).catch((e) => {
-                    console.error("initRefill error:", e);
-                    if(btn) btn.innerText = 'PAY';
-                    safeAlert("Refill Error: " + e);
-                });
-            } catch(error) {
-                console.error("initCustomRefill error:", error);
-                safeAlert("Critical Error: " + error.message);
+            alert("Function called!"); // FIRST TEST
+            
+            const input = document.getElementById('custom-refill');
+            const btn = document.getElementById('refill-pay-btn');
+            
+            if(!input) { 
+                alert("No input found!"); 
+                return; 
             }
+            
+            const val = parseFloat(input.value);
+            alert("Value: " + val); // SECOND TEST
+            
+            if(!val || val <= 0) {
+                alert("Invalid amount. Please enter a number greater than 0");
+                return;
+            }
+            
+            if(btn) btn.innerText = '...';
+            alert("About to call initRefill"); // THIRD TEST
+            
+            initRefill(val);
         }
 
         function safeAlert(msg) {
