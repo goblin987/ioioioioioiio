@@ -2436,8 +2436,25 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: FORCE UI BRIGHTNESS VIA CSS INJECTION =====
-            # We inject a style block to override any old dark CSS
+            # ===== HOTFIX: Debug Stock & Force UI Brightness =====
+            
+            # 1. Remove previous regex that might be breaking things
+            # We will let the file's own logic run, but we inject debugging
+            
+            debug_script = '''
+            <script>
+                console.log("DEBUG: Loaded v3.4");
+                // Override alert to debug
+                const oldAlert = tg.showAlert;
+                tg.showAlert = function(msg) {
+                    console.log("ALERT:", msg);
+                    oldAlert(msg);
+                }
+            </script>
+            '''
+            content = content.replace('<head>', '<head>' + debug_script)
+            
+            # 2. Force UI Brightness via CSS Injection
             brightness_css = '''
             <style>
                 /* FORCE BRIGHT CART UI */
@@ -2447,31 +2464,56 @@ def webapp_index():
                 
                 /* FORCE BRIGHT ITEMS */
                 .cart-item-modern {
+                    display: flex !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
                     background: #333 !important;
-                    border: 1px solid #666 !important;
-                    color: #fff !important;
-                    opacity: 1 !important; /* Fix opacity issues */
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+                    border: 2px solid #555 !important;
+                    border-radius: 12px !important;
+                    padding: 12px 15px !important;
+                    margin-bottom: 12px !important;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+                    opacity: 1 !important;
+                    height: auto !important;
                 }
                 
-                /* Make text bright */
-                .cim-name { color: #fff !important; text-shadow: 0 1px 2px #000 !important; }
+                .cart-item-modern:hover {
+                    border-color: var(--gta-green) !important;
+                    background: #3a3a3a !important;
+                }
+                
+                /* Inner Layout overrides */
+                .cim-left { display: flex !important; align-items: center !important; gap: 15px !important; flex: 1 !important; }
+                .cim-right { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; }
+                
+                /* Text brightness */
+                .cim-name { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; }
                 .cim-details { color: #ccc !important; }
+                .cim-price { color: var(--gta-green) !important; font-size: 22px !important; font-family: 'Pricedown', sans-serif !important; }
                 
-                /* Fix any backdrop issues */
-                .cart-backdrop { background: rgba(0,0,0,0.7) !important; }
+                /* Remove Button */
+                .cim-remove-btn {
+                    background: #800 !important;
+                    color: #fff !important;
+                    border: 1px solid #f00 !important;
+                    padding: 5px 12px !important;
+                    border-radius: 6px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 5px !important;
+                    font-weight: bold !important;
+                    cursor: pointer !important;
+                }
                 
-                /* Ensure REMOVE button is visible if present */
-                .cim-remove-btn { background: #800 !important; color: #fff !important; border: 1px solid #f00 !important; }
+                .cart-backdrop { background: rgba(0,0,0,0.8) !important; }
             </style>
-            </head>
             '''
-            content = content.replace('</head>', brightness_css)
+            content = content.replace('</head>', brightness_css + '</head>')
             
-            # ===== HOTFIX: Ensure v3.3 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.3-FINAL</title>')
-            content = content.replace('<title>Los Santos Shop v3.1-REMASTER</title>', '<title>Los Santos Shop v3.3-FINAL</title>')
-            content = content.replace('<title>Los Santos Shop v3.2-BRIGHTNESS-FIX</title>', '<title>Los Santos Shop v3.3-FINAL</title>')
+            # ===== HOTFIX: Ensure v3.4 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.4-FINAL</title>')
+            content = content.replace('<title>Los Santos Shop v3.1-REMASTER</title>', '<title>Los Santos Shop v3.4-FINAL</title>')
+            content = content.replace('<title>Los Santos Shop v3.3-FINAL</title>', '<title>Los Santos Shop v3.4-FINAL</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
