@@ -5283,8 +5283,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
                 
                 if(isRefill && parentModal) {
-                    // FORCE LIFT UP for Refill Modal to clear keyboard
-                    parentModal.style.transform = 'translateY(-250px)'; 
+                    // Gentle lift for Refill Modal (reduced from 250px)
+                    parentModal.style.transform = 'translateY(-120px)'; 
                     parentModal.style.transition = 'transform 0.3s ease';
                 } else if (parentModal) {
                     // Add padding to modal content to prevent keyboard overlap (Cart)
