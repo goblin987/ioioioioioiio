@@ -5746,8 +5746,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>
                     <div class="product-price">€${p.price.toFixed(2)}</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick="sfx.select(); addToBasket(${p.ids[0]}, '${p.display_name}', ${p.price}, event)">ADD</button>
-                        <button class="btn-buy" style="flex:2;" onmouseover="sfx.tick()" onclick="sfx.select(); buyNow(${p.ids[0]}, '${p.display_name}', ${p.price})">BUY</button>
+                        <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick="sfx.select(); addToBasket([${p.ids}], '${p.display_name}', ${p.price}, event)">ADD</button>
+                        <button class="btn-buy" style="flex:2;" onmouseover="sfx.tick()" onclick="sfx.select(); buyNow([${p.ids}], '${p.display_name}', ${p.price})">BUY</button>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -6101,15 +6101,34 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }, 600);
         }
 
-        function addToBasket(id, name, price, e) {
-            // 1. Check basket limit (10 items total - any products)
+        function addToBasket(ids, name, price, e) {
+            // 1. Smart ID Selection
+            let id = ids;
+            if(Array.isArray(ids)) {
+                // Find an ID that has stock available and isn't fully consumed in basket
+                let found = false;
+                for(let candidateId of ids) {
+                    const product = allProducts.find(p => p.id === candidateId);
+                    if(!product) continue;
+                    
+                    const inBasket = basket.filter(item => item.id === candidateId).length;
+                    if(inBasket < product.available) {
+                        id = candidateId;
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found) id = ids[0]; // Fallback to first (will trigger stock error)
+            }
+
+            // 2. Check basket limit
             if(basket.length >= 10) {
                 if(window.charSystem) charSystem.show('cj', 'BASKET FULL! MAX 10 ITEMS.');
                 tg.showAlert('⚠️ Maximum 10 items per order');
                 return;
             }
             
-            // 2. Get full product details from allProducts
+            // 3. Get details
             const product = allProducts.find(p => p.id === id);
             if(!product) {
                 console.error('Product not found:', id);
@@ -6117,15 +6136,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // 3. Check stock availability
+            // 4. Check stock availability
             const countInBasket = basket.filter(item => item.id === id).length;
             if(countInBasket >= product.available) {
                 if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
-                tg.showAlert(`⚠️ Only ${product.available} available. You already have ${countInBasket} in basket.`);
+                tg.showAlert(`⚠️ Max stock reached! (${ids.length} total available in group)`);
                 return;
             }
             
-            // 4. Add to basket
+            // 5. Add to basket
             if(e) flyToCart(e);
             
             basket.push({
@@ -6147,150 +6166,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
         
-        function updateBasketUI() {
-            document.getElementById('basket-count').innerText = basket.length;
-        }
-        
-        function openBasket() {
-            const modal = document.getElementById('basket-modal');
-            
-            // Fix Input Obstruction (Hide nav when typing)
-            const dInput = document.getElementById('discount-input');
-            const bNav = document.querySelector('.bottom-nav');
-            if(dInput && bNav) {
-                dInput.onfocus = () => bNav.style.display = 'none';
-                dInput.onblur = () => bNav.style.display = 'flex';
-            }
-
-            renderBasketContent();
-            modal.style.display = 'flex';
-            checkDiscounts();
-        }
-        
-        function renderBasketContent() {
-            // Fix potential NULL input
-            const dInp = document.getElementById('discount-input');
-            if(dInp && (dInp.value === 'NULL' || dInp.value === 'null')) dInp.value = '';
-
-            const list = document.getElementById('basket-items');
-            const totalEl = document.getElementById('basket-total');
-            const discountMsg = document.getElementById('discount-msg');
-            const emptyState = document.getElementById('cart-empty-state');
-            
-            // Header Stats
-            const countEl = document.getElementById('inv-count');
-            const cartNavCount = document.getElementById('cart-nav-count');
-            if(countEl) countEl.innerText = `${basket.length} ITEMS`;
-            if(cartNavCount) {
-                cartNavCount.innerText = basket.length;
-                cartNavCount.style.display = basket.length > 0 ? 'block' : 'none';
-                cartNavCount.style.color = basket.length > 0 ? 'var(--gta-gold)' : '#666';
-            }
-            
-            list.innerHTML = '';
-            let subtotal = 0;
-            
-            // Show/hide empty state
-            if(basket.length === 0) {
-                if(emptyState) {
-                    emptyState.classList.add('show');
-                    emptyState.style.transform = 'scale(1)';
-                }
-                list.style.display = 'none';
-            } else {
-                if(emptyState) emptyState.classList.remove('show');
-                list.style.display = 'flex';
-            }
-            
-            basket.forEach((item, index) => {
-                subtotal += item.price;
-                const card = document.createElement('div');
-                card.className = 'cart-item-modern';
-                card.id = `basket-item-${index}`;
-                // Animation
-                card.style.animation = `slideInRight 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.05}s forwards`;
-                card.style.opacity = '0'; 
-                
-                let emoji = '📦';
-                if(typeof getProductEmoji === 'function') emoji = getProductEmoji(item.type || 'misc', item.name);
-                
-                card.innerHTML = `
-                    <div class="cim-left">
-                        <div class="cim-icon-box">
-                            <span class="cim-emoji">${emoji}</span>
-                        </div>
-                        <div class="cim-info">
-                            <div class="cim-name">${item.name}</div>
-                            <div class="cim-details">
-                                ${item.city || 'LSPD'} <span style="color:#666">|</span> <span style="color:var(--gta-green)">${item.district ? item.district.toUpperCase() : 'STOCK'}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="cim-right">
-                        <div class="cim-price">€${item.price.toFixed(2)}</div>
-                        <button class="cim-remove-btn" onclick="removeFromBasket(${index}, event)" onmouseover="sfx.tick()">
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            REMOVE
-                        </button>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
-            
-            // Discount Logic (Clean)
-            if (currentDiscount) {
-                if(totalEl) {
-                    totalEl.innerText = `€${currentDiscount.final_total.toFixed(2)}`;
-                    totalEl.style.color = "var(--gta-green)";
-                }
-                // Remove "CODE APPLIED" message - just show green price
-                if(discountMsg) {
-                    discountMsg.innerText = "";
-                    discountMsg.className = "cart-promo-msg";
-                }
-            } else {
-                if(totalEl) {
-                    totalEl.innerText = `€${subtotal.toFixed(2)}`;
-                    totalEl.style.color = "#fff";
-                }
-                if(discountMsg) {
-                    discountMsg.innerText = "";
-                    discountMsg.className = "cart-promo-msg";
-                }
-            }
-        }
-        
-        function closeBasket() {
-            const modal = document.getElementById('basket-modal');
-            modal.style.display = 'none';
-        }
-        
-        function removeFromBasket(index, e) {
-            if(e) {
-                e.stopPropagation();
-                e.preventDefault();
-            }
-            const row = document.getElementById(`basket-item-${index}`);
-            if(row) {
-                row.classList.add('removing');
-                if(sfx.select) sfx.select();
-                
-                setTimeout(() => {
-                    basket.splice(index, 1);
-                    currentDiscount = null; 
-                    renderBasketContent();
-                    updateBasketUI();
-                }, 300);
-            } else {
-                basket.splice(index, 1);
-                currentDiscount = null;
-                renderBasketContent();
-                updateBasketUI();
-            }
-        }
-        
-        function buyNow(id, name, price) {
-            addToBasket(id, name, price);
+        function buyNow(ids, name, price) {
+            addToBasket(ids, name, price);
             openBasket();
         }
 
