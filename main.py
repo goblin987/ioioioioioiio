@@ -2331,8 +2331,18 @@ def webapp_create_refill():
         user_id = data.get('user_id')
         amount_eur = float(data.get('amount', 0))
         
+        # Security: Enforce min/max refill limits
+        MIN_REFILL = 1  # €1 minimum
+        MAX_REFILL = 10000  # €10,000 maximum
+        
         if not user_id or amount_eur <= 0:
             return jsonify({'error': 'Invalid data'}), 400
+        
+        if amount_eur < MIN_REFILL:
+            return jsonify({'error': f'Minimum refill amount is €{MIN_REFILL}'}), 400
+        
+        if amount_eur > MAX_REFILL:
+            return jsonify({'error': f'Maximum refill amount is €{MAX_REFILL}'}), 400
 
         # Get SOL price (synchronous function)
         from payment_solana import get_sol_price_eur

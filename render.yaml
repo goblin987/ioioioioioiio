@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: botshop
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        sync: false
+    # Explicitly include webapp directory
+    staticPublishPath: ./webapp
+
+
