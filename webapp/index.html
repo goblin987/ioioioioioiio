@@ -3138,27 +3138,23 @@
            CART STYLES - Shop Menu Style (GTA San Andreas)
            ═══════════════════════════════════════════════════════════════════ */
         
-        /* Minimalist Cart Item */
+        /* Minimalist Cart Item - BRIGHT like checkout section */
         .cart-item-modern {
             display: flex;
             align-items: center;
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 0;
-            padding: 15px 0;
-            margin-bottom: 0;
-            transition: background 0.2s;
+            background: rgba(26, 26, 26, 0.9); /* Same as checkout module */
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: background 0.2s, border-color 0.2s;
             position: relative;
             overflow: hidden;
-            box-shadow: none;
         }
 
         .cart-item-modern:hover {
-            transform: none;
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: none;
+            background: rgba(40, 40, 40, 0.95);
+            border-color: var(--gta-green);
         }
 
         .cart-item-modern.removing {
@@ -3172,17 +3168,16 @@
         }
 
         .cim-icon-box {
-            width: 40px;
-            height: 40px;
-            background: transparent;
-            border-radius: 0;
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            margin-right: 15px;
+            font-size: 24px;
+            margin-right: 12px;
             flex-shrink: 0;
-            border: none;
         }
 
         .cim-details {
@@ -3192,20 +3187,19 @@
 
         .cim-name {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-weight: 700; /* Bolder */
-            font-size: 16px; /* Larger */
-            color: #fff;
-            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 15px;
+            color: #fff; /* Pure white for max brightness */
+            margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8); /* Add shadow for better readability */
         }
 
         .cim-meta {
             font-family: 'Courier New', monospace;
             font-size: 11px;
-            color: #888;
+            color: #aaa; /* Brighter grey */
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -3417,9 +3411,10 @@
         .cart-content {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 15px 20px;
             min-height: 200px;
-            max-height: 60vh; /* Increased from 55vh for better visibility */
+            max-height: 60vh;
+            background: #000; /* Same solid black as checkout section */
         }
         
         .cart-content::-webkit-scrollbar { width: 6px; }
