@@ -2419,7 +2419,7 @@ def webapp_check_payment(payment_id):
 
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
-    """Serve Telegram Web App"""
+    """Serve Telegram Web App with NO CACHE"""
     # Try multiple possible paths
     possible_paths = [
         'webapp',
@@ -2429,9 +2429,17 @@ def webapp_index():
     ]
     
     for path in possible_paths:
-        if os.path.exists(path) and os.path.exists(os.path.join(path, 'index.html')):
+        index_path = os.path.join(path, 'index.html')
+        if os.path.exists(path) and os.path.exists(index_path):
             logger.info(f"✅ Found webapp at: {path}")
-            return send_from_directory(path, 'index.html')
+            # FORCE NO CACHE - Read file and send with explicit headers
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            response = Response(content, mimetype='text/html')
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
     
     # If nothing found, return error with debug info
     logger.error(f"❌ Webapp not found in any of: {possible_paths}")
