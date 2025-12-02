@@ -2513,7 +2513,7 @@ def webapp_index():
                     const btn = e ? e.currentTarget : null; // currentTarget is safer
                     const originalText = btn ? btn.innerText : '';
                     if(btn) { 
-                        btn.innerText = '⏳'; 
+                        btn.innerHTML = '<div class="spinner"></div>'; 
                         btn.style.opacity = '0.7';
                         btn.disabled = true; 
                     }
@@ -2674,16 +2674,20 @@ def webapp_index():
                     border: 1px solid #600 !important;
                 }
                 .cart-backdrop { background: rgba(0,0,0,0.9) !important; z-index: 10000 !important; }
+                /* Spinner */
+                .spinner { width:14px; height:14px; border:2px solid rgba(0,0,0,0.2); border-top:2px solid #000; border-radius:50%; animation:spin 0.6s linear infinite; display:inline-block; vertical-align:middle; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             </style>
             '''
             content = content.replace('</body>', super_injection + '</body>')
             
-            # ===== HOTFIX: Ensure v4.4 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
-            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
-            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.4-RESERVATION</title>')
+            # ===== HOTFIX: Ensure v4.5 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
+            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
+            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
+            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
+            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
