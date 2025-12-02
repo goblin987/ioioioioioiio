@@ -2409,12 +2409,17 @@ def webapp_check_payment(payment_id):
 def webapp_index():
     """Serve Telegram Web App"""
     webapp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')
+    logger.info(f"🔍 WEBAPP: Trying to serve index.html from: {webapp_dir}")
+    logger.info(f"🔍 WEBAPP: Directory exists? {os.path.exists(webapp_dir)}")
+    if os.path.exists(webapp_dir):
+        logger.info(f"🔍 WEBAPP: Files in directory: {os.listdir(webapp_dir)}")
     return send_from_directory(webapp_dir, 'index.html')
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
     """Serve static files for Web App"""
     webapp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')
+    logger.info(f"🔍 WEBAPP: Trying to serve {filename} from: {webapp_dir}")
     return send_from_directory(webapp_dir, filename)
 
 @flask_app.route("/", methods=['GET'])
