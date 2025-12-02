@@ -1320,9 +1320,21 @@ def init_db():
                 id SERIAL PRIMARY KEY, city TEXT NOT NULL, district TEXT NOT NULL,
                 product_type TEXT NOT NULL, size TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
-                added_by BIGINT, added_date TEXT
+                added_by BIGINT, added_date TEXT, added_by_worker_id BIGINT DEFAULT NULL
             )''')
             logger.info(f"✅ Products table created successfully")
+            
+            # Add added_by_worker_id column if it doesn't exist (for worker system)
+            try:
+                c.execute("ALTER TABLE products ADD COLUMN added_by_worker_id BIGINT DEFAULT NULL")
+                conn.commit()
+                logger.info(f"✅ added_by_worker_id column added to products table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ added_by_worker_id column already exists in products table")
+                else:
+                    logger.warning(f"⚠️ Could not add added_by_worker_id column: {e}")
+                conn.rollback()
             
             # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
             # will be added later when needed to avoid startup delays
