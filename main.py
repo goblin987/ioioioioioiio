@@ -2437,6 +2437,19 @@ def debug_files():
     }
     return jsonify(files_info)
 
+@flask_app.route("/debug/find", methods=['GET'])
+def debug_find():
+    """Debug endpoint to find index.html anywhere"""
+    import os
+    matches = []
+    # Walk from the project root
+    search_root = '/opt/render/project' if os.path.exists('/opt/render/project') else '.'
+    for root, dirnames, filenames in os.walk(search_root):
+        for filename in filenames:
+            if filename == 'index.html':
+                matches.append(os.path.join(root, filename))
+    return jsonify({"matches": matches, "cwd": os.getcwd(), "search_root": search_root})
+
 @flask_app.route("/", methods=['GET'])
 def root():
     """Root endpoint to verify server is running"""
