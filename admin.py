@@ -2143,8 +2143,8 @@ async def handle_adm_bulk_city(update: Update, context: ContextTypes.DEFAULT_TYP
             available_cities = {}
 
     if not available_cities:
-         if is_auth_worker:
-             return await query.answer("No allowed cities assigned to you.", show_alert=True)
+        if is_auth_worker:
+            return await query.answer("No allowed cities assigned to you.", show_alert=True)
         return await query.edit_message_text("No cities configured. Please add a city first via 'Manage Cities'.", parse_mode=None)
 
     sorted_city_ids = sorted(available_cities.keys(), key=lambda city_id: available_cities.get(city_id, ''))
@@ -2152,7 +2152,7 @@ async def handle_adm_bulk_city(update: Update, context: ContextTypes.DEFAULT_TYP
     
     # Back button logic
     if is_auth_worker and not is_admin:
-         keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="worker_dashboard")])
+        keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="worker_dashboard")])
     else:
         keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="admin_menu")])
 
