@@ -2422,6 +2422,21 @@ def webapp_static(filename):
     logger.info(f"🔍 WEBAPP: Trying to serve {filename} from: {webapp_dir}")
     return send_from_directory(webapp_dir, filename)
 
+@flask_app.route("/debug/files", methods=['GET'])
+def debug_files():
+    """Debug endpoint to see what files are deployed"""
+    import os
+    cwd = os.getcwd()
+    files_info = {
+        "cwd": cwd,
+        "main_py_location": os.path.abspath(__file__),
+        "webapp_path": os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp'),
+        "webapp_exists": os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')),
+        "files_in_cwd": os.listdir(cwd) if os.path.exists(cwd) else [],
+        "files_in_webapp": os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')) else []
+    }
+    return jsonify(files_info)
+
 @flask_app.route("/", methods=['GET'])
 def root():
     """Root endpoint to verify server is running"""
