@@ -2436,12 +2436,6 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: Remove stock check that blocks duplicates =====
-            # Find and remove the stock check code block
-            import re
-            stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
-            content = re.sub(stock_check_pattern, '// 3. Stock check REMOVED - allows duplicates', content, flags=re.DOTALL)
-            
             # ===== HOTFIX: FORCE UI BRIGHTNESS VIA CSS INJECTION =====
             # We inject a style block to override any old dark CSS
             brightness_css = '''
@@ -2474,9 +2468,10 @@ def webapp_index():
             '''
             content = content.replace('</head>', brightness_css)
             
-            # ===== HOTFIX: Ensure v3.2 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.2-BRIGHTNESS-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v3.1-REMASTER</title>', '<title>Los Santos Shop v3.2-BRIGHTNESS-FIX</title>')
+            # ===== HOTFIX: Ensure v3.3 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.3-FINAL</title>')
+            content = content.replace('<title>Los Santos Shop v3.1-REMASTER</title>', '<title>Los Santos Shop v3.3-FINAL</title>')
+            content = content.replace('<title>Los Santos Shop v3.2-BRIGHTNESS-FIX</title>', '<title>Los Santos Shop v3.3-FINAL</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             

@@ -6117,7 +6117,15 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // 3. Add to basket - NO STOCK CHECK (server validates on checkout)
+            // 3. Check stock availability
+            const countInBasket = basket.filter(item => item.id === id).length;
+            if(countInBasket >= product.available) {
+                if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
+                tg.showAlert(`⚠️ Only ${product.available} available. You already have ${countInBasket} in basket.`);
+                return;
+            }
+            
+            // 4. Add to basket
             if(e) flyToCart(e);
             
             basket.push({
@@ -6220,7 +6228,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </div>
                     <div class="cim-right">
                         <div class="cim-price">€${item.price.toFixed(2)}</div>
-                        <button class="cim-remove-btn" onclick="removeFromBasket(${index})" onmouseover="sfx.tick()">
+                        <button class="cim-remove-btn" onclick="removeFromBasket(${index}, event)" onmouseover="sfx.tick()">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                             REMOVE
                         </button>
@@ -6257,7 +6265,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             modal.style.display = 'none';
         }
         
-        function removeFromBasket(index) {
+        function removeFromBasket(index, e) {
+            if(e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
             const row = document.getElementById(`basket-item-${index}`);
             if(row) {
                 row.classList.add('removing');
