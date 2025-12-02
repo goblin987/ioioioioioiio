@@ -2523,7 +2523,7 @@ def webapp_index():
                         user_id: user_id || 0
                     };
                     
-                    fetch('api/reserve', {
+                    fetch('/webapp/api/reserve', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(payload)
