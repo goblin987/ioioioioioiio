@@ -138,7 +138,9 @@ def get_worker_by_user_id(user_id: int) -> Optional[Dict[str, Any]]:
         return None
         
     except Exception as e:
-        logger.error(f"❌ Error getting worker by user_id: {e}", exc_info=True)
+        # Silent fail if workers table doesn't exist yet
+        if "does not exist" not in str(e):
+            logger.error(f"❌ Error getting worker by user_id: {e}", exc_info=True)
         return None
     finally:
         if conn:
