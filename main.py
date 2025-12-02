@@ -2436,16 +2436,27 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: Debug Stock & Force UI Brightness =====
+            # ===== HOTFIX: STRICT STOCK CHECK + DEBUGGING + UI FIX =====
             
-            # 1. DISABLE STOCK CHECK COMPLETELY (Allows duplicates unlimited)
             import re
+            # Replace stock check with DEBUGGING version
             stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
-            content = re.sub(stock_check_pattern, '// 3. Stock check REMOVED - unlimited items allowed', content, flags=re.DOTALL)
+            new_check_logic = '''// 3. Debug Stock Check
+            const count = basket.filter(i => i.id === id).length;
+            console.log(`Stock Check: ID ${id}, Count ${count}, Available ${product.available}`);
+            
+            // STRICT CHECK: Stop if we reached the limit
+            if(count >= product.available) {
+                if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
+                tg.showAlert(`⚠️ Max stock reached! (${product.available} available)`);
+                return;
+            }'''
+            
+            content = re.sub(stock_check_pattern, new_check_logic, content, flags=re.DOTALL)
             
             debug_script = '''
             <script>
-                console.log("DEBUG: Loaded v3.5-UNLIMITED");
+                console.log("DEBUG: Loaded v3.6-STRICT-DEBUG");
             </script>
             '''
             content = content.replace('<head>', '<head>' + debug_script)
@@ -2461,12 +2472,21 @@ def webapp_index():
                     max-height: 90vh !important;
                     display: flex !important;
                     flex-direction: column !important;
+                    z-index: 10001 !important; /* Top z-index */
+                    position: relative !important;
                 }
-                .cart-header-bar { background: #2a2a2a !important; border-bottom: 2px solid #444 !important; flex-shrink: 0 !important; }
+                .cart-header-bar { 
+                    background: #2a2a2a !important; 
+                    border-bottom: 2px solid #444 !important; 
+                    flex-shrink: 0 !important; 
+                    z-index: 10002 !important;
+                }
                 .cart-content { 
                     background: #222 !important; 
                     flex: 1 !important;
                     overflow-y: auto !important;
+                    position: relative !important;
+                    z-index: 10002 !important;
                 }
                 
                 /* FORCE BRIGHT ITEMS */
@@ -2483,6 +2503,7 @@ def webapp_index():
                     opacity: 1 !important;
                     height: auto !important;
                     min-height: 80px !important;
+                    color: #fff !important;
                 }
                 
                 .cart-item-modern:hover {
@@ -2495,7 +2516,7 @@ def webapp_index():
                 .cim-right { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; }
                 
                 /* Text brightness */
-                .cim-name { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; }
+                .cim-name { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; text-shadow: none !important; }
                 .cim-details { color: #ccc !important; }
                 .cim-price { color: var(--gta-green) !important; font-size: 22px !important; font-family: 'Pricedown', sans-serif !important; }
                 
@@ -2511,16 +2532,18 @@ def webapp_index():
                     gap: 5px !important;
                     font-weight: bold !important;
                     cursor: pointer !important;
+                    z-index: 10005 !important;
                 }
                 
-                .cart-backdrop { background: rgba(0,0,0,0.8) !important; }
+                .cart-backdrop { background: rgba(0,0,0,0.8) !important; z-index: 10000 !important; }
             </style>
             '''
             content = content.replace('</head>', brightness_css + '</head>')
             
-            # ===== HOTFIX: Ensure v3.5 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.5-UNLIMITED</title>')
-            content = content.replace('<title>Los Santos Shop v3.4-FINAL</title>', '<title>Los Santos Shop v3.5-UNLIMITED</title>')
+            # ===== HOTFIX: Ensure v3.6 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.6-STRICT</title>')
+            content = content.replace('<title>Los Santos Shop v3.5-UNLIMITED</title>', '<title>Los Santos Shop v3.6-STRICT</title>')
+            content = content.replace('<title>Los Santos Shop v3.4-FINAL</title>', '<title>Los Santos Shop v3.6-STRICT</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
