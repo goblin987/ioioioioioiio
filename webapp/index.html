@@ -5119,7 +5119,35 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
         // Global Asset Preload (Removed to fix RefError)
         
-        // --- Refill Logic ---
+        // FORCE REFILL BUTTON TO WORK - Direct touch/click handler
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const refillPayBtn = document.getElementById('refill-pay-btn');
+                if(refillPayBtn) {
+                    // Remove any existing onclick
+                    refillPayBtn.removeAttribute('onclick');
+                    
+                    // Add touchend for mobile (fires before click)
+                    refillPayBtn.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('TOUCHEND on refill button');
+                        initCustomRefill();
+                    }, {passive: false});
+                    
+                    // Add click for desktop
+                    refillPayBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('CLICK on refill button');
+                        initCustomRefill();
+                    });
+                    
+                    console.log('Refill button handlers attached!');
+                }
+            }, 1000); // Wait for DOM to fully render
+        });
+
         function openRefill() {
             const modal = document.getElementById('refill-modal');
             modal.style.display = 'flex';
@@ -5290,13 +5318,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 rInput.addEventListener('focus', () => handleInputFocus(rInput, refillSheet, true));
                 rInput.addEventListener('blur', () => handleInputBlur(refillSheet));
                 
-                // Visual Feedback for Amount
+                // Visual Feedback for Amount (styling only, click handled by DOMContentLoaded)
                 rInput.addEventListener('input', () => {
                     const btn = rInput.nextElementSibling; // The PAY button
                     if(btn) {
-                        // Bind click explicitly to ensure it works
-                        btn.onclick = initCustomRefill;
-                        
                         const val = parseFloat(rInput.value);
                         if(val && val > 0) {
                             btn.style.background = 'var(--gta-green)';
