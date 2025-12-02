@@ -2408,12 +2408,14 @@ def webapp_check_payment(payment_id):
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App"""
-    return send_from_directory('webapp', 'index.html')
+    webapp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')
+    return send_from_directory(webapp_dir, 'index.html')
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
     """Serve static files for Web App"""
-    return send_from_directory('webapp', filename)
+    webapp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')
+    return send_from_directory(webapp_dir, filename)
 
 @flask_app.route("/", methods=['GET'])
 def root():
