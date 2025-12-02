@@ -50,7 +50,10 @@ try:
 except OSError as e:
     logger.error(f"Could not create media directory {MEDIA_DIR}: {e}")
 
-logger.info(f"Using PostgreSQL Database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+if os.getenv('DATABASE_URL'):
+    logger.info(f"Using PostgreSQL Database: DATABASE_URL (Render)")
+else:
+    logger.info(f"Using PostgreSQL Database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
 logger.info(f"Using Media Directory: {MEDIA_DIR}")
 logger.info(f"Using Bot Media Config Path: {BOT_MEDIA_JSON_PATH}")
 
@@ -1121,19 +1124,26 @@ def get_db_connection():
     """Returns a connection to the PostgreSQL database."""
     # Reduced logging for cleaner output - only log on errors
     try:
-        conn = psycopg2.connect(
-            host=POSTGRES_HOST,
-            port=POSTGRES_PORT,
-            database=POSTGRES_DB,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
-            cursor_factory=RealDictCursor
-        )
+        # Use DATABASE_URL if set (Render), otherwise fall back to individual params (local dev)
+        if os.getenv('DATABASE_URL'):
+            conn = psycopg2.connect(
+                POSTGRES_URL,
+                cursor_factory=RealDictCursor
+            )
+        else:
+            conn = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                database=POSTGRES_DB,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                cursor_factory=RealDictCursor
+            )
         conn.autocommit = False
         return conn
     except psycopg2.Error as e:
-        db_info = f"PostgreSQL at {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-        logger.critical(f"❌ CRITICAL ERROR connecting to {db_info}: {e}")
+        db_url_display = "DATABASE_URL" if os.getenv('DATABASE_URL') else f"{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+        logger.critical(f"❌ CRITICAL ERROR connecting to PostgreSQL ({db_url_display}): {e}")
         logger.critical(f"❌ Error type: {type(e).__name__}")
         logger.critical(f"❌ Error details: {str(e)}")
         raise SystemExit(f"Failed to connect to database: {e}")
@@ -1984,7 +1994,7 @@ def _get_lang_data(context: ContextTypes.DEFAULT_TYPE) -> tuple[str, dict]:
     """Gets the current language code and corresponding language data dictionary."""
     lang = "en"
     if getattr(context, 'user_data', None) is not None:
-        lang = context.user_data.get("lang", "en")
+    lang = context.user_data.get("lang", "en")
     
     # Uses LANGUAGES dict defined above in this file
     lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
