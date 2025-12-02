@@ -1733,12 +1733,13 @@ async def post_init(application: Application) -> None:
     if USERBOT_AVAILABLE:
         try:
             logger.info("🔧 [DEPLOY v3] Applying pyaes IGE replacement patch...")
-            from telethon_secret_patch import apply_all_patches
-            patch_success = apply_all_patches()
-            if patch_success:
-                logger.info("✅ [DEPLOY v3] pyaes patch applied - videos will use correct encryption!")
-            else:
-                logger.error("❌ [DEPLOY v3] Patch FAILED - videos will be corrupted!")
+            # from telethon_secret_patch import apply_all_patches
+            # patch_success = apply_all_patches()
+            # if patch_success:
+            #     logger.info("✅ [DEPLOY v3] pyaes patch applied - videos will use correct encryption!")
+            # else:
+            #     logger.error("❌ [DEPLOY v3] Patch FAILED - videos will be corrupted!")
+            logger.warning("⚠️ Patch module missing - skipping patch")
         except Exception as patch_err:
             logger.error(f"❌ Failed to apply patches: {patch_err}", exc_info=True)
     
@@ -2464,7 +2465,7 @@ def webapp_index():
             # 2. Force UI Brightness via CSS Injection
             brightness_css = '''
             <style>
-                /* FORCE BRIGHT CART UI */
+                /* FORCE BRIGHT CART UI with GRID */
                 .cart-container { 
                     background: #222 !important; 
                     border: 2px solid #555 !important; 
@@ -2482,7 +2483,9 @@ def webapp_index():
                     z-index: 10002 !important;
                 }
                 .cart-content { 
-                    background: #222 !important; 
+                    background-color: #222 !important;
+                    background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px) !important;
+                    background-size: 20px 20px !important;
                     flex: 1 !important;
                     overflow-y: auto !important;
                     position: relative !important;
@@ -2540,10 +2543,9 @@ def webapp_index():
             '''
             content = content.replace('</head>', brightness_css + '</head>')
             
-            # ===== HOTFIX: Ensure v3.6 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.6-STRICT</title>')
-            content = content.replace('<title>Los Santos Shop v3.5-UNLIMITED</title>', '<title>Los Santos Shop v3.6-STRICT</title>')
-            content = content.replace('<title>Los Santos Shop v3.4-FINAL</title>', '<title>Los Santos Shop v3.6-STRICT</title>')
+            # ===== HOTFIX: Ensure v3.7 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.7-GRID</title>')
+            content = content.replace('<title>Los Santos Shop v3.6-STRICT</title>', '<title>Los Santos Shop v3.7-GRID</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
