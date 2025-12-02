@@ -2483,7 +2483,7 @@ def webapp_index():
                     z-index: 10002 !important;
                 }
                 .cart-content { 
-                    background-color: #222 !important;
+                    background-color: #1a1a1a !important;
                     background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px) !important;
                     background-size: 20px 20px !important;
                     flex: 1 !important;
@@ -2497,12 +2497,12 @@ def webapp_index():
                     display: flex !important;
                     justify-content: space-between !important;
                     align-items: center !important;
-                    background: #333 !important;
-                    border: 2px solid #555 !important;
+                    background: #2a2a2a !important; /* Slightly darker than items for contrast */
+                    border: 1px solid #444 !important;
                     border-radius: 12px !important;
                     padding: 12px 15px !important;
                     margin-bottom: 12px !important;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
                     opacity: 1 !important;
                     height: auto !important;
                     min-height: 80px !important;
@@ -2511,7 +2511,7 @@ def webapp_index():
                 
                 .cart-item-modern:hover {
                     border-color: var(--gta-green) !important;
-                    background: #3a3a3a !important;
+                    background: #333 !important;
                 }
                 
                 /* Inner Layout overrides */
@@ -2519,9 +2519,9 @@ def webapp_index():
                 .cim-right { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; }
                 
                 /* Text brightness */
-                .cim-name { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; text-shadow: none !important; }
-                .cim-details { color: #ccc !important; }
-                .cim-price { color: var(--gta-green) !important; font-size: 22px !important; font-family: 'Pricedown', sans-serif !important; }
+                .cim-name { color: #fff !important; font-size: 17px !important; font-weight: 800 !important; text-shadow: 0 1px 3px #000 !important; }
+                .cim-details { color: #ccc !important; font-weight: 600 !important; }
+                .cim-price { color: var(--gta-green) !important; font-size: 22px !important; font-family: 'Pricedown', sans-serif !important; text-shadow: 1px 1px 0 #000 !important; }
                 
                 /* Remove Button */
                 .cim-remove-btn {
@@ -2536,16 +2536,17 @@ def webapp_index():
                     font-weight: bold !important;
                     cursor: pointer !important;
                     z-index: 10005 !important;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
                 }
                 
-                .cart-backdrop { background: rgba(0,0,0,0.8) !important; z-index: 10000 !important; }
+                .cart-backdrop { background: rgba(0,0,0,0.85) !important; z-index: 10000 !important; }
             </style>
             '''
             content = content.replace('</head>', brightness_css + '</head>')
             
-            # ===== HOTFIX: Ensure v3.7 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.7-GRID</title>')
-            content = content.replace('<title>Los Santos Shop v3.6-STRICT</title>', '<title>Los Santos Shop v3.7-GRID</title>')
+            # ===== HOTFIX: Ensure v3.9 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.9-POLISHED</title>')
+            content = content.replace('<title>Los Santos Shop v3.7-GRID</title>', '<title>Los Santos Shop v3.9-POLISHED</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
