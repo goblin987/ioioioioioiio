@@ -3138,25 +3138,25 @@
            CART STYLES - Shop Menu Style (GTA San Andreas)
            ═══════════════════════════════════════════════════════════════════ */
         
-        /* Minimalist Cart Item - VERY BRIGHT */
+        /* Cart Item - MAXIMUM BRIGHTNESS */
         .cart-item-modern {
             display: flex;
             align-items: center;
-            background: rgba(50, 50, 50, 1); /* BRIGHT background */
-            border: 1px solid #555; /* BRIGHT border */
+            background: #3a3a3a; /* VERY BRIGHT grey */
+            border: 1px solid #666;
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 10px;
             transition: all 0.2s;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .cart-item-modern:hover {
-            background: rgba(60, 60, 60, 1);
+            background: #454545; /* Even brighter on hover */
             border-color: var(--gta-green);
-            box-shadow: 0 4px 12px rgba(63, 165, 53, 0.3);
+            box-shadow: 0 4px 16px rgba(63, 165, 53, 0.4);
             transform: translateX(2px);
         }
 
@@ -3173,15 +3173,16 @@
         .cim-icon-box {
             width: 44px;
             height: 44px;
-            background: rgba(63, 165, 53, 0.15); /* Green tint */
-            border: 1px solid rgba(63, 165, 53, 0.3);
+            background: rgba(63, 165, 53, 0.25); /* BRIGHTER green tint */
+            border: 1px solid rgba(63, 165, 53, 0.5);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 26px;
             margin-right: 12px;
             flex-shrink: 0;
+            box-shadow: 0 0 8px rgba(63, 165, 53, 0.2);
         }
 
         .cim-details {
@@ -3191,19 +3192,20 @@
 
         .cim-name {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-weight: 600;
-            font-size: 15px;
-            color: #fff; /* Pure white for max brightness */
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff; /* Pure white */
             margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
 
         .cim-meta {
             font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #aaa; /* Brighter grey */
+            font-size: 12px;
+            color: #ccc; /* VERY BRIGHT grey */
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -6053,30 +6055,22 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function addToBasket(id, name, price, e) {
-            // 1. Check basket limit (10 products max to prevent reservation exploits)
+            // 1. Check basket limit (10 items total - any products)
             if(basket.length >= 10) {
                 if(window.charSystem) charSystem.show('cj', 'BASKET FULL! MAX 10 ITEMS.');
                 tg.showAlert('⚠️ Maximum 10 items per order');
                 return;
             }
             
-            // 2. Get full product details from allProducts (search by individual product ID)
+            // 2. Get full product details from allProducts
             const product = allProducts.find(p => p.id === id);
             if(!product) {
-                console.error('Product not found:', id, 'Available products:', allProducts);
+                console.error('Product not found:', id);
                 tg.showAlert('⚠️ Product not found');
                 return;
             }
             
-            // 3. Check stock availability - count how many of this product are already in basket
-            const countInBasket = basket.filter(item => item.id === id).length;
-            if(countInBasket >= product.available) {
-                if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
-                tg.showAlert(`⚠️ Only ${product.available} available. You already have ${countInBasket} in basket.`);
-                return;
-            }
-            
-            // 4. Add to basket with full metadata (allow duplicates for multiple purchases)
+            // 3. Add to basket - NO STOCK CHECK (server validates on checkout)
             if(e) flyToCart(e);
             
             basket.push({
@@ -6089,7 +6083,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             });
             
             updateBasketUI();
-            currentDiscount = null; // Reset on change
+            currentDiscount = null;
             if(window.charSystem) charSystem.show('cj', 'NICE CHOICE!');
             const nav = document.getElementById('nav-basket');
             if(nav) {
