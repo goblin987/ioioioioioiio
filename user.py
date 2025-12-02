@@ -656,6 +656,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_worker(user_id) and not is_primary_admin(user_id):
         return await handle_worker_dashboard(update, context)
     
+    # Check UI Mode Setting (MOVED TO TOP)
+    from utils import get_bot_setting
+    ui_mode = get_bot_setting("ui_mode", "bot")  # Default to "bot" if not set
+    
+    # If Mini App Only mode is enabled, show mini-app prompt instead of regular menu
+    if ui_mode == "miniapp":
+        # Check if this is an admin using /start to access admin panel
+        # Admins might need to access bot UI to manage things, but main UI should be hidden
+        # For now, enforce for everyone, admins can toggle via /admin command wrapper which works
+        
+        webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+        miniapp_welcome = (
+            f"👋 Welcome, {username}!\n\n"
+            f"🎮 This bot uses a Mini App interface for the best experience.\n\n"
+            f"Click the button below to open the shop:"
+        )
+        miniapp_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📱 Open Mini App", web_app=WebAppInfo(url=webapp_url))]
+        ])
+        
+        if is_callback:
+            query = update.callback_query
+            try:
+                await query.edit_message_text(miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
+            except Exception as e:
+                logger.warning(f"Failed to edit message for mini-app mode: {e}")
+                await send_message_with_retry(context.bot, chat_id, miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
+        else:
+            await send_message_with_retry(context.bot, chat_id, miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
+        return
+
     # LANGUAGE SELECTION CHECK - Before verification if enabled
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
         # Skip language selection for admins
@@ -910,32 +941,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         logger.info(f"start: Using existing language '{lang}' from context for user {user_id}.")
 
-    # Check UI Mode Setting
-    from utils import get_bot_setting
-    ui_mode = get_bot_setting("ui_mode", "bot")  # Default to "bot" if not set
-    
-    # If Mini App Only mode is enabled, show mini-app prompt instead of regular menu
-    if ui_mode == "miniapp":
-        webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
-        miniapp_welcome = (
-            f"👋 Welcome, {username}!\n\n"
-            f"🎮 This bot uses a Mini App interface for the best experience.\n\n"
-            f"Click the button below to open the shop:"
-        )
-        miniapp_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📱 Open Mini App", web_app=WebAppInfo(url=webapp_url))]
-        ])
-        
-        if is_callback:
-            query = update.callback_query
-            try:
-                await query.edit_message_text(miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
-            except Exception as e:
-                logger.warning(f"Failed to edit message for mini-app mode: {e}")
-                await send_message_with_retry(context.bot, chat_id, miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
-        else:
-            await send_message_with_retry(context.bot, chat_id, miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
-        return
+    # UI Mode check moved to top
     
     # Build and Send/Edit Menu (Bot UI mode)
     lang, lang_data = _get_lang_data(context)
