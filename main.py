@@ -2438,18 +2438,14 @@ def webapp_index():
             
             # ===== HOTFIX: Debug Stock & Force UI Brightness =====
             
-            # 1. Remove previous regex that might be breaking things
-            # We will let the file's own logic run, but we inject debugging
+            # 1. DISABLE STOCK CHECK COMPLETELY (Allows duplicates unlimited)
+            import re
+            stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
+            content = re.sub(stock_check_pattern, '// 3. Stock check REMOVED - unlimited items allowed', content, flags=re.DOTALL)
             
             debug_script = '''
             <script>
-                console.log("DEBUG: Loaded v3.4");
-                // Override alert to debug
-                const oldAlert = tg.showAlert;
-                tg.showAlert = function(msg) {
-                    console.log("ALERT:", msg);
-                    oldAlert(msg);
-                }
+                console.log("DEBUG: Loaded v3.5-UNLIMITED");
             </script>
             '''
             content = content.replace('<head>', '<head>' + debug_script)
@@ -2458,9 +2454,20 @@ def webapp_index():
             brightness_css = '''
             <style>
                 /* FORCE BRIGHT CART UI */
-                .cart-container { background: #222 !important; border: 2px solid #555 !important; }
-                .cart-header-bar { background: #2a2a2a !important; border-bottom: 2px solid #444 !important; }
-                .cart-content { background: #222 !important; }
+                .cart-container { 
+                    background: #222 !important; 
+                    border: 2px solid #555 !important; 
+                    height: auto !important;
+                    max-height: 90vh !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                .cart-header-bar { background: #2a2a2a !important; border-bottom: 2px solid #444 !important; flex-shrink: 0 !important; }
+                .cart-content { 
+                    background: #222 !important; 
+                    flex: 1 !important;
+                    overflow-y: auto !important;
+                }
                 
                 /* FORCE BRIGHT ITEMS */
                 .cart-item-modern {
@@ -2475,6 +2482,7 @@ def webapp_index():
                     box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
                     opacity: 1 !important;
                     height: auto !important;
+                    min-height: 80px !important;
                 }
                 
                 .cart-item-modern:hover {
@@ -2510,10 +2518,9 @@ def webapp_index():
             '''
             content = content.replace('</head>', brightness_css + '</head>')
             
-            # ===== HOTFIX: Ensure v3.4 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.4-FINAL</title>')
-            content = content.replace('<title>Los Santos Shop v3.1-REMASTER</title>', '<title>Los Santos Shop v3.4-FINAL</title>')
-            content = content.replace('<title>Los Santos Shop v3.3-FINAL</title>', '<title>Los Santos Shop v3.4-FINAL</title>')
+            # ===== HOTFIX: Ensure v3.5 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.5-UNLIMITED</title>')
+            content = content.replace('<title>Los Santos Shop v3.4-FINAL</title>', '<title>Los Santos Shop v3.5-UNLIMITED</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
