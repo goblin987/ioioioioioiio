@@ -1305,13 +1305,42 @@ async def process_successful_crypto_purchase(user_id: int, basket_snapshot: list
     else:
         # Finalization failed even after payment confirmed. This is bad.
         logger.error(f"CRITICAL: Crypto payment {payment_id} success for user {user_id}, but _finalize_purchase failed! Items paid for but not processed in DB correctly.")
-        if get_first_primary_admin_id() and chat_id:
-            try:
-                await send_message_with_retry(context.bot, get_first_primary_admin_id(), f"⚠️ Critical Issue: Crypto payment {payment_id} success for user {user_id}, but finalization FAILED! Check logs! MANUAL INTERVENTION REQUIRED.", parse_mode=None)
-            except Exception as admin_notify_e:
-                logger.error(f"Failed to notify admin about critical finalization failure: {admin_notify_e}")
-        if chat_id:
-            await send_message_with_retry(context.bot, chat_id, lang_data.get("error_processing_purchase_contact_support", "❌ Error processing purchase. Contact support."), parse_mode=None)
+        
+        # --- AUTO-REFUND LOGIC (v4.3) ---
+        refund_processed = False
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT target_eur_amount FROM pending_deposits WHERE payment_id = %s", (payment_id,))
+            row = c.fetchone()
+            conn.close()
+            
+            if row and row['target_eur_amount']:
+                amount_to_refund = Decimal(str(row['target_eur_amount']))
+                logger.info(f"Attempting auto-refund of {amount_to_refund} EUR to user {user_id} due to failed finalization.")
+                
+                refund_success = await credit_user_balance(user_id, amount_to_refund, f"Auto-Refund: Stock Unavailable (PayID: {payment_id})", context)
+                
+                if refund_success:
+                    refund_processed = True
+                    msg = lang_data.get("purchase_failed_refunded", "⚠️ Purchase failed due to stock change. {amount} EUR has been refunded to your balance.")
+                    if chat_id:
+                        await send_message_with_retry(context.bot, chat_id, msg.format(amount=f"{amount_to_refund:.2f}"), parse_mode=None)
+                    
+                    # Notify admin refund was issued
+                    if get_first_primary_admin_id():
+                        await send_message_with_retry(context.bot, get_first_primary_admin_id(), f"ℹ️ AUTO-REFUND: User {user_id} refunded {amount_to_refund} EUR. Reason: Stock Unavailable after payment {payment_id}.", parse_mode=None)
+        except Exception as e:
+            logger.error(f"Failed to auto-refund user {user_id} for payment {payment_id}: {e}")
+
+        if not refund_processed:
+            if get_first_primary_admin_id() and chat_id:
+                try:
+                    await send_message_with_retry(context.bot, get_first_primary_admin_id(), f"⚠️ Critical Issue: Crypto payment {payment_id} success for user {user_id}, but finalization FAILED and REFUND FAILED! Check logs! MANUAL INTERVENTION REQUIRED.", parse_mode=None)
+                except Exception as admin_notify_e:
+                    logger.error(f"Failed to notify admin about critical finalization failure: {admin_notify_e}")
+            if chat_id:
+                await send_message_with_retry(context.bot, chat_id, lang_data.get("error_processing_purchase_contact_support", "❌ Error processing purchase. Contact support."), parse_mode=None)
 
     return finalize_success
 
