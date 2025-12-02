@@ -1994,7 +1994,7 @@ def _get_lang_data(context: ContextTypes.DEFAULT_TYPE) -> tuple[str, dict]:
     """Gets the current language code and corresponding language data dictionary."""
     lang = "en"
     if getattr(context, 'user_data', None) is not None:
-    lang = context.user_data.get("lang", "en")
+        lang = context.user_data.get("lang", "en")
     
     # Uses LANGUAGES dict defined above in this file
     lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
