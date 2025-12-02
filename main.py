@@ -2442,15 +2442,9 @@ def webapp_index():
             stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
             content = re.sub(stock_check_pattern, '// 3. Stock check REMOVED - allows duplicates', content, flags=re.DOTALL)
             
-            # ===== HOTFIX: Brighten cart items =====
-            content = content.replace('background: rgba(26, 26, 26, 0.9)', 'background: #3a3a3a')
-            content = content.replace('background: rgba(30, 30, 30, 0.95)', 'background: #3a3a3a')
-            content = content.replace('border: 1px solid rgba(255, 255, 255, 0.1)', 'border: 1px solid #555')
-            content = content.replace('background: #0a0a0a', 'background: #222')
-            content = content.replace('background: #1a1a1a', 'background: #2a2a2a')
-            
-            # Update title to show hotfix is applied
-            content = content.replace('Los Santos Shop v2.1', 'Los Santos Shop v3.0-HOTFIX')
+            # ===== HOTFIX: Ensure v3.1 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.1-REMASTER</title>')
+            content = content.replace('<title>Los Santos Shop v3.0-HOTFIX</title>', '<title>Los Santos Shop v3.1-REMASTER</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
