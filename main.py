@@ -2408,7 +2408,24 @@ def webapp_check_payment(payment_id):
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App"""
-    return send_from_directory('webapp', 'index.html')
+    # Try multiple possible paths
+    possible_paths = [
+        'webapp',
+        './webapp',
+        '/opt/render/project/src/webapp',
+        os.path.join(os.getcwd(), 'webapp'),
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path) and os.path.exists(os.path.join(path, 'index.html')):
+            logger.info(f"✅ Found webapp at: {path}")
+            return send_from_directory(path, 'index.html')
+    
+    # If nothing found, return error with debug info
+    logger.error(f"❌ Webapp not found in any of: {possible_paths}")
+    logger.error(f"❌ Current working directory: {os.getcwd()}")
+    logger.error(f"❌ Files in cwd: {os.listdir(os.getcwd())}")
+    return f"Webapp not found. CWD: {os.getcwd()}", 404
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
