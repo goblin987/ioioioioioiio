@@ -2442,9 +2442,41 @@ def webapp_index():
             stock_check_pattern = r'// 3\. Check stock availability.*?return;\s*\}'
             content = re.sub(stock_check_pattern, '// 3. Stock check REMOVED - allows duplicates', content, flags=re.DOTALL)
             
-            # ===== HOTFIX: Ensure v3.1 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.1-REMASTER</title>')
-            content = content.replace('<title>Los Santos Shop v3.0-HOTFIX</title>', '<title>Los Santos Shop v3.1-REMASTER</title>')
+            # ===== HOTFIX: FORCE UI BRIGHTNESS VIA CSS INJECTION =====
+            # We inject a style block to override any old dark CSS
+            brightness_css = '''
+            <style>
+                /* FORCE BRIGHT CART UI */
+                .cart-container { background: #222 !important; border: 2px solid #555 !important; }
+                .cart-header-bar { background: #2a2a2a !important; border-bottom: 2px solid #444 !important; }
+                .cart-content { background: #222 !important; }
+                
+                /* FORCE BRIGHT ITEMS */
+                .cart-item-modern {
+                    background: #333 !important;
+                    border: 1px solid #666 !important;
+                    color: #fff !important;
+                    opacity: 1 !important; /* Fix opacity issues */
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+                }
+                
+                /* Make text bright */
+                .cim-name { color: #fff !important; text-shadow: 0 1px 2px #000 !important; }
+                .cim-details { color: #ccc !important; }
+                
+                /* Fix any backdrop issues */
+                .cart-backdrop { background: rgba(0,0,0,0.7) !important; }
+                
+                /* Ensure REMOVE button is visible if present */
+                .cim-remove-btn { background: #800 !important; color: #fff !important; border: 1px solid #f00 !important; }
+            </style>
+            </head>
+            '''
+            content = content.replace('</head>', brightness_css)
+            
+            # ===== HOTFIX: Ensure v3.2 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v3.2-BRIGHTNESS-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v3.1-REMASTER</title>', '<title>Los Santos Shop v3.2-BRIGHTNESS-FIX</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
