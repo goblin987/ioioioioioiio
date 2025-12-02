@@ -4577,7 +4577,7 @@
                 
                 <div class="refill-custom">
                      <input type="number" id="custom-refill" placeholder="CUSTOM AMOUNT (€)" class="modern-input" style="text-align:center;">
-                     <button class="modern-apply-btn" onclick="initCustomRefill()">PAY</button>
+                     <button id="refill-pay-btn" class="modern-apply-btn" onclick="initCustomRefill()">PAY</button>
                 </div>
             </div>
         </div>
@@ -5114,20 +5114,37 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
         
         function initCustomRefill() {
-            const val = document.getElementById('custom-refill').value;
-            if(val && val > 0) {
-                const btn = document.querySelector('.refill-custom .modern-apply-btn');
-                if(btn) btn.innerText = '...';
-                initRefill(val).then(() => {
-                    if(btn) btn.innerText = 'PAY';
-                }).catch(() => {
-                    if(btn) btn.innerText = 'PAY';
-                });
+            const input = document.getElementById('custom-refill');
+            const btn = document.getElementById('refill-pay-btn');
+            
+            if(!input) { safeAlert("Input not found"); return; }
+            
+            const val = input.value;
+            
+            if(!val || parseFloat(val) <= 0) {
+                input.style.border = '1px solid red';
+                setTimeout(() => input.style.border = '', 500);
+                return;
             }
+            
+            if(btn) btn.innerText = '...';
+            
+            initRefill(val).then(() => {
+                if(btn) setTimeout(() => btn.innerText = 'PAY', 1000);
+            }).catch((e) => {
+                if(btn) btn.innerText = 'PAY';
+                safeAlert("Refill Error: " + e);
+            });
         }
 
         function safeAlert(msg) {
-            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
+                window.Telegram.WebApp.showPopup({
+                    title: 'Notice',
+                    message: msg,
+                    buttons: [{type: 'ok'}]
+                });
+            } else if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
                 window.Telegram.WebApp.showAlert(msg);
             } else {
                 alert(msg);
