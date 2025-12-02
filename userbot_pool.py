@@ -312,23 +312,23 @@ class UserbotPool:
             
             # 3. Send elegant notification
             if use_secret_chat:
-            notification_text = (
-                f"🔐 **Encrypted Delivery**\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"**Order Details:**\n"
-                f"📦 Order ID: #{order_id}\n"
-                f"🏷️ Product: {product_data.get('product_name', 'Digital Content')}\n"
-                f"📏 Size: {product_data.get('size', 'N/A')}\n"
-                f"📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
-                f"💰 Price: {product_data.get('price', 0):.2f} EUR\n\n"
-                f"⏬ **Delivering your content securely...**\n\n"
-                f"🔒 _This is an end-to-end encrypted chat._"
-            )
-            try:
-                await secret_chat_manager.send_secret_message(secret_chat_obj, notification_text)
-                logger.info(f"✅ Sent elegant notification to secret chat")
-            except Exception as e:
-                logger.error(f"❌ Failed to send notification: {e}")
+                notification_text = (
+                    f"🔐 **Encrypted Delivery**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Order Details:**\n"
+                    f"📦 Order ID: #{order_id}\n"
+                    f"🏷️ Product: {product_data.get('product_name', 'Digital Content')}\n"
+                    f"📏 Size: {product_data.get('size', 'N/A')}\n"
+                    f"📍 Location: {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                    f"💰 Price: {product_data.get('price', 0):.2f} EUR\n\n"
+                    f"⏬ **Delivering your content securely...**\n\n"
+                    f"🔒 _This is an end-to-end encrypted chat._"
+                )
+                try:
+                    await secret_chat_manager.send_secret_message(secret_chat_obj, notification_text)
+                    logger.info(f"✅ Sent elegant notification to secret chat")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send notification: {e}")
             else:
                 notification_text = (
                     f"✅ **Delivery (Standard)**\n"
@@ -373,7 +373,7 @@ class UserbotPool:
                         try:
                             if use_secret_chat and media_type == 'photo':
                                 # --- SECRET CHAT PHOTO ---
-                            file_size = len(media_binary)
+                                file_size = len(media_binary)
                                 await secret_chat_manager.send_secret_photo(
                                     secret_chat_obj,
                                     temp_path,
@@ -414,23 +414,23 @@ class UserbotPool:
                                     logger.error(f"Failed to send secret video as document: {e}")
                                     
                                     # Fallback to PM (Reliable)
-                                        video_caption = (
-                                            f"🎬 **Your Video Content**\n"
-                                            f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                                            f"📦 **Order:** #{order_id}\n"
+                                    video_caption = (
+                                        f"🎬 **Your Video Content**\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                                        f"📦 **Order:** #{order_id}\n"
                                         f"🎞️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
                                         f"✨ **Ready to watch!**"
-                                        )
-                                        
-                                        await client.send_file(
-                                            user_entity,
-                                            temp_path,
-                                            caption=video_caption,
-                                            force_document=False,
-                                            supports_streaming=True
-                                        )
+                                    )
+                                    
+                                    await client.send_file(
+                                        user_entity,
+                                        temp_path,
+                                        caption=video_caption,
+                                        force_document=False,
+                                        supports_streaming=True
+                                    )
                                     logger.info(f"✅ Video {idx} sent to PRIVATE MESSAGE (Fallback)!")
-                                        
+                                    
                                     # Send notification to secret chat
                                     try:
                                         await secret_chat_manager.send_secret_message(
@@ -440,7 +440,7 @@ class UserbotPool:
                                     except: pass
                                     sent_media_count += 1
                                     
-                                else:
+                            else:
                                 # --- STANDARD DELIVERY (Fallback) ---
                                 logger.info(f"📤 Sending {media_type} via standard PM (Fallback)...")
                                 caption = (
@@ -480,22 +480,22 @@ class UserbotPool:
             
             # 5. Send completion message
             if use_secret_chat:
-            completion_text = (
-                f"✅ **Delivery Complete!**\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"**Your Order Summary:**\n"
-                f"🏷️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
-                f"📏 **Size:** {product_data.get('size', 'N/A')}\n"
-                f"📍 **Location:** {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
-                f"💰 **Paid:** {product_data.get('price', 0):.2f} EUR\n\n"
-                f"📦 **Order ID:** #{order_id}\n\n"
+                completion_text = (
+                    f"✅ **Delivery Complete!**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Your Order Summary:**\n"
+                    f"🏷️ **Product:** {product_data.get('product_name', 'Digital Content')}\n"
+                    f"📏 **Size:** {product_data.get('size', 'N/A')}\n"
+                    f"📍 **Location:** {product_data.get('city', 'N/A')}, {product_data.get('district', 'N/A')}\n"
+                    f"💰 **Paid:** {product_data.get('price', 0):.2f} EUR\n\n"
+                    f"📦 **Order ID:** #{order_id}\n\n"
                     f"🎉 **Thank you for your purchase!**"
-            )
-            try:
-                await secret_chat_manager.send_secret_message(secret_chat_obj, completion_text)
-                logger.info(f"✅ Sent elegant completion message to secret chat")
-            except Exception as e:
-                logger.error(f"❌ Failed to send completion message: {e}")
+                )
+                try:
+                    await secret_chat_manager.send_secret_message(secret_chat_obj, completion_text)
+                    logger.info(f"✅ Sent elegant completion message to secret chat")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send completion message: {e}")
             else:
                 completion_text = (
                     f"✅ **Delivery Complete!**\n"
