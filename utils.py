@@ -1215,6 +1215,7 @@ def init_db():
                 is_human_verified {get_boolean_type()} DEFAULT FALSE,
                 verification_attempts INTEGER DEFAULT 0
             )''')
+            conn.commit()  # Commit immediately so rollbacks below don't affect it
             logger.info(f"✅ Users table created successfully")
             
             # Add referral_code column if it doesn't exist
