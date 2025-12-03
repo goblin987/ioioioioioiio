@@ -2442,6 +2442,24 @@ def webapp_create_refill():
         
         if amount_eur > MAX_REFILL:
             return jsonify({'error': f'Maximum refill amount is €{MAX_REFILL}'}), 400
+        
+        # ENSURE USER EXISTS (critical for balance credit later)
+        try:
+            conn_user = get_db_connection()
+            c_user = conn_user.cursor()
+            c_user.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
+            if not c_user.fetchone():
+                # User doesn't exist, create them
+                c_user.execute("""
+                    INSERT INTO users (user_id, username, balance, total_spent, currency, lang)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (user_id) DO NOTHING
+                """, (user_id, f"user_{user_id}", 0.0, 0.0, 'EUR', 'en'))
+                conn_user.commit()
+                logger.info(f"✅ Auto-created user {user_id} for refill")
+            conn_user.close()
+        except Exception as e:
+            logger.error(f"Error ensuring user exists for refill: {e}")
 
         # ===== NASA-GRADE PAYMENT CREATION =====
         # Get SOL price (synchronous function)
