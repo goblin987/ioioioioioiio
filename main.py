@@ -2810,8 +2810,11 @@ def webapp_index():
                 
                 // DISCOUNT CODE HANDLER - Updates total when user types code
                 window.applyDiscountToUI = async function() {
-                    const discountInput = document.getElementById('discount-code-input');
-                    if(!discountInput) return;
+                    const discountInput = document.getElementById('discount-input');  // ✅ Correct ID
+                    if(!discountInput) {
+                        console.log('❌ Discount input not found');
+                        return;
+                    }
                     
                     const code = discountInput.value.trim();
                     const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
@@ -2827,6 +2830,13 @@ def webapp_index():
                         // Send basket items to validate discount
                         const basketItems = window.basket || [];
                         
+                        if(basketItems.length === 0) {
+                            console.log('⚠️ Empty basket, skipping discount validation');
+                            return;
+                        }
+                        
+                        console.log('🔍 Validating discount code:', code);
+                        
                         const response = await fetch('/webapp/api/validate_discount', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
@@ -2838,6 +2848,7 @@ def webapp_index():
                         });
                         
                         const data = await response.json();
+                        console.log('📋 Discount validation response:', data);
                         
                         if(data.success && data.code_valid && data.code_discount > 0) {
                             window.discountApplied = {
@@ -2847,16 +2858,26 @@ def webapp_index():
                                 final_total: data.final_total,
                                 original_total: data.original_total
                             };
-                            console.log('✅ Discount applied:', data);
+                            console.log('✅ Discount applied:', window.discountApplied);
+                            
+                            // Show success message in discount-msg div
+                            const msgDiv = document.getElementById('discount-msg');
+                            if(msgDiv) {
+                                msgDiv.innerHTML = `<span style="color:#4CAF50;">✓ Discount applied: -€${data.code_discount.toFixed(2)}</span>`;
+                                msgDiv.style.display = 'block';
+                            }
                         } else {
                             window.discountApplied = null;
-                            if(data.message && code) {
-                                // Only show message if user actually typed a code
-                                setTimeout(() => tg.showAlert(data.message), 100);
+                            
+                            // Show error in discount-msg div
+                            const msgDiv = document.getElementById('discount-msg');
+                            if(msgDiv && data.message) {
+                                msgDiv.innerHTML = `<span style="color:#f44336;">${data.message}</span>`;
+                                msgDiv.style.display = 'block';
                             }
                         }
                     } catch(e) {
-                        console.error('Discount validation error:', e);
+                        console.error('❌ Discount validation error:', e);
                         window.discountApplied = null;
                     }
                     
@@ -2871,22 +2892,32 @@ def webapp_index():
                     let displayTotal = baseTotal;
                     let discountAmount = 0;
                     
+                    console.log('🔄 updateCartTotal called. Basket:', basket.length, 'items, Base:', baseTotal);
+                    
                     if(window.discountApplied && window.discountApplied.final_total !== undefined) {
                         displayTotal = window.discountApplied.final_total;
                         discountAmount = (window.discountApplied.code_discount || 0) + (window.discountApplied.reseller_discount || 0);
+                        console.log('💰 Discount applied! Display total:', displayTotal);
                     }
                     
-                    // Update the main total display
-                    const totalElement = document.querySelector('.cart-total-price') || 
+                    // Update the main total display - try multiple possible IDs
+                    const totalElement = document.getElementById('basket-total') ||       // ✅ Correct ID
                                        document.getElementById('cart-total') || 
-                                       document.querySelector('.cart-total-amount');
+                                       document.querySelector('.cart-total-price') || 
+                                       document.querySelector('.mt-value-lg');
+                    
                     if(totalElement) {
                         totalElement.textContent = `€${displayTotal.toFixed(2)}`;
+                        console.log('✅ Updated total element:', totalElement.id, '→', totalElement.textContent);
+                    } else {
+                        console.error('❌ Total element not found!');
                     }
                     
                     // Show discount breakdown if applied
-                    const discountInfo = document.getElementById('discount-info') || 
-                                        document.querySelector('.discount-info');
+                    const discountInfo = document.getElementById('discount-msg') ||       // ✅ Correct ID
+                                        document.getElementById('discount-info') || 
+                                        document.querySelector('.cart-promo-msg');
+                    
                     if(discountInfo) {
                         if(discountAmount > 0) {
                             discountInfo.style.display = 'block';
@@ -2918,14 +2949,25 @@ def webapp_index():
                 
                 // Auto-attach to discount input when it exists
                 document.addEventListener('DOMContentLoaded', function() {
-                    const discountInput = document.getElementById('discount-code-input');
+                    const discountInput = document.getElementById('discount-input');  // ✅ Correct ID
                     if(discountInput) {
+                        console.log('✅ Discount input found, attaching event listener');
                         discountInput.addEventListener('input', function() {
                             clearTimeout(window.discountTimeout);
                             window.discountTimeout = setTimeout(() => {
+                                console.log('🔍 Discount input changed, validating...');
                                 applyDiscountToUI();
                             }, 800); // Debounce 800ms
                         });
+                        
+                        // Also trigger on blur (when user finishes typing)
+                        discountInput.addEventListener('blur', function() {
+                            if(discountInput.value.trim()) {
+                                applyDiscountToUI();
+                            }
+                        });
+                    } else {
+                        console.error('❌ Discount input not found (ID: discount-input)');
                     }
                 });
                 
