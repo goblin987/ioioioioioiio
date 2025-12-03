@@ -2760,6 +2760,105 @@ def webapp_index():
                     });
                 };
                 
+                // OVERRIDE initCheckout - Use window.basket
+                window.initCheckout = async function() {
+                    const basket = window.basket || [];
+                    
+                    console.log('🛒 initCheckout called. Basket:', basket.length, 'items');
+                    
+                    if(basket.length === 0) {
+                        console.warn('⚠️ Cannot checkout: basket is empty');
+                        return;
+                    }
+                    
+                    // Find the checkout button
+                    const btn = document.querySelector('#basket-modal .btn-buy:last-of-type') || 
+                               document.querySelector('.cart-checkout-btn');
+                    const originalText = btn ? btn.innerText : "CHECKOUT";
+                    
+                    if(btn) {
+                        btn.innerText = "CONNECTING...";
+                        btn.disabled = true;
+                    }
+                    
+                    try {
+                        const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+                        const userId = user ? user.id : 0; 
+                        
+                        const payload = {
+                            user_id: userId,
+                            items: basket,
+                            discount_code: window.currentDiscount ? window.currentDiscount.code : null
+                        };
+                        
+                        console.log('📤 Checkout payload:', payload);
+                        
+                        const response = await fetch('/webapp/api/create_invoice', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        const data = await response.json();
+                        console.log('📥 Invoice response:', data);
+                        
+                        if(data.success) {
+                            // Close basket modal
+                            const basketModal = document.getElementById('basket-modal');
+                            if(basketModal) basketModal.style.display = 'none';
+                            
+                            // Open invoice modal
+                            const invModal = document.getElementById('invoice-modal');
+                            
+                            document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
+                            document.getElementById('invoice-address').innerText = data.pay_address;
+                            
+                            // Generate QR
+                            const qrContainer = document.getElementById('qrcode');
+                            qrContainer.innerHTML = "";
+                            if(typeof QRCode !== 'undefined') {
+                                new QRCode(qrContainer, {
+                                    text: data.pay_address,
+                                    width: 150,
+                                    height: 150,
+                                    colorDark : "#000000",
+                                    colorLight : "#ffffff",
+                                    correctLevel : QRCode.CorrectLevel.L
+                                });
+                            }
+                            
+                            invModal.style.display = 'flex';
+                            window.activePaymentId = data.payment_id;
+                            
+                            // Start Polling
+                            if(window.pollInterval) clearInterval(window.pollInterval);
+                            window.pollInterval = setInterval(() => {
+                                if(typeof window.pollPayment === 'function') {
+                                    window.pollPayment(data.payment_id);
+                                }
+                            }, 3000);
+                            
+                            console.log('✅ Invoice displayed, polling started');
+                        } else {
+                            // Handle errors (including stock issues)
+                            window.safeNotify('⚠️ ' + (data.error || 'Checkout failed'));
+                            
+                            if(data.error && data.error.includes('stock')) {
+                                // Refresh products if stock issue
+                                if(typeof window.loadProducts === 'function') window.loadProducts();
+                            }
+                        }
+                    } catch(err) {
+                        console.error("❌ Checkout error:", err);
+                        window.safeNotify('⚠️ Network error. Try again.');
+                    } finally {
+                        if(btn) {
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        }
+                    }
+                };
+                
                 // OVERRIDE removeFromBasket - UN-RESERVE ON SERVER
                 window.removeFromBasket = function(index, e) {
                     const basket = window.basket || [];
