@@ -1434,7 +1434,11 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
                 reason=reason # Include reason for generic credits
             )
 
-            await send_message_with_retry(bot_instance, user_id, notify_msg, parse_mode=None)
+            # Skip bot message for refills (handled in mini-app only)
+            if "Refill" not in reason:
+                await send_message_with_retry(bot_instance, user_id, notify_msg, parse_mode=None)
+            else:
+                logger.info(f"✅ Skipped bot message for refill (mini-app notification only)")
         else:
              logger.error(f"Could not get bot instance to notify user {user_id} about balance credit.")
 
