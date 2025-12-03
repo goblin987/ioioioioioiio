@@ -2365,6 +2365,49 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
 
+@flask_app.route("/webapp/api/locations", methods=['GET'])
+def webapp_get_locations():
+    """API endpoint to fetch cities and districts with available products"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all cities and districts that have products available
+        c.execute("""
+            SELECT DISTINCT p.city, p.district, c.id as city_id
+            FROM products p
+            LEFT JOIN cities c ON c.name = p.city
+            WHERE p.available > 0
+            ORDER BY p.city, p.district
+        """)
+        
+        rows = c.fetchall()
+        
+        # Group by city
+        locations = {}
+        for row in rows:
+            city = row['city']
+            district = row['district']
+            
+            if city not in locations:
+                locations[city] = {
+                    'city_id': row['city_id'],
+                    'districts': []
+                }
+            
+            if district and district not in locations[city]['districts']:
+                locations[city]['districts'].append(district)
+        
+        conn.close()
+        
+        response = jsonify({'success': True, 'locations': locations})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error fetching locations for webapp: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
     """API endpoint to fetch available products for the Web App"""
