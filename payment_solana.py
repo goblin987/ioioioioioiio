@@ -21,9 +21,26 @@ ENABLE_AUTO_SWEEP = True # Automatically send funds to admin wallet after paymen
 logger = logging.getLogger(__name__)
 client = Client(SOLANA_RPC_URL)
 
+# Global price cache (NASA-grade reliability)
+_price_cache = {'price': None, 'timestamp': 0}
+PRICE_CACHE_TTL = 60  # Cache for 60 seconds
+
 def get_sol_price_eur():
-    """Fetch current SOL price in EUR from CoinGecko with Binance fallback"""
-    # 1. Try CoinGecko
+    """
+    NASA-GRADE: Fetch current SOL price in EUR with multi-source fallback and caching
+    Returns: Decimal price or None
+    """
+    import time
+    
+    # Check cache first (prevent rate limiting)
+    now = time.time()
+    if _price_cache['price'] and (now - _price_cache['timestamp']) < PRICE_CACHE_TTL:
+        logger.info(f"💰 Using cached SOL price: {_price_cache['price']} EUR (age: {int(now - _price_cache['timestamp'])}s)")
+        return _price_cache['price']
+    
+    price = None
+    
+    # 1. Try CoinGecko (Free API)
     try:
         response = requests.get(
             "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur", 
@@ -32,41 +49,60 @@ def get_sol_price_eur():
         if response.status_code == 200:
             data = response.json()
             if 'solana' in data and 'eur' in data['solana']:
-                return Decimal(str(data['solana']['eur']))
-            else:
-                logger.error(f"CoinGecko unexpected response: {data}")
+                price = Decimal(str(data['solana']['eur']))
+                logger.info(f"✅ CoinGecko SOL price: {price} EUR")
+        elif response.status_code == 429:
+            logger.warning(f"⚠️ CoinGecko rate limited (429)")
         else:
-            logger.warning(f"CoinGecko returned status {response.status_code}")
+            logger.warning(f"⚠️ CoinGecko returned status {response.status_code}")
     except Exception as e:
-        logger.error(f"Error fetching SOL price from CoinGecko: {e}")
+        logger.error(f"❌ CoinGecko error: {e}")
 
     # 2. Try Binance Fallback
-    try:
-        response = requests.get(
-            "https://api.binance.com/api/v3/ticker/price?symbol=SOLEUR", 
-            timeout=5
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if 'price' in data:
-                return Decimal(str(data['price']))
-    except Exception as e:
-        logger.error(f"Error fetching SOL price from Binance: {e}")
+    if not price:
+        try:
+            response = requests.get(
+                "https://api.binance.com/api/v3/ticker/price?symbol=SOLEUR", 
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if 'price' in data:
+                    price = Decimal(str(data['price']))
+                    logger.info(f"✅ Binance SOL price: {price} EUR")
+        except Exception as e:
+            logger.error(f"❌ Binance error: {e}")
 
     # 3. Try CryptoCompare Fallback
-    try:
-        response = requests.get(
-            "https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=EUR",
-            timeout=5
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if 'EUR' in data:
-                return Decimal(str(data['EUR']))
-    except Exception as e:
-        logger.error(f"Error fetching SOL price from CryptoCompare: {e}")
-
-    return None
+    if not price:
+        try:
+            response = requests.get(
+                "https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=EUR",
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if 'EUR' in data:
+                    price = Decimal(str(data['EUR']))
+                    logger.info(f"✅ CryptoCompare SOL price: {price} EUR")
+        except Exception as e:
+            logger.error(f"❌ CryptoCompare error: {e}")
+    
+    # 4. Use stale cache as last resort (better than failing)
+    if not price and _price_cache['price']:
+        age = int(now - _price_cache['timestamp'])
+        logger.warning(f"⚠️ All APIs failed, using stale cache ({age}s old): {_price_cache['price']} EUR")
+        return _price_cache['price']
+    
+    # Update cache if we got a price
+    if price:
+        _price_cache['price'] = price
+        _price_cache['timestamp'] = now
+        logger.info(f"💾 Cached SOL price: {price} EUR")
+    else:
+        logger.error(f"❌ CRITICAL: All price APIs failed and no cache available!")
+    
+    return price
 
 async def create_solana_payment(user_id, order_id, eur_amount):
     """

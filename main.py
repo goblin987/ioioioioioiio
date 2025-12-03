@@ -2443,35 +2443,65 @@ def webapp_create_refill():
         if amount_eur > MAX_REFILL:
             return jsonify({'error': f'Maximum refill amount is €{MAX_REFILL}'}), 400
 
+        # ===== NASA-GRADE PAYMENT CREATION =====
         # Get SOL price (synchronous function)
         from payment_solana import get_sol_price_eur
+        
+        logger.info(f"💰 REFILL REQUEST: User {user_id} wants to deposit €{amount_eur}")
         
         try:
             sol_price = get_sol_price_eur()
         except Exception as e:
-            logger.error(f"Error getting SOL price: {e}")
-            return jsonify({'error': 'Could not get crypto price'}), 500
+            logger.error(f"❌ Error getting SOL price: {e}")
+            return jsonify({'error': 'Could not get crypto price. Please try again in a moment.'}), 500
         
         if not sol_price or sol_price <= Decimal('0'):
-            return jsonify({'error': 'Invalid crypto price'}), 500
-            
-        # Calculate SOL amount with safety buffer (1%) to ensure it covers EUR amount
-        # Actually, no buffer for exact calculation, but we check for underpayment later
-        amount_sol = Decimal(str(amount_eur)) / sol_price
-        amount_sol = amount_sol.quantize(Decimal("0.000001")) # Precision
+            logger.error(f"❌ Invalid SOL price: {sol_price}")
+            return jsonify({'error': 'Invalid crypto price. Please try again.'}), 500
+        
+        logger.info(f"✅ SOL Price: {sol_price} EUR")
+        
+        # Calculate expected SOL amount (for logging/validation only)
+        expected_sol = (Decimal(str(amount_eur)) / sol_price).quantize(Decimal("0.000001"))
+        logger.info(f"💡 Expected SOL amount: {expected_sol} SOL for €{amount_eur}")
 
-        # Create Payment
+        # Create Payment Order
         order_id = f"WEBAPP_REFILL_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
+        
+        logger.info(f"🔧 Creating Solana payment for Order ID: {order_id}")
         
         from payment import create_solana_payment
         loop = main_loop if main_loop else asyncio.new_event_loop()
+        
+        # CRITICAL FIX: Pass EUR amount, not SOL amount!
         payment_res = asyncio.run_coroutine_threadsafe(
-            create_solana_payment(user_id, order_id, amount_sol), 
+            create_solana_payment(user_id, order_id, amount_eur),  # ✅ EUR, not SOL!
             loop
         ).result(timeout=10)
         
+        logger.info(f"📋 Payment creation result: {payment_res}")
+        
         if 'error' in payment_res:
+            logger.error(f"❌ Payment creation failed: {payment_res}")
             return jsonify(payment_res), 500
+        
+        # Validate payment response
+        if not payment_res.get('pay_address') or not payment_res.get('pay_amount'):
+            logger.error(f"❌ Invalid payment response: {payment_res}")
+            return jsonify({'error': 'Invalid payment data'}), 500
+        
+        # Sanity check: SOL amount should be reasonable
+        sol_amount = Decimal(str(payment_res['pay_amount']))
+        if sol_amount <= Decimal('0') or sol_amount > Decimal('1000'):
+            logger.error(f"❌ INSANE SOL AMOUNT: {sol_amount} for €{amount_eur}")
+            return jsonify({'error': 'Payment calculation error. Please contact support.'}), 500
+        
+        # Verify: EUR amount matches (prevent double-conversion bugs)
+        calculated_eur = (sol_amount * sol_price).quantize(Decimal("0.01"))
+        if abs(calculated_eur - Decimal(str(amount_eur))) > Decimal('0.10'):  # Allow 10 cent tolerance
+            logger.warning(f"⚠️ EUR mismatch: Expected €{amount_eur}, got ~€{calculated_eur}")
+        
+        logger.info(f"✅ Payment created: {sol_amount} SOL (~€{calculated_eur}) to {payment_res['pay_address']}")
             
         # Store in DB
         conn = get_db_connection()
@@ -2481,17 +2511,21 @@ def webapp_create_refill():
             (user_id, payment_id, currency, target_eur_amount, expected_crypto_amount, 
              created_at, is_purchase, basket_snapshot_json)
             VALUES (%s, %s, %s, %s, %s, NOW(), FALSE, NULL)
-        """, (user_id, order_id, 'SOL', amount_eur, float(payment_res['pay_amount'])))
+        """, (user_id, order_id, 'SOL', amount_eur, float(sol_amount)))
         conn.commit()
         conn.close()
         
+        logger.info(f"💾 Stored refill order in DB: {order_id}")
+        
         response = jsonify({
             'success': True,
-            'payment_id': order_id,
+            'order_id': order_id,
             'pay_address': payment_res['pay_address'],
-            'pay_amount': payment_res['pay_amount'],
+            'pay_amount': str(sol_amount),
             'amount_eur': amount_eur
         })
+        
+        logger.info(f"✅ REFILL INVOICE CREATED: User {user_id} pays {sol_amount} SOL for €{amount_eur}")
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
         
