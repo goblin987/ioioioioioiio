@@ -7843,6 +7843,148 @@ async def handle_adm_product_types_menu(update: Update, context: ContextTypes.DE
 
 # === PRODUCT REMOVAL SYSTEM ===
 
+async def send_removed_product_with_media(context, user_id, product, index, total):
+    """Helper function to send a removed product with its media (photos/videos/gifs)"""
+    from telegram import InputMediaPhoto, InputMediaVideo
+    from utils import send_media_group_with_retry, send_message_with_retry
+    import io
+    
+    product_id = product['id']
+    product_code = product['original_text'] or product['name']
+    product_type = product.get('product_type', 'Product')
+    size = product.get('size', '')
+    city = product.get('city', '')
+    district = product.get('district', '')
+    
+    # Fetch media for this product
+    conn = None
+    media_items = []
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT media_type, telegram_file_id, media_binary
+            FROM product_media 
+            WHERE product_id = %s
+        """, (product_id,))
+        media_items = c.fetchall()
+        logger.info(f"Found {len(media_items)} media items for removed product {product_id}")
+    except Exception as e:
+        logger.error(f"Error fetching media for product {product_id}: {e}")
+    finally:
+        if conn:
+            conn.close()
+    
+    # Separate media by type
+    photo_video_group = []
+    animations = []
+    
+    for media in media_items:
+        media_type = media['media_type']
+        file_id = media.get('telegram_file_id')
+        media_binary = media.get('media_binary')
+        
+        if media_type in ['photo', 'video']:
+            photo_video_group.append({
+                'type': media_type,
+                'id': file_id,
+                'binary': media_binary
+            })
+        elif media_type == 'gif':
+            animations.append({
+                'type': media_type,
+                'id': file_id,
+                'binary': media_binary
+            })
+    
+    # Send photos/videos as media group (if any)
+    if photo_video_group:
+        media_group_input = []
+        
+        for item in photo_video_group[:10]:  # Telegram limit: 10 items
+            input_media = None
+            
+            # Try binary first (most reliable)
+            if item.get('binary'):
+                try:
+                    media_file = io.BytesIO(item['binary'])
+                    media_file.name = f"product_{product_id}.{'jpg' if item['type'] == 'photo' else 'mp4'}"
+                    
+                    if item['type'] == 'photo':
+                        input_media = InputMediaPhoto(media=media_file)
+                    elif item['type'] == 'video':
+                        input_media = InputMediaVideo(media=media_file)
+                    
+                    logger.info(f"✅ Created InputMedia from binary for removed product {product_id}")
+                except Exception as e:
+                    logger.error(f"Binary media failed for P{product_id}: {e}")
+            
+            # Fallback to file_id
+            if not input_media and item.get('id'):
+                try:
+                    if item['type'] == 'photo':
+                        input_media = InputMediaPhoto(media=item['id'])
+                    elif item['type'] == 'video':
+                        input_media = InputMediaVideo(media=item['id'])
+                    logger.debug(f"✅ Created InputMedia from file_id for P{product_id}")
+                except Exception as e:
+                    logger.warning(f"File_id media failed for P{product_id}: {e}")
+            
+            if input_media:
+                media_group_input.append(input_media)
+        
+        # Send media group
+        if media_group_input:
+            try:
+                await send_media_group_with_retry(
+                    context.bot,
+                    user_id,
+                    media_group_input
+                )
+                logger.info(f"✅ Sent media group for removed P{product_id} ({len(media_group_input)} items)")
+                await asyncio.sleep(0.5)  # Small delay between media groups
+            except Exception as e:
+                logger.error(f"Failed to send media group for P{product_id}: {e}")
+    
+    # Send GIFs separately
+    for animation in animations:
+        try:
+            if animation.get('binary'):
+                media_file = io.BytesIO(animation['binary'])
+                media_file.name = f"product_{product_id}.gif"
+                await context.bot.send_animation(chat_id=user_id, animation=media_file)
+            elif animation.get('id'):
+                await context.bot.send_animation(chat_id=user_id, animation=animation['id'])
+            logger.info(f"✅ Sent GIF for removed P{product_id}")
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.error(f"Failed to send GIF for P{product_id}: {e}")
+    
+    # Send text with product details
+    location_text = f"{city} / {district}" if city and district else (city or district or "")
+    msg = f"📦 **{index}/{total}** | {product_type} - {size}\n{location_text}\n\n```\n{product_code}\n```"
+    
+    try:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=msg,
+            parse_mode='Markdown'
+        )
+        logger.info(f"✅ Sent text for removed P{product_id}")
+    except Exception as e:
+        logger.error(f"Failed to send text for P{product_id}: {e}")
+        # Fallback without markdown
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"📦 {index}/{total} | {product_type} - {size}\n{location_text}\n\n{product_code}",
+                parse_mode=None
+            )
+        except Exception as e2:
+            logger.error(f"Fallback text also failed for P{product_id}: {e2}")
+    
+    await asyncio.sleep(0.3)  # Rate limiting
+
 async def handle_remove_products_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Main menu for product removal system"""
     query = update.callback_query
@@ -8297,20 +8439,13 @@ async def handle_confirm_remove_city(update: Update, context: ContextTypes.DEFAU
     
     # Send summary
     await query.edit_message_text(
-        f"✅ **Removal Complete**\n\nRemoved {len(removed_products)} items from {city_name}.\nSending codes...",
+        f"✅ **Removal Complete**\n\nRemoved {len(removed_products)} items from {city_name}.\nSending products with media...",
         parse_mode='Markdown'
     )
     
-    # Send each product
+    # Send each product WITH MEDIA
     for i, product in enumerate(removed_products, 1):
-        product_code = product['original_text'] or product['name']
-        msg = f"📦 **{i}/{len(removed_products)}** | {product['product_type']} - {product['size']}\n{product['district']}\n\n```\n{product_code}\n```"
-        
-        try:
-            await context.bot.send_message(chat_id=user_id, text=msg, parse_mode='Markdown')
-            await asyncio.sleep(0.3)
-        except Exception as e:
-            logger.error(f"Error sending product {i}: {e}")
+        await send_removed_product_with_media(context, user_id, product, i, len(removed_products))
     
     # Final summary
     keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
@@ -8380,20 +8515,13 @@ async def handle_confirm_remove_category(update: Update, context: ContextTypes.D
     
     # Send summary
     await query.edit_message_text(
-        f"✅ **Removal Complete**\n\nRemoved {len(removed_products)} {p_type} items.\nSending codes...",
+        f"✅ **Removal Complete**\n\nRemoved {len(removed_products)} {p_type} items.\nSending products with media...",
         parse_mode='Markdown'
     )
     
-    # Send each product
+    # Send each product WITH MEDIA
     for i, product in enumerate(removed_products, 1):
-        product_code = product['original_text'] or product['name']
-        msg = f"📦 **{i}/{len(removed_products)}** | {product['size']}\n{product['city']} / {product['district']}\n\n```\n{product_code}\n```"
-        
-        try:
-            await context.bot.send_message(chat_id=user_id, text=msg, parse_mode='Markdown')
-            await asyncio.sleep(0.3)
-        except Exception as e:
-            logger.error(f"Error sending product {i}: {e}")
+        await send_removed_product_with_media(context, user_id, product, i, len(removed_products))
     
     # Final summary
     keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
@@ -8437,7 +8565,7 @@ async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_T
         
         # Fetch products to remove
         c.execute("""
-            SELECT id, name, original_text 
+            SELECT id, name, original_text, product_type, size, city, district
             FROM products 
             WHERE city = %s AND district = %s AND product_type = %s AND size = %s AND available > reserved
             ORDER BY id 
@@ -8481,33 +8609,13 @@ async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(
         f"✅ **Removal Complete**\n\n"
         f"Removed {len(removed_products)} items.\n"
-        f"Sending product codes now...",
+        f"Sending products with media...",
         parse_mode='Markdown'
     )
     
-    # Send each product code one by one
+    # Send each product WITH MEDIA
     for i, product in enumerate(removed_products, 1):
-        product_code = product['original_text'] or product['name']
-        msg = (
-            f"📦 **Product {i}/{len(removed_products)}**\n\n"
-            f"```\n{product_code}\n```"
-        )
-        
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=msg,
-                parse_mode='Markdown'
-            )
-            # Small delay to avoid flooding
-            await asyncio.sleep(0.3)
-        except Exception as e:
-            logger.error(f"Error sending product {i}: {e}")
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=f"❌ Error sending product {i}: {product_code}",
-                parse_mode=None
-            )
+        await send_removed_product_with_media(context, user_id, product, i, len(removed_products))
     
     # Final summary
     summary_msg = (
