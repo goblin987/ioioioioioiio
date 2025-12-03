@@ -2780,10 +2780,13 @@ def webapp_index():
 
                 // OVERRIDE renderBasketContent - Professional UI
                 window.renderBasketContent = function() {
+                    const basket = window.basket || [];  // ✅ FIX: Use window.basket
                     const container = document.getElementById('basket-items');
                     const totalEl = document.getElementById('basket-total');
                     const countEl = document.getElementById('basket-count');
                     const navCount = document.getElementById('cart-nav-count');
+                    
+                    console.log('🛒 renderBasketContent called. Basket:', basket.length, 'items');
                     
                     if(!container) return;
                     container.innerHTML = '';
@@ -2791,6 +2794,7 @@ def webapp_index():
                     let total = 0;
                     basket.forEach((item, i) => {
                         total += item.price;
+                        console.log(`  - Item ${i}: ${item.name} €${item.price}`);
                         const itemEl = document.createElement('div');
                         itemEl.className = 'cart-item-modern';
                         
