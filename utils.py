@@ -1672,6 +1672,10 @@ def init_db():
             # Note: product_media table migration skipped for PostgreSQL to avoid startup delays
             logger.info("✅ Product_media table created successfully (migration skipped for PostgreSQL)")
 
+            # CRITICAL: Commit all table creations before creating indices
+            conn.commit()
+            logger.info("✅ All tables committed successfully")
+
             # Create Indices
             c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)")
@@ -1689,6 +1693,10 @@ def init_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_users_is_reseller ON users(is_reseller)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_reseller_discounts_user_id ON reseller_discounts(reseller_user_id)")
             # <<< END ADDED >>>
+
+            # CRITICAL: Commit all indices before any ALTER TABLE commands
+            conn.commit()
+            logger.info("✅ All indices committed successfully")
 
             # Handle existing tables: ALTER all user_id columns from INTEGER to BIGINT for Telegram compatibility
             logger.info(f"🔧 Converting all user_id columns to BIGINT for existing tables...")
