@@ -3491,16 +3491,21 @@ def main() -> None:
             
             # --- SOLANA MONITORING ---
             try:
-                from payment_solana import check_solana_deposits
-                # Run every 30 seconds
+                from payment_solana import check_solana_deposits, refresh_price_cache
+                
+                # Monitor deposits every 30 seconds
                 job_queue.run_repeating(check_solana_deposits, interval=timedelta(seconds=30), first=timedelta(seconds=15), name="solana_monitor")
                 logger.info("✅ Solana deposit monitor registered (interval: 30s)")
+                
+                # Proactive price cache refresh every 4 minutes (prevents rate limiting during high traffic)
+                job_queue.run_repeating(refresh_price_cache, interval=timedelta(minutes=4), first=timedelta(seconds=5), name="price_cache_refresh")
+                logger.info("✅ SOL price cache refresh registered (interval: 4min)")
             except ImportError:
                 logger.warning("⚠️ Could not import check_solana_deposits. Solana payments will not work.")
             
             # Enhanced auto ads: No background job needed (campaigns run on-demand)
             
-            logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + solana monitor + auto ads).")
+            logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + solana monitor + price refresh + auto ads).")
         else: logger.warning("Job Queue is not available. Background jobs skipped.")
     else: logger.warning("BASKET_TIMEOUT is not positive. Skipping background job setup.")
 

@@ -21,88 +21,161 @@ ENABLE_AUTO_SWEEP = True # Automatically send funds to admin wallet after paymen
 logger = logging.getLogger(__name__)
 client = Client(SOLANA_RPC_URL)
 
-# Global price cache (NASA-grade reliability)
-_price_cache = {'price': None, 'timestamp': 0}
-PRICE_CACHE_TTL = 60  # Cache for 60 seconds
+# ===== PRODUCTION-GRADE PRICE CACHING SYSTEM =====
+_price_cache = {'price': None, 'timestamp': 0, 'last_api_used': None}
+PRICE_CACHE_TTL = 300  # 5 minutes cache (production-grade)
+STALE_CACHE_MAX_AGE = 3600  # Accept stale cache up to 1 hour if all APIs fail
+
+def get_sol_price_from_db():
+    """Get cached price from database (survives restarts)"""
+    try:
+        from utils import get_db_connection
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT setting_value, updated_at 
+            FROM bot_settings 
+            WHERE setting_key = 'sol_price_eur_cache'
+        """)
+        result = c.fetchone()
+        conn.close()
+        
+        if result:
+            import time
+            price = Decimal(str(result['setting_value']))
+            # Check if cache is fresh (< 10 minutes)
+            cache_age = time.time() - result['updated_at'].timestamp()
+            if cache_age < 600:  # 10 minutes
+                logger.info(f"📊 DB cached SOL price: {price} EUR (age: {int(cache_age)}s)")
+                return price
+    except Exception as e:
+        logger.debug(f"Could not fetch DB price cache: {e}")
+    return None
+
+def save_sol_price_to_db(price):
+    """Save price to database for persistence"""
+    try:
+        from utils import get_db_connection
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO bot_settings (setting_key, setting_value, updated_at)
+            VALUES ('sol_price_eur_cache', %s, NOW())
+            ON CONFLICT (setting_key) DO UPDATE 
+            SET setting_value = EXCLUDED.setting_value, updated_at = NOW()
+        """, (str(price),))
+        conn.commit()
+        conn.close()
+        logger.debug(f"💾 Saved SOL price to DB: {price} EUR")
+    except Exception as e:
+        logger.debug(f"Could not save price to DB: {e}")
+
+def fetch_price_from_api(api_name, url, parser_func):
+    """Generic API fetcher with timeout and error handling"""
+    try:
+        response = requests.get(url, timeout=3)  # Faster timeout
+        if response.status_code == 200:
+            price = parser_func(response.json())
+            if price:
+                logger.info(f"✅ {api_name} SOL price: {price} EUR")
+                return price
+        elif response.status_code == 429:
+            logger.warning(f"⚠️ {api_name} rate limited (429)")
+        else:
+            logger.warning(f"⚠️ {api_name} returned status {response.status_code}")
+    except requests.Timeout:
+        logger.warning(f"⏱️ {api_name} timeout")
+    except Exception as e:
+        logger.debug(f"{api_name} error: {e}")
+    return None
 
 def get_sol_price_eur():
     """
-    NASA-GRADE: Fetch current SOL price in EUR with multi-source fallback and caching
-    Returns: Decimal price or None
+    PRODUCTION-GRADE: Multi-layer caching + smart API rotation
+    
+    Strategy:
+    1. Check memory cache (instant, 5 min TTL)
+    2. Check DB cache (fast, 10 min TTL)
+    3. Try APIs in rotation (avoid hammering one)
+    4. Use stale cache up to 1 hour (last resort)
     """
     import time
-    
-    # Check cache first (prevent rate limiting)
     now = time.time()
+    
+    # Layer 1: Memory cache (instant)
     if _price_cache['price'] and (now - _price_cache['timestamp']) < PRICE_CACHE_TTL:
-        logger.info(f"💰 Using cached SOL price: {_price_cache['price']} EUR (age: {int(now - _price_cache['timestamp'])}s)")
+        cache_age = int(now - _price_cache['timestamp'])
+        logger.info(f"💰 Memory cached SOL price: {_price_cache['price']} EUR (age: {cache_age}s)")
         return _price_cache['price']
     
-    price = None
-    
-    # 1. Try CoinGecko (Free API)
-    try:
-        response = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur", 
-            timeout=5
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if 'solana' in data and 'eur' in data['solana']:
-                price = Decimal(str(data['solana']['eur']))
-                logger.info(f"✅ CoinGecko SOL price: {price} EUR")
-        elif response.status_code == 429:
-            logger.warning(f"⚠️ CoinGecko rate limited (429)")
-        else:
-            logger.warning(f"⚠️ CoinGecko returned status {response.status_code}")
-    except Exception as e:
-        logger.error(f"❌ CoinGecko error: {e}")
-
-    # 2. Try Binance Fallback
-    if not price:
-        try:
-            response = requests.get(
-                "https://api.binance.com/api/v3/ticker/price?symbol=SOLEUR", 
-                timeout=5
-            )
-            if response.status_code == 200:
-                data = response.json()
-                if 'price' in data:
-                    price = Decimal(str(data['price']))
-                    logger.info(f"✅ Binance SOL price: {price} EUR")
-        except Exception as e:
-            logger.error(f"❌ Binance error: {e}")
-
-    # 3. Try CryptoCompare Fallback
-    if not price:
-        try:
-            response = requests.get(
-                "https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=EUR",
-                timeout=5
-            )
-            if response.status_code == 200:
-                data = response.json()
-                if 'EUR' in data:
-                    price = Decimal(str(data['EUR']))
-                    logger.info(f"✅ CryptoCompare SOL price: {price} EUR")
-        except Exception as e:
-            logger.error(f"❌ CryptoCompare error: {e}")
-    
-    # 4. Use stale cache as last resort (better than failing)
-    if not price and _price_cache['price']:
-        age = int(now - _price_cache['timestamp'])
-        logger.warning(f"⚠️ All APIs failed, using stale cache ({age}s old): {_price_cache['price']} EUR")
-        return _price_cache['price']
-    
-    # Update cache if we got a price
-    if price:
-        _price_cache['price'] = price
+    # Layer 2: Database cache (survives restarts)
+    db_price = get_sol_price_from_db()
+    if db_price:
+        _price_cache['price'] = db_price
         _price_cache['timestamp'] = now
-        logger.info(f"💾 Cached SOL price: {price} EUR")
-    else:
-        logger.error(f"❌ CRITICAL: All price APIs failed and no cache available!")
+        return db_price
     
-    return price
+    # Layer 3: Fetch from APIs (smart rotation to avoid rate limits)
+    apis = [
+        ('Binance', 'https://api.binance.com/api/v3/ticker/price?symbol=SOLEUR', 
+         lambda data: Decimal(str(data['price'])) if 'price' in data else None),
+        
+        ('CryptoCompare', 'https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=EUR',
+         lambda data: Decimal(str(data['EUR'])) if 'EUR' in data else None),
+        
+        ('CoinGecko', 'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur',
+         lambda data: Decimal(str(data['solana']['eur'])) if 'solana' in data and 'eur' in data['solana'] else None),
+    ]
+    
+    # Start with API that was NOT used last time (rotation)
+    last_used = _price_cache.get('last_api_used', -1)
+    start_idx = (last_used + 1) % len(apis) if last_used >= 0 else 0
+    
+    # Try all APIs in rotated order
+    for i in range(len(apis)):
+        idx = (start_idx + i) % len(apis)
+        api_name, url, parser = apis[idx]
+        
+        price = fetch_price_from_api(api_name, url, parser)
+        
+        if price:
+            # Success! Update all caches
+            _price_cache['price'] = price
+            _price_cache['timestamp'] = now
+            _price_cache['last_api_used'] = idx
+            save_sol_price_to_db(price)
+            return price
+    
+    # Layer 4: Stale cache (up to 1 hour old - better than failing)
+    if _price_cache['price']:
+        age = int(now - _price_cache['timestamp'])
+        if age < STALE_CACHE_MAX_AGE:
+            logger.warning(f"⚠️ All APIs failed, using stale cache ({age}s old): {_price_cache['price']} EUR")
+            return _price_cache['price']
+        else:
+            logger.error(f"❌ Stale cache too old ({age}s), cannot use")
+    
+    logger.error(f"❌ CRITICAL: All price sources failed!")
+    return None
+
+def refresh_price_cache():
+    """
+    Background job: Proactively refresh price cache every 4 minutes
+    This prevents rate limiting during high traffic
+    """
+    logger.info("🔄 Background price refresh triggered")
+    
+    # Force cache refresh by temporarily invalidating it
+    old_timestamp = _price_cache['timestamp']
+    _price_cache['timestamp'] = 0
+    
+    price = get_sol_price_eur()
+    
+    if price:
+        logger.info(f"✅ Background refresh successful: {price} EUR")
+    else:
+        logger.warning(f"⚠️ Background refresh failed, restoring old cache")
+        _price_cache['timestamp'] = old_timestamp
 
 async def create_solana_payment(user_id, order_id, eur_amount):
     """
