@@ -158,7 +158,7 @@ def get_sol_price_eur():
     logger.error(f"❌ CRITICAL: All price sources failed!")
     return None
 
-def refresh_price_cache(context=None):
+async def refresh_price_cache(context=None):
     """
     Background job: Proactively refresh price cache every 4 minutes
     This prevents rate limiting during high traffic
