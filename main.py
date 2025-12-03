@@ -2271,13 +2271,13 @@ def webapp_create_invoice():
         try:
             conn_user = get_db_connection()
             c_user = conn_user.cursor()
-            c_user.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+            c_user.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
             if not c_user.fetchone():
                 # User doesn't exist, create them
                 c_user.execute("""
-                    INSERT INTO users (id, username, balance, total_spent, currency, lang)
+                    INSERT INTO users (user_id, username, balance, total_spent, currency, lang)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO NOTHING
+                    ON CONFLICT (user_id) DO NOTHING
                 """, (user_id, f"user_{user_id}", 0.0, 0.0, 'EUR', 'en'))
                 conn_user.commit()
                 logger.info(f"✅ Auto-created user {user_id} from webapp")
@@ -2803,34 +2803,36 @@ def webapp_index():
                         return;
                     }
                     
-                    // Calculate current basket total
-                    const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
-                    
                     try {
+                        // Send basket items to validate discount
+                        const basketItems = window.basket || [];
+                        
                         const response = await fetch('/webapp/api/validate_discount', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({
                                 code: code,
                                 user_id: user_id || 0,
-                                base_total: baseTotal,
-                                product_types: basket.map(item => item.name.split(' ')[0]) // Get product types
+                                items: basketItems  // Send full basket items with IDs
                             })
                         });
                         
                         const data = await response.json();
                         
-                        if(data.success && data.discount_amount > 0) {
+                        if(data.success && data.code_valid && data.code_discount > 0) {
                             window.discountApplied = {
                                 code: code,
-                                amount: data.discount_amount,
-                                final_total: data.final_total
+                                code_discount: data.code_discount,
+                                reseller_discount: data.reseller_discount,
+                                final_total: data.final_total,
+                                original_total: data.original_total
                             };
                             console.log('✅ Discount applied:', data);
                         } else {
                             window.discountApplied = null;
-                            if(data.message) {
-                                tg.showAlert(data.message);
+                            if(data.message && code) {
+                                // Only show message if user actually typed a code
+                                setTimeout(() => tg.showAlert(data.message), 100);
                             }
                         }
                     } catch(e) {
@@ -2844,33 +2846,53 @@ def webapp_index():
                 // Update cart total display (override if exists)
                 const originalUpdateCartTotal = window.updateCartTotal;
                 window.updateCartTotal = function() {
+                    const basket = window.basket || [];
                     const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
                     let displayTotal = baseTotal;
+                    let discountAmount = 0;
                     
                     if(window.discountApplied && window.discountApplied.final_total !== undefined) {
                         displayTotal = window.discountApplied.final_total;
+                        discountAmount = (window.discountApplied.code_discount || 0) + (window.discountApplied.reseller_discount || 0);
                     }
                     
-                    // Update the total display element
-                    const totalElement = document.getElementById('cart-total') || document.querySelector('.cart-total-amount');
+                    // Update the main total display
+                    const totalElement = document.querySelector('.cart-total-price') || 
+                                       document.getElementById('cart-total') || 
+                                       document.querySelector('.cart-total-amount');
                     if(totalElement) {
                         totalElement.textContent = `€${displayTotal.toFixed(2)}`;
                     }
                     
-                    // Show discount info if applied
-                    const discountInfo = document.getElementById('discount-info');
+                    // Show discount breakdown if applied
+                    const discountInfo = document.getElementById('discount-info') || 
+                                        document.querySelector('.discount-info');
                     if(discountInfo) {
-                        if(window.discountApplied && window.discountApplied.amount > 0) {
+                        if(discountAmount > 0) {
                             discountInfo.style.display = 'block';
-                            discountInfo.innerHTML = `<span style="color:#4CAF50;">✓ Discount applied: -€${window.discountApplied.amount.toFixed(2)}</span>`;
+                            let html = '<div style="color:#4CAF50; font-size:12px; margin-top:5px;">';
+                            
+                            if(window.discountApplied.reseller_discount > 0) {
+                                html += `✓ Reseller discount: -€${window.discountApplied.reseller_discount.toFixed(2)}<br>`;
+                            }
+                            if(window.discountApplied.code_discount > 0) {
+                                html += `✓ Promo code: -€${window.discountApplied.code_discount.toFixed(2)}`;
+                            }
+                            
+                            html += '</div>';
+                            discountInfo.innerHTML = html;
                         } else {
                             discountInfo.style.display = 'none';
                         }
                     }
                     
-                    // Call original if it exists
+                    // Call original if it exists and is different
                     if(originalUpdateCartTotal && originalUpdateCartTotal !== window.updateCartTotal) {
-                        originalUpdateCartTotal();
+                        try {
+                            originalUpdateCartTotal();
+                        } catch(e) {
+                            console.log('Original updateCartTotal error:', e);
+                        }
                     }
                 };
                 

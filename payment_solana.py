@@ -128,8 +128,8 @@ def get_sol_price_eur():
     ]
     
     # Start with API that was NOT used last time (rotation)
-    last_used = _price_cache.get('last_api_used', -1)
-    start_idx = (last_used + 1) % len(apis) if last_used >= 0 else 0
+    last_used = _price_cache.get('last_api_used')
+    start_idx = ((last_used + 1) % len(apis)) if (last_used is not None) else 0
     
     # Try all APIs in rotated order
     for i in range(len(apis)):
