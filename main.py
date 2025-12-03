@@ -2604,6 +2604,36 @@ def webapp_check_payment(payment_id=None):
         logger.error(f"Error checking payment: {e}")
         return jsonify({'error': str(e)}), 500
 
+@flask_app.route("/webapp/api/user_balance", methods=['POST'])
+def webapp_user_balance():
+    """Get user's current balance"""
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Ensure user exists
+        ensure_user_exists(user_id)
+        
+        # Get user's balance
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        res = c.fetchone()
+        conn.close()
+        
+        balance = float(res['balance']) if res else 0.0
+        
+        response = jsonify({'balance': balance})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+    except Exception as e:
+        logger.error(f"Error getting user balance: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App with NO CACHE and PATCHED JS"""
@@ -3004,8 +3034,103 @@ def webapp_index():
                     msgDiv.innerHTML = '';
                 };
                 
+                // OVERRIDE pollPayment to handle 'confirmed' status and update wallet
+                window.pollPayment = async function(paymentId) {
+                    try {
+                        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
+                        const response = await fetch('/webapp/api/check_payment', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                order_id: paymentId,
+                                user_id: userId
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        console.log('💳 Payment poll result:', data);
+                        
+                        // Check for BOTH 'paid' (legacy) and 'confirmed' (Solana)
+                        if(data.status === 'paid' || data.status === 'confirmed') {
+                            if(window.pollInterval) clearInterval(window.pollInterval);
+                            
+                            // Update wallet if new_balance provided
+                            if(data.new_balance !== undefined) {
+                                window.userBalance = data.new_balance;
+                                
+                                // Try multiple selectors for wallet element
+                                const walletEl = document.getElementById('user-balance') ||
+                                               document.querySelector('.mt-value-sm') ||
+                                               document.querySelector('[class*="wallet"]');
+                                
+                                if(walletEl) {
+                                    walletEl.textContent = '€' + data.new_balance.toFixed(2);
+                                    console.log('✅ Updated wallet to:', data.new_balance);
+                                } else {
+                                    console.warn('⚠️ Wallet element not found');
+                                }
+                            }
+                            
+                            // Show success notification
+                            if(typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
+                                window.Telegram.WebApp.showAlert('✅ Payment received! Balance updated.');
+                            }
+                            
+                            // Call original success handler if it exists
+                            if(typeof window.onPaymentSuccess === 'function') {
+                                window.onPaymentSuccess();
+                            } else {
+                                // Fallback: close invoice and reload products
+                                if(typeof window.closeInvoice === 'function') window.closeInvoice();
+                                if(typeof window.loadProducts === 'function') window.loadProducts();
+                            }
+                        } else if (data.status === 'expired' || data.status === 'refunded') {
+                            if(window.pollInterval) clearInterval(window.pollInterval);
+                            if(typeof window.closeInvoice === 'function') window.closeInvoice();
+                            if(typeof window.triggerWasted === 'function') window.triggerWasted();
+                        }
+                    } catch(e) {
+                        console.error("❌ Poll error:", e);
+                    }
+                };
+                
+                // Load user balance on page load
+                window.loadUserBalance = async function() {
+                    try {
+                        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
+                        if(!userId) {
+                            console.warn('⚠️ No user ID available');
+                            return;
+                        }
+                        
+                        const response = await fetch('/webapp/api/user_balance', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ user_id: userId })
+                        });
+                        
+                        const data = await response.json();
+                        if(data.balance !== undefined) {
+                            window.userBalance = data.balance;
+                            
+                            const walletEl = document.querySelector('.mt-value-sm');
+                            if(walletEl) {
+                                walletEl.textContent = '€' + data.balance.toFixed(2);
+                                console.log('✅ Loaded user balance:', data.balance);
+                            }
+                        }
+                    } catch(e) {
+                        console.error('❌ Error loading balance:', e);
+                    }
+                };
+                
                 // Auto-attach to discount input when it exists
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Load user balance
+                    if(typeof window.loadUserBalance === 'function') {
+                        window.loadUserBalance();
+                    }
+                    
                     const discountInput = document.getElementById('discount-input');  // ✅ Correct ID
                     if(discountInput) {
                         console.log('✅ Discount input found, attaching event listener');
