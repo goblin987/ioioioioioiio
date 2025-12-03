@@ -2432,10 +2432,12 @@ def webapp_get_locations():
         c = conn.cursor()
         
         # Get all cities and districts that have products available
+        # STRICT: City and District MUST exist in their respective tables to be shown
         c.execute("""
             SELECT DISTINCT p.city, p.district, c.id as city_id
             FROM products p
-            LEFT JOIN cities c ON c.name = p.city
+            JOIN cities c ON c.name = p.city
+            JOIN districts d ON d.name = p.district AND d.city_id = c.id
             WHERE p.available > 0
             ORDER BY p.city, p.district
         """)

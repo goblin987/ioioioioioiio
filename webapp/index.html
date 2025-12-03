@@ -5735,7 +5735,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     renderProducts(allProducts);
                     renderFilters(allProducts);
                     updateStars(Math.floor(Math.random() * 6));
-                    refreshDistrictColors(); // Update map district colors 
+                    // refreshDistrictColors(); // Removed to prevent error if undefined
                 } else {
                     if(!cached) grid.innerHTML = '<div class="loading" style="color:red">NO DATA</div>';
                 }
