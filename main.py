@@ -2153,6 +2153,27 @@ def webapp_reserve_item():
         if 'conn' in locals() and conn: conn.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@flask_app.route("/webapp/api/unreserve", methods=['POST'])
+def webapp_unreserve_item():
+    """Un-reserves an item (e.g. removed from basket)"""
+    try:
+        data = request.json
+        p_id = data.get('id')
+        
+        if not p_id:
+            return jsonify({'success': False}), 400
+            
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE products SET reserved_until = NULL, reserved_by = NULL WHERE id = %s", (p_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Un-reservation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @flask_app.route("/webapp/api/validate_discount", methods=['POST'])
 def webapp_validate_discount():
     """Validates a discount code and calculates reseller discounts"""
@@ -2488,13 +2509,13 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: SUPER INJECTION v4.4 (Reservation System) =====
+            # ===== HOTFIX: SUPER INJECTION v4.6 (Un-Reserve + Spinner) =====
             
             super_injection = '''
             <script>
-                console.log("DEBUG: Loaded v4.4-RESERVATION-SYSTEM");
+                console.log("DEBUG: Loaded v4.6-FINAL-FIX");
                 
-                // OVERRIDE addToBasket - ASYNC RESERVATION
+                // OVERRIDE addToBasket - ASYNC RESERVATION + SPINNER
                 window.addToBasket = function(ids, name, price, e) {
                     // 1. Check limit
                     if(basket.length >= 10) {
@@ -2505,12 +2526,11 @@ def webapp_index():
                     // 2. RESERVE ON SERVER
                     const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
                     if(!user_id) { 
-                        // Fallback for testing outside Telegram
                         console.warn("User ID missing, using fallback 0"); 
                     }
                     
-                    // Show visual feedback
-                    const btn = e ? e.currentTarget : null; // currentTarget is safer
+                    // Show visual feedback (SPINNER)
+                    const btn = e ? e.currentTarget : null; 
                     const originalText = btn ? btn.innerText : '';
                     if(btn) { 
                         btn.innerHTML = '<div class="spinner"></div>'; 
@@ -2558,13 +2578,8 @@ def webapp_index():
                             
                             updateBasketUI();
                             
-                            // Update the badge locally to reflect -1 available
-                            // This is purely visual until next refresh
-                            // (Optional refinement)
-                            
                         } else {
                             tg.showAlert('⚠️ ' + (data.error || 'Item reserved or sold out!'));
-                            // Refresh grid to show real state
                             if(window.loadProducts) window.loadProducts(); 
                         }
                     })
@@ -2579,13 +2594,34 @@ def webapp_index():
                     });
                 };
                 
+                // OVERRIDE removeFromBasket - UN-RESERVE ON SERVER
+                window.removeFromBasket = function(index, e) {
+                    if(e) { e.stopPropagation(); e.preventDefault(); }
+                    const item = basket[index];
+                    if(!item) return;
+                    
+                    const product_id = item.id;
+                    basket.splice(index, 1);
+                    updateBasketUI();
+                    
+                    // Call API to un-reserve
+                    fetch('/webapp/api/unreserve', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: product_id })
+                    }).then(() => {
+                        console.log("Unreserved item:", product_id);
+                        // Refresh products to show it back in stock immediately
+                        if(window.loadProducts) window.loadProducts();
+                    }).catch(err => console.error("Unreserve failed:", err));
+                };
+                
                 // OVERRIDE renderProducts - Hide Reserved Items
                 window.renderProducts = function(products) {
-                    console.log("Render Products v4.4 (Injected)");
+                    console.log("Render Products v4.6 (Injected)");
                     const grid = document.getElementById('product-grid');
                     grid.innerHTML = '';
                     
-                    // STRICT FILTER: available > 0 (Server already filters reserved, but good to be safe)
                     if(!products) return;
                     const availableProducts = products.filter(p => p.available > 0);
                     
@@ -2681,13 +2717,16 @@ def webapp_index():
             '''
             content = content.replace('</body>', super_injection + '</body>')
             
-            # ===== HOTFIX: Ensure v4.5 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
-            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
-            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
-            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.5-SPINNER</title>')
+            # ===== HOTFIX: Ensure v4.6 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v4.5-SPINNER</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            
+            logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
