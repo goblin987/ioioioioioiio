@@ -17,7 +17,7 @@ Features:
 - Level-up notifications and celebrations
 - Admin dashboard for VIP management
 
-Author: Enhanced Bot System
+Author: BotShop Development Team
 Version: 1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

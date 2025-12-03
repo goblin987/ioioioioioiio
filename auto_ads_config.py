@@ -6,7 +6,7 @@ Configuration settings for the auto ads campaign system.
 Integrates with botshop's existing environment while maintaining
 separate configuration for auto ads functionality.
 
-Author: TgCF Pro Team (Adapted for Botshop)
+Author: BotShop Development Team
 License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

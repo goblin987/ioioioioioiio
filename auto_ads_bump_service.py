@@ -5,7 +5,7 @@ Auto Ads Bump Service (Simplified for Botshop)
 Service for managing automated ad campaigns with scheduling and anti-ban protection.
 Simplified version adapted for botshop PostgreSQL integration.
 
-Author: TgCF Pro Team (Adapted for Botshop)
+Author: BotShop Development Team
 License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

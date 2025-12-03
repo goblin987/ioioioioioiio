@@ -5,7 +5,7 @@ Auto Ads Database Management (PostgreSQL)
 Professional database layer for auto ads system using PostgreSQL.
 Provides secure data persistence, account management, campaign storage, and performance analytics.
 
-Author: TgCF Pro Team (Adapted for Botshop PostgreSQL)
+Author: BotShop Development Team
 License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

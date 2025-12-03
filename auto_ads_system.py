@@ -5,7 +5,7 @@ Auto Ads System - Simplified UI
 Professional auto ads campaign management system with simplified 6-button interface.
 Integrates with botshop while keeping auto ads accounts separate from userbots.
 
-Author: TgCF Pro Team (Adapted for Botshop)
+Author: BotShop Development Team
 License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

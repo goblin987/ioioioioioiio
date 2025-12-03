@@ -6102,23 +6102,24 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function addToBasket(ids, name, price, e) {
-            // 1. Smart ID Selection
+            // 1. Smart ID Selection (Robust)
             let id = ids;
             if(Array.isArray(ids)) {
-                // Find an ID that has stock available and isn't fully consumed in basket
-                let found = false;
-                for(let candidateId of ids) {
-                    const product = allProducts.find(p => p.id === candidateId);
-                    if(!product) continue;
-                    
-                    const inBasket = basket.filter(item => item.id === candidateId).length;
-                    if(inBasket < product.available) {
-                        id = candidateId;
-                        found = true;
-                        break;
-                    }
+                // Get list of IDs currently in basket (as strings for safe comparison)
+                const basketIds = basket.map(i => String(i.id));
+                
+                // Find the first candidate ID that is NOT in the basket
+                const availableId = ids.find(candidate => !basketIds.includes(String(candidate)));
+                
+                if(availableId) {
+                    id = availableId;
+                    console.log(`SmartAdd: Found unused ID ${id}`);
+                } else {
+                    // All unique IDs are already in basket.
+                    // Fallback: Pick the first one (this will likely trigger "Max stock" error unless that specific item has qty > 1)
+                    id = ids[0];
+                    console.log(`SmartAdd: All IDs used, falling back to ${id}`);
                 }
-                if(!found) id = ids[0]; // Fallback to first (will trigger stock error)
             }
 
             // 2. Check basket limit
@@ -6140,7 +6141,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const countInBasket = basket.filter(item => item.id === id).length;
             if(countInBasket >= product.available) {
                 if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
-                tg.showAlert(`⚠️ Max stock reached! (${ids.length} total available in group)`);
+                // Show helpful message if it's a group
+                if(Array.isArray(ids)) {
+                     tg.showAlert(`⚠️ Max stock reached! You have all ${ids.length} available units in your basket.`);
+                } else {
+                     tg.showAlert(`⚠️ Only ${product.available} available.`);
+                }
                 return;
             }
             

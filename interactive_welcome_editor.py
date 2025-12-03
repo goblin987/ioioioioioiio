@@ -14,7 +14,7 @@ Advanced, interactive welcome message editor with:
 - A/B testing integration
 - Analytics and optimization tips
 
-Author: Enhanced Bot System
+Author: BotShop Development Team
 Version: 2.0.0 - Super Interactive Edition
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
