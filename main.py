@@ -3677,6 +3677,32 @@ def webapp_index():
                         });
                     }
                 });
+                
+                // ===== CART MODAL FUNCTIONS =====
+                window.openBasket = function() {
+                    console.log('🛒 Opening cart');
+                    const modal = document.getElementById('basket-modal');
+                    if(modal) {
+                        modal.style.display = 'flex';
+                        
+                        // Update cart content
+                        if(typeof window.renderBasketContent === 'function') {
+                            window.renderBasketContent();
+                        }
+                    } else {
+                        console.error('❌ basket-modal not found');
+                    }
+                };
+                
+                window.closeBasket = function() {
+                    console.log('❌ Closing cart');
+                    const modal = document.getElementById('basket-modal');
+                    if(modal) {
+                        modal.style.display = 'none';
+                    }
+                };
+                
+                console.log('✅ Cart modal functions registered (openBasket, closeBasket)');
             </script>
             <style>
                 /* ===== MOBILE KEYBOARD FIX: REFILL MODAL ===== */
