@@ -659,6 +659,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check UI Mode Setting (MOVED TO TOP)
     from utils import get_bot_setting
     ui_mode = get_bot_setting("ui_mode", "bot")  # Default to "bot" if not set
+    logger.info(f"start: User {user_id} accessed bot. UI Mode: {ui_mode}")
     
     # If Mini App Only mode is enabled, show mini-app prompt instead of regular menu
     if ui_mode == "miniapp":
@@ -670,10 +671,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Get custom welcome text and button text from settings
         miniapp_text = get_bot_setting("miniapp_welcome_text", 
-            f"👋 Welcome, {username}!\n\n"
+            f"👋 Welcome, {{username}}!\n\n"
             f"🎮 This bot uses a Mini App interface for the best experience.\n\n"
             f"Click the button below to open the shop:"
         )
+        
+        logger.info(f"start: Using Mini App Text: {miniapp_text[:50]}...")
         
         # If username placeholder is used, replace it
         if "{username}" in miniapp_text:

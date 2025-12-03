@@ -1348,9 +1348,21 @@ def init_db():
                 else:
                     logger.warning(f"⚠️ Could not add reservation columns: {e}")
                 conn.rollback()
+
+            # Add Stock Alert columns (Fix for stock_management crash)
+            try:
+                c.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5")
+                c.execute("ALTER TABLE products ADD COLUMN stock_alerts_enabled BOOLEAN DEFAULT TRUE")
+                c.execute("ALTER TABLE products ADD COLUMN last_stock_alert TIMESTAMP DEFAULT NULL")
+                conn.commit()
+                logger.info(f"✅ Stock Alert columns added to products table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ Stock Alert columns already exist in products table")
+                else:
+                    logger.warning(f"⚠️ Could not add Stock Alert columns: {e}")
+                conn.rollback()
             
-            # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
-            # will be added later when needed to avoid startup delays
             logger.info(f"✅ Products table created with basic columns")
             # product_media table
             logger.info(f"🔧 Creating product_media table...")
