@@ -3043,11 +3043,11 @@ def webapp_index():
                     msgDiv.innerHTML = '';
                 };
                 
-                // ENHANCED pollPayment - Setup after page loads to ensure it overrides the original
+                // STICKY OVERRIDE: Use Object.defineProperty to prevent replacement
                 function setupPollPaymentOverride() {
-                    const originalPollPayment = window.pollPayment;
+                    console.log('🔧 Setting up STICKY pollPayment override...');
                     
-                    window.pollPayment = async function(paymentId) {
+                    const enhancedPollPayment = async function(paymentId) {
                         console.log('🔄 [ENHANCED] pollPayment called for:', paymentId);
                         
                         try {
@@ -3127,18 +3127,89 @@ def webapp_index():
                         }
                     };
                     
-                    console.log('✅ pollPayment override installed');
+                    // Use Object.defineProperty to make it STICKY (can't be overwritten)
+                    try {
+                        Object.defineProperty(window, 'pollPayment', {
+                            value: enhancedPollPayment,
+                            writable: false,     // ✅ Cannot be overwritten
+                            configurable: true,  // Can be redefined if needed
+                            enumerable: true
+                        });
+                        console.log('✅ STICKY pollPayment override installed (writable: false)');
+                    } catch(e) {
+                        // Fallback: regular assignment if property already defined
+                        console.warn('⚠️ Could not make pollPayment sticky, using regular override:', e);
+                        window.pollPayment = enhancedPollPayment;
+                    }
                 }
                 
-                // Install override immediately AND after DOM loads
+                // Install override multiple times to ensure it sticks
                 setupPollPaymentOverride();
+                
+                // Try again after delays
+                setTimeout(setupPollPaymentOverride, 100);
+                setTimeout(setupPollPaymentOverride, 500);
+                setTimeout(setupPollPaymentOverride, 1000);
+                setTimeout(setupPollPaymentOverride, 2000);
                 
                 if(document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', setupPollPaymentOverride);
-                } else {
-                    // Try again after a delay to catch late-loaded functions
-                    setTimeout(setupPollPaymentOverride, 1000);
                 }
+                
+                // BACKUP: Intercept ALL fetch calls to check_payment
+                const originalFetch = window.fetch;
+                window.fetch = async function(...args) {
+                    const response = await originalFetch.apply(this, args);
+                    
+                    // Clone response so we can read it without consuming the stream
+                    const clonedResponse = response.clone();
+                    
+                    // Check if this is a check_payment call
+                    const url = args[0];
+                    if(typeof url === 'string' && url.includes('check_payment')) {
+                        try {
+                            const data = await clonedResponse.json();
+                            console.log('🔍 [INTERCEPTED] check_payment response:', data);
+                            
+                            // If payment is confirmed, update wallet immediately
+                            if(data.status === 'confirmed' || data.status === 'paid') {
+                                console.log('🎉 [INTERCEPTED] Payment confirmed! Updating wallet...');
+                                
+                                if(data.new_balance !== undefined) {
+                                    window.userBalance = data.new_balance;
+                                    
+                                    const walletEl = document.querySelector('.mt-value-sm');
+                                    if(walletEl) {
+                                        walletEl.textContent = '€' + data.new_balance.toFixed(2);
+                                        console.log('✅ [INTERCEPTED] Wallet updated to:', data.new_balance);
+                                    }
+                                    
+                                    // Show alert
+                                    if(window.Telegram?.WebApp?.showAlert) {
+                                        window.Telegram.WebApp.showAlert('✅ Payment received! Balance updated.');
+                                        console.log('✅ [INTERCEPTED] Alert shown');
+                                    }
+                                    
+                                    // Stop polling
+                                    if(window.pollInterval) {
+                                        clearInterval(window.pollInterval);
+                                        console.log('⏹️ [INTERCEPTED] Polling stopped');
+                                    }
+                                    
+                                    // Close invoice
+                                    if(typeof window.closeInvoice === 'function') {
+                                        setTimeout(() => window.closeInvoice(), 500);
+                                    }
+                                }
+                            }
+                        } catch(e) {
+                            // Ignore JSON parse errors for non-JSON responses
+                        }
+                    }
+                    
+                    return response;
+                };
+                console.log('✅ Fetch interceptor installed for check_payment');
                 
                 // Load user balance on page load
                 window.loadUserBalance = async function() {
