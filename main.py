@@ -2617,12 +2617,21 @@ def webapp_user_balance():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Ensure user exists
-        ensure_user_exists(user_id)
-        
-        # Get user's balance
+        # Get user's balance (create if doesn't exist)
         c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
         res = c.fetchone()
+        
+        if not res:
+            # User doesn't exist yet, create with 0 balance
+            c.execute("""
+                INSERT INTO users (user_id, username, balance, total_purchases, language)
+                VALUES (%s, %s, 0, 0, 'en')
+                ON CONFLICT (user_id) DO NOTHING
+            """, (user_id, f"user_{user_id}"))
+            conn.commit()
+            c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+            res = c.fetchone()
+        
         conn.close()
         
         balance = float(res['balance']) if res else 0.0
@@ -3034,65 +3043,102 @@ def webapp_index():
                     msgDiv.innerHTML = '';
                 };
                 
-                // OVERRIDE pollPayment to handle 'confirmed' status and update wallet
-                window.pollPayment = async function(paymentId) {
-                    try {
-                        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
-                        const response = await fetch('/webapp/api/check_payment', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                order_id: paymentId,
-                                user_id: userId
-                            })
-                        });
+                // ENHANCED pollPayment - Setup after page loads to ensure it overrides the original
+                function setupPollPaymentOverride() {
+                    const originalPollPayment = window.pollPayment;
+                    
+                    window.pollPayment = async function(paymentId) {
+                        console.log('🔄 [ENHANCED] pollPayment called for:', paymentId);
                         
-                        const data = await response.json();
-                        console.log('💳 Payment poll result:', data);
-                        
-                        // Check for BOTH 'paid' (legacy) and 'confirmed' (Solana)
-                        if(data.status === 'paid' || data.status === 'confirmed') {
-                            if(window.pollInterval) clearInterval(window.pollInterval);
+                        try {
+                            const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
+                            console.log('👤 User ID:', userId);
                             
-                            // Update wallet if new_balance provided
-                            if(data.new_balance !== undefined) {
-                                window.userBalance = data.new_balance;
+                            const response = await fetch('/webapp/api/check_payment', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    order_id: paymentId,
+                                    user_id: userId
+                                })
+                            });
+                            
+                            const data = await response.json();
+                            console.log('💳 Payment poll result:', data);
+                            
+                            // Check for BOTH 'paid' (legacy) and 'confirmed' (Solana)
+                            if(data.status === 'paid' || data.status === 'confirmed') {
+                                console.log('✅ Payment CONFIRMED!');
                                 
-                                // Try multiple selectors for wallet element
-                                const walletEl = document.getElementById('user-balance') ||
-                                               document.querySelector('.mt-value-sm') ||
-                                               document.querySelector('[class*="wallet"]');
-                                
-                                if(walletEl) {
-                                    walletEl.textContent = '€' + data.new_balance.toFixed(2);
-                                    console.log('✅ Updated wallet to:', data.new_balance);
-                                } else {
-                                    console.warn('⚠️ Wallet element not found');
+                                if(window.pollInterval) {
+                                    clearInterval(window.pollInterval);
+                                    console.log('⏹️ Stopped polling');
                                 }
-                            }
-                            
-                            // Show success notification
-                            if(typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
-                                window.Telegram.WebApp.showAlert('✅ Payment received! Balance updated.');
-                            }
-                            
-                            // Call original success handler if it exists
-                            if(typeof window.onPaymentSuccess === 'function') {
-                                window.onPaymentSuccess();
-                            } else {
-                                // Fallback: close invoice and reload products
+                                
+                                // Update wallet if new_balance provided
+                                if(data.new_balance !== undefined) {
+                                    window.userBalance = data.new_balance;
+                                    console.log('💰 New balance from API:', data.new_balance);
+                                    
+                                    // Try multiple selectors for wallet element
+                                    const walletEl = document.getElementById('user-balance') ||
+                                                   document.querySelector('.mt-value-sm') ||
+                                                   document.querySelector('[class*="wallet"]');
+                                    
+                                    if(walletEl) {
+                                        const oldText = walletEl.textContent;
+                                        walletEl.textContent = '€' + data.new_balance.toFixed(2);
+                                        console.log('✅ Updated wallet:', oldText, '→', walletEl.textContent);
+                                    } else {
+                                        console.warn('⚠️ Wallet element not found');
+                                    }
+                                }
+                                
+                                // Show success notification IN MINI-APP
+                                if(typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
+                                    try {
+                                        window.Telegram.WebApp.showAlert('✅ Payment received! Balance updated.');
+                                        console.log('✅ Showed alert to user');
+                                    } catch(e) {
+                                        console.error('❌ Alert error:', e);
+                                    }
+                                }
+                                
+                                // Call original success handler if it exists
+                                if(typeof window.onPaymentSuccess === 'function') {
+                                    console.log('🎯 Calling onPaymentSuccess()');
+                                    window.onPaymentSuccess();
+                                } else {
+                                    console.log('🎯 Fallback: closing invoice');
+                                    // Fallback: close invoice and reload products
+                                    if(typeof window.closeInvoice === 'function') window.closeInvoice();
+                                    if(typeof window.loadProducts === 'function') window.loadProducts();
+                                }
+                            } else if (data.status === 'expired' || data.status === 'refunded') {
+                                console.log('❌ Payment failed:', data.status);
+                                if(window.pollInterval) clearInterval(window.pollInterval);
                                 if(typeof window.closeInvoice === 'function') window.closeInvoice();
-                                if(typeof window.loadProducts === 'function') window.loadProducts();
+                                if(typeof window.triggerWasted === 'function') window.triggerWasted();
+                            } else {
+                                console.log('⏳ Payment pending...', data.status);
                             }
-                        } else if (data.status === 'expired' || data.status === 'refunded') {
-                            if(window.pollInterval) clearInterval(window.pollInterval);
-                            if(typeof window.closeInvoice === 'function') window.closeInvoice();
-                            if(typeof window.triggerWasted === 'function') window.triggerWasted();
+                        } catch(e) {
+                            console.error("❌ Poll error:", e);
                         }
-                    } catch(e) {
-                        console.error("❌ Poll error:", e);
-                    }
-                };
+                    };
+                    
+                    console.log('✅ pollPayment override installed');
+                }
+                
+                // Install override immediately AND after DOM loads
+                setupPollPaymentOverride();
+                
+                if(document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', setupPollPaymentOverride);
+                } else {
+                    // Try again after a delay to catch late-loaded functions
+                    setTimeout(setupPollPaymentOverride, 1000);
+                }
                 
                 // Load user balance on page load
                 window.loadUserBalance = async function() {
