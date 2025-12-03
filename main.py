@@ -2267,6 +2267,24 @@ def webapp_create_invoice():
         if not user_id or not items:
             return jsonify({'error': 'Invalid data'}), 400
         
+        # ENSURE USER EXISTS (fix "user not found" error)
+        try:
+            conn_user = get_db_connection()
+            c_user = conn_user.cursor()
+            c_user.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+            if not c_user.fetchone():
+                # User doesn't exist, create them
+                c_user.execute("""
+                    INSERT INTO users (id, username, balance, total_spent, currency, lang)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO NOTHING
+                """, (user_id, f"user_{user_id}", 0.0, 0.0, 'EUR', 'en'))
+                conn_user.commit()
+                logger.info(f"✅ Auto-created user {user_id} from webapp")
+            conn_user.close()
+        except Exception as e:
+            logger.error(f"Error ensuring user exists: {e}")
+        
         # Enforce basket limit (10 items max)
         if len(items) > 10:
             return jsonify({'error': 'Maximum 10 items per order'}), 400
@@ -2735,6 +2753,105 @@ def webapp_index():
                         grid.appendChild(card);
                     });
                 };
+                
+                // DISCOUNT CODE HANDLER - Updates total when user types code
+                window.applyDiscountToUI = async function() {
+                    const discountInput = document.getElementById('discount-code-input');
+                    if(!discountInput) return;
+                    
+                    const code = discountInput.value.trim();
+                    const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
+                    
+                    if(!code) {
+                        // No code, reset to original total
+                        window.discountApplied = null;
+                        updateCartTotal();
+                        return;
+                    }
+                    
+                    // Calculate current basket total
+                    const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
+                    
+                    try {
+                        const response = await fetch('/webapp/api/validate_discount', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                code: code,
+                                user_id: user_id || 0,
+                                base_total: baseTotal,
+                                product_types: basket.map(item => item.name.split(' ')[0]) // Get product types
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if(data.success && data.discount_amount > 0) {
+                            window.discountApplied = {
+                                code: code,
+                                amount: data.discount_amount,
+                                final_total: data.final_total
+                            };
+                            console.log('✅ Discount applied:', data);
+                        } else {
+                            window.discountApplied = null;
+                            if(data.message) {
+                                tg.showAlert(data.message);
+                            }
+                        }
+                    } catch(e) {
+                        console.error('Discount validation error:', e);
+                        window.discountApplied = null;
+                    }
+                    
+                    updateCartTotal();
+                };
+                
+                // Update cart total display (override if exists)
+                const originalUpdateCartTotal = window.updateCartTotal;
+                window.updateCartTotal = function() {
+                    const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
+                    let displayTotal = baseTotal;
+                    
+                    if(window.discountApplied && window.discountApplied.final_total !== undefined) {
+                        displayTotal = window.discountApplied.final_total;
+                    }
+                    
+                    // Update the total display element
+                    const totalElement = document.getElementById('cart-total') || document.querySelector('.cart-total-amount');
+                    if(totalElement) {
+                        totalElement.textContent = `€${displayTotal.toFixed(2)}`;
+                    }
+                    
+                    // Show discount info if applied
+                    const discountInfo = document.getElementById('discount-info');
+                    if(discountInfo) {
+                        if(window.discountApplied && window.discountApplied.amount > 0) {
+                            discountInfo.style.display = 'block';
+                            discountInfo.innerHTML = `<span style="color:#4CAF50;">✓ Discount applied: -€${window.discountApplied.amount.toFixed(2)}</span>`;
+                        } else {
+                            discountInfo.style.display = 'none';
+                        }
+                    }
+                    
+                    // Call original if it exists
+                    if(originalUpdateCartTotal && originalUpdateCartTotal !== window.updateCartTotal) {
+                        originalUpdateCartTotal();
+                    }
+                };
+                
+                // Auto-attach to discount input when it exists
+                document.addEventListener('DOMContentLoaded', function() {
+                    const discountInput = document.getElementById('discount-code-input');
+                    if(discountInput) {
+                        discountInput.addEventListener('input', function() {
+                            clearTimeout(window.discountTimeout);
+                            window.discountTimeout = setTimeout(() => {
+                                applyDiscountToUI();
+                            }, 800); // Debounce 800ms
+                        });
+                    }
+                });
             </script>
             <style>
                 /* FORCE PROFESSIONAL DARK THEME (GTA Style) */
