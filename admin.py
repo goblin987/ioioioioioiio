@@ -7806,6 +7806,7 @@ async def handle_adm_products_advanced(update: Update, context: ContextTypes.DEF
     
     keyboard = [
         [InlineKeyboardButton("📝 Manage Products", callback_data="adm_manage_products")],
+        [InlineKeyboardButton("🗑️ Remove Products (Bulk)", callback_data="remove_products_menu")],
         [InlineKeyboardButton("🏷️ Product Types", callback_data="adm_product_types_menu")],
         [
             get_back_button(context),
@@ -8159,6 +8160,248 @@ async def handle_removal_quantity_message(update: Update, context: ContextTypes.
     ]
     
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_by_city_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select an entire city to remove all products from"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Remove City", "remove_by_city_select")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🗺️ **Remove All Products from City**\n\nSelect a city to remove ALL its products:"
+    
+    keyboard = []
+    for city_id, city_name in CITIES.items():
+        keyboard.append([InlineKeyboardButton(
+            f"{city_name}",
+            callback_data=f"confirm_remove_city|{city_id}"
+        )])
+    
+    keyboard.append([
+        get_back_button(context),
+        InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_remove_by_category_select(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Select a product category to remove from ALL locations"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id):
+        return await query.answer("Access denied.", show_alert=True)
+    
+    update_breadcrumb(context, "Remove Category", "remove_by_category_select")
+    breadcrumb = get_breadcrumb_text(context)
+    
+    msg = f"{breadcrumb}\n\n🎯 **Remove by Category (All Locations)**\n\nSelect a product type to remove from ALL cities/districts:"
+    
+    # Get all product types
+    conn = None
+    keyboard = []
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT DISTINCT product_type 
+            FROM products 
+            WHERE available > reserved
+            ORDER BY product_type
+        """)
+        types = c.fetchall()
+        
+        for row in types:
+            ptype = row['product_type']
+            emoji = PRODUCT_TYPES_EMOJI.get(ptype, '📦')
+            keyboard.append([InlineKeyboardButton(
+                f"{emoji} {ptype}",
+                callback_data=f"confirm_remove_category|{ptype}"
+            )])
+        
+        if not types:
+            msg += "\n\n❌ No products available to remove."
+    except Exception as e:
+        logger.error(f"Error fetching product types: {e}")
+        msg += "\n\n❌ Error fetching categories."
+    finally:
+        if conn:
+            conn.close()
+    
+    keyboard.append([
+        get_back_button(context),
+        InlineKeyboardButton("🏠 Home", callback_data="admin_menu")
+    ])
+    
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_confirm_remove_city(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm and execute removal of all products from a city"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        return await query.answer("Access denied", show_alert=True)
+    
+    city_id = params[0] if params else None
+    if not city_id:
+        await query.answer("Error: No city selected", show_alert=True)
+        return
+    
+    city_name = CITIES.get(city_id)
+    
+    await query.edit_message_text("⏳ Removing all products and sending codes...", parse_mode=None)
+    
+    conn = None
+    removed_products = []
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Fetch ALL products from this city
+        c.execute("""
+            SELECT id, name, original_text, product_type, size, city, district
+            FROM products 
+            WHERE city = %s AND available > reserved
+            ORDER BY id
+        """, (city_name,))
+        
+        products = c.fetchall()
+        
+        if not products:
+            await query.edit_message_text(f"❌ No products found in {city_name}.", parse_mode=None)
+            return
+        
+        product_ids = [p['id'] for p in products]
+        
+        # Delete products
+        c.execute("DELETE FROM products WHERE id = ANY(%s)", (product_ids,))
+        conn.commit()
+        
+        removed_products = products
+        logger.info(f"Admin {user_id} removed ALL {len(removed_products)} products from city: {city_name}")
+        
+    except Exception as e:
+        logger.error(f"Error removing city products: {e}", exc_info=True)
+        await query.edit_message_text(f"❌ Error: {e}", parse_mode=None)
+        if conn:
+            conn.rollback()
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    # Send summary
+    await query.edit_message_text(
+        f"✅ **Removal Complete**\n\nRemoved {len(removed_products)} items from {city_name}.\nSending codes...",
+        parse_mode='Markdown'
+    )
+    
+    # Send each product
+    for i, product in enumerate(removed_products, 1):
+        product_code = product['original_text'] or product['name']
+        msg = f"📦 **{i}/{len(removed_products)}** | {product['product_type']} - {product['size']}\n{product['district']}\n\n```\n{product_code}\n```"
+        
+        try:
+            await context.bot.send_message(chat_id=user_id, text=msg, parse_mode='Markdown')
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.error(f"Error sending product {i}: {e}")
+    
+    # Final summary
+    keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
+                [InlineKeyboardButton("🏠 Admin Home", callback_data="admin_menu")]]
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=f"🎉 **Done!** Removed {len(removed_products)} products from {city_name}.",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
+
+async def handle_confirm_remove_category(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Confirm and execute removal of all products of a type (all locations)"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if not is_primary_admin(user_id):
+        return await query.answer("Access denied", show_alert=True)
+    
+    p_type = params[0] if params else None
+    if not p_type:
+        await query.answer("Error: No type selected", show_alert=True)
+        return
+    
+    await query.edit_message_text(f"⏳ Removing all {p_type} products (all locations)...", parse_mode=None)
+    
+    conn = None
+    removed_products = []
+    
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Fetch ALL products of this type
+        c.execute("""
+            SELECT id, name, original_text, product_type, size, city, district
+            FROM products 
+            WHERE product_type = %s AND available > reserved
+            ORDER BY id
+        """, (p_type,))
+        
+        products = c.fetchall()
+        
+        if not products:
+            await query.edit_message_text(f"❌ No {p_type} products found.", parse_mode=None)
+            return
+        
+        product_ids = [p['id'] for p in products]
+        
+        # Delete products
+        c.execute("DELETE FROM products WHERE id = ANY(%s)", (product_ids,))
+        conn.commit()
+        
+        removed_products = products
+        logger.info(f"Admin {user_id} removed ALL {len(removed_products)} products of type: {p_type}")
+        
+    except Exception as e:
+        logger.error(f"Error removing category products: {e}", exc_info=True)
+        await query.edit_message_text(f"❌ Error: {e}", parse_mode=None)
+        if conn:
+            conn.rollback()
+        return
+    finally:
+        if conn:
+            conn.close()
+    
+    # Send summary
+    await query.edit_message_text(
+        f"✅ **Removal Complete**\n\nRemoved {len(removed_products)} {p_type} items.\nSending codes...",
+        parse_mode='Markdown'
+    )
+    
+    # Send each product
+    for i, product in enumerate(removed_products, 1):
+        product_code = product['original_text'] or product['name']
+        msg = f"📦 **{i}/{len(removed_products)}** | {product['size']}\n{product['city']} / {product['district']}\n\n```\n{product_code}\n```"
+        
+        try:
+            await context.bot.send_message(chat_id=user_id, text=msg, parse_mode='Markdown')
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.error(f"Error sending product {i}: {e}")
+    
+    # Final summary
+    keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
+                [InlineKeyboardButton("🏠 Admin Home", callback_data="admin_menu")]]
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=f"🎉 **Done!** Removed {len(removed_products)} {p_type} products from all locations.",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Execute the removal and send products one by one"""
