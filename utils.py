@@ -1595,6 +1595,35 @@ def init_db():
                 setting_key TEXT PRIMARY KEY NOT NULL, setting_value TEXT
             )''')
             logger.info("✅ Bot_settings table created successfully")
+            
+            # --- SCHEMA FIX: Ensure bot_settings has PK and no duplicates ---
+            try:
+                # 1. Remove duplicates (keep latest by ctid) - PostgreSQL only
+                if os.getenv('DATABASE_URL'): # Only run on Postgres
+                    logger.info("🔧 Cleaning up bot_settings duplicates...")
+                    c.execute("""
+                        DELETE FROM bot_settings a USING bot_settings b
+                        WHERE a.ctid < b.ctid AND a.setting_key = b.setting_key
+                    """)
+                    conn.commit()
+            except Exception as e:
+                logger.warning(f"⚠️ Duplicate cleanup skipped/failed: {e}")
+                conn.rollback()
+
+            try:
+                # 2. Add Primary Key if missing
+                logger.info("🔧 Ensuring bot_settings has Primary Key...")
+                c.execute("ALTER TABLE bot_settings ADD PRIMARY KEY (setting_key)")
+                conn.commit()
+                logger.info("✅ Primary Key added to bot_settings")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "multiple primary keys" in str(e).lower():
+                    pass # Expected if table is healthy
+                else:
+                    logger.warning(f"⚠️ Could not add PK to bot_settings: {e}")
+                conn.rollback()
+            # ---------------------------------------------------------------
+
             # Welcome Messages table
             logger.info("🔧 Creating welcome_messages table...")
             c.execute('''CREATE TABLE IF NOT EXISTS welcome_messages (
