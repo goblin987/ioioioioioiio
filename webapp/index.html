@@ -4903,26 +4903,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </svg>
                     
                             <!-- Signal Emitters -->
-                            <!-- City Pins - Geographically Accurate (verified via Google Maps) -->
-                            <div class="city-pin" style="top: 55%; left: 85%;" onclick="zoomToCity('Vilnius', 55, 85)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: VILNIUS</div>
-                            </div>
-                            <div class="city-pin" style="top: 52%; left: 48%;" onclick="zoomToCity('Kaunas', 52, 48)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: KAUNAS</div>
-                            </div>
-                            <div class="city-pin" style="top: 38%; left: 10%;" onclick="zoomToCity('Klaipeda', 38, 10)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: KLAIPEDA</div>
-                            </div>
-                            <div class="city-pin" style="top: 28%; left: 58%;" onclick="zoomToCity('Panevezys', 28, 58)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: PANEVEZYS</div>
+                            <!-- City Pins - Dynamic Container -->
+                            <div id="city-pins-container">
+                                <!-- Dynamic pins will be injected here -->
                             </div>
                             
                             <!-- District Polygon Overlays -->
@@ -5621,11 +5604,84 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(nav) nav.classList.add('active');
         }
 
+        // Coordinates for known cities (top%, left%)
+        const CITY_COORDINATES = {
+            'vilnius': { top: 55, left: 85 },
+            'kaunas': { top: 52, left: 48 },
+            'klaipeda': { top: 38, left: 10 },
+            'panevezys': { top: 28, left: 58 },
+            'siauliai': { top: 22, left: 45 },
+            'palanga': { top: 32, left: 8 },
+            'druskininkai': { top: 85, left: 70 },
+            'marijampole': { top: 65, left: 40 },
+            'alytus': { top: 70, left: 60 },
+            'utena': { top: 40, left: 85 },
+            'mazeikiai': { top: 10, left: 35 },
+            'telsiai': { top: 20, left: 25 },
+            'taurage': { top: 45, left: 25 },
+            'jonava': { top: 48, left: 60 },
+            'kedainiai': { top: 38, left: 50 },
+            'pasvalys': { top: 18, left: 60 }
+        };
+
+        function renderMapPins() {
+            const container = document.getElementById('city-pins-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Get all cities from appLocations
+            const cities = Object.keys(appLocations);
+            
+            cities.forEach((city, index) => {
+                const cityLower = city.toLowerCase();
+                let coords = CITY_COORDINATES[cityLower];
+                
+                // If no coords, auto-position in a grid/list for visibility
+                if (!coords) {
+                    // Position unknown cities in a "New Locations" area
+                    // Start around 75% top, distributed horizontally
+                    coords = { 
+                        top: 75 + (index % 3) * 8, 
+                        left: 20 + (index % 4) * 15 
+                    };
+                }
+                
+                // Create Pin Element
+                const pin = document.createElement('div');
+                pin.className = 'city-pin';
+                pin.style.top = coords.top + '%';
+                pin.style.left = coords.left + '%';
+                
+                // Clean city name for display (remove special chars if any)
+                const displayName = city.toUpperCase();
+                
+                pin.onclick = () => zoomToCity(city, coords.top, coords.left);
+                
+                pin.innerHTML = `
+                    <div class="pin-core"></div>
+                    <div class="pin-pulse"></div>
+                    <div class="city-label">${displayName}</div>
+                `;
+                
+                container.appendChild(pin);
+            });
+        }
+
         async function loadProducts() {
             const grid = document.getElementById('product-grid');
             
             // CACHE STRATEGY: Instant Load
             const cached = localStorage.getItem('shop_cache');
+            
+            // CACHE STRATEGY: Locations
+            const cachedLocs = localStorage.getItem('locations_cache');
+            if(cachedLocs) {
+                try {
+                    appLocations = JSON.parse(cachedLocs);
+                    renderMapPins();
+                } catch(e) { console.log("Loc cache error", e); }
+            }
+            
             if(cached) {
                 try {
                     const cData = JSON.parse(cached);
@@ -5634,6 +5690,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         grid.innerHTML = ''; // Clear loading immediately
                         renderProducts(allProducts);
                         renderFilters(allProducts);
+                        
+                        // Try to render map pins if we have cached locations (stored separately or re-fetch)
+                        // Since we don't cache locations separately yet, we rely on fetch.
+                        // But if products have city data, we can infer some locations? 
+                        // Better to just wait for location fetch, or cache locations too.
                     }
                 } catch(e) { 
                     console.log("Cache error:", e);
@@ -5661,7 +5722,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // Load locations
                 if(locationsData.success && locationsData.locations) {
                     appLocations = locationsData.locations;
+                    localStorage.setItem('locations_cache', JSON.stringify(appLocations));
                     console.log("Loaded locations:", Object.keys(appLocations));
+                    renderMapPins(); // Render dynamic pins
                 }
                 
                 if(productsData.success && productsData.products) {
