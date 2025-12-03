@@ -2612,8 +2612,73 @@ def webapp_check_payment(payment_id):
 
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
-    """Serve Telegram Web App"""
-    return send_from_directory('webapp', 'index.html')
+    """Serve Telegram Web App with JavaScript hotfix injection"""
+    try:
+        # Read the original HTML
+        with open('webapp/index.html', 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # JavaScript hotfix for cart button
+        hotfix_script = """
+        <script>
+        // 🔧 BULLETPROOF CART FIX - Make cart button work
+        console.log('🔧 Injecting cart button fix...');
+        
+        // Override openBasket function
+        window.openBasket = function() {
+            console.log('🛒 openBasket called');
+            const modal = document.getElementById('basket-modal');
+            if(modal) {
+                modal.style.display = 'flex';
+                if(typeof window.renderBasketContent === 'function') {
+                    window.renderBasketContent();
+                }
+            } else {
+                console.error('❌ basket-modal not found!');
+            }
+        };
+        
+        // Override closeBasket function
+        window.closeBasket = function() {
+            console.log('🛒 closeBasket called');
+            const modal = document.getElementById('basket-modal');
+            if(modal) {
+                modal.style.display = 'none';
+            }
+        };
+        
+        // Wait for DOM to load, then fix cart button
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 DOM loaded, fixing cart button...');
+            
+            // Find all cart buttons in navigation
+            const navButtons = document.querySelectorAll('.nav-btn, .bottom-nav button, [onclick*="openBasket"]');
+            navButtons.forEach(btn => {
+                const btnText = btn.textContent || btn.innerText;
+                if(btnText.includes('🛒') || btnText.includes('Cart') || btn.id === 'cart-btn') {
+                    console.log('✅ Found cart button, attaching listener');
+                    btn.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.openBasket();
+                    };
+                }
+            });
+        });
+        </script>
+        """
+        
+        # Inject before closing </body> tag
+        if '</body>' in html_content:
+            html_content = html_content.replace('</body>', hotfix_script + '</body>')
+        else:
+            html_content += hotfix_script
+        
+        return Response(html_content, mimetype='text/html')
+        
+    except Exception as e:
+        logger.error(f"Error serving webapp with hotfix: {e}")
+        return send_from_directory('webapp', 'index.html')
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
