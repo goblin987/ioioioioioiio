@@ -3103,6 +3103,30 @@ def main() -> None:
             main_loop.stop()
         logger.info("Bot shutdown complete.")
 
+@flask_app.route("/debug/products", methods=['GET'])
+def debug_products():
+    """Dump raw product table for debugging stock issues"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT id, name, available, reserved, reserved_until, reserved_by FROM products")
+        rows = c.fetchall()
+        conn.close()
+        
+        results = []
+        for row in rows:
+            results.append({
+                'id': row['id'],
+                'name': row['name'],
+                'available': row['available'],
+                'reserved': row['reserved'], # Old column
+                'reserved_until': str(row['reserved_until']),
+                'reserved_by': row['reserved_by']
+            })
+        return jsonify({'count': len(results), 'products': results})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     main()
 
