@@ -1293,7 +1293,9 @@ def init_db():
                 id {get_auto_increment()}, 
                 name {get_text_type()} UNIQUE NOT NULL
             )''')
+            conn.commit()
             logger.info(f"✅ Cities table created successfully")
+            
             # districts table
             logger.info(f"🔧 Creating districts table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS districts (
@@ -1302,7 +1304,9 @@ def init_db():
                 name {get_text_type()} NOT NULL,
                 UNIQUE (city_id, name)
             )''')
+            conn.commit()
             logger.info(f"✅ Districts table created successfully")
+            
             # product_types table
             logger.info(f"🔧 Creating product_types table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS product_types (
@@ -1310,6 +1314,7 @@ def init_db():
                 emoji {get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}',
                 description {get_text_type()}
             )''')
+            conn.commit()
             logger.info(f"✅ Product_types table created successfully")
             # Note: All columns are already included in the CREATE TABLE statement above
             logger.info(f"✅ Product_types table columns are already complete")
@@ -1322,6 +1327,7 @@ def init_db():
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
                 added_by BIGINT, added_date TEXT, added_by_worker_id BIGINT DEFAULT NULL
             )''')
+            conn.commit()  # CRITICAL: Commit immediately to prevent rollback from ALTER commands
             logger.info(f"✅ Products table created successfully")
             
             # Add added_by_worker_id column if it doesn't exist (for worker system)
@@ -1371,6 +1377,7 @@ def init_db():
                 media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
                 media_binary BYTEA
             )''')
+            conn.commit()  # CRITICAL: Commit immediately to prevent rollback
             logger.info(f"✅ Product_media table created successfully")
             
             # 🚀 YOLO: Add media_binary column if it doesn't exist (for existing databases)
@@ -1388,7 +1395,9 @@ def init_db():
                 product_name TEXT NOT NULL, product_type TEXT NOT NULL, product_size TEXT NOT NULL,
                 price_paid REAL NOT NULL, city TEXT NOT NULL, district TEXT NOT NULL, purchase_date TEXT NOT NULL
             )''')
+            conn.commit()  # CRITICAL: Commit immediately
             logger.info(f"✅ Purchases table created successfully")
+            
             # reviews table
             c.execute('''CREATE TABLE IF NOT EXISTS reviews (
                 review_id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
