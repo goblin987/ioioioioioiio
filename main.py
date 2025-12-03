@@ -2784,12 +2784,18 @@ def webapp_index():
                         `;
                     }
                     
-                    // Update Totals
-                    if(totalEl) totalEl.innerText = `€${total.toFixed(2)}`;
+                    // Update Totals - Use updateCartTotal() to apply discounts
                     if(countEl) countEl.innerText = `(${basket.length})`;
                     if(navCount) {
                         navCount.innerText = basket.length;
                         navCount.style.display = basket.length > 0 ? 'flex' : 'none';
+                    }
+                    
+                    // Call updateCartTotal() to calculate final amount (with discounts)
+                    if(typeof window.updateCartTotal === 'function') {
+                        window.updateCartTotal();
+                    } else if(totalEl) {
+                        totalEl.innerText = `€${total.toFixed(2)}`;
                     }
                 };
                 
@@ -2894,91 +2900,108 @@ def webapp_index():
                             };
                             console.log('✅ Discount applied:', window.discountApplied);
                             
+                            // DIRECTLY UPDATE THE TOTAL DISPLAY
+                            const totalElement = document.getElementById('basket-total');
+                            if(totalElement) {
+                                totalElement.textContent = `€${data.final_total.toFixed(2)}`;
+                                console.log('✅ Updated basket-total to:', totalElement.textContent);
+                            }
+                            
                             // Show success message in discount-msg div
                             const msgDiv = document.getElementById('discount-msg');
                             if(msgDiv) {
-                                msgDiv.innerHTML = `<span style="color:#4CAF50;">✓ Discount applied: -€${data.code_discount.toFixed(2)}</span>`;
+                                let msg = '';
+                                if(data.reseller_discount > 0) {
+                                    msg += `✓ Reseller: -€${data.reseller_discount.toFixed(2)} `;
+                                }
+                                if(data.code_discount > 0) {
+                                    msg += `✓ Code: -€${data.code_discount.toFixed(2)}`;
+                                }
+                                msgDiv.innerHTML = `<span style="color:#4CAF50; font-size:13px;">${msg}</span>`;
                                 msgDiv.style.display = 'block';
                             }
                         } else {
                             window.discountApplied = null;
                             
+                            // Reset total to original
+                            const basket = window.basket || [];
+                            const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
+                            const totalElement = document.getElementById('basket-total');
+                            if(totalElement) {
+                                totalElement.textContent = `€${baseTotal.toFixed(2)}`;
+                            }
+                            
                             // Show error in discount-msg div
                             const msgDiv = document.getElementById('discount-msg');
                             if(msgDiv && data.message) {
-                                msgDiv.innerHTML = `<span style="color:#f44336;">${data.message}</span>`;
+                                msgDiv.innerHTML = `<span style="color:#f44336; font-size:12px;">${data.message}</span>`;
                                 msgDiv.style.display = 'block';
                             }
                         }
                     } catch(e) {
                         console.error('❌ Discount validation error:', e);
                         window.discountApplied = null;
+                        
+                        // Reset total on error
+                        const basket = window.basket || [];
+                        const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
+                        const totalElement = document.getElementById('basket-total');
+                        if(totalElement) {
+                            totalElement.textContent = `€${baseTotal.toFixed(2)}`;
+                        }
                     }
-                    
-                    updateCartTotal();
                 };
                 
-                // Update cart total display (override if exists)
-                const originalUpdateCartTotal = window.updateCartTotal;
+                // SIMPLE CART TOTAL UPDATER - Called whenever basket changes
                 window.updateCartTotal = function() {
                     const basket = window.basket || [];
                     const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
                     let displayTotal = baseTotal;
-                    let discountAmount = 0;
                     
-                    console.log('🔄 updateCartTotal called. Basket:', basket.length, 'items, Base:', baseTotal);
+                    console.log('🔄 updateCartTotal called. Basket:', basket.length, 'items, Base:', baseTotal.toFixed(2));
                     
+                    // Apply discount if available
                     if(window.discountApplied && window.discountApplied.final_total !== undefined) {
                         displayTotal = window.discountApplied.final_total;
-                        discountAmount = (window.discountApplied.code_discount || 0) + (window.discountApplied.reseller_discount || 0);
-                        console.log('💰 Discount applied! Display total:', displayTotal);
+                        console.log('💰 Discount active! Final total:', displayTotal.toFixed(2));
                     }
                     
-                    // Update the main total display - try multiple possible IDs
-                    const totalElement = document.getElementById('basket-total') ||       // ✅ Correct ID
-                                       document.getElementById('cart-total') || 
-                                       document.querySelector('.cart-total-price') || 
-                                       document.querySelector('.mt-value-lg');
-                    
+                    // Update total display element
+                    const totalElement = document.getElementById('basket-total');
                     if(totalElement) {
                         totalElement.textContent = `€${displayTotal.toFixed(2)}`;
-                        console.log('✅ Updated total element:', totalElement.id, '→', totalElement.textContent);
+                        console.log('✅ Updated basket-total to:', totalElement.textContent);
                     } else {
-                        console.error('❌ Total element not found!');
+                        console.warn('⚠️ basket-total element not found');
                     }
                     
-                    // Show discount breakdown if applied
-                    const discountInfo = document.getElementById('discount-msg') ||       // ✅ Correct ID
-                                        document.getElementById('discount-info') || 
-                                        document.querySelector('.cart-promo-msg');
+                    // Update discount message
+                    updateDiscountMessage();
+                };
+                
+                // Helper: Update discount message display
+                window.updateDiscountMessage = function() {
+                    const msgDiv = document.getElementById('discount-msg');
+                    if(!msgDiv) return;
                     
-                    if(discountInfo) {
-                        if(discountAmount > 0) {
-                            discountInfo.style.display = 'block';
-                            let html = '<div style="color:#4CAF50; font-size:12px; margin-top:5px;">';
+                    if(window.discountApplied) {
+                        const rd = window.discountApplied.reseller_discount || 0;
+                        const cd = window.discountApplied.code_discount || 0;
+                        const total = rd + cd;
+                        
+                        if(total > 0) {
+                            let msg = '';
+                            if(rd > 0) msg += `✓ Reseller: -€${rd.toFixed(2)} `;
+                            if(cd > 0) msg += `✓ Code: -€${cd.toFixed(2)}`;
                             
-                            if(window.discountApplied.reseller_discount > 0) {
-                                html += `✓ Reseller discount: -€${window.discountApplied.reseller_discount.toFixed(2)}<br>`;
-                            }
-                            if(window.discountApplied.code_discount > 0) {
-                                html += `✓ Promo code: -€${window.discountApplied.code_discount.toFixed(2)}`;
-                            }
-                            
-                            html += '</div>';
-                            discountInfo.innerHTML = html;
-                        } else {
-                            discountInfo.style.display = 'none';
+                            msgDiv.innerHTML = `<span style="color:#4CAF50; font-size:13px;">${msg.trim()}</span>`;
+                            msgDiv.style.display = 'block';
+                            return;
                         }
                     }
                     
-                    // Call original if it exists and is different
-                    if(originalUpdateCartTotal && originalUpdateCartTotal !== window.updateCartTotal) {
-                        try {
-                            originalUpdateCartTotal();
-                        } catch(e) {
-                            console.log('Original updateCartTotal error:', e);
-                        }
-                    }
+                    msgDiv.style.display = 'none';
+                    msgDiv.innerHTML = '';
                 };
                 
                 // Auto-attach to discount input when it exists
