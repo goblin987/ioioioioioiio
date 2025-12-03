@@ -2513,12 +2513,17 @@ def webapp_index():
             with open(index_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # ===== HOTFIX: SUPER INJECTION v4.6 (Un-Reserve + Spinner) =====
+            # ===== HOTFIX: SUPER INJECTION v4.7 (Render Override + UI Fixes) =====
             
             super_injection = '''
             <script>
-                console.log("DEBUG: Loaded v4.6-FINAL-FIX");
+                console.log("DEBUG: Loaded v4.7-UI-FIXES");
                 
+                // Ensure getProductEmoji exists or fallback
+                if(typeof getProductEmoji === 'undefined') {
+                    window.getProductEmoji = function(type, name) { return '📦'; }
+                }
+
                 // OVERRIDE addToBasket - ASYNC RESERVATION + SPINNER
                 window.addToBasket = function(ids, name, price, e) {
                     // 1. Check limit
@@ -2529,9 +2534,6 @@ def webapp_index():
 
                     // 2. RESERVE ON SERVER
                     const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
-                    if(!user_id) { 
-                        console.warn("User ID missing, using fallback 0"); 
-                    }
                     
                     // Show visual feedback (SPINNER)
                     const btn = e ? e.currentTarget : null; 
@@ -2562,7 +2564,6 @@ def webapp_index():
                         
                         if(data.success) {
                             const reserved_id = data.reserved_id;
-                            console.log("Reserved ID:", reserved_id);
                             
                             // 3. Add to Basket (Local)
                             if(e) flyToCart(e);
@@ -2577,7 +2578,8 @@ def webapp_index():
                                 price: price,
                                 city: product ? (product.city || 'Unknown') : 'Unknown',
                                 district: product ? (product.district || 'Unknown') : 'Unknown',
-                                type: product ? (product.type || 'misc') : 'misc'
+                                type: product ? (product.type || 'misc') : 'misc',
+                                size: product ? (product.size || '') : ''
                             });
                             
                             updateBasketUI();
@@ -2601,28 +2603,97 @@ def webapp_index():
                 // OVERRIDE removeFromBasket - UN-RESERVE ON SERVER
                 window.removeFromBasket = function(index, e) {
                     if(e) { e.stopPropagation(); e.preventDefault(); }
+                    
                     const item = basket[index];
-                    if(!item) return;
+                    if(!item) {
+                        console.error("Remove failed: Item not found at index", index);
+                        return;
+                    }
                     
                     const product_id = item.id;
+                    
+                    // Remove locally FIRST to update UI instantly
                     basket.splice(index, 1);
                     updateBasketUI();
                     
-                    // Call API to un-reserve
+                    // Call API to un-reserve (Background)
                     fetch('/webapp/api/unreserve', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ id: product_id })
                     }).then(() => {
                         console.log("Unreserved item:", product_id);
-                        // Refresh products to show it back in stock immediately
                         if(window.loadProducts) window.loadProducts();
                     }).catch(err => console.error("Unreserve failed:", err));
                 };
                 
+                // OVERRIDE updateBasketUI
+                window.updateBasketUI = function() {
+                    renderBasketContent();
+                };
+
+                // OVERRIDE renderBasketContent - Ensure Remove Works
+                window.renderBasketContent = function() {
+                    const container = document.getElementById('basket-items');
+                    const totalEl = document.getElementById('basket-total');
+                    const countEl = document.getElementById('basket-count');
+                    const navCount = document.getElementById('cart-nav-count');
+                    
+                    if(!container) return;
+                    container.innerHTML = '';
+                    
+                    let total = 0;
+                    basket.forEach((item, i) => {
+                        total += item.price;
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'cart-item-modern';
+                        
+                        // Clean name
+                        let name = item.name.replace(/"/g, '&quot;');
+                        
+                        itemEl.innerHTML = `
+                            <div class="cim-icon-box">${getProductEmoji(item.type, item.name)}</div>
+                            <div class="cim-info">
+                                <div class="cim-name">${name}</div>
+                                <div class="cim-details">${item.size} | ${item.city}</div>
+                                <div class="cim-meta">${item.district || ''}</div>
+                            </div>
+                            <div class="cim-right">
+                                <div class="cim-price">€${item.price.toFixed(2)}</div>
+                                <button class="cim-remove-btn" onclick="removeFromBasket(${i}, event)">✕</button>
+                            </div>
+                        `;
+                        container.appendChild(itemEl);
+                    });
+                    
+                    if(basket.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align:center; padding:40px; color:#666;">
+                                <div style="font-size:40px; margin-bottom:10px;">🛒</div>
+                                <div>BASKET EMPTY</div>
+                                <button onclick="document.getElementById('basket-modal').style.display='none'" style="margin-top:20px; background:var(--gta-green); color:#000; border:none; padding:10px 20px; font-family:'Pricedown'; cursor:pointer;">GO SHOPPING</button>
+                            </div>
+                        `;
+                        
+                        // Disable checkout if empty
+                        const checkoutBtn = document.querySelector('#basket-modal .btn-buy:last-of-type');
+                        if(checkoutBtn && checkoutBtn.innerText === "CHECKOUT") {
+                             // checkoutBtn.disabled = true; // Optional
+                        }
+                    }
+                    
+                    // Update Totals
+                    if(totalEl) totalEl.innerText = `€${total.toFixed(2)}`;
+                    if(countEl) countEl.innerText = `(${basket.length})`;
+                    if(navCount) {
+                        navCount.innerText = basket.length;
+                        navCount.style.display = basket.length > 0 ? 'flex' : 'none';
+                    }
+                };
+                
                 // OVERRIDE renderProducts - Hide Reserved Items
                 window.renderProducts = function(products) {
-                    console.log("Render Products v4.6 (Injected)");
+                    console.log("Render Products v4.7 (Injected)");
                     const grid = document.getElementById('product-grid');
                     grid.innerHTML = '';
                     
@@ -2721,14 +2792,15 @@ def webapp_index():
             '''
             content = content.replace('</body>', super_injection + '</body>')
             
-            # ===== HOTFIX: Ensure v4.6 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v4.5-SPINNER</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.6-FINAL-FIX</title>')
+            # ===== HOTFIX: Ensure v4.7 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.6-FINAL-FIX</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.5-SPINNER</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
