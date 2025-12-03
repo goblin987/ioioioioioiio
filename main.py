@@ -3213,22 +3213,35 @@ def webapp_index():
                                 
                             // Show success notification IN MINI-APP
                             try {
-                                window.safeNotify('✅ Payment received! Balance updated.');
-                                console.log('✅ Showed notification to user');
+                                // Check if this is a refill or purchase
+                                const isRefill = paymentId && paymentId.includes('REFILL');
+                                const message = isRefill 
+                                    ? '✅ Payment received! Balance updated.' 
+                                    : '✅ Purchase successful! Check bot chat for delivery.';
+                                
+                                window.safeNotify(message);
+                                console.log('✅ Showed notification to user:', message);
                             } catch(e) {
                                 console.error('❌ Notification error:', e);
                             }
                                 
-                                // Call original success handler if it exists
-                                if(typeof window.onPaymentSuccess === 'function') {
-                                    console.log('🎯 Calling onPaymentSuccess()');
-                                    window.onPaymentSuccess();
-                                } else {
-                                    console.log('🎯 Fallback: closing invoice');
-                                    // Fallback: close invoice and reload products
-                                    if(typeof window.closeInvoice === 'function') window.closeInvoice();
-                                    if(typeof window.loadProducts === 'function') window.loadProducts();
-                                }
+                            // Clear basket for purchases (not refills)
+                            const isRefill = paymentId && paymentId.includes('REFILL');
+                            if(!isRefill && window.basket) {
+                                window.basket = [];
+                                console.log('🛒 Cleared basket after purchase');
+                            }
+                            
+                            // Call original success handler if it exists
+                            if(typeof window.onPaymentSuccess === 'function') {
+                                console.log('🎯 Calling onPaymentSuccess()');
+                                window.onPaymentSuccess();
+                            } else {
+                                console.log('🎯 Fallback: closing invoice');
+                                // Fallback: close invoice and reload products
+                                if(typeof window.closeInvoice === 'function') window.closeInvoice();
+                                if(typeof window.loadProducts === 'function') window.loadProducts();
+                            }
                             } else if (data.status === 'expired' || data.status === 'refunded') {
                                 console.log('❌ Payment failed:', data.status);
                                 if(window.pollInterval) clearInterval(window.pollInterval);
@@ -3299,12 +3312,26 @@ def webapp_index():
                                         console.log('✅ [INTERCEPTED] Wallet updated to:', data.new_balance);
                                     }
                                     
-                                    // Show alert
+                                    // Show alert - differentiate refill vs purchase
                                     try {
-                                        window.safeNotify('✅ Payment received! Balance updated.');
-                                        console.log('✅ [INTERCEPTED] Notification shown');
+                                        // Check payment ID from URL or active payment
+                                        const isRefill = url.includes('REFILL') || 
+                                                       (window.activePaymentId && window.activePaymentId.includes('REFILL'));
+                                        
+                                        const message = isRefill 
+                                            ? '✅ Payment received! Balance updated.' 
+                                            : '✅ Purchase successful! Check bot chat for delivery.';
+                                        
+                                        window.safeNotify(message);
+                                        console.log('✅ [INTERCEPTED] Notification shown:', message);
                                     } catch(e) {
                                         console.error('❌ [INTERCEPTED] Notification error:', e);
+                                    }
+                                    
+                                    // Clear basket for purchases (not refills)
+                                    if(!isRefill && window.basket) {
+                                        window.basket = [];
+                                        console.log('🛒 [INTERCEPTED] Cleared basket after purchase');
                                     }
                                     
                                     // Stop polling
