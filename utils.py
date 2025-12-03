@@ -50,7 +50,14 @@ try:
 except OSError as e:
     logger.error(f"Could not create media directory {MEDIA_DIR}: {e}")
 
-logger.info(f"Using PostgreSQL Database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+# Log database connection info (mask password for security)
+try:
+    from urllib.parse import urlparse
+    parsed = urlparse(POSTGRES_URL)
+    db_display = f"{parsed.hostname}:{parsed.port}/{parsed.path.lstrip('/')}"
+except:
+    db_display = "DATABASE_URL (parsing failed)"
+logger.info(f"Using PostgreSQL Database: {db_display}")
 logger.info(f"Using Media Directory: {MEDIA_DIR}")
 logger.info(f"Using Bot Media Config Path: {BOT_MEDIA_JSON_PATH}")
 
@@ -1118,24 +1125,29 @@ def get_product_emoji(product_type):
     return '😃'  # Default emoji
 
 def get_db_connection():
-    """Returns a connection to the PostgreSQL database."""
+    """Returns a connection to the PostgreSQL database using DATABASE_URL."""
     # Reduced logging for cleaner output - only log on errors
     try:
+        # Use POSTGRES_URL (which comes from DATABASE_URL env var)
         conn = psycopg2.connect(
-            host=POSTGRES_HOST,
-            port=POSTGRES_PORT,
-            database=POSTGRES_DB,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
+            POSTGRES_URL,
             cursor_factory=RealDictCursor
         )
         conn.autocommit = False
         return conn
     except psycopg2.Error as e:
-        db_info = f"PostgreSQL at {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+        # Extract host info from POSTGRES_URL for error message
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(POSTGRES_URL)
+            db_info = f"PostgreSQL at {parsed.hostname}:{parsed.port}/{parsed.path.lstrip('/')}"
+        except:
+            db_info = "PostgreSQL (URL parsing failed)"
+        
         logger.critical(f"❌ CRITICAL ERROR connecting to {db_info}: {e}")
         logger.critical(f"❌ Error type: {type(e).__name__}")
         logger.critical(f"❌ Error details: {str(e)}")
+        logger.critical(f"❌ Connection URL pattern: postgresql://USER:***@HOST:PORT/DATABASE")
         raise SystemExit(f"Failed to connect to database: {e}")
 
 
