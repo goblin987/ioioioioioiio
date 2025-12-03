@@ -2459,6 +2459,9 @@ def webapp_get_locations():
         
         conn.close()
         
+        # STRICT LOGGING as requested
+        logger.info(f"Returning active locations: {locations}")
+        
         response = jsonify({'success': True, 'locations': locations})
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response

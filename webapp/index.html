@@ -6007,14 +6007,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             };
             list.appendChild(allBtn);
 
-            // Use dynamic locations from API, fallback to products
+            // STRICT: Use dynamic locations from API ONLY. No fallbacks.
             let districts = [];
-            if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
+            if(appLocations[city] && appLocations[city].districts) {
                 districts = appLocations[city].districts.map(d => ({name: d, type: 'grove'}));
-            } else {
-                // Fallback: extract from products
-                const districtNames = [...new Set(allProducts.filter(p => p.city === city).map(p => p.district))];
-                districts = districtNames.map(name => ({name, type: 'grove'}));
             }
             
             if(districts.length === 0) {
@@ -6575,13 +6571,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             header.innerText = city.toUpperCase();
             list.innerHTML = '';
 
-            // Use dynamic locations from API, fallback to extracting from products
+            // STRICT: Use dynamic locations from API ONLY. No fallbacks.
             let districts = [];
-            if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
+            if(appLocations[city] && appLocations[city].districts) {
                 districts = appLocations[city].districts;
-            } else {
-                // Fallback: extract districts from loaded products
-                districts = [...new Set(allProducts.filter(p => p.city === city).map(p => p.district))];
             }
             
             (districts.length > 0 ? districts : ['All Areas']).forEach(d => {
