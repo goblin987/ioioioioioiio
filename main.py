@@ -2122,9 +2122,14 @@ def webapp_reserve_item():
         ids = data.get('ids', []) # List of candidate IDs
         user_id = data.get('user_id')
         
-        if not ids or not user_id:
-            logger.error(f"❌ Reserve failed: ids={ids}, user_id={user_id}")
-            return jsonify({'success': False, 'error': 'Missing IDs or User ID'}), 400
+        if not ids:
+            logger.error(f"❌ Reserve failed: No IDs provided")
+            return jsonify({'success': False, 'error': 'Missing product IDs'}), 400
+        
+        # Default to user_id 0 if not provided (for testing)
+        if not user_id:
+            user_id = 0
+            logger.warning(f"⚠️ No user_id provided, using 0 for testing")
             
         conn = get_db_connection()
         c = conn.cursor()
@@ -3286,15 +3291,21 @@ def webapp_index():
                         font-weight: bold;
                         z-index: 999999;
                         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                        animation: slideDown 0.3s ease-out;
+                        opacity: 0;
+                        transition: opacity 0.3s ease-out;
                     `;
                     notif.textContent = message;
                     document.body.appendChild(notif);
                     
+                    // Fade in
+                    setTimeout(() => notif.style.opacity = '1', 10);
+                    
+                    // Fade out and remove
                     setTimeout(() => {
                         notif.style.opacity = '0';
-                        notif.style.transition = 'opacity 0.3s';
-                        setTimeout(() => document.body.removeChild(notif), 300);
+                        setTimeout(() => {
+                            if(notif.parentNode) document.body.removeChild(notif);
+                        }, 300);
                     }, 3000);
                 };
                 
