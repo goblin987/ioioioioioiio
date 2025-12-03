@@ -2553,21 +2553,55 @@ def webapp_create_refill():
         logger.error(f"Error creating refill: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
-def webapp_check_payment(payment_id):
-    """Check payment status"""
+@flask_app.route("/webapp/api/check_payment", methods=['POST', 'GET'])
+def webapp_check_payment(payment_id=None):
+    """Check payment status and return user balance"""
     try:
+        # Support both POST (with body) and GET (with URL param)
+        if request.method == 'POST':
+            data = request.json or {}
+            payment_id = data.get('order_id') or payment_id
+            user_id = data.get('user_id')
+        else:
+            user_id = request.args.get('user_id')
+        
+        if not payment_id:
+            return jsonify({'error': 'Payment ID required'}), 400
+        
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT status FROM solana_wallets WHERE order_id = %s", (payment_id,))
+        
+        # Get payment status
+        c.execute("SELECT status, user_id FROM solana_wallets WHERE order_id = %s", (payment_id,))
         res = c.fetchone()
+        
+        if not res:
+            conn.close()
+            return jsonify({'status': 'unknown'})
+        
+        status = res['status']
+        if not user_id:
+            user_id = res['user_id']
+        
+        # Get user's current balance
+        new_balance = None
+        if status == 'confirmed' and user_id:
+            c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+            balance_res = c.fetchone()
+            if balance_res:
+                new_balance = float(balance_res['balance'])
+        
         conn.close()
         
-        status = res['status'] if res else 'unknown'
-        response = jsonify({'status': status})
+        response_data = {'status': status}
+        if new_balance is not None:
+            response_data['new_balance'] = new_balance
+        
+        response = jsonify(response_data)
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
     except Exception as e:
+        logger.error(f"Error checking payment: {e}")
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
