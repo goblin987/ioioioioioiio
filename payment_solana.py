@@ -249,9 +249,9 @@ async def check_solana_deposits(context):
                             # Refill
                             # We need to calculate EUR amount. Use the stored rate or current rate?
                             # Ideally we stored the target EUR amount in pending_deposits
-                            c.execute("SELECT amount_eur FROM pending_deposits WHERE payment_id = %s", (order_id,))
+                            c.execute("SELECT target_eur_amount FROM pending_deposits WHERE payment_id = %s", (order_id,))
                             amount_res = c.fetchone()
-                            amount_eur = Decimal(str(amount_res['amount_eur'])) if amount_res else Decimal("0.0")
+                            amount_eur = Decimal(str(amount_res['target_eur_amount'])) if amount_res else Decimal("0.0")
                             
                             await process_successful_refill(user_id, amount_eur, order_id, context)
                     else:
