@@ -2678,9 +2678,11 @@ def webapp_index():
 
                 // OVERRIDE addToBasket - ASYNC RESERVATION + SPINNER
                 window.addToBasket = function(ids, name, price, e) {
+                    const basket = window.basket || [];
+                    
                     // 1. Check limit
                     if(basket.length >= 10) {
-                        tg.showAlert('⚠️ Maximum 10 items per order');
+                        window.safeNotify('⚠️ Maximum 10 items per order');
                         return;
                     }
 
@@ -2724,7 +2726,7 @@ def webapp_index():
                             let product = allProducts.find(p => p.id === reserved_id);
                             if(!product && Array.isArray(ids)) product = allProducts.find(p => p.id === ids[0]);
                             
-                            basket.push({
+                            window.basket.push({
                                 id: reserved_id,
                                 name: name,
                                 price: price,
@@ -2734,10 +2736,11 @@ def webapp_index():
                                 size: product ? (product.size || '') : ''
                             });
                             
+                            console.log('✅ Added to basket. Total items:', window.basket.length);
                             updateBasketUI();
                             
                         } else {
-                            tg.showAlert('⚠️ ' + (data.error || 'Item reserved or sold out!'));
+                            window.safeNotify('⚠️ ' + (data.error || 'Item reserved or sold out!'));
                             if(window.loadProducts) window.loadProducts(); 
                         }
                     })
@@ -2748,12 +2751,14 @@ def webapp_index():
                             btn.style.opacity = '1';
                             btn.disabled = false; 
                         }
-                        tg.showAlert('⚠️ Network error. Try again.');
+                        window.safeNotify('⚠️ Network error. Try again.');
                     });
                 };
                 
                 // OVERRIDE removeFromBasket - UN-RESERVE ON SERVER
                 window.removeFromBasket = function(index, e) {
+                    const basket = window.basket || [];
+                    
                     if(e) { e.stopPropagation(); e.preventDefault(); }
                     
                     const item = basket[index];
@@ -2762,7 +2767,8 @@ def webapp_index():
                     const product_id = item.id;
                     
                     // Remove locally FIRST to update UI instantly
-                    basket.splice(index, 1);
+                    window.basket.splice(index, 1);
+                    console.log('❌ Removed from basket. Total items:', window.basket.length);
                     updateBasketUI();
                     
                     // Call API to un-reserve (Background)
@@ -3217,6 +3223,21 @@ def webapp_index():
                     return response;
                 };
                 console.log('✅ Fetch interceptor installed for check_payment');
+                
+                // INITIALIZE: Ensure basket exists
+                if(!window.basket) {
+                    window.basket = [];
+                    console.log('✅ Initialized window.basket');
+                }
+                
+                // FIX: Stub for missing refreshDistrictColors function
+                if(typeof window.refreshDistrictColors === 'undefined') {
+                    window.refreshDistrictColors = function() {
+                        console.log('🎨 refreshDistrictColors (stub)');
+                        // Do nothing - this function is not needed
+                    };
+                    console.log('✅ Created refreshDistrictColors stub');
+                }
                 
                 // SAFE ALERT - Works on all Telegram versions
                 window.safeNotify = function(message) {
