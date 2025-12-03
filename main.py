@@ -3013,8 +3013,105 @@ def webapp_index():
                         alert(msg);
                     }
                 };
+                
+                // ===== MOBILE KEYBOARD FIX FOR REFILL =====
+                // When keyboard opens, scroll modal up so button is visible
+                document.addEventListener('DOMContentLoaded', function() {
+                    const customInput = document.getElementById('custom-refill');
+                    if(!customInput) return;
+                    
+                    // On focus (keyboard opens)
+                    customInput.addEventListener('focus', function() {
+                        const modal = document.getElementById('refill-modal');
+                        const modalContent = modal ? modal.querySelector('.refill-modal-content') : null;
+                        
+                        if(modalContent) {
+                            // Make modal scrollable
+                            modal.style.overflowY = 'auto';
+                            modal.style.webkitOverflowScrolling = 'touch';
+                            
+                            // Scroll input into view after small delay (wait for keyboard animation)
+                            setTimeout(() => {
+                                customInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 300);
+                            
+                            // Alternative: Move modal up
+                            modalContent.style.transform = 'translateY(-30%)';
+                            modalContent.style.transition = 'transform 0.3s ease';
+                        }
+                    });
+                    
+                    // On blur (keyboard closes)
+                    customInput.addEventListener('blur', function() {
+                        const modal = document.getElementById('refill-modal');
+                        const modalContent = modal ? modal.querySelector('.refill-modal-content') : null;
+                        
+                        if(modalContent) {
+                            // Reset position
+                            setTimeout(() => {
+                                modalContent.style.transform = 'translateY(0)';
+                            }, 100);
+                        }
+                    });
+                    
+                    // Alternative approach: Use visualViewport API (iOS Safari)
+                    if(window.visualViewport) {
+                        window.visualViewport.addEventListener('resize', function() {
+                            const modal = document.getElementById('refill-modal');
+                            if(modal && modal.style.display === 'block') {
+                                // Keyboard is open if viewport height decreased
+                                const viewportHeight = window.visualViewport.height;
+                                const windowHeight = window.innerHeight;
+                                
+                                if(viewportHeight < windowHeight) {
+                                    // Keyboard open - adjust modal
+                                    modal.style.paddingBottom = (windowHeight - viewportHeight) + 'px';
+                                } else {
+                                    // Keyboard closed - reset
+                                    modal.style.paddingBottom = '0';
+                                }
+                            }
+                        });
+                    }
+                });
             </script>
             <style>
+                /* ===== MOBILE KEYBOARD FIX: REFILL MODAL ===== */
+                #refill-modal {
+                    overflow-y: auto !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    overscroll-behavior: contain !important;
+                }
+                
+                .refill-modal-content {
+                    max-height: 85vh !important;
+                    overflow-y: auto !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    position: relative !important;
+                    margin: auto !important;
+                    padding-bottom: 20px !important;
+                }
+                
+                /* Ensure button is always visible */
+                #refill-pay-btn {
+                    position: sticky !important;
+                    bottom: 0 !important;
+                    z-index: 10 !important;
+                    margin-top: 10px !important;
+                }
+                
+                /* Custom input container */
+                .refill-custom-box {
+                    margin-bottom: 15px !important;
+                }
+                
+                /* iOS safe area support */
+                @supports (padding: max(0px)) {
+                    #refill-modal {
+                        padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+                    }
+                }
+                
                 /* FORCE PROFESSIONAL DARK THEME (GTA Style) */
                 .cart-container { 
                     background: #111 !important; 
