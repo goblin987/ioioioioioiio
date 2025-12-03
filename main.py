@@ -2117,10 +2117,13 @@ def webapp_reserve_item():
     """Reserves an item for 15 minutes (High Concurrency Safe)"""
     try:
         data = request.json
+        logger.info(f"📥 Reserve request data: {data}")
+        
         ids = data.get('ids', []) # List of candidate IDs
         user_id = data.get('user_id')
         
         if not ids or not user_id:
+            logger.error(f"❌ Reserve failed: ids={ids}, user_id={user_id}")
             return jsonify({'success': False, 'error': 'Missing IDs or User ID'}), 400
             
         conn = get_db_connection()
@@ -3094,15 +3097,13 @@ def webapp_index():
                                     }
                                 }
                                 
-                                // Show success notification IN MINI-APP
-                                if(typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
-                                    try {
-                                        window.Telegram.WebApp.showAlert('✅ Payment received! Balance updated.');
-                                        console.log('✅ Showed alert to user');
-                                    } catch(e) {
-                                        console.error('❌ Alert error:', e);
-                                    }
-                                }
+                            // Show success notification IN MINI-APP
+                            try {
+                                window.safeNotify('✅ Payment received! Balance updated.');
+                                console.log('✅ Showed notification to user');
+                            } catch(e) {
+                                console.error('❌ Notification error:', e);
+                            }
                                 
                                 // Call original success handler if it exists
                                 if(typeof window.onPaymentSuccess === 'function') {
@@ -3185,9 +3186,11 @@ def webapp_index():
                                     }
                                     
                                     // Show alert
-                                    if(window.Telegram?.WebApp?.showAlert) {
-                                        window.Telegram.WebApp.showAlert('✅ Payment received! Balance updated.');
-                                        console.log('✅ [INTERCEPTED] Alert shown');
+                                    try {
+                                        window.safeNotify('✅ Payment received! Balance updated.');
+                                        console.log('✅ [INTERCEPTED] Notification shown');
+                                    } catch(e) {
+                                        console.error('❌ [INTERCEPTED] Notification error:', e);
                                     }
                                     
                                     // Stop polling
@@ -3210,6 +3213,65 @@ def webapp_index():
                     return response;
                 };
                 console.log('✅ Fetch interceptor installed for check_payment');
+                
+                // SAFE ALERT - Works on all Telegram versions
+                window.safeNotify = function(message) {
+                    console.log('📢 Notification:', message);
+                    
+                    // Try multiple methods in order of preference
+                    if(window.Telegram?.WebApp) {
+                        const tg = window.Telegram.WebApp;
+                        
+                        // Try showAlert (v6.1+)
+                        if(typeof tg.showAlert === 'function') {
+                            try {
+                                tg.showAlert(message);
+                                return;
+                            } catch(e) {
+                                console.warn('showAlert failed:', e);
+                            }
+                        }
+                        
+                        // Try showPopup (v6.2+)
+                        if(typeof tg.showPopup === 'function') {
+                            try {
+                                tg.showPopup({message: message});
+                                return;
+                            } catch(e) {
+                                console.warn('showPopup failed:', e);
+                            }
+                        }
+                    }
+                    
+                    // Fallback: console + visual notification
+                    console.log('✅ ' + message);
+                    
+                    // Create temporary notification element
+                    const notif = document.createElement('div');
+                    notif.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: #4CAF50;
+                        color: white;
+                        padding: 15px 30px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        z-index: 999999;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        animation: slideDown 0.3s ease-out;
+                    `;
+                    notif.textContent = message;
+                    document.body.appendChild(notif);
+                    
+                    setTimeout(() => {
+                        notif.style.opacity = '0';
+                        notif.style.transition = 'opacity 0.3s';
+                        setTimeout(() => document.body.removeChild(notif), 300);
+                    }, 3000);
+                };
                 
                 // Load user balance on page load
                 window.loadUserBalance = async function() {
@@ -3390,11 +3452,7 @@ def webapp_index():
                 
                 // Override safeAlert to use tg.showAlert instead of showPopup
                 window.safeAlert = function(msg) {
-                    if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
-                        window.Telegram.WebApp.showAlert(msg);
-                    } else {
-                        alert(msg);
-                    }
+                    window.safeNotify(msg);
                 };
                 
                 // ===== MOBILE KEYBOARD FIX FOR REFILL =====
