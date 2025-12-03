@@ -2426,44 +2426,77 @@ def webapp_debug_data():
 
 @flask_app.route("/webapp/api/locations", methods=['GET'])
 def webapp_get_locations():
-    """API endpoint to fetch cities and districts with available products"""
+    """API endpoint to fetch cities and districts with available products (STRICT VALIDATION)"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get all cities and districts that have products available
-        # STRICT: City and District MUST exist in their respective tables to be shown
-        # UPDATED: Case-insensitive comparison to prevent valid products from disappearing
-        c.execute("""
-            SELECT DISTINCT p.city, p.district, c.id as city_id
-            FROM products p
-            JOIN cities c ON LOWER(TRIM(c.name)) = LOWER(TRIM(p.city))
-            JOIN districts d ON LOWER(TRIM(d.name)) = LOWER(TRIM(p.district)) AND d.city_id = c.id
-            WHERE p.available > 0
-            ORDER BY p.city, p.district
-        """)
+        # 1. Get all valid cities
+        c.execute("SELECT id, name FROM cities")
+        valid_cities = {row['name'].strip().lower(): row['id'] for row in c.fetchall()}
         
-        rows = c.fetchall()
-        
-        # Group by city
-        locations = {}
-        for row in rows:
-            city = row['city']
-            district = row['district']
+        # 2. Get all valid districts
+        c.execute("SELECT id, city_id, name FROM districts")
+        # Map: city_id -> set of district names (lowercase)
+        valid_districts = {}
+        for row in c.fetchall():
+            cid = row['city_id']
+            dname = row['name'].strip().lower()
+            if cid not in valid_districts:
+                valid_districts[cid] = set()
+            valid_districts[cid].add(dname)
             
-            if city not in locations:
-                locations[city] = {
-                    'city_id': row['city_id'],
+        # 3. Get candidate locations from products
+        c.execute("""
+            SELECT DISTINCT city, district
+            FROM products
+            WHERE available > 0
+        """)
+        rows = c.fetchall()
+        conn.close()
+        
+        locations = {}
+        
+        for row in rows:
+            # Normalize product data
+            p_city_raw = row['city']
+            p_dist_raw = row['district']
+            
+            if not p_city_raw or not p_dist_raw:
+                continue
+                
+            p_city = p_city_raw.strip().lower()
+            p_dist = p_dist_raw.strip().lower()
+            
+            # STRICT CHECK 1: City must exist
+            if p_city not in valid_cities:
+                continue
+                
+            city_id = valid_cities[p_city]
+            
+            # STRICT CHECK 2: District must exist for that city
+            if city_id not in valid_districts or p_dist not in valid_districts[city_id]:
+                continue
+                
+            # If we pass checks, add to response (preserve original casing from Product or City? Let's use City table casing for tidiness)
+            # Actually, better to use Product casing if that's what we filter by in frontend?
+            # Or better: Use the casing from the Cities/Districts tables to be clean.
+            
+            # Let's find the "Display Name" from the cities table
+            # We need to invert the valid_cities dict or store it differently.
+            # For now, let's just use the product's string but we know it's valid.
+            # Actually, let's use the capitalized version from product to match frontend expectations.
+            
+            if p_city_raw not in locations:
+                locations[p_city_raw] = {
+                    'city_id': city_id,
                     'districts': []
                 }
             
-            if district and district not in locations[city]['districts']:
-                locations[city]['districts'].append(district)
+            if p_dist_raw not in locations[p_city_raw]['districts']:
+                locations[p_city_raw]['districts'].append(p_dist_raw)
         
-        conn.close()
-        
-        # STRICT LOGGING as requested
-        logger.info(f"Returning active locations: {locations}")
+        logger.info(f"Returning active locations (Python Filtered): {locations.keys()}")
         
         response = jsonify({'success': True, 'locations': locations})
         response.headers.add('Access-Control-Allow-Origin', '*')
