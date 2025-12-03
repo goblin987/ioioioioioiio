@@ -2365,6 +2365,65 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
 
+@flask_app.route("/webapp/api/debug_data", methods=['GET'])
+def webapp_debug_data():
+    """DEBUG: Show raw data from database to diagnose district issues"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get ALL products with their cities and districts
+        c.execute("""
+            SELECT id, name, city, district, available, price
+            FROM products 
+            ORDER BY city, district, name
+        """)
+        products = [dict(row) for row in c.fetchall()]
+        
+        # Get all cities from cities table
+        c.execute("SELECT id, name FROM cities ORDER BY name")
+        cities = [dict(row) for row in c.fetchall()]
+        
+        # Get all districts from districts table
+        c.execute("""
+            SELECT d.id, d.name, d.city_id, c.name as city_name 
+            FROM districts d
+            LEFT JOIN cities c ON c.id = d.city_id
+            ORDER BY c.name, d.name
+        """)
+        districts = [dict(row) for row in c.fetchall()]
+        
+        # Count products by city/district
+        c.execute("""
+            SELECT city, district, COUNT(*) as count, SUM(available) as total_available
+            FROM products
+            GROUP BY city, district
+            ORDER BY city, district
+        """)
+        summary = [dict(row) for row in c.fetchall()]
+        
+        conn.close()
+        
+        response = jsonify({
+            'success': True,
+            'debug_info': {
+                'total_products': len(products),
+                'total_cities': len(cities),
+                'total_districts': len(districts),
+                'products': products,
+                'cities_table': cities,
+                'districts_table': districts,
+                'product_summary_by_location': summary
+            },
+            'instructions': 'Districts shown in phone UI come from products.city and products.district fields. Delete unwanted products to remove districts.'
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @flask_app.route("/webapp/api/locations", methods=['GET'])
 def webapp_get_locations():
     """API endpoint to fetch cities and districts with available products"""
@@ -2738,9 +2797,30 @@ def webapp_index():
         with open('webapp/index.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        # JavaScript hotfix for cart button
+        # JavaScript hotfix for cart button AND cache management
         hotfix_script = """
         <script>
+        // 🔧 CACHE MANAGEMENT - Clear old cached data
+        (function() {
+            const CACHE_VERSION = 'v2.0';
+            const lastVersion = localStorage.getItem('app_cache_version');
+            
+            if(lastVersion !== CACHE_VERSION) {
+                console.log('🧹 Clearing old cache data...');
+                localStorage.removeItem('shop_cache');
+                localStorage.setItem('app_cache_version', CACHE_VERSION);
+                console.log('✅ Cache cleared! Fresh data will load.');
+            }
+            
+            // Global function to force cache clear
+            window.clearShopCache = function() {
+                localStorage.removeItem('shop_cache');
+                localStorage.removeItem('app_cache_version');
+                console.log('🧹 Shop cache cleared! Refreshing...');
+                location.reload();
+            };
+        })();
+        
         // 🔧 BULLETPROOF CART FIX - Make cart button work
         console.log('🔧 Injecting cart button fix...');
         
