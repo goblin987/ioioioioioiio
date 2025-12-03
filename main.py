@@ -2807,12 +2807,13 @@ def webapp_index():
         <script>
         // 🔧 CACHE MANAGEMENT - Clear old cached data
         (function() {
-            const CACHE_VERSION = 'v2.0';
+            const CACHE_VERSION = 'v2.1';
             const lastVersion = localStorage.getItem('app_cache_version');
             
             if(lastVersion !== CACHE_VERSION) {
                 console.log('🧹 Clearing old cache data...');
                 localStorage.removeItem('shop_cache');
+                localStorage.removeItem('locations_cache');
                 localStorage.setItem('app_cache_version', CACHE_VERSION);
                 console.log('✅ Cache cleared! Fresh data will load.');
             }
@@ -2820,6 +2821,7 @@ def webapp_index():
             // Global function to force cache clear
             window.clearShopCache = function() {
                 localStorage.removeItem('shop_cache');
+                localStorage.removeItem('locations_cache');
                 localStorage.removeItem('app_cache_version');
                 console.log('🧹 Shop cache cleared! Refreshing...');
                 location.reload();
@@ -2879,7 +2881,12 @@ def webapp_index():
         else:
             html_content += hotfix_script
         
-        return Response(html_content, mimetype='text/html')
+        response = Response(html_content, mimetype='text/html')
+        # FORCE NO CACHE
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
         
     except Exception as e:
         logger.error(f"Error serving webapp with hotfix: {e}")
