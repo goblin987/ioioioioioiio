@@ -2705,7 +2705,13 @@ def webapp_user_balance():
                 ON CONFLICT (user_id) DO NOTHING
             """, (user_id,))
             conn.commit()
-            balance = 0.0
+            
+            # BUGFIX: Query again after INSERT to handle race condition
+            # If another process created the user between SELECT and INSERT,
+            # ON CONFLICT does nothing but user might have non-zero balance
+            c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+            user_res = c.fetchone()
+            balance = float(user_res['balance']) if user_res else 0.0
         else:
             balance = float(user_res['balance'])
         
