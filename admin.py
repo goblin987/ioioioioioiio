@@ -917,6 +917,10 @@ async def handle_admin_save_miniapp_text(update: Update, context: ContextTypes.D
     """Save the new Mini App welcome text"""
     text = update.message.text
     from utils import set_bot_setting
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Admin {update.effective_user.id} saving Mini App Text: {text}")
+    
     set_bot_setting("miniapp_welcome_text", text)
     
     context.user_data['state'] = None

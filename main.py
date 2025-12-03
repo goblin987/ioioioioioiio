@@ -2517,7 +2517,7 @@ def webapp_index():
             
             super_injection = '''
             <script>
-                console.log("DEBUG: Loaded v4.7-UI-FIXES");
+                console.log("DEBUG: Loaded v4.8-UI-POLISH");
                 
                 // Ensure getProductEmoji exists or fallback
                 if(typeof getProductEmoji === 'undefined') {
@@ -2605,10 +2605,7 @@ def webapp_index():
                     if(e) { e.stopPropagation(); e.preventDefault(); }
                     
                     const item = basket[index];
-                    if(!item) {
-                        console.error("Remove failed: Item not found at index", index);
-                        return;
-                    }
+                    if(!item) return;
                     
                     const product_id = item.id;
                     
@@ -2627,12 +2624,9 @@ def webapp_index():
                     }).catch(err => console.error("Unreserve failed:", err));
                 };
                 
-                // OVERRIDE updateBasketUI
-                window.updateBasketUI = function() {
-                    renderBasketContent();
-                };
+                window.updateBasketUI = function() { renderBasketContent(); };
 
-                // OVERRIDE renderBasketContent - Ensure Remove Works
+                // OVERRIDE renderBasketContent - Professional UI
                 window.renderBasketContent = function() {
                     const container = document.getElementById('basket-items');
                     const totalEl = document.getElementById('basket-total');
@@ -2660,7 +2654,12 @@ def webapp_index():
                             </div>
                             <div class="cim-right">
                                 <div class="cim-price">€${item.price.toFixed(2)}</div>
-                                <button class="cim-remove-btn" onclick="removeFromBasket(${i}, event)">✕</button>
+                                <div class="cim-remove-wrapper" onclick="removeFromBasket(${i}, event)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </div>
                             </div>
                         `;
                         container.appendChild(itemEl);
@@ -2668,18 +2667,11 @@ def webapp_index():
                     
                     if(basket.length === 0) {
                         container.innerHTML = `
-                            <div style="text-align:center; padding:40px; color:#666;">
-                                <div style="font-size:40px; margin-bottom:10px;">🛒</div>
-                                <div>BASKET EMPTY</div>
-                                <button onclick="document.getElementById('basket-modal').style.display='none'" style="margin-top:20px; background:var(--gta-green); color:#000; border:none; padding:10px 20px; font-family:'Pricedown'; cursor:pointer;">GO SHOPPING</button>
+                            <div style="text-align:center; padding:60px 20px; color:#444;">
+                                <div style="font-size:40px; margin-bottom:15px; opacity:0.5;">🛒</div>
+                                <div style="font-size:14px; font-weight:600; letter-spacing:1px;">CART IS EMPTY</div>
                             </div>
                         `;
-                        
-                        // Disable checkout if empty
-                        const checkoutBtn = document.querySelector('#basket-modal .btn-buy:last-of-type');
-                        if(checkoutBtn && checkoutBtn.innerText === "CHECKOUT") {
-                             // checkoutBtn.disabled = true; // Optional
-                        }
                     }
                     
                     // Update Totals
@@ -2691,9 +2683,8 @@ def webapp_index():
                     }
                 };
                 
-                // OVERRIDE renderProducts - Hide Reserved Items
+                // OVERRIDE renderProducts
                 window.renderProducts = function(products) {
-                    console.log("Render Products v4.7 (Injected)");
                     const grid = document.getElementById('product-grid');
                     grid.innerHTML = '';
                     
@@ -2756,53 +2747,89 @@ def webapp_index():
                     border-radius: 12px !important; /* Smooth corners */
                     overflow: hidden !important;
                 }
-                /* Header - Solid Black */
                 .cart-header-bar { 
                     background: #000 !important; 
                     border-bottom: 1px solid #333 !important; 
                     padding: 15px 20px !important;
                     z-index: 10002 !important;
                 }
-                /* Content - Dark Grey with Subtle Grid */
                 .cart-content { 
                     background-color: #111 !important;
                     background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px) !important;
                     background-size: 20px 20px !important;
                     z-index: 10002 !important;
                 }
-                /* Items */
                 .cart-item-modern {
                     background: #1a1a1a !important;
                     border: 1px solid #333 !important;
                     color: #fff !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    padding: 12px !important;
+                    margin-bottom: 8px !important;
+                    border-radius: 8px !important;
                 }
-                .cim-name { color: #fff !important; font-weight: 700 !important; }
-                .cim-details { color: #888 !important; }
-                .cim-price { color: var(--gta-green) !important; font-family: 'Pricedown', sans-serif !important; }
-                .cim-remove-btn {
-                    background: #300 !important;
-                    color: #f55 !important;
-                    border: 1px solid #600 !important;
+                .cim-icon-box {
+                    width: 40px !important;
+                    height: 40px !important;
+                    background: rgba(255,255,255,0.05) !important;
+                    border-radius: 8px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    font-size: 20px !important;
+                    margin-right: 15px !important;
                 }
+                .cim-info {
+                    flex: 1 !important;
+                }
+                .cim-name { color: #fff !important; font-weight: 700 !important; font-size: 15px !important; margin-bottom: 2px !important; }
+                .cim-details { color: #aaa !important; font-size: 13px !important; }
+                .cim-meta { color: #666 !important; font-size: 11px !important; text-transform:uppercase !important; margin-top:2px !important; }
+                
+                .cim-right {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 15px !important;
+                }
+                .cim-price { 
+                    color: var(--gta-green) !important; 
+                    font-family: 'Pricedown', sans-serif !important; 
+                    font-size: 18px !important;
+                }
+                .cim-remove-wrapper {
+                    width: 24px !important;
+                    height: 24px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    cursor: pointer !important;
+                    color: #666 !important;
+                    transition: all 0.2s !important;
+                    border-radius: 50% !important;
+                }
+                .cim-remove-wrapper:hover {
+                    background: rgba(255, 50, 50, 0.1) !important;
+                    color: #ff4444 !important;
+                }
+                
                 .cart-backdrop { background: rgba(0,0,0,0.9) !important; z-index: 10000 !important; }
-                /* Spinner */
                 .spinner { width:14px; height:14px; border:2px solid rgba(0,0,0,0.2); border-top:2px solid #000; border-radius:50%; animation:spin 0.6s linear infinite; display:inline-block; vertical-align:middle; }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             </style>
             '''
             content = content.replace('</body>', super_injection + '</body>')
             
-            # ===== HOTFIX: Ensure v4.7 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.6-FINAL-FIX</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.5-SPINNER</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.7-UI-FIXES</title>')
-            
-            logger.info(f"✅ Applied JavaScript hotfixes to webapp")
+            # ===== HOTFIX: Ensure v4.8 Title =====
+            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.7-UI-FIXES</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.6-FINAL-FIX</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.5-SPINNER</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
+            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
             
             logger.info(f"✅ Applied JavaScript hotfixes to webapp")
             
