@@ -50,10 +50,7 @@ try:
 except OSError as e:
     logger.error(f"Could not create media directory {MEDIA_DIR}: {e}")
 
-if os.getenv('DATABASE_URL'):
-    logger.info(f"Using PostgreSQL Database: DATABASE_URL (Render)")
-else:
-    logger.info(f"Using PostgreSQL Database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+logger.info(f"Using PostgreSQL Database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
 logger.info(f"Using Media Directory: {MEDIA_DIR}")
 logger.info(f"Using Bot Media Config Path: {BOT_MEDIA_JSON_PATH}")
 
@@ -328,10 +325,10 @@ LANGUAGES = {
         "error_displaying_review": "Error displaying review",
         "error_updating_review_list": "Error updating review list.",
 
-        # --- Refill / Crypto Payments ---
-        "payment_amount_too_low_api": "❌ Payment Amount Too Low: The equivalent of {target_eur_amount} EUR in {currency} \\({crypto_amount}\\) is below the minimum required \\({min_amount} {currency}\\)\\. Please try a higher EUR amount\\.",
-        "payment_amount_too_low_with_min_eur": "❌ Payment Amount Too Low: {target_eur_amount} EUR is below the minimum for {currency} payments \\(minimum: {min_eur_amount} EUR\\)\\. Please try a higher amount\\.",
-        "error_min_amount_fetch": "❌ Error: Could not retrieve minimum payment amount for {currency}\\. Please try again later\\.",
+        # --- Refill / NOWPayments ---
+        "payment_amount_too_low_api": "❌ Payment Amount Too Low: The equivalent of {target_eur_amount} EUR in {currency} \\({crypto_amount}\\) is below the minimum required by the payment provider \\({min_amount} {currency}\\)\\. Please try a higher EUR amount\\.",
+        "payment_amount_too_low_with_min_eur": "❌ Payment Amount Too Low: {target_eur_amount} EUR is below the minimum for {currency} payments \\(minimum: {min_eur_amount} EUR\\)\\. Please try a higher amount or select a different cryptocurrency\\.",
+        "error_min_amount_fetch": "❌ Error: Could not retrieve minimum payment amount for {currency}\\. Please try again later or select a different currency\\.",
         "invoice_title_refill": "*Top\\-Up Invoice Created*",
         "invoice_title_purchase": "*Payment Invoice Created*", # <<< NEW
         "min_amount_label": "*Minimum Amount:*",
@@ -668,10 +665,10 @@ LANGUAGES = {
         "error_displaying_review": "Klaida rodant atsiliepimą",
         "error_updating_review_list": "Klaida atnaujinant atsiliepimų sąrašą.",
 
-        # --- Refill / Crypto Payments ---
-        "payment_amount_too_low_api": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR atitikmuo {currency} \\({crypto_amount}\\) yra mažesnis už minimalų reikalaujamą \\({min_amount} {currency}\\)\\. Bandykite didesnę EUR sumą\\.",
-        "payment_amount_too_low_with_min_eur": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR yra mažesnė už minimalų {currency} mokėjimų sumą \\(minimalus: {min_eur_amount} EUR\\)\\. Bandykite didesnę sumą\\.",
-        "error_min_amount_fetch": "❌ Klaida: Nepavyko gauti minimalios mokėjimo sumos {currency}\\. Bandykite vėliau\\.",
+        # --- Refill / NOWPayments ---
+        "payment_amount_too_low_api": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR atitikmuo {currency} \\({crypto_amount}\\) yra mažesnis už minimalų reikalaujamą mokėjimo teikėjo \\({min_amount} {currency}\\)\\. Bandykite didesnę EUR sumą\\.",
+        "payment_amount_too_low_with_min_eur": "❌ Mokėjimo Suma Per Maža: {target_eur_amount} EUR yra mažesnė už minimalų {currency} mokėjimų sumą \\(minimalus: {min_eur_amount} EUR\\)\\. Bandykite didesnę sumą arba pasirinkite kitą kriptovaliutą\\.",
+        "error_min_amount_fetch": "❌ Klaida: Nepavyko gauti minimalios mokėjimo sumos {currency}\\. Bandykite vėliau arba pasirinkite kitą valiutą\\.",
         "invoice_title_refill": "*Sąskaita Papildymui Sukurta*",
         "invoice_title_purchase": "*Sąskaita Pirkimui Sukurta*",
         "min_amount_label": "*Minimali Suma:*",
@@ -1009,10 +1006,10 @@ LANGUAGES = {
         "error_displaying_review": "Ошибка отображения отзыва",
         "error_updating_review_list": "Ошибка обновления списка отзывов.",
 
-        # --- Refill / Crypto Payments ---
-        "payment_amount_too_low_api": "❌ Сумма Платежа Слишком Мала: Эквивалент {target_eur_amount} EUR в {currency} \\({crypto_amount}\\) ниже минимума \\({min_amount} {currency}\\)\\. Попробуйте большую сумму EUR\\.",
-        "payment_amount_too_low_with_min_eur": "❌ Сумма Платежа Слишком Мала: {target_eur_amount} EUR ниже минимума для {currency} платежей \\(минимум: {min_eur_amount} EUR\\)\\. Попробуйте большую сумму\\.",
-        "error_min_amount_fetch": "❌ Ошибка: Не удалось получить минимальную сумму платежа для {currency}\\. Попробуйте позже\\.",
+        # --- Refill / NOWPayments ---
+        "payment_amount_too_low_api": "❌ Сумма Платежа Слишком Мала: Эквивалент {target_eur_amount} EUR в {currency} \\({crypto_amount}\\) ниже минимума, требуемого платежной системой \\({min_amount} {currency}\\)\\. Попробуйте большую сумму EUR\\.",
+        "payment_amount_too_low_with_min_eur": "❌ Сумма Платежа Слишком Мала: {target_eur_amount} EUR ниже минимума для {currency} платежей \\(минимум: {min_eur_amount} EUR\\)\\. Попробуйте большую сумму или выберите другую криптовалюту\\.",
+        "error_min_amount_fetch": "❌ Ошибка: Не удалось получить минимальную сумму платежа для {currency}\\. Попробуйте позже или выберите другую валюту\\.",
         "invoice_title_refill": "*Счет на Пополнение Создан*",
         "invoice_title_purchase": "*Счет на Оплату Создан*",
         "min_amount_label": "*Минимальная Сумма:*",
@@ -1124,26 +1121,19 @@ def get_db_connection():
     """Returns a connection to the PostgreSQL database."""
     # Reduced logging for cleaner output - only log on errors
     try:
-        # Use DATABASE_URL if set (Render), otherwise fall back to individual params (local dev)
-        if os.getenv('DATABASE_URL'):
-            conn = psycopg2.connect(
-                POSTGRES_URL,
-                cursor_factory=RealDictCursor
-            )
-        else:
-            conn = psycopg2.connect(
-                host=POSTGRES_HOST,
-                port=POSTGRES_PORT,
-                database=POSTGRES_DB,
-                user=POSTGRES_USER,
-                password=POSTGRES_PASSWORD,
-                cursor_factory=RealDictCursor
-            )
+        conn = psycopg2.connect(
+            host=POSTGRES_HOST,
+            port=POSTGRES_PORT,
+            database=POSTGRES_DB,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
+            cursor_factory=RealDictCursor
+        )
         conn.autocommit = False
         return conn
     except psycopg2.Error as e:
-        db_url_display = "DATABASE_URL" if os.getenv('DATABASE_URL') else f"{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-        logger.critical(f"❌ CRITICAL ERROR connecting to PostgreSQL ({db_url_display}): {e}")
+        db_info = f"PostgreSQL at {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+        logger.critical(f"❌ CRITICAL ERROR connecting to {db_info}: {e}")
         logger.critical(f"❌ Error type: {type(e).__name__}")
         logger.critical(f"❌ Error details: {str(e)}")
         raise SystemExit(f"Failed to connect to database: {e}")
@@ -1215,7 +1205,6 @@ def init_db():
                 is_human_verified {get_boolean_type()} DEFAULT FALSE,
                 verification_attempts INTEGER DEFAULT 0
             )''')
-            conn.commit()  # Commit immediately so rollbacks below don't affect it
             logger.info(f"✅ Users table created successfully")
             
             # Add referral_code column if it doesn't exist
@@ -1293,9 +1282,7 @@ def init_db():
                 id {get_auto_increment()}, 
                 name {get_text_type()} UNIQUE NOT NULL
             )''')
-            conn.commit()
             logger.info(f"✅ Cities table created successfully")
-            
             # districts table
             logger.info(f"🔧 Creating districts table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS districts (
@@ -1304,9 +1291,7 @@ def init_db():
                 name {get_text_type()} NOT NULL,
                 UNIQUE (city_id, name)
             )''')
-            conn.commit()
             logger.info(f"✅ Districts table created successfully")
-            
             # product_types table
             logger.info(f"🔧 Creating product_types table...")
             c.execute(f'''CREATE TABLE IF NOT EXISTS product_types (
@@ -1314,7 +1299,6 @@ def init_db():
                 emoji {get_text_type()} DEFAULT '{DEFAULT_PRODUCT_EMOJI}',
                 description {get_text_type()}
             )''')
-            conn.commit()
             logger.info(f"✅ Product_types table created successfully")
             # Note: All columns are already included in the CREATE TABLE statement above
             logger.info(f"✅ Product_types table columns are already complete")
@@ -1325,50 +1309,12 @@ def init_db():
                 id SERIAL PRIMARY KEY, city TEXT NOT NULL, district TEXT NOT NULL,
                 product_type TEXT NOT NULL, size TEXT NOT NULL, name TEXT NOT NULL, price REAL NOT NULL,
                 available INTEGER DEFAULT 1, reserved INTEGER DEFAULT 0, original_text TEXT,
-                added_by BIGINT, added_date TEXT, added_by_worker_id BIGINT DEFAULT NULL
+                added_by BIGINT, added_date TEXT
             )''')
-            conn.commit()  # CRITICAL: Commit immediately to prevent rollback from ALTER commands
             logger.info(f"✅ Products table created successfully")
             
-            # Add added_by_worker_id column if it doesn't exist (for worker system)
-            try:
-                c.execute("ALTER TABLE products ADD COLUMN added_by_worker_id BIGINT DEFAULT NULL")
-                conn.commit()
-                logger.info(f"✅ added_by_worker_id column added to products table")
-            except Exception as e:
-                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
-                    logger.info(f"✅ added_by_worker_id column already exists in products table")
-                else:
-                    logger.warning(f"⚠️ Could not add added_by_worker_id column: {e}")
-                conn.rollback()
-                
-            # Add reserved_until and reserved_by columns for Reservation System
-            try:
-                c.execute("ALTER TABLE products ADD COLUMN reserved_until TIMESTAMP DEFAULT NULL")
-                c.execute("ALTER TABLE products ADD COLUMN reserved_by BIGINT DEFAULT NULL")
-                conn.commit()
-                logger.info(f"✅ Reservation columns (reserved_until, reserved_by) added to products table")
-            except Exception as e:
-                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
-                    logger.info(f"✅ Reservation columns already exist in products table")
-                else:
-                    logger.warning(f"⚠️ Could not add reservation columns: {e}")
-                conn.rollback()
-
-            # Add Stock Alert columns (Fix for stock_management crash)
-            try:
-                c.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5")
-                c.execute("ALTER TABLE products ADD COLUMN stock_alerts_enabled BOOLEAN DEFAULT TRUE")
-                c.execute("ALTER TABLE products ADD COLUMN last_stock_alert TIMESTAMP DEFAULT NULL")
-                conn.commit()
-                logger.info(f"✅ Stock Alert columns added to products table")
-            except Exception as e:
-                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
-                    logger.info(f"✅ Stock Alert columns already exist in products table")
-                else:
-                    logger.warning(f"⚠️ Could not add Stock Alert columns: {e}")
-                conn.rollback()
-            
+            # Note: Additional columns (low_stock_threshold, stock_alerts_enabled, last_stock_alert) 
+            # will be added later when needed to avoid startup delays
             logger.info(f"✅ Products table created with basic columns")
             # product_media table
             logger.info(f"🔧 Creating product_media table...")
@@ -1377,7 +1323,6 @@ def init_db():
                 media_type TEXT NOT NULL, file_path TEXT NOT NULL, telegram_file_id TEXT,
                 media_binary BYTEA
             )''')
-            conn.commit()  # CRITICAL: Commit immediately to prevent rollback
             logger.info(f"✅ Product_media table created successfully")
             
             # 🚀 YOLO: Add media_binary column if it doesn't exist (for existing databases)
@@ -1395,9 +1340,7 @@ def init_db():
                 product_name TEXT NOT NULL, product_type TEXT NOT NULL, product_size TEXT NOT NULL,
                 price_paid REAL NOT NULL, city TEXT NOT NULL, district TEXT NOT NULL, purchase_date TEXT NOT NULL
             )''')
-            conn.commit()  # CRITICAL: Commit immediately
             logger.info(f"✅ Purchases table created successfully")
-            
             # reviews table
             c.execute('''CREATE TABLE IF NOT EXISTS reviews (
                 review_id SERIAL PRIMARY KEY, user_id BIGINT NOT NULL,
@@ -1604,35 +1547,6 @@ def init_db():
                 setting_key TEXT PRIMARY KEY NOT NULL, setting_value TEXT
             )''')
             logger.info("✅ Bot_settings table created successfully")
-            
-            # --- SCHEMA FIX: Ensure bot_settings has PK and no duplicates ---
-            try:
-                # 1. Remove duplicates (keep latest by ctid) - PostgreSQL only
-                if os.getenv('DATABASE_URL'): # Only run on Postgres
-                    logger.info("🔧 Cleaning up bot_settings duplicates...")
-                    c.execute("""
-                        DELETE FROM bot_settings a USING bot_settings b
-                        WHERE a.ctid < b.ctid AND a.setting_key = b.setting_key
-                    """)
-                    conn.commit()
-            except Exception as e:
-                logger.warning(f"⚠️ Duplicate cleanup skipped/failed: {e}")
-                conn.rollback()
-
-            try:
-                # 2. Add Primary Key if missing
-                logger.info("🔧 Ensuring bot_settings has Primary Key...")
-                c.execute("ALTER TABLE bot_settings ADD PRIMARY KEY (setting_key)")
-                conn.commit()
-                logger.info("✅ Primary Key added to bot_settings")
-            except Exception as e:
-                if "already exists" in str(e).lower() or "multiple primary keys" in str(e).lower():
-                    pass # Expected if table is healthy
-                else:
-                    logger.warning(f"⚠️ Could not add PK to bot_settings: {e}")
-                conn.rollback()
-            # ---------------------------------------------------------------
-
             # Welcome Messages table
             logger.info("🔧 Creating welcome_messages table...")
             c.execute('''CREATE TABLE IF NOT EXISTS welcome_messages (
@@ -1681,10 +1595,6 @@ def init_db():
             # Note: product_media table migration skipped for PostgreSQL to avoid startup delays
             logger.info("✅ Product_media table created successfully (migration skipped for PostgreSQL)")
 
-            # CRITICAL: Commit all table creations before creating indices
-            conn.commit()
-            logger.info("✅ All tables committed successfully")
-
             # Create Indices
             c.execute("CREATE INDEX IF NOT EXISTS idx_product_media_product_id ON product_media(product_id)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)")
@@ -1702,10 +1612,6 @@ def init_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_users_is_reseller ON users(is_reseller)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_reseller_discounts_user_id ON reseller_discounts(reseller_user_id)")
             # <<< END ADDED >>>
-
-            # CRITICAL: Commit all indices before any ALTER TABLE commands
-            conn.commit()
-            logger.info("✅ All indices committed successfully")
 
             # Handle existing tables: ALTER all user_id columns from INTEGER to BIGINT for Telegram compatibility
             logger.info(f"🔧 Converting all user_id columns to BIGINT for existing tables...")
@@ -1905,9 +1811,9 @@ def remove_pending_deposit(payment_id: str, trigger: str = "unknown"): # Added t
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        result = c.execute("DELETE FROM pending_deposits WHERE payment_id = %s", (payment_id,))
+        c.execute("DELETE FROM pending_deposits WHERE payment_id = %s", (payment_id,))
         conn.commit()
-        deleted = result.rowcount > 0
+        deleted = c.rowcount > 0
         if deleted:
             logger.info(f"Removed pending deposit record for payment ID: {payment_id} (Trigger: {trigger})")
         else:
@@ -2078,7 +1984,7 @@ def _get_lang_data(context: ContextTypes.DEFAULT_TYPE) -> tuple[str, dict]:
     """Gets the current language code and corresponding language data dictionary."""
     lang = "en"
     if getattr(context, 'user_data', None) is not None:
-        lang = context.user_data.get("lang", "en")
+    lang = context.user_data.get("lang", "en")
     
     # Uses LANGUAGES dict defined above in this file
     lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
@@ -4028,8 +3934,8 @@ def get_bot_setting(key: str, default: str | None = None):
         if conn:
             conn.close()
 
-def set_bot_setting(key: str, value: str) -> bool:
-    """Set a bot setting value in database. Returns True if successful."""
+def set_bot_setting(key: str, value: str):
+    """Set a bot setting value in database"""
     conn = None
     try:
         conn = get_db_connection()
@@ -4040,15 +3946,11 @@ def set_bot_setting(key: str, value: str) -> bool:
             ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
         """, (key, value))
         conn.commit()
-        logger.info(f"✅ Bot setting '{key}' set to '{value[:50]}...' (SUCCESS)")
-        return True
+        logger.info(f"Bot setting '{key}' set to '{value}'")
     except Exception as e:
-        logger.error(f"❌ ERROR writing bot setting '{key}': {e}")
-        logger.error(f"❌ Error type: {type(e).__name__}")
-        logger.error(f"❌ Error details: {str(e)}")
+        logger.error(f"Error writing bot setting {key}: {e}")
         if conn and conn.status == 1:
             conn.rollback()
-        return False
     finally:
         if conn:
             conn.close()

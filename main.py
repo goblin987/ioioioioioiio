@@ -6,7 +6,7 @@ import os
 import signal
 import sqlite3 # Keep for error handling if needed directly
 from functools import wraps
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta
 import threading # Added for Flask thread
 import json # Added for webhook processing
 import time # Added for timestamp
@@ -165,7 +165,6 @@ from admin import (
     handle_confirm_yes,
     handle_adm_bot_media_message,  # Import bot media handler
     handle_toggle_daily_rewards_button,  # Daily Rewards toggle
-    handle_toggle_ui_mode,  # UI Mode toggle
     # Bulk product handlers
     handle_adm_bulk_city, handle_adm_bulk_dist, handle_adm_bulk_type, handle_adm_bulk_add,
     handle_adm_bulk_size, handle_adm_bulk_custom_size, handle_adm_bulk_custom_size_message,
@@ -559,13 +558,10 @@ try:
         handle_reseller_edit_discount,
         handle_reseller_percent_message,
         handle_reseller_delete_discount_confirm,
-        get_reseller_discount,
     )
 except ImportError:
     logger_dummy_reseller = logging.getLogger(__name__ + "_dummy_reseller")
     logger_dummy_reseller.error("Could not import handlers from reseller_management.py.")
-    def get_reseller_discount(user_id: int, product_type: str) -> Decimal:
-        return Decimal('0.0')
     async def handle_manage_resellers_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
         query = update.callback_query; msg = "Reseller Status Mgmt handler not found."
         if query: await query.edit_message_text(msg)
@@ -827,9 +823,6 @@ def callback_query_router(func):
                 "admin_marketing_menu": admin.handle_admin_marketing_menu,
                 "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
                 "toggle_daily_rewards_button": handle_toggle_daily_rewards_button,
-                "toggle_ui_mode": handle_toggle_ui_mode,
-                "edit_miniapp_text_start": admin.handle_admin_edit_miniapp_text_start,
-                "edit_miniapp_btn_start": admin.handle_admin_edit_miniapp_btn_start,
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "toggle_human_verification": admin.handle_toggle_human_verification,
                 "set_verification_attempts": admin.handle_set_verification_attempts,
@@ -856,18 +849,14 @@ def callback_query_router(func):
                 "adm_users_other": admin.handle_adm_users_other,
                 "adm_export_usernames": admin.handle_adm_export_usernames,
                 
-                # Product Removal System handlers
-                "remove_products_menu": admin.handle_remove_products_menu,
-                "remove_by_location": admin.handle_remove_by_location,
-                "remove_by_city_select": admin.handle_remove_by_city_select,
-                "remove_by_category_select": admin.handle_remove_by_category_select,
-                "remove_city": admin.handle_remove_city,
-                "remove_district": admin.handle_remove_district,
-                "remove_type": admin.handle_remove_type,
-                "remove_confirm": admin.handle_remove_confirm,
-                "execute_removal": admin.handle_execute_removal,
-                "confirm_remove_city": admin.handle_confirm_remove_city,
-                "confirm_remove_category": admin.handle_confirm_remove_category,
+                # Product Removal System handlers - DISABLED (use Manage Products instead)
+                # "remove_products_menu": admin.handle_remove_products_menu,
+                # "remove_by_location": admin.handle_remove_by_location,
+                # "remove_city": admin.handle_remove_city,
+                # "remove_district": admin.handle_remove_district,
+                # "remove_type": admin.handle_remove_type,
+                # "remove_confirm": admin.handle_remove_confirm,
+                # "execute_removal": admin.handle_execute_removal,
                 
                 # Stock management handlers
                 "stock_management_menu": handle_stock_management_menu,
@@ -1542,8 +1531,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
         'awaiting_vip_name_edit': handle_vip_name_edit_message,
         'awaiting_welcome_text': handle_welcome_text_message,
-        'awaiting_miniapp_text': admin.handle_admin_save_miniapp_text, # New
-        'awaiting_miniapp_btn': admin.handle_admin_save_miniapp_btn, # New
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
         'awaiting_price_simple': handle_price_simple_message,
@@ -1741,13 +1728,12 @@ async def post_init(application: Application) -> None:
     if USERBOT_AVAILABLE:
         try:
             logger.info("🔧 [DEPLOY v3] Applying pyaes IGE replacement patch...")
-            # from telethon_secret_patch import apply_all_patches
-            # patch_success = apply_all_patches()
-            # if patch_success:
-            #     logger.info("✅ [DEPLOY v3] pyaes patch applied - videos will use correct encryption!")
-            # else:
-            #     logger.error("❌ [DEPLOY v3] Patch FAILED - videos will be corrupted!")
-            logger.warning("⚠️ Patch module missing - skipping patch")
+            from telethon_secret_patch import apply_all_patches
+            patch_success = apply_all_patches()
+            if patch_success:
+                logger.info("✅ [DEPLOY v3] pyaes patch applied - videos will use correct encryption!")
+            else:
+                logger.error("❌ [DEPLOY v3] Patch FAILED - videos will be corrupted!")
         except Exception as patch_err:
             logger.error(f"❌ Failed to apply patches: {patch_err}", exc_info=True)
     
@@ -1989,10 +1975,356 @@ async def process_payment_with_retry(user_id: int, basket_snapshot: list, discou
     return False
 
 @flask_app.route("/webhook", methods=['POST'])
-def legacy_webhook():
-    """Legacy webhook endpoint - no longer used. SOL payments monitored via background task."""
-    logger.info("Legacy webhook endpoint accessed (ignored)")
-    return Response("Not used", status=200)
+def nowpayments_webhook():
+    global telegram_app, main_loop, NOWPAYMENTS_IPN_SECRET
+    
+    # CRITICAL: Log every webhook attempt
+    logger.info("🔍 WEBHOOK RECEIVED: NOWPayments webhook endpoint accessed")
+    logger.info(f"🔍 WEBHOOK DEBUG: Request method: {request.method}")
+    logger.info(f"🔍 WEBHOOK DEBUG: Request headers: {dict(request.headers)}")
+    logger.info(f"🔍 WEBHOOK DEBUG: Content length: {request.content_length}")
+    logger.info(f"🔍 WEBHOOK DEBUG: Remote address: {request.remote_addr}")
+    
+    if not telegram_app or not main_loop:
+        logger.error("Webhook received but Telegram app or event loop not initialized.")
+        return Response(status=503)
+
+    # Check request size limit
+    content_length = request.content_length
+    if content_length and content_length > 10240:  # 10KB limit
+        logger.warning(f"Webhook request too large: {content_length} bytes")
+        return Response("Request too large", status=413)
+
+    raw_body = request.get_data() # Get raw body once
+    signature = request.headers.get('x-nowpayments-sig')
+
+    # BULLETPROOF: MANDATORY signature verification for security and reliability
+    if not NOWPAYMENTS_IPN_SECRET:
+        logger.critical("❌ CRITICAL SECURITY ERROR: NOWPAYMENTS_IPN_SECRET not configured! Rejecting all webhooks for security.")
+        return Response("IPN Secret not configured", status=500)
+    
+    if not signature:
+        logger.warning("❌ SECURITY REJECTION: No signature header received from webhook. Rejecting for security.")
+        return Response("Missing signature header", status=400)
+    
+    if not verify_nowpayments_signature(raw_body, signature, NOWPAYMENTS_IPN_SECRET):
+        logger.warning("❌ SECURITY REJECTION: NOWPayments signature verification FAILED - webhook is fake or corrupted")
+        return Response("Invalid signature", status=400)
+    
+    logger.info("✅ NOWPayments signature verification PASSED - webhook is authentic")
+
+    logger.info(f"NOWPayments IPN Received (signature verification {'PASSED' if NOWPAYMENTS_IPN_SECRET and signature else 'SKIPPED'})")
+    
+    # Add webhook debugging
+    logger.info(f"🔍 WEBHOOK DEBUG: Raw body length: {len(raw_body)} bytes")
+    logger.info(f"🔍 WEBHOOK DEBUG: Signature header: {signature}")
+    logger.info(f"🔍 WEBHOOK DEBUG: IPN Secret configured: {bool(NOWPAYMENTS_IPN_SECRET)}")
+    logger.info(f"🔍 WEBHOOK DEBUG: Webhook URL: {WEBHOOK_URL}/webhook")
+
+
+    try:
+        data = json.loads(raw_body) # Parse JSON from raw body
+    except json.JSONDecodeError:
+        logger.warning("Webhook received non-JSON request.")
+        return Response("Invalid Request: Not JSON", status=400)
+
+    logger.info(f"NOWPayments IPN Data: {json.dumps(data)}") # Log the parsed data
+
+    required_keys = ['payment_id', 'payment_status', 'pay_currency', 'actually_paid']
+    if not all(key in data for key in required_keys):
+        logger.error(f"Webhook missing required keys. Data: {data}")
+        return Response("Missing required keys", status=400)
+
+    payment_id = data.get('payment_id')
+    status = data.get('payment_status')
+    pay_currency = data.get('pay_currency')
+    actually_paid_str = data.get('actually_paid')
+    parent_payment_id = data.get('parent_payment_id')
+    order_id = data.get('order_id')
+
+    if parent_payment_id:
+         logger.info(f"Ignoring child payment webhook update {payment_id} (parent: {parent_payment_id}).")
+         return Response("Child payment ignored", status=200)
+
+    if status in ['finished', 'confirmed', 'partially_paid'] and actually_paid_str is not None:
+        logger.info(f"🚀 BULLETPROOF: Processing '{status}' payment: {payment_id}")
+        logger.info(f"📊 BULLETPROOF: Payment details - Amount: {actually_paid_str} {pay_currency}, Order: {order_id}")
+        
+        # CRITICAL: Check if payment was already processed to prevent duplicate processing
+        try:
+            existing_pending = asyncio.run_coroutine_threadsafe(
+                asyncio.to_thread(get_pending_deposit, payment_id), main_loop
+            ).result(timeout=5)
+            
+            if not existing_pending:
+                logger.warning(f"⚠️ Payment {payment_id} with status '{status}' already processed or not found. Skipping to prevent duplicate processing.")
+                return Response("Payment already processed", status=200)
+        except Exception as check_e:
+            logger.error(f"❌ Error checking existing payment {payment_id}: {check_e}")
+            # Continue processing if check fails
+        
+        try:
+            actually_paid_decimal = Decimal(str(actually_paid_str))
+            if actually_paid_decimal <= 0:
+                logger.warning(f"⚠️ Ignoring webhook for payment {payment_id} with zero 'actually_paid'.")
+                if status != 'confirmed': # Only remove if not yet confirmed, might be a final "zero paid" update after other partials
+                    asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="zero_paid"), main_loop)
+                return Response("Zero amount paid", status=200)
+
+            # BULLETPROOF: Get pending info with timeout and retry
+            pending_info = None
+            for attempt in range(3):  # 3 attempts with exponential backoff
+                try:
+                    pending_info = asyncio.run_coroutine_threadsafe(
+                        asyncio.to_thread(get_pending_deposit, payment_id), main_loop
+                    ).result(timeout=10)  # 10 second timeout
+                    break
+                except asyncio.TimeoutError:
+                    logger.warning(f"⏰ Timeout getting pending info for {payment_id}, attempt {attempt + 1}/3")
+                    if attempt < 2:  # Don't sleep on last attempt
+                        time.sleep(1 * (attempt + 1))  # Exponential backoff
+                except Exception as e:
+                    logger.error(f"❌ Error getting pending info for {payment_id}, attempt {attempt + 1}/3: {e}")
+                    if attempt < 2:
+                        time.sleep(1 * (attempt + 1))
+
+            if not pending_info:
+                 logger.info(f"ℹ️ Webhook Info: Pending deposit {payment_id} not found (likely already processed).")
+                 return Response("Pending deposit not found", status=200)
+
+            user_id = pending_info['user_id']
+            stored_currency = pending_info['currency']
+            target_eur_decimal = Decimal(str(pending_info['target_eur_amount']))
+            expected_crypto_decimal = Decimal(str(pending_info.get('expected_crypto_amount', '0.0')))
+            is_purchase = pending_info.get('is_purchase') == 1
+            basket_snapshot = pending_info.get('basket_snapshot')
+            discount_code_used = pending_info.get('discount_code_used')
+            log_prefix = "PURCHASE" if is_purchase else "REFILL"
+
+            if stored_currency.lower() != pay_currency.lower():
+                 logger.error(f"Currency mismatch {log_prefix} {payment_id}. DB: {stored_currency}, Webhook: {pay_currency}")
+                 asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="currency_mismatch"), main_loop)
+                 return Response("Currency mismatch", status=400)
+
+            paid_eur_equivalent = Decimal('0.0')
+            # Use real-time crypto price conversion instead of proportion-based calculation
+            try:
+                crypto_price_future = asyncio.run_coroutine_threadsafe(
+                    asyncio.to_thread(get_crypto_price_eur, pay_currency), main_loop
+                )
+                crypto_price_eur = crypto_price_future.result(timeout=10)
+                
+                if crypto_price_eur and crypto_price_eur > Decimal('0.0'):
+                    paid_eur_equivalent = (actually_paid_decimal * crypto_price_eur).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    logger.info(f"{log_prefix} {payment_id}: Used real-time price {crypto_price_eur} EUR/{pay_currency.upper()} for conversion.")
+                else:
+                    logger.warning(f"{log_prefix} {payment_id}: Could not get real-time price for {pay_currency}. Falling back to proportion method.")
+                    # Fallback to proportion method if price fetch fails
+                    if expected_crypto_decimal > Decimal('0.0'):
+                        proportion = actually_paid_decimal / expected_crypto_decimal
+                        paid_eur_equivalent = (proportion * target_eur_decimal).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    else:
+                        logger.error(f"{log_prefix} {payment_id}: Cannot calculate EUR equivalent (expected crypto amount is zero).")
+                        asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="zero_expected_crypto"), main_loop)
+                        return Response("Cannot calculate EUR equivalent", status=400)
+            except Exception as price_e:
+                logger.error(f"{log_prefix} {payment_id}: Error getting crypto price: {price_e}. Using proportion fallback.")
+                # Fallback to proportion method if price API fails
+                if expected_crypto_decimal > Decimal('0.0'):
+                    proportion = actually_paid_decimal / expected_crypto_decimal
+                    paid_eur_equivalent = (proportion * target_eur_decimal).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                else:
+                    logger.error(f"{log_prefix} {payment_id}: Cannot calculate EUR equivalent (expected crypto amount is zero).")
+                    asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="zero_expected_crypto"), main_loop)
+                    return Response("Cannot calculate EUR equivalent", status=400)
+
+            logger.info(f"{log_prefix} {payment_id}: User {user_id} paid {actually_paid_decimal} {pay_currency}. Approx EUR value: {paid_eur_equivalent:.2f}. Target EUR: {target_eur_decimal:.2f}")
+
+            dummy_context = ContextTypes.DEFAULT_TYPE(application=telegram_app, chat_id=user_id, user_id=user_id) if telegram_app else None
+            if not dummy_context:
+                logger.error(f"Cannot process {log_prefix} {payment_id}, telegram_app not ready.")
+                return Response("Internal error: App not ready", status=503)
+
+            if is_purchase:
+                # CRITICAL: Check payment amount BEFORE processing to prevent underpayment exploitation
+                if paid_eur_equivalent < target_eur_decimal:
+                    # Underpayment: Reject payment, credit balance, don't give product
+                    underpaid_eur = (target_eur_decimal - paid_eur_equivalent).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+                    logger.warning(f"❌ UNDERPAYMENT REJECTED: User {user_id} paid {paid_eur_equivalent:.2f} EUR for {target_eur_decimal:.2f} EUR product. Short by {underpaid_eur:.2f} EUR. Crediting balance, NO PRODUCT DELIVERED.")
+                    
+                    # Credit the received amount to user's balance
+                    credit_future = asyncio.run_coroutine_threadsafe(
+                        credit_user_balance(user_id, paid_eur_equivalent, f"Underpayment refund on purchase {payment_id}", dummy_context),
+                        main_loop
+                    )
+                    credit_success = False
+                    try: 
+                        credit_success = credit_future.result(timeout=30)
+                    except Exception as e: 
+                        logger.error(f"Error crediting underpayment refund for {payment_id}: {e}", exc_info=True)
+                    
+                    if not credit_success:
+                        logger.critical(f"CRITICAL: Failed to credit balance for underpayment {payment_id} user {user_id}. Amount: {paid_eur_equivalent:.2f} EUR. MANUAL CHECK NEEDED!")
+                    
+                    # Send rejection message to user
+                    underpay_msg = f"❌ Payment Rejected: Underpayment detected!\n\nYou paid: {paid_eur_equivalent:.2f} EUR\nRequired: {target_eur_decimal:.2f} EUR\nShort by: {underpaid_eur:.2f} EUR\n\nYour payment has been refunded to your balance. Please try again with the correct amount."
+                    asyncio.run_coroutine_threadsafe(send_message_with_retry(telegram_app.bot, user_id, underpay_msg, parse_mode=None), main_loop)
+                    
+                    # Remove pending deposit as failed
+                    asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="underpayment_rejected"), main_loop)
+                    logger.info(f"Processed underpaid purchase {payment_id} for user {user_id}. Balance credited, items NOT delivered.")
+                    return Response("Underpayment rejected", status=200)
+                
+                # Process payment (overpayment or exact payment) - only if amount is sufficient
+                logger.info(f"{log_prefix} {payment_id}: Processing payment for user {user_id}. Paid {paid_eur_equivalent:.2f} EUR, target {target_eur_decimal:.2f} EUR.")
+                
+                # BULLETPROOF: Use the improved payment processing with retry and comprehensive error handling
+                logger.info(f"🔄 BULLETPROOF: Starting purchase finalization for {payment_id} user {user_id}")
+                
+                finalize_future = asyncio.run_coroutine_threadsafe(
+                    process_payment_with_retry(user_id, basket_snapshot, discount_code_used, payment_id, dummy_context),
+                    main_loop
+                )
+                purchase_finalized = False
+                
+                # BULLETPROOF: Multiple timeout attempts with different strategies
+                for attempt in range(3):
+                    try: 
+                        logger.info(f"🔄 BULLETPROOF: Purchase finalization attempt {attempt + 1}/3 for {payment_id}")
+                        purchase_finalized = finalize_future.result(timeout=180)  # 3 minutes per attempt
+                        break
+                    except asyncio.TimeoutError:
+                        logger.warning(f"⏰ BULLETPROOF: Purchase finalization timeout attempt {attempt + 1}/3 for {payment_id}")
+                        if attempt < 2:  # Not the last attempt
+                            # Try to cancel the future and restart
+                            finalize_future.cancel()
+                            time.sleep(5)  # Wait 5 seconds
+                            # Restart the process
+                            finalize_future = asyncio.run_coroutine_threadsafe(
+                                process_payment_with_retry(user_id, basket_snapshot, discount_code_used, payment_id, dummy_context),
+                                main_loop
+                            )
+                        else:
+                            # Last attempt failed
+                            logger.critical(f"🚨 CRITICAL TIMEOUT: Purchase finalization for {payment_id} user {user_id} failed after 3 attempts. Payment may be lost!")
+                            # Notify admin immediately about timeout
+                            if get_first_primary_admin_id():
+                                asyncio.run_coroutine_threadsafe(
+                                    send_message_with_retry(telegram_app.bot, get_first_primary_admin_id(), 
+                                        f"🚨 CRITICAL TIMEOUT: Purchase {payment_id} for user {user_id} failed after 3 attempts. Payment may be lost! Manual intervention required!"),
+                                    main_loop
+                                )
+                            # DO NOT remove pending deposit - keep it for manual recovery
+                            return Response("Purchase finalization timeout - payment kept for manual recovery", status=500)
+                    except Exception as e: 
+                        logger.critical(f"🚨 CRITICAL ERROR: Purchase finalization for {payment_id} user {user_id} failed with error: {e}. Payment may be lost!")
+                        # Notify admin about the error
+                        if get_first_primary_admin_id():
+                            asyncio.run_coroutine_threadsafe(
+                                send_message_with_retry(telegram_app.bot, get_first_primary_admin_id(), 
+                                    f"🚨 CRITICAL ERROR: Purchase {payment_id} for user {user_id} failed with error: {str(e)}. Payment may be lost! Manual intervention required!"),
+                                main_loop
+                            )
+                        # DO NOT remove pending deposit - keep it for manual recovery
+                        return Response("Purchase finalization error - payment kept for manual recovery", status=500)
+
+                # Process payment (overpayment or exact payment)
+                if purchase_finalized:
+                    logger.info(f"✅ BULLETPROOF: Purchase finalization SUCCESSFUL for {payment_id} user {user_id}")
+                    
+                    # Handle overpayment/exact payment
+                    if paid_eur_equivalent > target_eur_decimal:
+                        # Overpayment: Give product + credit excess
+                        overpaid_eur = (paid_eur_equivalent - target_eur_decimal).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+                        logger.info(f"💰 BULLETPROOF: Overpayment detected. User {user_id} paid {paid_eur_equivalent:.2f} EUR for {target_eur_decimal:.2f} EUR product. Crediting {overpaid_eur:.2f} EUR to balance.")
+                        credit_future = asyncio.run_coroutine_threadsafe(
+                            credit_user_balance(user_id, overpaid_eur, f"Overpayment on purchase {payment_id}", dummy_context),
+                            main_loop
+                        )
+                        try: 
+                            credit_future.result(timeout=30)
+                            # Send overpayment message to user
+                            overpay_msg = f"✅ Purchase successful! You overpaid by {overpaid_eur:.2f} EUR. The excess has been added to your balance."
+                            asyncio.run_coroutine_threadsafe(send_message_with_retry(telegram_app.bot, user_id, overpay_msg, parse_mode=None), main_loop)
+                        except Exception as e:
+                            logger.error(f"Error crediting overpayment for {payment_id}: {e}", exc_info=True)
+                    else:
+                        # Exact payment: Just give product
+                        logger.info(f"💰 BULLETPROOF: Exact payment. User {user_id} paid exactly {paid_eur_equivalent:.2f} EUR for {target_eur_decimal:.2f} EUR product.")
+                    
+                    # CRITICAL: Only remove pending deposit AFTER confirming complete success
+                    asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="purchase_success"), main_loop)
+                    logger.info(f"✅ COMPLETE SUCCESS: {log_prefix} {payment_id} fully processed and pending record removed for user {user_id}")
+                else:
+                    logger.critical(f"🚨 CRITICAL: {log_prefix} {payment_id} paid, but process_successful_crypto_purchase FAILED for user {user_id}. Pending deposit NOT removed. Manual intervention required.")
+                    # Notify admin about critical failure
+                    if get_first_primary_admin_id():
+                        asyncio.run_coroutine_threadsafe(
+                            send_message_with_retry(telegram_app.bot, get_first_primary_admin_id(), 
+                                f"🚨 CRITICAL: Payment {payment_id} for user {user_id} FAILED after successful payment! Manual intervention required!"),
+                            main_loop
+                        )
+            else: # Refill
+                 credited_eur_amount = paid_eur_equivalent
+                 if credited_eur_amount > 0:
+                     future = asyncio.run_coroutine_threadsafe(
+                         payment.process_successful_refill(user_id, credited_eur_amount, payment_id, dummy_context),
+                         main_loop
+                     )
+                     try:
+                          db_update_success = future.result(timeout=30)
+                          if db_update_success:
+                               asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="refill_success"), main_loop)
+                               logger.info(f"Successfully processed and removed pending deposit {payment_id} (Status: {status})")
+                          else:
+                               logger.critical(f"CRITICAL: {log_prefix} {payment_id} ({status}) processed, but process_successful_refill FAILED for user {user_id}. Pending deposit NOT removed. Manual intervention required.")
+                     except asyncio.TimeoutError:
+                          logger.error(f"Timeout waiting for process_successful_refill result for {payment_id}. Pending deposit NOT removed.")
+                     except Exception as e:
+                          logger.error(f"Error getting result from process_successful_refill for {payment_id}: {e}. Pending deposit NOT removed.", exc_info=True)
+                 else:
+                     logger.warning(f"{log_prefix} {payment_id} ({status}): Calculated credited EUR is zero for user {user_id}. Removing pending deposit without updating balance.")
+                     asyncio.run_coroutine_threadsafe(asyncio.to_thread(remove_pending_deposit, payment_id, trigger="zero_credit"), main_loop)
+        except (ValueError, TypeError) as e:
+            logger.error(f"Webhook Error: Invalid number format in webhook data for {payment_id}. Error: {e}. Data: {data}")
+        except Exception as e:
+            logger.error(f"Webhook Error: Could not process payment update {payment_id}.", exc_info=True)
+    elif status in ['failed', 'expired', 'refunded']:
+        logger.warning(f"Payment {payment_id} has status '{status}'. Removing pending record.")
+        pending_info_for_removal = None
+        try:
+            pending_info_for_removal = asyncio.run_coroutine_threadsafe(
+                 asyncio.to_thread(get_pending_deposit, payment_id), main_loop
+            ).result(timeout=5) 
+        except Exception as e:
+            logger.error(f"Error checking pending deposit for {payment_id} before removal/notification: {e}")
+        asyncio.run_coroutine_threadsafe(
+            asyncio.to_thread(remove_pending_deposit, payment_id, trigger="failure" if status == 'failed' else "expiry"),
+            main_loop
+        )
+        if pending_info_for_removal and telegram_app:
+            user_id = pending_info_for_removal['user_id']
+            is_purchase_failure = pending_info_for_removal.get('is_purchase') == 1
+            try:
+                conn_lang = None; user_lang = 'en'
+                try:
+                    conn_lang = get_db_connection()
+                    c_lang = conn_lang.cursor()
+                    c_lang.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+                    lang_res = c_lang.fetchone()
+                    if lang_res and lang_res['language'] in LANGUAGES: user_lang = lang_res['language']
+                except Exception as lang_e: logger.error(f"Failed to get lang for user {user_id} notify: {lang_e}")
+                finally:
+                     if conn_lang: conn_lang.close()
+                lang_data_local = LANGUAGES.get(user_lang, LANGUAGES['en'])
+                if is_purchase_failure: fail_msg = lang_data_local.get("crypto_purchase_failed", "Payment Failed/Expired. Your items are no longer reserved.")
+                else: fail_msg = lang_data_local.get("payment_cancelled_or_expired", "Payment Status: Your payment ({payment_id}) was cancelled or expired.").format(payment_id=payment_id)
+                dummy_context = ContextTypes.DEFAULT_TYPE(application=telegram_app, chat_id=user_id, user_id=user_id)
+                asyncio.run_coroutine_threadsafe(send_message_with_retry(telegram_app.bot, user_id, fail_msg, parse_mode=None), main_loop)
+            except Exception as notify_e: logger.error(f"Error notifying user {user_id} about failed/expired payment {payment_id}: {notify_e}")
+    else:
+         logger.info(f"Webhook received for payment {payment_id} with status: {status} (ignored).")
+    return Response(status=200)
 
 @flask_app.route("/telegram/<token>", methods=['POST'])
 async def telegram_webhook(token):
@@ -2033,56 +2365,19 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
 
-@flask_app.route("/webapp/api/locations", methods=['GET'])
-def webapp_get_locations():
-    """API endpoint to fetch cities and districts from database for the Web App"""
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        
-        # Fetch all cities
-        c.execute("SELECT id, name FROM cities ORDER BY name")
-        cities_rows = c.fetchall()
-        
-        locations = {}
-        for city_row in cities_rows:
-            city_id = city_row['id']
-            city_name = city_row['name']
-            
-            # Fetch districts for this city
-            c.execute("SELECT id, name FROM districts WHERE city_id = %s ORDER BY name", (city_id,))
-            districts_rows = c.fetchall()
-            
-            locations[city_name] = [
-                {'id': d['id'], 'name': d['name']} 
-                for d in districts_rows
-            ]
-        
-        conn.close()
-        
-        response = jsonify({'success': True, 'locations': locations})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error fetching locations for webapp: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
-    """API endpoint to fetch available products for the Web App (Excluding Reserved)"""
+    """API endpoint to fetch available products for the Web App"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
         # Fetch products grouped by city/district
-        # Show available AND NOT RESERVED products
-        # (reserved_until < NOW() means expired/free)
+        # We want to show available products
         c.execute("""
             SELECT id, name, price, size, product_type, city, district, available
             FROM products
             WHERE available > 0
-            AND (reserved_until IS NULL OR reserved_until < CURRENT_TIMESTAMP)
             ORDER BY city, district, product_type, price
         """)
         
@@ -2112,90 +2407,12 @@ def webapp_get_products():
         logger.error(f"Error fetching products for webapp: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/reserve", methods=['POST'])
-def webapp_reserve_item():
-    """Reserves an item for 15 minutes (High Concurrency Safe)"""
-    try:
-        data = request.json
-        logger.info(f"📥 Reserve request data: {data}")
-        
-        ids = data.get('ids', []) # List of candidate IDs
-        user_id = data.get('user_id')
-        
-        if not ids:
-            logger.error(f"❌ Reserve failed: No IDs provided")
-            return jsonify({'success': False, 'error': 'Missing product IDs'}), 400
-        
-        # Default to user_id 0 if not provided (for testing)
-        if not user_id:
-            user_id = 0
-            logger.warning(f"⚠️ No user_id provided, using 0 for testing")
-            
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("BEGIN") # Start transaction
-        
-        # Find first available (not reserved)
-        # FOR UPDATE SKIP LOCKED prevents two users grabbing the same row simultaneously
-        placeholders = ','.join(['%s'] * len(ids))
-        query = f"""
-            SELECT id FROM products 
-            WHERE id IN ({placeholders}) 
-            AND available > 0 
-            AND (reserved_until IS NULL OR reserved_until < CURRENT_TIMESTAMP)
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
-        """
-        c.execute(query, ids)
-        row = c.fetchone()
-        
-        if not row:
-            conn.rollback()
-            conn.close()
-            return jsonify({'success': False, 'error': 'All items reserved or sold'}), 409
-            
-        reserved_id = row['id']
-        
-        # Reserve it
-        expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
-        c.execute("UPDATE products SET reserved_until = %s, reserved_by = %s WHERE id = %s", (expiry, user_id, reserved_id))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({'success': True, 'reserved_id': reserved_id, 'expires_at': expiry.isoformat()})
-        
-    except Exception as e:
-        logger.error(f"Reservation error: {e}")
-        if 'conn' in locals() and conn: conn.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@flask_app.route("/webapp/api/unreserve", methods=['POST'])
-def webapp_unreserve_item():
-    """Un-reserves an item (e.g. removed from basket)"""
-    try:
-        data = request.json
-        p_id = data.get('id')
-        
-        if not p_id:
-            return jsonify({'success': False}), 400
-            
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("UPDATE products SET reserved_until = NULL, reserved_by = NULL WHERE id = %s", (p_id,))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Un-reservation error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 @flask_app.route("/webapp/api/validate_discount", methods=['POST'])
 def webapp_validate_discount():
     """Validates a discount code and calculates reseller discounts"""
     try:
         data = request.json
-        code = (data.get('code') or '').strip()
+        code = data.get('code', '').strip()
         user_id = data.get('user_id')
         items = data.get('items', [])
         
@@ -2270,91 +2487,33 @@ def webapp_create_invoice():
         data = request.json
         user_id = data.get('user_id')
         items = data.get('items', [])
-        discount_code = (data.get('discount_code') or '').strip()
+        discount_code = data.get('discount_code', '').strip()
         
         if not user_id or not items:
             return jsonify({'error': 'Invalid data'}), 400
-        
-        # ENSURE USER EXISTS (fix "user not found" error)
-        try:
-            conn_user = get_db_connection()
-            c_user = conn_user.cursor()
-            c_user.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-            if not c_user.fetchone():
-                # User doesn't exist, create them with correct schema
-                c_user.execute("""
-                    INSERT INTO users (user_id, username, balance, total_purchases, language)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (user_id) DO NOTHING
-                """, (user_id, f"user_{user_id}", 0.0, 0, 'en'))
-                conn_user.commit()
-                logger.info(f"✅ Auto-created user {user_id} from webapp")
-            conn_user.close()
-        except Exception as e:
-            logger.error(f"Error ensuring user exists: {e}")
-        
-        # Enforce basket limit (10 items max)
-        if len(items) > 10:
-            return jsonify({'error': 'Maximum 10 items per order'}), 400
 
         conn = get_db_connection()
         c = conn.cursor()
         total_eur = Decimal('0.0')
         reseller_discount_total = Decimal('0.0')
         
-        # Validate items and calculate total, also build proper basket snapshot
-        unavailable_items = []
-        enriched_items = []  # Will contain items with all required fields for payment processing
-        
+        # Validate items and calculate total
         for item in items:
             p_id = item.get('id')
-            c.execute("""
-                SELECT id, name, price, product_type, available, size, city, district, 
-                       original_text 
-                FROM products WHERE id = %s
-            """, (p_id,))
+            c.execute("SELECT price, product_type FROM products WHERE id = %s", (p_id,))
             row = c.fetchone()
-            if not row:
-                unavailable_items.append(f"Product ID {p_id} not found")
-                continue
-            
-            # Check if product is available (available > 0)
-            if row.get('available', 0) <= 0:
-                product_name = row.get('name', f"Product {p_id}")
-                unavailable_items.append(f"{product_name} is out of stock")
-                continue
+            if row:
+                price = Decimal(str(row['price']))
+                p_type = row['product_type']
+                total_eur += price
                 
-            price = Decimal(str(row['price']))
-            p_type = row['product_type']
-            total_eur += price
-            
-            # Calculate reseller discount for this item
-            r_disc_percent = get_reseller_discount(user_id, p_type)
-            if r_disc_percent > 0:
-                item_discount = (price * r_disc_percent) / Decimal('100.0')
-                reseller_discount_total += item_discount
-            
-            # Build enriched item with all fields needed for payment processing
-            enriched_items.append({
-                'product_id': row['id'],  # KEY FIELD for payment processing
-                'name': row['name'],
-                'price': float(row['price']),
-                'product_type': p_type,
-                'size': row.get('size', ''),
-                'city': row.get('city', ''),
-                'district': row.get('district', ''),
-                'original_text': row.get('original_text', '')  # Fixed: use 'original_text' not 'original_text_pickup'
-            })
+                # Calculate reseller discount for this item
+                r_disc_percent = get_reseller_discount(user_id, p_type)
+                if r_disc_percent > 0:
+                    item_discount = (price * r_disc_percent) / Decimal('100.0')
+                    reseller_discount_total += item_discount
         
         conn.close()
-        
-        # If any items are unavailable, return error
-        if unavailable_items:
-            return jsonify({
-                'success': False,
-                'error': 'Some items are unavailable',
-                'details': unavailable_items
-            }), 400
         
         if total_eur == 0:
              return jsonify({'error': 'Empty basket'}), 400
@@ -2401,17 +2560,21 @@ def webapp_create_invoice():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Store basket snapshot as LIST (matching bot format) with enriched product details
-        # Items format: [{'product_id': X, 'name': Y, 'price': Z, 'city': A, 'district': B, ...}, ...]
-        basket_snapshot = enriched_items  # Use enriched items with product_id field
+        # Store basket snapshot WITH discount info
+        basket_snapshot = {
+            'items': items,
+            'discounts': discount_info,
+            'original_total': float(total_eur),
+            'final_total': float(final_total)
+        }
         
         c.execute("""
             INSERT INTO pending_deposits 
-            (user_id, payment_id, currency, target_eur_amount, expected_crypto_amount, 
-             created_at, is_purchase, basket_snapshot_json, discount_code_used)
-            VALUES (%s, %s, %s, %s, %s, NOW(), TRUE, %s, %s)
-        """, (user_id, order_id, 'SOL', float(final_total), float(payment_res['pay_amount']), 
-              json.dumps(basket_snapshot), discount_code if discount_code else None))
+            (user_id, payment_id, amount_eur, pay_currency, pay_amount_crypto, 
+             pay_address, status, created_at, is_purchase, basket_snapshot_json)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending', NOW(), 1, %s)
+        """, (user_id, order_id, float(final_total), 'SOL', float(payment_res['pay_amount']), 
+              payment_res['pay_address'], json.dumps(basket_snapshot)))
         
         conn.commit()
         conn.close()
@@ -2425,1491 +2588,37 @@ def webapp_create_invoice():
         })
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
-    
+
     except Exception as e:
         logger.error(f"Error creating invoice: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/create_refill", methods=['POST'])
-def webapp_create_refill():
-    """Create a refill invoice for balance top-up"""
+@flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
+def webapp_check_payment(payment_id):
+    """Check payment status"""
     try:
-        data = request.json
-        user_id = data.get('user_id')
-        amount_eur = float(data.get('amount', 0))
-        
-        # Security: Enforce min/max refill limits
-        MIN_REFILL = 1  # €1 minimum
-        MAX_REFILL = 10000  # €10,000 maximum
-        
-        if not user_id or amount_eur <= 0:
-            return jsonify({'error': 'Invalid data'}), 400
-        
-        if amount_eur < MIN_REFILL:
-            return jsonify({'error': f'Minimum refill amount is €{MIN_REFILL}'}), 400
-        
-        if amount_eur > MAX_REFILL:
-            return jsonify({'error': f'Maximum refill amount is €{MAX_REFILL}'}), 400
-        
-        # ENSURE USER EXISTS (critical for balance credit later)
-        try:
-            conn_user = get_db_connection()
-            c_user = conn_user.cursor()
-            c_user.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-            if not c_user.fetchone():
-                # User doesn't exist, create them with correct schema
-                c_user.execute("""
-                    INSERT INTO users (user_id, username, balance, total_purchases, language)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (user_id) DO NOTHING
-                """, (user_id, f"user_{user_id}", 0.0, 0, 'en'))
-                conn_user.commit()
-                logger.info(f"✅ Auto-created user {user_id} for refill")
-            conn_user.close()
-        except Exception as e:
-            logger.error(f"Error ensuring user exists for refill: {e}")
-            # Don't fail the refill just because of this
-            pass
-
-        # ===== NASA-GRADE PAYMENT CREATION =====
-        # Get SOL price (synchronous function)
-        from payment_solana import get_sol_price_eur
-        
-        logger.info(f"💰 REFILL REQUEST: User {user_id} wants to deposit €{amount_eur}")
-        
-        try:
-            sol_price = get_sol_price_eur()
-        except Exception as e:
-            logger.error(f"❌ Error getting SOL price: {e}")
-            return jsonify({'error': 'Could not get crypto price. Please try again in a moment.'}), 500
-        
-        if not sol_price or sol_price <= Decimal('0'):
-            logger.error(f"❌ Invalid SOL price: {sol_price}")
-            return jsonify({'error': 'Invalid crypto price. Please try again.'}), 500
-        
-        logger.info(f"✅ SOL Price: {sol_price} EUR")
-        
-        # Calculate expected SOL amount (for logging/validation only)
-        expected_sol = (Decimal(str(amount_eur)) / sol_price).quantize(Decimal("0.000001"))
-        logger.info(f"💡 Expected SOL amount: {expected_sol} SOL for €{amount_eur}")
-
-        # Create Payment Order
-        order_id = f"WEBAPP_REFILL_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
-        
-        logger.info(f"🔧 Creating Solana payment for Order ID: {order_id}")
-        
-        from payment import create_solana_payment
-        loop = main_loop if main_loop else asyncio.new_event_loop()
-        
-        # CRITICAL FIX: Pass EUR amount, not SOL amount!
-        payment_res = asyncio.run_coroutine_threadsafe(
-            create_solana_payment(user_id, order_id, amount_eur),  # ✅ EUR, not SOL!
-            loop
-        ).result(timeout=10)
-        
-        logger.info(f"📋 Payment creation result: {payment_res}")
-        
-        if 'error' in payment_res:
-            logger.error(f"❌ Payment creation failed: {payment_res}")
-            return jsonify(payment_res), 500
-        
-        # Validate payment response
-        if not payment_res.get('pay_address') or not payment_res.get('pay_amount'):
-            logger.error(f"❌ Invalid payment response: {payment_res}")
-            return jsonify({'error': 'Invalid payment data'}), 500
-        
-        # Sanity check: SOL amount should be reasonable
-        sol_amount = Decimal(str(payment_res['pay_amount']))
-        if sol_amount <= Decimal('0') or sol_amount > Decimal('1000'):
-            logger.error(f"❌ INSANE SOL AMOUNT: {sol_amount} for €{amount_eur}")
-            return jsonify({'error': 'Payment calculation error. Please contact support.'}), 500
-        
-        # Verify: EUR amount matches (prevent double-conversion bugs)
-        calculated_eur = (sol_amount * sol_price).quantize(Decimal("0.01"))
-        if abs(calculated_eur - Decimal(str(amount_eur))) > Decimal('0.10'):  # Allow 10 cent tolerance
-            logger.warning(f"⚠️ EUR mismatch: Expected €{amount_eur}, got ~€{calculated_eur}")
-        
-        logger.info(f"✅ Payment created: {sol_amount} SOL (~€{calculated_eur}) to {payment_res['pay_address']}")
-            
-        # Store in DB
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""
-            INSERT INTO pending_deposits 
-            (user_id, payment_id, currency, target_eur_amount, expected_crypto_amount, 
-             created_at, is_purchase, basket_snapshot_json)
-            VALUES (%s, %s, %s, %s, %s, NOW(), FALSE, NULL)
-        """, (user_id, order_id, 'SOL', amount_eur, float(sol_amount)))
-        conn.commit()
-        conn.close()
-        
-        logger.info(f"💾 Stored refill order in DB: {order_id}")
-        
-        response = jsonify({
-            'success': True,
-            'order_id': order_id,
-            'pay_address': payment_res['pay_address'],
-            'pay_amount': str(sol_amount),
-            'amount_eur': amount_eur
-        })
-        
-        logger.info(f"✅ REFILL INVOICE CREATED: User {user_id} pays {sol_amount} SOL for €{amount_eur}")
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error creating refill: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
-@flask_app.route("/webapp/api/check_payment", methods=['POST', 'GET'])
-def webapp_check_payment(payment_id=None):
-    """Check payment status and return user balance"""
-    try:
-        # Support both POST (with body) and GET (with URL param)
-        if request.method == 'POST':
-            data = request.json or {}
-            payment_id = data.get('order_id') or payment_id
-            user_id = data.get('user_id')
-        else:
-            user_id = request.args.get('user_id')
-        
-        if not payment_id:
-            return jsonify({'error': 'Payment ID required'}), 400
-        
-        conn = get_db_connection()
-        c = conn.cursor()
-        
-        # Get payment status
-        c.execute("SELECT status, user_id FROM solana_wallets WHERE order_id = %s", (payment_id,))
+        c.execute("SELECT status FROM solana_wallets WHERE order_id = %s", (payment_id,))
         res = c.fetchone()
-        
-        if not res:
-            conn.close()
-            return jsonify({'status': 'unknown'})
-        
-        status = res['status']
-        if not user_id:
-            user_id = res['user_id']
-        
-        # Get user's current balance
-        new_balance = None
-        if status == 'confirmed' and user_id:
-            c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
-            balance_res = c.fetchone()
-            if balance_res:
-                new_balance = float(balance_res['balance'])
-        
         conn.close()
         
-        response_data = {'status': status}
-        if new_balance is not None:
-            response_data['new_balance'] = new_balance
-        
-        response = jsonify(response_data)
+        status = res['status'] if res else 'unknown'
+        response = jsonify({'status': status})
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
     except Exception as e:
-        logger.error(f"Error checking payment: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@flask_app.route("/webapp/api/user_balance", methods=['POST'])
-def webapp_user_balance():
-    """Get user's current balance"""
-    try:
-        data = request.json or {}
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
-        
-        conn = get_db_connection()
-        c = conn.cursor()
-        
-        # Get user's balance (create if doesn't exist)
-        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
-        res = c.fetchone()
-        
-        if not res:
-            # User doesn't exist yet, create with 0 balance
-            c.execute("""
-                INSERT INTO users (user_id, username, balance, total_purchases, language)
-                VALUES (%s, %s, 0, 0, 'en')
-                ON CONFLICT (user_id) DO NOTHING
-            """, (user_id, f"user_{user_id}"))
-            conn.commit()
-            c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
-            res = c.fetchone()
-        
-        conn.close()
-        
-        balance = float(res['balance']) if res else 0.0
-        
-        response = jsonify({'balance': balance})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
-    except Exception as e:
-        logger.error(f"Error getting user balance: {e}")
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
 def webapp_index():
-    """Serve Telegram Web App with NO CACHE and PATCHED JS"""
-    # Try multiple possible paths
-    possible_paths = [
-        'webapp',
-        './webapp',
-        '/opt/render/project/src/webapp',
-        os.path.join(os.getcwd(), 'webapp'),
-    ]
-    
-    for path in possible_paths:
-        index_path = os.path.join(path, 'index.html')
-        if os.path.exists(path) and os.path.exists(index_path):
-            logger.info(f"✅ Found webapp at: {path}")
-            # FORCE NO CACHE - Read file and send with explicit headers
-            with open(index_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # ===== HOTFIX: SUPER INJECTION v4.7 (Render Override + UI Fixes) =====
-            
-            super_injection = '''
-            <script>
-                console.log("DEBUG: Loaded v4.8-UI-POLISH");
-                
-                // Ensure getProductEmoji exists or fallback
-                if(typeof getProductEmoji === 'undefined') {
-                    window.getProductEmoji = function(type, name) { return '📦'; }
-                }
-
-                // OVERRIDE addToBasket - ASYNC RESERVATION + SPINNER
-                window.addToBasket = function(ids, name, price, e) {
-                    const basket = window.basket || [];
-                    
-                    // 1. Check limit
-                    if(basket.length >= 10) {
-                        window.safeNotify('⚠️ Maximum 10 items per order');
-                        return;
-                    }
-
-                    // 2. RESERVE ON SERVER
-                    const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
-                    
-                    // Show visual feedback (SPINNER)
-                    const btn = e ? e.currentTarget : null; 
-                    const originalText = btn ? btn.innerText : '';
-                    if(btn) { 
-                        btn.innerHTML = '<div class="spinner"></div>'; 
-                        btn.style.opacity = '0.7';
-                        btn.disabled = true; 
-                    }
-                    
-                    const payload = { 
-                        ids: Array.isArray(ids) ? ids : [ids], 
-                        user_id: user_id || 0
-                    };
-                    
-                    fetch('/webapp/api/reserve', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payload)
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if(btn) { 
-                            btn.innerText = originalText; 
-                            btn.style.opacity = '1';
-                            btn.disabled = false; 
-                        }
-                        
-                        if(data.success) {
-                            const reserved_id = data.reserved_id;
-                            
-                            // 3. Add to Basket (Local)
-                            if(e) flyToCart(e);
-                            
-                            // Find details
-                            let product = allProducts.find(p => p.id === reserved_id);
-                            if(!product && Array.isArray(ids)) product = allProducts.find(p => p.id === ids[0]);
-                            
-                            window.basket.push({
-                                id: reserved_id,
-                                name: name,
-                                price: price,
-                                city: product ? (product.city || 'Unknown') : 'Unknown',
-                                district: product ? (product.district || 'Unknown') : 'Unknown',
-                                type: product ? (product.type || 'misc') : 'misc',
-                                size: product ? (product.size || '') : ''
-                            });
-                            
-                            console.log('✅ Added to basket. Total items:', window.basket.length);
-                            updateBasketUI();
-                            
-                        } else {
-                            window.safeNotify('⚠️ ' + (data.error || 'Item reserved or sold out!'));
-                            if(window.loadProducts) window.loadProducts(); 
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Reservation error:", err);
-                        if(btn) { 
-                            btn.innerText = originalText; 
-                            btn.style.opacity = '1';
-                            btn.disabled = false; 
-                        }
-                        window.safeNotify('⚠️ Network error. Try again.');
-                    });
-                };
-                
-                // OVERRIDE initCheckout - Use window.basket
-                window.initCheckout = async function() {
-                    const basket = window.basket || [];
-                    
-                    console.log('🛒 initCheckout called. Basket:', basket.length, 'items');
-                    
-                    if(basket.length === 0) {
-                        console.warn('⚠️ Cannot checkout: basket is empty');
-                        return;
-                    }
-                    
-                    // Find the checkout button
-                    const btn = document.querySelector('#basket-modal .btn-buy:last-of-type') || 
-                               document.querySelector('.cart-checkout-btn');
-                    const originalText = btn ? btn.innerText : "CHECKOUT";
-                    
-                    if(btn) {
-                        btn.innerText = "CONNECTING...";
-                        btn.disabled = true;
-                    }
-                    
-                    try {
-                        const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-                        const userId = user ? user.id : 0; 
-                        
-                        const payload = {
-                            user_id: userId,
-                            items: basket,
-                            discount_code: window.currentDiscount ? window.currentDiscount.code : null
-                        };
-                        
-                        console.log('📤 Checkout payload:', payload);
-                        
-                        const response = await fetch('/webapp/api/create_invoice', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(payload)
-                        });
-                        
-                        const data = await response.json();
-                        console.log('📥 Invoice response:', data);
-                        
-                        if(data.success) {
-                            // Close basket modal
-                            const basketModal = document.getElementById('basket-modal');
-                            if(basketModal) basketModal.style.display = 'none';
-                            
-                            // Open invoice modal
-                            const invModal = document.getElementById('invoice-modal');
-                            
-                            document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
-                            document.getElementById('invoice-address').innerText = data.pay_address;
-                            
-                            // Generate QR
-                            const qrContainer = document.getElementById('qrcode');
-                            qrContainer.innerHTML = "";
-                            if(typeof QRCode !== 'undefined') {
-                                new QRCode(qrContainer, {
-                                    text: data.pay_address,
-                                    width: 150,
-                                    height: 150,
-                                    colorDark : "#000000",
-                                    colorLight : "#ffffff",
-                                    correctLevel : QRCode.CorrectLevel.L
-                                });
-                            }
-                            
-                            invModal.style.display = 'flex';
-                            window.activePaymentId = data.payment_id;
-                            
-                            // Start Polling
-                            if(window.pollInterval) clearInterval(window.pollInterval);
-                            window.pollInterval = setInterval(() => {
-                                if(typeof window.pollPayment === 'function') {
-                                    window.pollPayment(data.payment_id);
-                                }
-                            }, 3000);
-                            
-                            console.log('✅ Invoice displayed, polling started');
-                        } else {
-                            // Handle errors (including stock issues)
-                            window.safeNotify('⚠️ ' + (data.error || 'Checkout failed'));
-                            
-                            if(data.error && data.error.includes('stock')) {
-                                // Refresh products if stock issue
-                                if(typeof window.loadProducts === 'function') window.loadProducts();
-                            }
-                        }
-                    } catch(err) {
-                        console.error("❌ Checkout error:", err);
-                        window.safeNotify('⚠️ Network error. Try again.');
-                    } finally {
-                        if(btn) {
-                            btn.innerText = originalText;
-                            btn.disabled = false;
-                        }
-                    }
-                };
-                
-                // OVERRIDE removeFromBasket - UN-RESERVE ON SERVER
-                window.removeFromBasket = function(index, e) {
-                    const basket = window.basket || [];
-                    
-                    if(e) { e.stopPropagation(); e.preventDefault(); }
-                    
-                    const item = basket[index];
-                    if(!item) return;
-                    
-                    const product_id = item.id;
-                    
-                    // Remove locally FIRST to update UI instantly
-                    window.basket.splice(index, 1);
-                    console.log('❌ Removed from basket. Total items:', window.basket.length);
-                    updateBasketUI();
-                    
-                    // Call API to un-reserve (Background)
-                    fetch('/webapp/api/unreserve', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ id: product_id })
-                    }).then(() => {
-                        console.log("Unreserved item:", product_id);
-                        if(window.loadProducts) window.loadProducts();
-                    }).catch(err => console.error("Unreserve failed:", err));
-                };
-                
-                window.updateBasketUI = function() { renderBasketContent(); };
-
-                // OVERRIDE renderBasketContent - Professional UI
-                window.renderBasketContent = function() {
-                    const basket = window.basket || [];  // ✅ FIX: Use window.basket
-                    const container = document.getElementById('basket-items');
-                    const totalEl = document.getElementById('basket-total');
-                    const countEl = document.getElementById('basket-count');
-                    const navCount = document.getElementById('cart-nav-count');
-                    
-                    console.log('🛒 renderBasketContent called. Basket:', basket.length, 'items');
-                    
-                    if(!container) return;
-                    container.innerHTML = '';
-                    
-                    let total = 0;
-                    basket.forEach((item, i) => {
-                        total += item.price;
-                        console.log(`  - Item ${i}: ${item.name} €${item.price}`);
-                        const itemEl = document.createElement('div');
-                        itemEl.className = 'cart-item-modern';
-                        
-                        // Clean name
-                        let name = item.name.replace(/"/g, '&quot;');
-                        
-                        itemEl.innerHTML = `
-                            <div class="cim-icon-box">${getProductEmoji(item.type, item.name)}</div>
-                            <div class="cim-info">
-                                <div class="cim-name">${name}</div>
-                                <div class="cim-details">${item.size} | ${item.city}</div>
-                                <div class="cim-meta">${item.district || ''}</div>
-                            </div>
-                            <div class="cim-right">
-                                <div class="cim-price">€${item.price.toFixed(2)}</div>
-                                <div class="cim-remove-wrapper" onclick="removeFromBasket(${i}, event)">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
-                                </div>
-                            </div>
-                        `;
-                        container.appendChild(itemEl);
-                    });
-                    
-                    if(basket.length === 0) {
-                        container.innerHTML = `
-                            <div style="text-align:center; padding:60px 20px; color:#444;">
-                                <div style="font-size:40px; margin-bottom:15px; opacity:0.5;">🛒</div>
-                                <div style="font-size:14px; font-weight:600; letter-spacing:1px;">CART IS EMPTY</div>
-                            </div>
-                        `;
-                    }
-                    
-                    // Update Totals - Use updateCartTotal() to apply discounts
-                    if(countEl) countEl.innerText = `(${basket.length})`;
-                    if(navCount) {
-                        navCount.innerText = basket.length;
-                        navCount.style.display = basket.length > 0 ? 'flex' : 'none';
-                    }
-                    
-                    // Call updateCartTotal() to calculate final amount (with discounts)
-                    if(typeof window.updateCartTotal === 'function') {
-                        window.updateCartTotal();
-                    } else if(totalEl) {
-                        totalEl.innerText = `€${total.toFixed(2)}`;
-                    }
-                };
-                
-                // OVERRIDE renderProducts
-                window.renderProducts = function(products) {
-                    const grid = document.getElementById('product-grid');
-                    grid.innerHTML = '';
-                    
-                    if(!products) return;
-                    const availableProducts = products.filter(p => p.available > 0);
-                    
-                    if(availableProducts.length === 0) {
-                        grid.innerHTML = '<div class="loading">NO PRODUCTS AVAILABLE</div>';
-                        return;
-                    }
-                    
-                    const groups = {};
-                    availableProducts.forEach(p => {
-                        let cleanName = p.name.replace(/[\\d_]{6,}.*/g, '').trim();
-                        cleanName = cleanName.replace(/\\s\\d+$/, '').trim();
-                        const key = `${cleanName.toLowerCase()}|${p.type}|${p.city}|${p.size}|${p.price}`;
-                        
-                        if(!groups[key]) {
-                            groups[key] = { ...p, display_name: cleanName, count: 0, ids: [] };
-                        }
-                        groups[key].count++;
-                        groups[key].ids.push(p.id);
-                    });
-                    
-                    Object.values(groups).forEach((p, index) => {
-                        const card = document.createElement('div');
-                        card.className = 'product-card';
-                        card.style.animationDelay = `${index * 0.05}s`;
-                        const countBadge = p.count > 1 ? `<div style="position:absolute; top:5px; right:5px; background:var(--gta-gold); color:#000; padding:2px 6px; font-size:12px; border-radius:4px; font-weight:bold;">x${p.count}</div>` : '';
-                        const idsJson = JSON.stringify(p.ids);
-                        const cleanName = p.display_name.replace(/"/g, '&quot;');
-                        
-                        card.innerHTML = `
-                            ${countBadge}
-                            <div class="product-emoji">${getProductEmoji(p.type, p.display_name)}</div>
-                            <div class="product-name">${p.display_name}</div>
-                            <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>
-                            <div class="product-price">€${p.price.toFixed(2)}</div>
-                            <div style="display:flex; gap:5px;">
-                                <button class="btn-buy" style="font-size:14px; flex:1;" onmouseover="sfx.tick()" onclick='sfx.select(); addToBasket(${idsJson}, "${cleanName}", ${p.price}, event)'>ADD</button>
-                                <button class="btn-buy" style="flex:2;" onmouseover="sfx.tick()" onclick='sfx.select(); buyNow(${idsJson}, "${cleanName}", ${p.price})'>BUY</button>
-                            </div>
-                        `;
-                        grid.appendChild(card);
-                    });
-                };
-                
-                // DISCOUNT CODE HANDLER - Updates total when user types code
-                window.applyDiscountToUI = async function() {
-                    const discountInput = document.getElementById('discount-input');  // ✅ Correct ID
-                    if(!discountInput) {
-                        console.log('❌ Discount input not found');
-                        return;
-                    }
-                    
-                    const code = discountInput.value.trim();
-                    const user_id = window.Telegram.WebApp.initDataUnsafe?.user?.id;
-                    
-                    if(!code) {
-                        // No code, reset to original total
-                        window.discountApplied = null;
-                        updateCartTotal();
-                        return;
-                    }
-                    
-                    try {
-                        // Send basket items to validate discount
-                        const basketItems = window.basket || [];
-                        
-                        if(basketItems.length === 0) {
-                            console.log('⚠️ Empty basket, skipping discount validation');
-                            return;
-                        }
-                        
-                        console.log('🔍 Validating discount code:', code);
-                        
-                        const response = await fetch('/webapp/api/validate_discount', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                code: code,
-                                user_id: user_id || 0,
-                                items: basketItems  // Send full basket items with IDs
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        console.log('📋 Discount validation response:', data);
-                        
-                        if(data.success && data.code_valid && data.code_discount > 0) {
-                            window.discountApplied = {
-                                code: code,
-                                code_discount: data.code_discount,
-                                reseller_discount: data.reseller_discount,
-                                final_total: data.final_total,
-                                original_total: data.original_total
-                            };
-                            console.log('✅ Discount applied:', window.discountApplied);
-                            
-                            // DIRECTLY UPDATE THE TOTAL DISPLAY
-                            const totalElement = document.getElementById('basket-total');
-                            if(totalElement) {
-                                totalElement.textContent = `€${data.final_total.toFixed(2)}`;
-                                console.log('✅ Updated basket-total to:', totalElement.textContent);
-                            }
-                            
-                            // Show success message in discount-msg div
-                            const msgDiv = document.getElementById('discount-msg');
-                            if(msgDiv) {
-                                let msg = '';
-                                if(data.reseller_discount > 0) {
-                                    msg += `✓ Reseller: -€${data.reseller_discount.toFixed(2)} `;
-                                }
-                                if(data.code_discount > 0) {
-                                    msg += `✓ Code: -€${data.code_discount.toFixed(2)}`;
-                                }
-                                msgDiv.innerHTML = `<span style="color:#4CAF50; font-size:13px;">${msg}</span>`;
-                                msgDiv.style.display = 'block';
-                            }
-                        } else {
-                            window.discountApplied = null;
-                            
-                            // Reset total to original
-                            const basket = window.basket || [];
-                            const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
-                            const totalElement = document.getElementById('basket-total');
-                            if(totalElement) {
-                                totalElement.textContent = `€${baseTotal.toFixed(2)}`;
-                            }
-                            
-                            // Show error in discount-msg div
-                            const msgDiv = document.getElementById('discount-msg');
-                            if(msgDiv && data.message) {
-                                msgDiv.innerHTML = `<span style="color:#f44336; font-size:12px;">${data.message}</span>`;
-                                msgDiv.style.display = 'block';
-                            }
-                        }
-                    } catch(e) {
-                        console.error('❌ Discount validation error:', e);
-                        window.discountApplied = null;
-                        
-                        // Reset total on error
-                        const basket = window.basket || [];
-                        const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
-                        const totalElement = document.getElementById('basket-total');
-                        if(totalElement) {
-                            totalElement.textContent = `€${baseTotal.toFixed(2)}`;
-                        }
-                    }
-                };
-                
-                // SIMPLE CART TOTAL UPDATER - Called whenever basket changes
-                window.updateCartTotal = function() {
-                    const basket = window.basket || [];
-                    const baseTotal = basket.reduce((sum, item) => sum + item.price, 0);
-                    let displayTotal = baseTotal;
-                    
-                    console.log('🔄 updateCartTotal called. Basket:', basket.length, 'items, Base:', baseTotal.toFixed(2));
-                    
-                    // Apply discount if available
-                    if(window.discountApplied && window.discountApplied.final_total !== undefined) {
-                        displayTotal = window.discountApplied.final_total;
-                        console.log('💰 Discount active! Final total:', displayTotal.toFixed(2));
-                    }
-                    
-                    // Update total display element
-                    const totalElement = document.getElementById('basket-total');
-                    if(totalElement) {
-                        totalElement.textContent = `€${displayTotal.toFixed(2)}`;
-                        console.log('✅ Updated basket-total to:', totalElement.textContent);
-                    } else {
-                        console.warn('⚠️ basket-total element not found');
-                    }
-                    
-                    // Update discount message
-                    updateDiscountMessage();
-                };
-                
-                // Helper: Update discount message display
-                window.updateDiscountMessage = function() {
-                    const msgDiv = document.getElementById('discount-msg');
-                    if(!msgDiv) return;
-                    
-                    if(window.discountApplied) {
-                        const rd = window.discountApplied.reseller_discount || 0;
-                        const cd = window.discountApplied.code_discount || 0;
-                        const total = rd + cd;
-                        
-                        if(total > 0) {
-                            let msg = '';
-                            if(rd > 0) msg += `✓ Reseller: -€${rd.toFixed(2)} `;
-                            if(cd > 0) msg += `✓ Code: -€${cd.toFixed(2)}`;
-                            
-                            msgDiv.innerHTML = `<span style="color:#4CAF50; font-size:13px;">${msg.trim()}</span>`;
-                            msgDiv.style.display = 'block';
-                            return;
-                        }
-                    }
-                    
-                    msgDiv.style.display = 'none';
-                    msgDiv.innerHTML = '';
-                };
-                
-                // STICKY OVERRIDE: Use Object.defineProperty to prevent replacement
-                function setupPollPaymentOverride() {
-                    console.log('🔧 Setting up STICKY pollPayment override...');
-                    
-                    const enhancedPollPayment = async function(paymentId) {
-                        console.log('🔄 [ENHANCED] pollPayment called for:', paymentId);
-                        
-                        try {
-                            const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
-                            console.log('👤 User ID:', userId);
-                            
-                            const response = await fetch('/webapp/api/check_payment', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({
-                                    order_id: paymentId,
-                                    user_id: userId
-                                })
-                            });
-                            
-                            const data = await response.json();
-                            console.log('💳 Payment poll result:', data);
-                            
-                            // Check for BOTH 'paid' (legacy) and 'confirmed' (Solana)
-                            if(data.status === 'paid' || data.status === 'confirmed') {
-                                console.log('✅ Payment CONFIRMED!');
-                                
-                                if(window.pollInterval) {
-                                    clearInterval(window.pollInterval);
-                                    console.log('⏹️ Stopped polling');
-                                }
-                                
-                                // Update wallet if new_balance provided
-                                if(data.new_balance !== undefined) {
-                                    window.userBalance = data.new_balance;
-                                    console.log('💰 New balance from API:', data.new_balance);
-                                    
-                                    // Try multiple selectors for wallet element
-                                    const walletEl = document.getElementById('user-balance') ||
-                                                   document.querySelector('.mt-value-sm') ||
-                                                   document.querySelector('[class*="wallet"]');
-                                    
-                                    if(walletEl) {
-                                        const oldText = walletEl.textContent;
-                                        walletEl.textContent = '€' + data.new_balance.toFixed(2);
-                                        console.log('✅ Updated wallet:', oldText, '→', walletEl.textContent);
-                                    } else {
-                                        console.warn('⚠️ Wallet element not found');
-                                    }
-                                }
-                                
-                            // Show success notification IN MINI-APP
-                            try {
-                                // Check if this is a refill or purchase
-                                const isRefill = paymentId && paymentId.includes('REFILL');
-                                const message = isRefill 
-                                    ? '✅ Payment received! Balance updated.' 
-                                    : '✅ Purchase successful! Check bot chat for delivery.';
-                                
-                                window.safeNotify(message);
-                                console.log('✅ Showed notification to user:', message);
-                            } catch(e) {
-                                console.error('❌ Notification error:', e);
-                            }
-                                
-                            // Clear basket for purchases (not refills)
-                            const isRefill = paymentId && paymentId.includes('REFILL');
-                            if(!isRefill && window.basket) {
-                                window.basket = [];
-                                console.log('🛒 Cleared basket after purchase');
-                            }
-                            
-                            // Call original success handler if it exists
-                            if(typeof window.onPaymentSuccess === 'function') {
-                                console.log('🎯 Calling onPaymentSuccess()');
-                                window.onPaymentSuccess();
-                            } else {
-                                console.log('🎯 Fallback: closing invoice');
-                                // Fallback: close invoice and reload products
-                                if(typeof window.closeInvoice === 'function') window.closeInvoice();
-                                if(typeof window.loadProducts === 'function') window.loadProducts();
-                            }
-                            } else if (data.status === 'expired' || data.status === 'refunded') {
-                                console.log('❌ Payment failed:', data.status);
-                                if(window.pollInterval) clearInterval(window.pollInterval);
-                                if(typeof window.closeInvoice === 'function') window.closeInvoice();
-                                if(typeof window.triggerWasted === 'function') window.triggerWasted();
-                            } else {
-                                console.log('⏳ Payment pending...', data.status);
-                            }
-                        } catch(e) {
-                            console.error("❌ Poll error:", e);
-                        }
-                    };
-                    
-                    // Use Object.defineProperty to make it STICKY (can't be overwritten)
-                    try {
-                        Object.defineProperty(window, 'pollPayment', {
-                            value: enhancedPollPayment,
-                            writable: false,     // ✅ Cannot be overwritten
-                            configurable: true,  // Can be redefined if needed
-                            enumerable: true
-                        });
-                        console.log('✅ STICKY pollPayment override installed (writable: false)');
-                    } catch(e) {
-                        // Fallback: regular assignment if property already defined
-                        console.warn('⚠️ Could not make pollPayment sticky, using regular override:', e);
-                        window.pollPayment = enhancedPollPayment;
-                    }
-                }
-                
-                // Install override multiple times to ensure it sticks
-                setupPollPaymentOverride();
-                
-                // Try again after delays
-                setTimeout(setupPollPaymentOverride, 100);
-                setTimeout(setupPollPaymentOverride, 500);
-                setTimeout(setupPollPaymentOverride, 1000);
-                setTimeout(setupPollPaymentOverride, 2000);
-                
-                if(document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', setupPollPaymentOverride);
-                }
-                
-                // BACKUP: Intercept ALL fetch calls to check_payment
-                const originalFetch = window.fetch;
-                window.fetch = async function(...args) {
-                    const response = await originalFetch.apply(this, args);
-                    
-                    // Clone response so we can read it without consuming the stream
-                    const clonedResponse = response.clone();
-                    
-                    // Check if this is a check_payment call
-                    const url = args[0];
-                    if(typeof url === 'string' && url.includes('check_payment')) {
-                        try {
-                            const data = await clonedResponse.json();
-                            console.log('🔍 [INTERCEPTED] check_payment response:', data);
-                            
-                            // If payment is confirmed, update wallet immediately
-                            if(data.status === 'confirmed' || data.status === 'paid') {
-                                console.log('🎉 [INTERCEPTED] Payment confirmed! Updating wallet...');
-                                
-                                if(data.new_balance !== undefined) {
-                                    window.userBalance = data.new_balance;
-                                    
-                                    const walletEl = document.querySelector('.mt-value-sm');
-                                    if(walletEl) {
-                                        walletEl.textContent = '€' + data.new_balance.toFixed(2);
-                                        console.log('✅ [INTERCEPTED] Wallet updated to:', data.new_balance);
-                                    }
-                                    
-                                    // Show alert - differentiate refill vs purchase
-                                    try {
-                                        // Check payment ID from URL or active payment
-                                        const isRefill = url.includes('REFILL') || 
-                                                       (window.activePaymentId && window.activePaymentId.includes('REFILL'));
-                                        
-                                        const message = isRefill 
-                                            ? '✅ Payment received! Balance updated.' 
-                                            : '✅ Purchase successful! Check bot chat for delivery.';
-                                        
-                                        window.safeNotify(message);
-                                        console.log('✅ [INTERCEPTED] Notification shown:', message);
-                                    } catch(e) {
-                                        console.error('❌ [INTERCEPTED] Notification error:', e);
-                                    }
-                                    
-                                    // Clear basket for purchases (not refills)
-                                    if(!isRefill && window.basket) {
-                                        window.basket = [];
-                                        console.log('🛒 [INTERCEPTED] Cleared basket after purchase');
-                                    }
-                                    
-                                    // Stop polling
-                                    if(window.pollInterval) {
-                                        clearInterval(window.pollInterval);
-                                        console.log('⏹️ [INTERCEPTED] Polling stopped');
-                                    }
-                                    
-                                    // Close invoice
-                                    if(typeof window.closeInvoice === 'function') {
-                                        setTimeout(() => window.closeInvoice(), 500);
-                                    }
-                                }
-                            }
-                        } catch(e) {
-                            // Ignore JSON parse errors for non-JSON responses
-                        }
-                    }
-                    
-                    return response;
-                };
-                console.log('✅ Fetch interceptor installed for check_payment');
-                
-                // INITIALIZE: Ensure basket exists
-                if(!window.basket) {
-                    window.basket = [];
-                    console.log('✅ Initialized window.basket');
-                }
-                
-                // FIX: Stub for missing refreshDistrictColors function
-                if(typeof window.refreshDistrictColors === 'undefined') {
-                    window.refreshDistrictColors = function() {
-                        console.log('🎨 refreshDistrictColors (stub)');
-                        // Do nothing - this function is not needed
-                    };
-                    console.log('✅ Created refreshDistrictColors stub');
-                }
-                
-                // SAFE ALERT - Works on all Telegram versions
-                window.safeNotify = function(message) {
-                    console.log('📢 Notification:', message);
-                    
-                    // Try multiple methods in order of preference
-                    if(window.Telegram?.WebApp) {
-                        const tg = window.Telegram.WebApp;
-                        
-                        // Try showAlert (v6.1+)
-                        if(typeof tg.showAlert === 'function') {
-                            try {
-                                tg.showAlert(message);
-                                return;
-                            } catch(e) {
-                                console.warn('showAlert failed:', e);
-                            }
-                        }
-                        
-                        // Try showPopup (v6.2+)
-                        if(typeof tg.showPopup === 'function') {
-                            try {
-                                tg.showPopup({message: message});
-                                return;
-                            } catch(e) {
-                                console.warn('showPopup failed:', e);
-                            }
-                        }
-                    }
-                    
-                    // Fallback: console + visual notification
-                    console.log('✅ ' + message);
-                    
-                    // Create temporary notification element
-                    const notif = document.createElement('div');
-                    notif.style.cssText = `
-                        position: fixed;
-                        top: 20px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background: #4CAF50;
-                        color: white;
-                        padding: 15px 30px;
-                        border-radius: 8px;
-                        font-size: 14px;
-                        font-weight: bold;
-                        z-index: 999999;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                        opacity: 0;
-                        transition: opacity 0.3s ease-out;
-                    `;
-                    notif.textContent = message;
-                    document.body.appendChild(notif);
-                    
-                    // Fade in
-                    setTimeout(() => notif.style.opacity = '1', 10);
-                    
-                    // Fade out and remove
-                    setTimeout(() => {
-                        notif.style.opacity = '0';
-                        setTimeout(() => {
-                            if(notif.parentNode) document.body.removeChild(notif);
-                        }, 300);
-                    }, 3000);
-                };
-                
-                // Load user balance on page load
-                window.loadUserBalance = async function() {
-                    try {
-                        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
-                        if(!userId) {
-                            console.warn('⚠️ No user ID available');
-                            return;
-                        }
-                        
-                        const response = await fetch('/webapp/api/user_balance', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ user_id: userId })
-                        });
-                        
-                        const data = await response.json();
-                        if(data.balance !== undefined) {
-                            window.userBalance = data.balance;
-                            
-                            const walletEl = document.querySelector('.mt-value-sm');
-                            if(walletEl) {
-                                walletEl.textContent = '€' + data.balance.toFixed(2);
-                                console.log('✅ Loaded user balance:', data.balance);
-                            }
-                        }
-                    } catch(e) {
-                        console.error('❌ Error loading balance:', e);
-                    }
-                };
-                
-                // Auto-attach to discount input when it exists
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Load user balance
-                    if(typeof window.loadUserBalance === 'function') {
-                        window.loadUserBalance();
-                    }
-                    
-                    const discountInput = document.getElementById('discount-input');  // ✅ Correct ID
-                    if(discountInput) {
-                        console.log('✅ Discount input found, attaching event listener');
-                        discountInput.addEventListener('input', function() {
-                            clearTimeout(window.discountTimeout);
-                            window.discountTimeout = setTimeout(() => {
-                                console.log('🔍 Discount input changed, validating...');
-                                applyDiscountToUI();
-                            }, 800); // Debounce 800ms
-                        });
-                        
-                        // Also trigger on blur (when user finishes typing)
-                        discountInput.addEventListener('blur', function() {
-                            if(discountInput.value.trim()) {
-                                applyDiscountToUI();
-                            }
-                        });
-                    } else {
-                        console.error('❌ Discount input not found (ID: discount-input)');
-                    }
-                });
-                
-                // ===== REFILL UI FIX =====
-                // Override initRefill to update custom input and re-enable buttons on error
-                const originalInitRefill = window.initRefill;
-                window.initRefill = async function(amount) {
-                    // Update custom input with selected amount
-                    const customInput = document.getElementById('custom-refill');
-                    if(customInput) {
-                        customInput.value = amount;
-                    }
-                    
-                    const btns = document.querySelectorAll('.refill-btn');
-                    const payBtn = document.getElementById('refill-pay-btn');
-                    
-                    // Disable all buttons
-                    btns.forEach(b => b.disabled = true);
-                    if(payBtn) {
-                        payBtn.disabled = true;
-                        payBtn.style.opacity = '0.5';
-                    }
-                    
-                    try {
-                        const user = tg.initDataUnsafe?.user;
-                        const userId = user ? user.id : 0;
-                        
-                        const response = await fetch('/webapp/api/create_refill', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ user_id: userId, amount: parseFloat(amount) })
-                        });
-                        
-                        if(!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        
-                        if(data.success) {
-                            closeRefill();
-                            const invModal = document.getElementById('invoice-modal');
-                            
-                            document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
-                            document.getElementById('invoice-address').innerText = data.pay_address;
-                            
-                            // Generate QR
-                            const qrContainer = document.getElementById('qrcode');
-                            qrContainer.innerHTML = "";
-                            new QRCode(qrContainer, {
-                                text: data.pay_address,
-                                width: 150,
-                                height: 150,
-                                colorDark: "#000000",
-                                colorLight: "#ffffff"
-                            });
-                            
-                            invModal.style.display = 'block';
-                            
-                            // Poll for payment
-                            const orderId = data.order_id;
-                            let polling = true;
-                            const pollInterval = setInterval(async () => {
-                                if(!polling) return;
-                                
-                                try {
-                                    const pollResp = await fetch('/webapp/api/check_payment', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({ order_id: orderId, user_id: userId })
-                                    });
-                                    const pollData = await pollResp.json();
-                                    
-                                    if(pollData.status === 'confirmed') {
-                                        polling = false;
-                                        clearInterval(pollInterval);
-                                        
-                                        invModal.style.display = 'none';
-                                        
-                                        // Success alert using tg.showAlert
-                                        if(tg && tg.showAlert) {
-                                            tg.showAlert('✅ Payment received! Balance updated.');
-                                        }
-                                        
-                                        // Update wallet display
-                                        const walletEl = document.getElementById('wallet-balance');
-                                        if(walletEl && pollData.new_balance !== undefined) {
-                                            walletEl.textContent = `€${pollData.new_balance.toFixed(2)}`;
-                                        }
-                                    }
-                                } catch(e) {
-                                    console.error('Poll error:', e);
-                                }
-                            }, 5000);
-                            
-                            // Stop polling after 10 minutes
-                            setTimeout(() => {
-                                polling = false;
-                                clearInterval(pollInterval);
-                            }, 600000);
-                        } else {
-                            throw new Error(data.error || 'Unknown error');
-                        }
-                    } catch(e) {
-                        console.error('Refill error:', e);
-                        // Re-enable buttons on error
-                        btns.forEach(b => b.disabled = false);
-                        if(payBtn) {
-                            payBtn.disabled = false;
-                            payBtn.style.opacity = '1';
-                        }
-                        
-                        // Show error using tg.showAlert (always available)
-                        if(tg && tg.showAlert) {
-                            tg.showAlert('❌ Error: ' + e.message);
-                        } else {
-                            alert('❌ Error: ' + e.message);
-                        }
-                    }
-                };
-                
-                // Override safeAlert to use tg.showAlert instead of showPopup
-                window.safeAlert = function(msg) {
-                    window.safeNotify(msg);
-                };
-                
-                // ===== MOBILE KEYBOARD FIX FOR REFILL =====
-                // When keyboard opens, scroll modal up so button is visible
-                document.addEventListener('DOMContentLoaded', function() {
-                    const customInput = document.getElementById('custom-refill');
-                    if(!customInput) return;
-                    
-                    // On focus (keyboard opens)
-                    customInput.addEventListener('focus', function() {
-                        const modal = document.getElementById('refill-modal');
-                        const modalContent = modal ? modal.querySelector('.refill-modal-content') : null;
-                        
-                        if(modalContent) {
-                            // Make modal scrollable
-                            modal.style.overflowY = 'auto';
-                            modal.style.webkitOverflowScrolling = 'touch';
-                            
-                            // Scroll input into view after small delay (wait for keyboard animation)
-                            setTimeout(() => {
-                                customInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 300);
-                            
-                            // Alternative: Move modal up
-                            modalContent.style.transform = 'translateY(-30%)';
-                            modalContent.style.transition = 'transform 0.3s ease';
-                        }
-                    });
-                    
-                    // On blur (keyboard closes)
-                    customInput.addEventListener('blur', function() {
-                        const modal = document.getElementById('refill-modal');
-                        const modalContent = modal ? modal.querySelector('.refill-modal-content') : null;
-                        
-                        if(modalContent) {
-                            // Reset position
-                            setTimeout(() => {
-                                modalContent.style.transform = 'translateY(0)';
-                            }, 100);
-                        }
-                    });
-                    
-                    // Alternative approach: Use visualViewport API (iOS Safari)
-                    if(window.visualViewport) {
-                        window.visualViewport.addEventListener('resize', function() {
-                            const modal = document.getElementById('refill-modal');
-                            if(modal && modal.style.display === 'block') {
-                                // Keyboard is open if viewport height decreased
-                                const viewportHeight = window.visualViewport.height;
-                                const windowHeight = window.innerHeight;
-                                
-                                if(viewportHeight < windowHeight) {
-                                    // Keyboard open - adjust modal
-                                    modal.style.paddingBottom = (windowHeight - viewportHeight) + 'px';
-                                } else {
-                                    // Keyboard closed - reset
-                                    modal.style.paddingBottom = '0';
-                                }
-                            }
-                        });
-                    }
-                });
-                
-                // ===== CART MODAL FUNCTIONS =====
-                window.openBasket = function() {
-                    console.log('🛒 Opening cart');
-                    const modal = document.getElementById('basket-modal');
-                    if(modal) {
-                        modal.style.display = 'flex';
-                        
-                        // Update cart content
-                        if(typeof window.renderBasketContent === 'function') {
-                            window.renderBasketContent();
-                        }
-                    } else {
-                        console.error('❌ basket-modal not found');
-                    }
-                };
-                
-                window.closeBasket = function() {
-                    console.log('❌ Closing cart');
-                    const modal = document.getElementById('basket-modal');
-                    if(modal) {
-                        modal.style.display = 'none';
-                    }
-                };
-                
-                console.log('✅ Cart modal functions registered (openBasket, closeBasket)');
-            </script>
-            <style>
-                /* ===== MOBILE KEYBOARD FIX: REFILL MODAL ===== */
-                #refill-modal {
-                    overflow-y: auto !important;
-                    -webkit-overflow-scrolling: touch !important;
-                    overscroll-behavior: contain !important;
-                }
-                
-                .refill-modal-content {
-                    max-height: 85vh !important;
-                    overflow-y: auto !important;
-                    -webkit-overflow-scrolling: touch !important;
-                    position: relative !important;
-                    margin: auto !important;
-                    padding-bottom: 20px !important;
-                }
-                
-                /* Ensure button is always visible */
-                #refill-pay-btn {
-                    position: sticky !important;
-                    bottom: 0 !important;
-                    z-index: 10 !important;
-                    margin-top: 10px !important;
-                }
-                
-                /* Custom input container */
-                .refill-custom-box {
-                    margin-bottom: 15px !important;
-                }
-                
-                /* iOS safe area support */
-                @supports (padding: max(0px)) {
-                    #refill-modal {
-                        padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
-                    }
-                }
-                
-                /* FORCE PROFESSIONAL DARK THEME (GTA Style) */
-                .cart-container { 
-                    background: #111 !important; 
-                    border: 1px solid #333 !important; 
-                    height: auto !important;
-                    max-height: 90vh !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    z-index: 10001 !important;
-                    position: relative !important;
-                    box-shadow: 0 0 50px rgba(0,0,0,0.9) !important;
-                    border-radius: 12px !important; /* Smooth corners */
-                    overflow: hidden !important;
-                }
-                .cart-header-bar { 
-                    background: #000 !important; 
-                    border-bottom: 1px solid #333 !important; 
-                    padding: 15px 20px !important;
-                    z-index: 10002 !important;
-                }
-                .cart-content { 
-                    background-color: #111 !important;
-                    background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px) !important;
-                    background-size: 20px 20px !important;
-                    z-index: 10002 !important;
-                }
-                .cart-item-modern {
-                    background: #1a1a1a !important;
-                    border: 1px solid #333 !important;
-                    color: #fff !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    padding: 12px !important;
-                    margin-bottom: 8px !important;
-                    border-radius: 8px !important;
-                }
-                .cim-icon-box {
-                    width: 40px !important;
-                    height: 40px !important;
-                    background: rgba(255,255,255,0.05) !important;
-                    border-radius: 8px !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    font-size: 20px !important;
-                    margin-right: 15px !important;
-                }
-                .cim-info {
-                    flex: 1 !important;
-                }
-                .cim-name { color: #fff !important; font-weight: 700 !important; font-size: 15px !important; margin-bottom: 2px !important; }
-                .cim-details { color: #aaa !important; font-size: 13px !important; }
-                .cim-meta { color: #666 !important; font-size: 11px !important; text-transform:uppercase !important; margin-top:2px !important; }
-                
-                .cim-right {
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 15px !important;
-                }
-                .cim-price { 
-                    color: var(--gta-green) !important; 
-                    font-family: 'Pricedown', sans-serif !important; 
-                    font-size: 18px !important;
-                }
-                .cim-remove-wrapper {
-                    width: 24px !important;
-                    height: 24px !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    cursor: pointer !important;
-                    color: #666 !important;
-                    transition: all 0.2s !important;
-                    border-radius: 50% !important;
-                }
-                .cim-remove-wrapper:hover {
-                    background: rgba(255, 50, 50, 0.1) !important;
-                    color: #ff4444 !important;
-                }
-                
-                .cart-backdrop { background: rgba(0,0,0,0.9) !important; z-index: 10000 !important; }
-                .spinner { width:14px; height:14px; border:2px solid rgba(0,0,0,0.2); border-top:2px solid #000; border-radius:50%; animation:spin 0.6s linear infinite; display:inline-block; vertical-align:middle; }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-            '''
-            content = content.replace('</body>', super_injection + '</body>')
-            
-            # ===== HOTFIX: Ensure v4.8 Title =====
-            content = content.replace('<title>Los Santos Shop v2.1</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.7-UI-FIXES</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.6-FINAL-FIX</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.5-SPINNER</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.4-RESERVATION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.3-END-INJECTION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.2-BODY-INJECTION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.1-SUPER-INJECTION</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            content = content.replace('<title>Los Santos Shop v4.0-FINAL-POLISH</title>', '<title>Los Santos Shop v4.8-UI-POLISH</title>')
-            
-            logger.info(f"✅ Applied JavaScript hotfixes to webapp")
-            
-            response = Response(content, mimetype='text/html')
-            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-            return response
-    
-    # If nothing found, return error with debug info
-    logger.error(f"❌ Webapp not found in any of: {possible_paths}")
-    logger.error(f"❌ Current working directory: {os.getcwd()}")
-    logger.error(f"❌ Files in cwd: {os.listdir(os.getcwd())}")
-    return f"Webapp not found. CWD: {os.getcwd()}", 404
+    """Serve Telegram Web App"""
+    return send_from_directory('webapp', 'index.html')
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
     """Serve static files for Web App"""
     return send_from_directory('webapp', filename)
-
-@flask_app.route("/debug/files", methods=['GET'])
-def debug_files():
-    """Debug endpoint to see what files are deployed"""
-    import os
-    cwd = os.getcwd()
-    files_info = {
-        "cwd": cwd,
-        "main_py_location": os.path.abspath(__file__),
-        "webapp_path": os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp'),
-        "webapp_exists": os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')),
-        "files_in_cwd": os.listdir(cwd) if os.path.exists(cwd) else [],
-        "files_in_webapp": os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webapp')) else []
-    }
-    return jsonify(files_info)
-
-@flask_app.route("/debug/find", methods=['GET'])
-def debug_find():
-    """Debug endpoint to find index.html anywhere"""
-    import os
-    matches = []
-    # Walk from the project root
-    search_root = '/opt/render/project' if os.path.exists('/opt/render/project') else '.'
-    for root, dirnames, filenames in os.walk(search_root):
-        for filename in filenames:
-            if filename == 'index.html':
-                matches.append(os.path.join(root, filename))
-    return jsonify({"matches": matches, "cwd": os.getcwd(), "search_root": search_root})
-
-@flask_app.route("/debug/index-version", methods=['GET'])
-def debug_index_version():
-    """Check what version of index.html is actually on disk"""
-    import os
-    webapp_path = os.path.join(os.getcwd(), 'webapp', 'index.html')
-    if os.path.exists(webapp_path):
-        with open(webapp_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            # Extract title line
-            title_line = 'NOT FOUND'
-            for line in content.split('\n'):
-                if '<title>' in line:
-                    title_line = line.strip()
-                    break
-            return jsonify({
-                "file_exists": True,
-                "path": webapp_path,
-                "title_line": title_line,
-                "file_size": len(content),
-                "has_no_stock_check": "NO STOCK CHECK" in content,
-                "has_v23": "v2.3" in content or "v2.2" in content
-            })
-    else:
-        return jsonify({"file_exists": False, "path": webapp_path})
 
 @flask_app.route("/", methods=['GET'])
 def root():
@@ -3919,20 +2628,6 @@ def root():
 
 def main() -> None:
     global telegram_app, main_loop
-    
-    # RENDER FIX: Ensure webapp files are present
-    import subprocess
-    webapp_dir = os.path.join(os.getcwd(), 'webapp')
-    if os.path.exists(webapp_dir):
-        files_in_webapp = os.listdir(webapp_dir)
-        if not files_in_webapp or len(files_in_webapp) == 0:
-            logger.warning("⚠️ Webapp folder is empty! Attempting to restore from Git...")
-            try:
-                subprocess.run(['git', 'checkout', 'HEAD', '--', 'webapp/'], check=True, cwd=os.getcwd())
-                logger.info("✅ Webapp files restored from Git")
-            except Exception as e:
-                logger.error(f"❌ Failed to restore webapp files: {e}")
-    
     logger.info("🔧 Starting bot...")
     logger.info("🔧 Initializing database...")
     init_db()
@@ -4062,8 +2757,8 @@ def main() -> None:
             
             # Build application with this token
             app_builder = ApplicationBuilder().token(token).defaults(defaults).job_queue(JobQueue())
-            app_builder.post_init(post_init)
-            app_builder.post_shutdown(post_shutdown)
+    app_builder.post_init(post_init)
+    app_builder.post_shutdown(post_shutdown)
             temp_app = app_builder.build()
             
             # Test token validity (will fail if token is invalid)
@@ -4120,21 +2815,16 @@ def main() -> None:
             
             # --- SOLANA MONITORING ---
             try:
-                from payment_solana import check_solana_deposits, refresh_price_cache
-                
-                # Monitor deposits every 30 seconds
+                from payment_solana import check_solana_deposits
+                # Run every 30 seconds
                 job_queue.run_repeating(check_solana_deposits, interval=timedelta(seconds=30), first=timedelta(seconds=15), name="solana_monitor")
                 logger.info("✅ Solana deposit monitor registered (interval: 30s)")
-                
-                # Proactive price cache refresh every 4 minutes (prevents rate limiting during high traffic)
-                job_queue.run_repeating(refresh_price_cache, interval=timedelta(minutes=4), first=timedelta(seconds=5), name="price_cache_refresh")
-                logger.info("✅ SOL price cache refresh registered (interval: 4min)")
             except ImportError:
                 logger.warning("⚠️ Could not import check_solana_deposits. Solana payments will not work.")
             
             # Enhanced auto ads: No background job needed (campaigns run on-demand)
             
-            logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + solana monitor + price refresh + auto ads).")
+            logger.info("Background jobs setup complete (basket cleanup + payment timeout + abandoned reservations + stock alerts + solana monitor + auto ads).")
         else: logger.warning("Job Queue is not available. Background jobs skipped.")
     else: logger.warning("BASKET_TIMEOUT is not positive. Skipping background job setup.")
 
@@ -4257,30 +2947,6 @@ def main() -> None:
             logger.info("Stopping event loop.") 
             main_loop.stop()
         logger.info("Bot shutdown complete.")
-
-@flask_app.route("/debug/products", methods=['GET'])
-def debug_products():
-    """Dump raw product table for debugging stock issues"""
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT id, name, available, reserved, reserved_until, reserved_by FROM products")
-        rows = c.fetchall()
-        conn.close()
-        
-        results = []
-        for row in rows:
-            results.append({
-                'id': row['id'],
-                'name': row['name'],
-                'available': row['available'],
-                'reserved': row['reserved'], # Old column
-                'reserved_until': str(row['reserved_until']),
-                'reserved_by': row['reserved_by']
-            })
-        return jsonify({'count': len(results), 'products': results})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     main()

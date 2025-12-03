@@ -277,6 +277,10 @@ async def _prepare_and_confirm_drop(
              media_list_for_db = []
              if temp_dir and await asyncio.to_thread(os.path.exists, temp_dir): await asyncio.to_thread(shutil.rmtree, temp_dir, ignore_errors=True); temp_dir = None
 
+    # ===== ENHANCED LOGGING FOR DISTRICT TRACKING =====
+    logger.info(f"🏘️ CREATING PENDING_DROP: City: {user_data.get('admin_city')} | District: {user_data.get('admin_district')} | Type: {user_data.get('admin_product_type')}")
+    # ===== END ENHANCED LOGGING =====
+    
     user_data["pending_drop"] = {
         "city": user_data["admin_city"], "district": user_data["admin_district"],
         "product_type": user_data["admin_product_type"], "size": user_data["pending_drop_size"],
@@ -1987,6 +1991,12 @@ async def handle_adm_add(update: Update, context: ContextTypes.DEFAULT_TYPE, par
     city_id, dist_id, p_type = params
     city_name = CITIES.get(city_id)
     district_name = DISTRICTS.get(city_id, {}).get(dist_id)
+    
+    # ===== ENHANCED LOGGING FOR DISTRICT TRACKING =====
+    logger.info(f"🏘️ DISTRICT SELECTION: User {user_id} | City ID: {city_id} ({city_name}) | District ID: {dist_id} ({district_name}) | Type: {p_type}")
+    logger.info(f"🔍 Available districts in city {city_id}: {list(DISTRICTS.get(city_id, {}).keys())}")
+    # ===== END ENHANCED LOGGING =====
+    
     if not city_name or not district_name:
         return await query.edit_message_text("Error: City/District not found. Please select again.", parse_mode=None)
     type_emoji = PRODUCT_TYPES.get(p_type, DEFAULT_PRODUCT_EMOJI)
