@@ -4011,8 +4011,8 @@ def get_bot_setting(key: str, default: str | None = None):
         if conn:
             conn.close()
 
-def set_bot_setting(key: str, value: str):
-    """Set a bot setting value in database"""
+def set_bot_setting(key: str, value: str) -> bool:
+    """Set a bot setting value in database. Returns True if successful."""
     conn = None
     try:
         conn = get_db_connection()
@@ -4023,11 +4023,15 @@ def set_bot_setting(key: str, value: str):
             ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value
         """, (key, value))
         conn.commit()
-        logger.info(f"Bot setting '{key}' set to '{value}'")
+        logger.info(f"✅ Bot setting '{key}' set to '{value[:50]}...' (SUCCESS)")
+        return True
     except Exception as e:
-        logger.error(f"Error writing bot setting {key}: {e}")
+        logger.error(f"❌ ERROR writing bot setting '{key}': {e}")
+        logger.error(f"❌ Error type: {type(e).__name__}")
+        logger.error(f"❌ Error details: {str(e)}")
         if conn and conn.status == 1:
             conn.rollback()
+        return False
     finally:
         if conn:
             conn.close()

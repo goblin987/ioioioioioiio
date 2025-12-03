@@ -921,10 +921,14 @@ async def handle_admin_save_miniapp_text(update: Update, context: ContextTypes.D
     logger = logging.getLogger(__name__)
     logger.info(f"Admin {update.effective_user.id} saving Mini App Text: {text}")
     
-    set_bot_setting("miniapp_welcome_text", text)
+    success = set_bot_setting("miniapp_welcome_text", text)
     
     context.user_data['state'] = None
-    await update.message.reply_text("✅ Mini App welcome text updated!", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="admin_bot_ui_menu")]]))
+    
+    if success:
+        await update.message.reply_text("✅ Mini App welcome text updated!", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="admin_bot_ui_menu")]]))
+    else:
+        await update.message.reply_text("❌ FAILED to update text! Check server logs for database error.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="admin_bot_ui_menu")]]))
 
 async def handle_admin_edit_miniapp_btn_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Prompt admin to enter new Mini App button text"""
