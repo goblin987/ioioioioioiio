@@ -828,6 +828,8 @@ def callback_query_router(func):
                 "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
                 "toggle_daily_rewards_button": handle_toggle_daily_rewards_button,
                 "toggle_ui_mode": handle_toggle_ui_mode,
+                "edit_miniapp_text_start": admin.handle_admin_edit_miniapp_text_start,
+                "edit_miniapp_btn_start": admin.handle_admin_edit_miniapp_btn_start,
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "toggle_human_verification": admin.handle_toggle_human_verification,
                 "set_verification_attempts": admin.handle_set_verification_attempts,
@@ -1536,6 +1538,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_vip_custom_emoji': handle_vip_custom_emoji_message,
         'awaiting_vip_name_edit': handle_vip_name_edit_message,
         'awaiting_welcome_text': handle_welcome_text_message,
+        'awaiting_miniapp_text': admin.handle_admin_save_miniapp_text, # New
+        'awaiting_miniapp_btn': admin.handle_admin_save_miniapp_btn, # New
         'awaiting_price_search': handle_price_search_message,
         'awaiting_new_price': handle_price_new_price_message,
         'awaiting_price_simple': handle_price_simple_message,

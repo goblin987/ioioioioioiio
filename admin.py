@@ -882,6 +882,8 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
             f"{'📱 Using: Mini App Only' if ui_mode == 'miniapp' else '🤖 Using: Bot UI'}",
             callback_data=f"toggle_ui_mode|{'bot' if ui_mode == 'miniapp' else 'miniapp'}"
         )],
+        [InlineKeyboardButton("✏️ Edit Mini App Text", callback_data="edit_miniapp_text_start")],
+        [InlineKeyboardButton("🔘 Edit Button Text", callback_data="edit_miniapp_btn_start")],
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
         [InlineKeyboardButton(
@@ -894,6 +896,54 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
         ]
     ]
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_edit_miniapp_text_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Prompt admin to enter new Mini App welcome text"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): return
+    
+    context.user_data['state'] = 'awaiting_miniapp_text'
+    
+    msg = (
+        "📝 **Edit Mini App Welcome Text**\n\n"
+        "Please send the new text to show when users start the bot in Mini App mode.\n"
+        "You can use `{username}` as a placeholder.\n\n"
+        "Current text will be replaced."
+    )
+    keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="admin_bot_ui_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_save_miniapp_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Save the new Mini App welcome text"""
+    text = update.message.text
+    from utils import set_bot_setting
+    set_bot_setting("miniapp_welcome_text", text)
+    
+    context.user_data['state'] = None
+    await update.message.reply_text("✅ Mini App welcome text updated!", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="admin_bot_ui_menu")]]))
+
+async def handle_admin_edit_miniapp_btn_start(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
+    """Prompt admin to enter new Mini App button text"""
+    query = update.callback_query
+    if not is_primary_admin(query.from_user.id): return
+    
+    context.user_data['state'] = 'awaiting_miniapp_btn'
+    
+    msg = (
+        "🔘 **Edit Mini App Button Text**\n\n"
+        "Please send the new text for the button (e.g., '📱 Open Shop')."
+    )
+    keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="admin_bot_ui_menu")]]
+    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+async def handle_admin_save_miniapp_btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Save the new Mini App button text"""
+    text = update.message.text
+    from utils import set_bot_setting
+    set_bot_setting("miniapp_button_text", text)
+    
+    context.user_data['state'] = None
+    await update.message.reply_text("✅ Mini App button text updated!", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="admin_bot_ui_menu")]]))
 
 async def handle_toggle_daily_rewards_button(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle Daily Rewards button visibility in user start menu"""

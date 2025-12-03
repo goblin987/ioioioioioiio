@@ -667,24 +667,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # For now, enforce for everyone, admins can toggle via /admin command wrapper which works
         
         webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
-        miniapp_welcome = (
+        
+        # Get custom welcome text and button text from settings
+        miniapp_text = get_bot_setting("miniapp_welcome_text", 
             f"👋 Welcome, {username}!\n\n"
             f"🎮 This bot uses a Mini App interface for the best experience.\n\n"
             f"Click the button below to open the shop:"
         )
+        
+        # If username placeholder is used, replace it
+        if "{username}" in miniapp_text:
+            miniapp_text = miniapp_text.replace("{username}", username)
+            
+        miniapp_btn_text = get_bot_setting("miniapp_button_text", "📱 Open Shop")
+        
         miniapp_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📱 Open Mini App", web_app=WebAppInfo(url=webapp_url))]
+            [InlineKeyboardButton(miniapp_btn_text, web_app=WebAppInfo(url=webapp_url))]
         ])
         
         if is_callback:
             query = update.callback_query
             try:
-                await query.edit_message_text(miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
+                await query.edit_message_text(miniapp_text, reply_markup=miniapp_keyboard, parse_mode=None)
             except Exception as e:
                 logger.warning(f"Failed to edit message for mini-app mode: {e}")
-                await send_message_with_retry(context.bot, chat_id, miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
+                await send_message_with_retry(context.bot, chat_id, miniapp_text, reply_markup=miniapp_keyboard, parse_mode=None)
         else:
-            await send_message_with_retry(context.bot, chat_id, miniapp_welcome, reply_markup=miniapp_keyboard, parse_mode=None)
+            await send_message_with_retry(context.bot, chat_id, miniapp_text, reply_markup=miniapp_keyboard, parse_mode=None)
         return
 
     # LANGUAGE SELECTION CHECK - Before verification if enabled
