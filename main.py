@@ -2852,6 +2852,133 @@ def webapp_index():
                         });
                     }
                 });
+                
+                // ===== REFILL UI FIX =====
+                // Override initRefill to update custom input and re-enable buttons on error
+                const originalInitRefill = window.initRefill;
+                window.initRefill = async function(amount) {
+                    // Update custom input with selected amount
+                    const customInput = document.getElementById('custom-refill');
+                    if(customInput) {
+                        customInput.value = amount;
+                    }
+                    
+                    const btns = document.querySelectorAll('.refill-btn');
+                    const payBtn = document.getElementById('refill-pay-btn');
+                    
+                    // Disable all buttons
+                    btns.forEach(b => b.disabled = true);
+                    if(payBtn) {
+                        payBtn.disabled = true;
+                        payBtn.style.opacity = '0.5';
+                    }
+                    
+                    try {
+                        const user = tg.initDataUnsafe?.user;
+                        const userId = user ? user.id : 0;
+                        
+                        const response = await fetch('/webapp/api/create_refill', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ user_id: userId, amount: parseFloat(amount) })
+                        });
+                        
+                        if(!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if(data.success) {
+                            closeRefill();
+                            const invModal = document.getElementById('invoice-modal');
+                            
+                            document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
+                            document.getElementById('invoice-address').innerText = data.pay_address;
+                            
+                            // Generate QR
+                            const qrContainer = document.getElementById('qrcode');
+                            qrContainer.innerHTML = "";
+                            new QRCode(qrContainer, {
+                                text: data.pay_address,
+                                width: 150,
+                                height: 150,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff"
+                            });
+                            
+                            invModal.style.display = 'block';
+                            
+                            // Poll for payment
+                            const orderId = data.order_id;
+                            let polling = true;
+                            const pollInterval = setInterval(async () => {
+                                if(!polling) return;
+                                
+                                try {
+                                    const pollResp = await fetch('/webapp/api/check_payment', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({ order_id: orderId, user_id: userId })
+                                    });
+                                    const pollData = await pollResp.json();
+                                    
+                                    if(pollData.status === 'confirmed') {
+                                        polling = false;
+                                        clearInterval(pollInterval);
+                                        
+                                        invModal.style.display = 'none';
+                                        
+                                        // Success alert using tg.showAlert
+                                        if(tg && tg.showAlert) {
+                                            tg.showAlert('✅ Payment received! Balance updated.');
+                                        }
+                                        
+                                        // Update wallet display
+                                        const walletEl = document.getElementById('wallet-balance');
+                                        if(walletEl && pollData.new_balance !== undefined) {
+                                            walletEl.textContent = `€${pollData.new_balance.toFixed(2)}`;
+                                        }
+                                    }
+                                } catch(e) {
+                                    console.error('Poll error:', e);
+                                }
+                            }, 5000);
+                            
+                            // Stop polling after 10 minutes
+                            setTimeout(() => {
+                                polling = false;
+                                clearInterval(pollInterval);
+                            }, 600000);
+                        } else {
+                            throw new Error(data.error || 'Unknown error');
+                        }
+                    } catch(e) {
+                        console.error('Refill error:', e);
+                        // Re-enable buttons on error
+                        btns.forEach(b => b.disabled = false);
+                        if(payBtn) {
+                            payBtn.disabled = false;
+                            payBtn.style.opacity = '1';
+                        }
+                        
+                        // Show error using tg.showAlert (always available)
+                        if(tg && tg.showAlert) {
+                            tg.showAlert('❌ Error: ' + e.message);
+                        } else {
+                            alert('❌ Error: ' + e.message);
+                        }
+                    }
+                };
+                
+                // Override safeAlert to use tg.showAlert instead of showPopup
+                window.safeAlert = function(msg) {
+                    if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+                        window.Telegram.WebApp.showAlert(msg);
+                    } else {
+                        alert(msg);
+                    }
+                };
             </script>
             <style>
                 /* FORCE PROFESSIONAL DARK THEME (GTA Style) */
