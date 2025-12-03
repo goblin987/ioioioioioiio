@@ -2595,19 +2595,90 @@ def webapp_create_invoice():
 
 @flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
 def webapp_check_payment(payment_id):
-    """Check payment status"""
+    """Check payment status and return updated user balance"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT status FROM solana_wallets WHERE order_id = %s", (payment_id,))
+        
+        # Get payment status and user_id
+        c.execute("SELECT status, user_id FROM solana_wallets WHERE order_id = %s", (payment_id,))
         res = c.fetchone()
+        
+        if not res:
+            conn.close()
+            return jsonify({'status': 'unknown'}), 404
+        
+        status = res['status']
+        user_id = res['user_id']
+        
+        # Get user's current balance if payment is completed
+        user_balance = None
+        if status in ['paid', 'confirmed']:
+            c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+            user_res = c.fetchone()
+            if user_res:
+                user_balance = float(user_res['balance'])
+        
         conn.close()
         
-        status = res['status'] if res else 'unknown'
-        response = jsonify({'status': status})
+        response_data = {
+            'status': status,
+            'user_id': user_id
+        }
+        
+        # Include balance if available
+        if user_balance is not None:
+            response_data['new_balance'] = user_balance
+        
+        response = jsonify(response_data)
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response
     except Exception as e:
+        logger.error(f"Error checking payment status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@flask_app.route("/webapp/api/user_balance", methods=['GET'])
+def webapp_user_balance():
+    """Get user's current EUR balance"""
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id parameter required'}), 400
+        
+        user_id = int(user_id)
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get or create user
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        user_res = c.fetchone()
+        
+        if not user_res:
+            # Create user with default balance
+            c.execute("""
+                INSERT INTO users (user_id, balance, total_purchases, language)
+                VALUES (%s, 0.0, 0.0, 'en')
+                ON CONFLICT (user_id) DO NOTHING
+            """, (user_id,))
+            conn.commit()
+            balance = 0.0
+        else:
+            balance = float(user_res['balance'])
+        
+        conn.close()
+        
+        response = jsonify({
+            'user_id': user_id,
+            'balance': balance
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except ValueError:
+        return jsonify({'error': 'Invalid user_id format'}), 400
+    except Exception as e:
+        logger.error(f"Error getting user balance: {e}")
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
