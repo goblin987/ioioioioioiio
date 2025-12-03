@@ -5910,32 +5910,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }
 
-        // District Data
-        const districtData = {
-            'Vilnius': [
-                {name: 'Senamiestis', type: 'grove'}, 
-                {name: 'Naujamiestis', type: 'grove'},
-                {name: 'Zirmunai', type: 'ballas'},
-                {name: 'Fabijoniskes', type: 'ballas'},
-                {name: 'Pilaite', type: 'vagos'}
-            ],
-            'Kaunas': [
-                {name: 'Centras', type: 'grove'},
-                {name: 'Dainava', type: 'ballas'},
-                {name: 'Silainiai', type: 'vagos'},
-                {name: 'Aleksotas', type: 'vagos'}
-            ],
-            'Klaipeda': [
-                {name: 'Senamiestis', type: 'vagos'},
-                {name: 'Baltija', type: 'ballas'},
-                {name: 'Pietinis', type: 'grove'}
-            ],
-            'Panevezys': [
-                {name: 'Centras', type: 'grove'},
-                {name: 'Pramone', type: 'ballas'},
-                {name: 'Tulpes', type: 'vagos'}
-            ]
-        };
+        // District Data - Now loaded dynamically from API via appLocations
+        // Removed hardcoded districtData - districts now come from /webapp/api/locations
 
         // Map Zoom (Legacy support, redirects to menu)
         function zoomMap(cityName, topPerc, leftPerc) {
@@ -5970,8 +5946,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
             // Use dynamic locations from API, fallback to products
             let districts = [];
-            if(appLocations[city] && appLocations[city].length > 0) {
-                districts = appLocations[city].map(d => ({name: d.name, type: 'grove'}));
+            if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
+                districts = appLocations[city].districts.map(d => ({name: d, type: 'grove'}));
             } else {
                 // Fallback: extract from products
                 const districtNames = [...new Set(allProducts.filter(p => p.city === city).map(p => p.district))];
@@ -6538,8 +6514,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
 
             // Use dynamic locations from API, fallback to extracting from products
             let districts = [];
-            if(appLocations[city] && appLocations[city].length > 0) {
-                districts = appLocations[city].map(d => d.name);
+            if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
+                districts = appLocations[city].districts;
             } else {
                 // Fallback: extract districts from loaded products
                 districts = [...new Set(allProducts.filter(p => p.city === city).map(p => p.district))];
