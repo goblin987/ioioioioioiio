@@ -84,6 +84,11 @@ BOT_TOKENS = [t for t in BOT_TOKENS if t]
 TOKEN = BOT_TOKENS[0] if BOT_TOKENS else ""
 # SOL-only payment system - no third-party API keys needed
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "") # Base URL for Render app (e.g., https://app-name.onrender.com)
+
+# NowPayments placeholders for backward compatibility (not used in SOL-only mode)
+NOWPAYMENTS_API_KEY = None
+NOWPAYMENTS_API_URL = None
+
 ADMIN_ID_RAW = os.environ.get("ADMIN_ID", None)
 PRIMARY_ADMIN_IDS_STR = os.environ.get("PRIMARY_ADMIN_IDS", "")
 SECONDARY_ADMIN_IDS_STR = os.environ.get("SECONDARY_ADMIN_IDS", "")
@@ -2818,6 +2823,13 @@ available_currencies_cache = {'currencies': None, 'timestamp': 0}
 def is_currency_supported(currency_code: str) -> bool:
     """SOL-only system: only SOL is supported"""
     return currency_code.lower() == 'sol'
+
+def get_nowpayments_min_amount(currency_code: str) -> Decimal:
+    """
+    Stub function for SOL-only payment system.
+    Returns 0 since NowPayments API is not used.
+    """
+    return Decimal('0')
 
 def format_expiration_time(expiration_date_str: str | None) -> str:
     if not expiration_date_str: return "N/A"
