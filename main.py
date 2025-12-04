@@ -2626,6 +2626,140 @@ def debug_cities():
         logger.error(f"Error in debug endpoint: {e}")
         return f"<html><body style='background:#000;color:#f00;font-family:monospace;padding:20px;'><h1>❌ Error</h1><pre>{str(e)}</pre></body></html>", 500
 
+@flask_app.route("/webapp/api/debug/files", methods=['GET'])
+def debug_files():
+    """🔥 CRITICAL DEBUG: Check what files ACTUALLY exist on Render's filesystem"""
+    import os
+    from datetime import datetime
+    try:
+        html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Render Filesystem Debug</title>
+            <style>
+                body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+                h1 { color: #f00; border-bottom: 2px solid #f00; padding-bottom: 10px; }
+                h2 { color: #ff0; margin-top: 30px; }
+                .file { background: #2a2a2a; padding: 10px; margin: 5px 0; border-left: 3px solid #0f0; }
+                .missing { background: #3a0000; border-left: 3px solid #f00; }
+                .old { background: #3a3a00; border-left: 3px solid #ff0; }
+                pre { background: #000; padding: 10px; border: 1px solid #0f0; overflow-x: auto; color: #0f0; }
+                .timestamp { color: #0af; }
+                .size { color: #0a0; }
+                .warning { color: #f00; font-weight: bold; font-size: 1.2em; }
+            </style>
+        </head>
+        <body>
+            <h1>🔥 RENDER FILESYSTEM DEBUG</h1>
+        """
+        
+        # Check webapp directory
+        if os.path.exists('webapp'):
+            files = os.listdir('webapp')
+            html += f"<h2>📂 Files in webapp/ directory:</h2>"
+            html += f"<p>Total files: {len(files)}</p>"
+            
+            for f in sorted(files):
+                path = os.path.join('webapp', f)
+                if os.path.isfile(path):
+                    stat = os.stat(path)
+                    size = stat.st_size
+                    mtime = datetime.fromtimestamp(stat.st_mtime)
+                    age_hours = (datetime.now() - mtime).total_seconds() / 3600
+                    
+                    css_class = 'file'
+                    if age_hours > 24:
+                        css_class += ' old'
+                    
+                    html += f"<div class='{css_class}'>"
+                    html += f"<strong>📄 {f}</strong><br>"
+                    html += f"<span class='size'>Size: {size:,} bytes</span> | "
+                    html += f"<span class='timestamp'>Modified: {mtime} ({age_hours:.1f} hours ago)</span>"
+                    html += f"</div>"
+        else:
+            html += "<p class='warning'>⚠️ webapp/ directory does NOT exist!</p>"
+        
+        html += "<h2>🎯 CRITICAL CHECK:</h2>"
+        
+        # Check for index.html (OLD)
+        index_exists = os.path.exists('webapp/index.html')
+        html += f"<div class='{'file' if index_exists else 'missing'}'>"
+        html += f"<strong>webapp/index.html (OLD FILE):</strong> "
+        if index_exists:
+            stat = os.stat('webapp/index.html')
+            mtime = datetime.fromtimestamp(stat.st_mtime)
+            html += f"<span class='warning'>❌ EXISTS! {stat.st_size:,} bytes, modified {mtime}</span>"
+            html += f"<br><span class='warning'>This file should be DELETED!</span>"
+        else:
+            html += "<span class='size'>✅ DELETED (good!)</span>"
+        html += "</div>"
+        
+        # Check for app.html (NEW)
+        app_exists = os.path.exists('webapp/app.html')
+        html += f"<div class='{'file' if app_exists else 'missing'}'>"
+        html += f"<strong>webapp/app.html (NEW FILE):</strong> "
+        if app_exists:
+            stat = os.stat('webapp/app.html')
+            mtime = datetime.fromtimestamp(stat.st_mtime)
+            html += f"<span class='size'>✅ EXISTS! {stat.st_size:,} bytes, modified {mtime}</span>"
+        else:
+            html += "<span class='warning'>❌ MISSING! This is the problem!</span>"
+        html += "</div>"
+        
+        html += "<h2>📖 Read File Content Sample:</h2>"
+        
+        # Try reading app.html title
+        if app_exists:
+            try:
+                with open('webapp/app.html', 'r', encoding='utf-8') as f:
+                    content = f.read(2000)  # First 2000 chars
+                    # Extract title
+                    if '<title>' in content:
+                        title_start = content.find('<title>') + 7
+                        title_end = content.find('</title>')
+                        title = content[title_start:title_end]
+                        html += f"<pre>Title in app.html: {title}</pre>"
+                    else:
+                        html += "<pre>No title found in first 2000 chars</pre>"
+            except Exception as e:
+                html += f"<pre class='warning'>Error reading app.html: {e}</pre>"
+        
+        # Try reading index.html title
+        if index_exists:
+            try:
+                with open('webapp/index.html', 'r', encoding='utf-8') as f:
+                    content = f.read(2000)
+                    if '<title>' in content:
+                        title_start = content.find('<title>') + 7
+                        title_end = content.find('</title>')
+                        title = content[title_start:title_end]
+                        html += f"<pre class='warning'>Title in OLD index.html: {title}</pre>"
+            except Exception as e:
+                html += f"<pre>Error reading index.html: {e}</pre>"
+        
+        html += "<h2>🔎 Diagnosis:</h2>"
+        if index_exists and not app_exists:
+            html += "<p class='warning'>❌ PROBLEM: Render has OLD index.html but NOT app.html!</p>"
+            html += "<p class='warning'>Git didn't sync the rename. Need to force re-clone.</p>"
+        elif index_exists and app_exists:
+            html += "<p class='warning'>⚠️ PROBLEM: BOTH files exist! Old index.html wasn't deleted.</p>"
+            html += "<p class='warning'>Need to manually delete index.html from git.</p>"
+        elif not index_exists and app_exists:
+            html += "<p class='size'>✅ CORRECT: Only app.html exists (as expected)</p>"
+            html += "<p>If mini app still shows old version, it's pure client cache.</p>"
+        else:
+            html += "<p class='warning'>❌ CRITICAL: Neither file exists!</p>"
+        
+        html += "</body></html>"
+        
+        return html
+        
+    except Exception as e:
+        logger.error(f"Error in debug/files endpoint: {e}")
+        import traceback
+        return f"<html><body style='background:#000;color:#f00;font-family:monospace;padding:20px;'><h1>❌ Error</h1><pre>{traceback.format_exc()}</pre></body></html>", 500
+
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
     """API endpoint to fetch available products for the Web App (STRICT FILTERING)"""
@@ -3105,7 +3239,8 @@ def webapp_index():
         
     except Exception as e:
         logger.error(f"Error serving webapp with hotfix: {e}")
-        return send_from_directory('webapp', 'index.html')
+        # Return error instead of falling back to cached file
+        return Response(f"Error loading webapp: {e}", status=500)
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
