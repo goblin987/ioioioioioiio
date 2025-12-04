@@ -2491,6 +2491,10 @@ def webapp_get_locations():
         
         response = jsonify({'success': True, 'locations': locations})
         response.headers.add('Access-Control-Allow-Origin', '*')
+        # Force no-cache to prevent browser/Telegram Mini App caching
+        response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        response.headers.add('Pragma', 'no-cache')
+        response.headers.add('Expires', '0')
         return response
         
     except Exception as e:
@@ -2998,7 +3002,7 @@ def webapp_index():
         <script>
         // 🔧 CACHE MANAGEMENT
         (function() {
-            const CACHE_VERSION = '2.6-PANEVEZYS-BLOCKED-20251204';
+            const CACHE_VERSION = '2.7-FORCE-FRESH-20251204';
             localStorage.setItem('app_cache_version', CACHE_VERSION);
             
             // Global function to force cache clear

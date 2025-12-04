@@ -6,11 +6,11 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Los Santos Shop v2.6-PANEVEZYS-BLOCKED</title>
+    <title>Los Santos Shop v2.7-FORCE-FRESH</title>
     <!-- CRITICAL: Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '2.6-PANEVEZYS-BLOCKED-20251204';
+        const APP_VERSION = '2.7-FORCE-FRESH-20251204';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -5653,27 +5653,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             // CACHE STRATEGY: Instant Load
             const cached = localStorage.getItem('shop_cache');
             
-            // CACHE STRATEGY: Locations
+            // CACHE STRATEGY: Locations - DISABLED TO FORCE FRESH FETCH
+            // DO NOT load cached locations - always fetch fresh from API
+            // This prevents stale data (like Panevezys) from appearing
             const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
-            const cachedLocs = localStorage.getItem('locations_cache');
-            if(cachedLocs) {
-                try {
-                    const parsed = JSON.parse(cachedLocs);
-                    // Filter out blacklisted cities from cache
-                    const filtered = {};
-                    for (const [city, data] of Object.entries(parsed)) {
-                        if (!BLACKLISTED_CITIES.includes(city.toLowerCase())) {
-                            filtered[city] = data;
-                        } else {
-                            console.warn(`🚫 REMOVED BLACKLISTED CITY FROM CACHE: ${city}`);
-                        }
-                    }
-                    appLocations = filtered;
-                    // Update cache with filtered data
-                    localStorage.setItem('locations_cache', JSON.stringify(filtered));
-                    renderMapPins();
-                } catch(e) { console.log("Loc cache error", e); }
-            }
+            // Clear any existing cached locations to force fresh fetch
+            localStorage.removeItem('locations_cache');
+            appLocations = {}; // Start with empty object
             
             if(cached) {
                 try {
@@ -5702,10 +5688,19 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 4000);
                 
-                // Fetch products AND locations in parallel
+                // Fetch products AND locations in parallel with cache-busting
+                const cacheBuster = '?v=' + Date.now() + '&_=' + APP_VERSION;
                 const [productsRes, locationsRes] = await Promise.all([
-                    fetch('/webapp/api/products', { signal: controller.signal }),
-                    fetch('/webapp/api/locations', { signal: controller.signal })
+                    fetch('/webapp/api/products' + cacheBuster, { 
+                        signal: controller.signal,
+                        cache: 'no-store',
+                        headers: { 'Cache-Control': 'no-cache' }
+                    }),
+                    fetch('/webapp/api/locations' + cacheBuster, { 
+                        signal: controller.signal,
+                        cache: 'no-store',
+                        headers: { 'Cache-Control': 'no-cache' }
+                    })
                 ]);
                 clearTimeout(timeoutId);
                 
