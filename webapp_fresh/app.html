@@ -51,8 +51,8 @@
             window.location.reload(true); // Hard reload bypassing cache
         }
     </script>
-    <link rel="preload" href="/webapp/intro.mp4?v=2.3" as="video" type="video/mp4">
-    <link rel="preload" href="/webapp/ah_shit.mp3?v=2.3" as="audio">
+    <link rel="preload" href="/webapp_fresh/intro.mp4?v=2.3" as="video" type="video/mp4">
+    <link rel="preload" href="/webapp_fresh/ah_shit.mp3?v=2.3" as="audio">
     <link rel="preload" href="https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png" as="image">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- assets.js removed, embedded inline -->
@@ -4783,7 +4783,7 @@
             <div class="video-frame-overlay"></div> <!-- CINEMATIC OVERLAY -->
             <div id="video-loading" style="position:absolute; color:#555; font-family:'Courier New'; z-index:1;">BUFFERING...</div>
             <video id="intro-vid" style="width:100%; height:100%; object-fit:contain; position:relative; z-index:2; transform: translateZ(0); will-change: transform;" playsinline webkit-playsinline preload="auto" muted>
-                <source src="/webapp/intro.mp4" type="video/mp4">
+                <source src="/webapp_fresh/intro.mp4" type="video/mp4">
             </video>
             <div id="play-overlay" style="display:none; position:absolute; z-index:4; color:#fff; border:2px solid #fff; padding:10px 20px; cursor:pointer; background:rgba(0,0,0,0.7);" onclick="forcePlayVideo()">[ RETRY PLAY ]</div>
             <div style="position:absolute; bottom:20px; right:20px; color:rgba(255,255,255,0.5); font-family:'Courier New'; font-size:12px; cursor:pointer; z-index:4; border:1px solid #555; padding:5px; background:rgba(0,0,0,0.5);" onclick="skipIntro()">[ SKIP INTRO ]</div>
@@ -5299,7 +5299,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const user = tg.initDataUnsafe?.user;
                 const userId = user ? user.id : 0; 
                 
-                const response = await fetch('/webapp/api/create_refill', {
+                const response = await fetch('/webapp_fresh/api/create_refill', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user_id: userId, amount: amount })
@@ -5720,12 +5720,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // Fetch products AND locations in parallel with cache-busting
                 const cacheBuster = '?v=' + Date.now() + '&_=' + APP_VERSION;
                 const [productsRes, locationsRes] = await Promise.all([
-                    fetch('/webapp/api/products' + cacheBuster, { 
+                    fetch('/webapp_fresh/api/products' + cacheBuster, { 
                         signal: controller.signal,
                         cache: 'no-store',
                         headers: { 'Cache-Control': 'no-cache' }
                     }),
-                    fetch('/webapp/api/locations' + cacheBuster, { 
+                    fetch('/webapp_fresh/api/locations' + cacheBuster, { 
                         signal: controller.signal,
                         cache: 'no-store',
                         headers: { 'Cache-Control': 'no-cache' }
@@ -6250,7 +6250,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const user = tg.initDataUnsafe?.user;
                 const userId = user ? user.id : 0;
                 
-                const response = await fetch('/webapp/api/validate_discount', {
+                const response = await fetch('/webapp_fresh/api/validate_discount', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -6347,7 +6347,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     discount_code: currentDiscount ? currentDiscount.code : null
                 };
 
-                const response = await fetch('/webapp/api/create_invoice', {
+                const response = await fetch('/webapp_fresh/api/create_invoice', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
