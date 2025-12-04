@@ -2449,42 +2449,32 @@ def webapp_get_locations():
                 valid_districts[cid] = set()
             valid_districts[cid].add(dname)
             
-        # 3. Get candidate locations from products
+        # 3. Get candidate locations from products - DATABASE-LEVEL FILTERING
+        # Only get products whose city exists in cities table AND district exists in districts table
+        # This prevents any orphaned products from appearing
         c.execute("""
-            SELECT DISTINCT city, district
-            FROM products
-            WHERE available > 0
+            SELECT DISTINCT 
+                p.city, 
+                p.district,
+                c.id as city_id,
+                c.name as city_display_name
+            FROM products p
+            INNER JOIN cities c ON LOWER(TRIM(p.city)) = LOWER(TRIM(c.name))
+            INNER JOIN districts d ON d.city_id = c.id AND LOWER(TRIM(p.district)) = LOWER(TRIM(d.name))
+            WHERE p.available > 0
+            AND LOWER(TRIM(p.city)) NOT IN ('panevezys', 'panevėžys')
         """)
         rows = c.fetchall()
         conn.close()
         
         locations = {}
-        skipped_cities = set()
-        skipped_districts = set()
         
         for row in rows:
-            # Normalize product data
-            p_city_raw = row['city']
+            city_display_name = row['city_display_name']  # Use name from cities table
             p_dist_raw = row['district']
+            city_id = row['city_id']
             
-            if not p_city_raw or not p_dist_raw:
-                continue
-                
-            p_city = p_city_raw.strip().lower()
-            p_dist = p_dist_raw.strip().lower()
-            
-            # STRICT CHECK 1: City must exist in cities table
-            if p_city not in valid_cities:
-                skipped_cities.add(p_city_raw)
-                continue
-                
-            city_info = valid_cities[p_city]
-            city_id = city_info['id']
-            city_display_name = city_info['name']  # Use name from cities table
-            
-            # STRICT CHECK 2: District must exist for that city
-            if city_id not in valid_districts or p_dist not in valid_districts[city_id]:
-                skipped_districts.add(f"{p_city_raw}/{p_dist_raw}")
+            if not city_display_name or not p_dist_raw:
                 continue
             
             # Use the display name from the cities table for consistency
@@ -2497,13 +2487,7 @@ def webapp_get_locations():
             if p_dist_raw not in locations[city_display_name]['districts']:
                 locations[city_display_name]['districts'].append(p_dist_raw)
         
-        # Log what was skipped for debugging
-        if skipped_cities:
-            logger.warning(f"⚠️ Skipped cities NOT in cities table: {skipped_cities}")
-        if skipped_districts:
-            logger.warning(f"⚠️ Skipped districts NOT in districts table: {skipped_districts}")
-        
-        logger.info(f"✅ Returning active locations: {list(locations.keys())}")
+        logger.info(f"✅ Returning active locations (DB-filtered): {list(locations.keys())}")
         
         response = jsonify({'success': True, 'locations': locations})
         response.headers.add('Access-Control-Allow-Origin', '*')
