@@ -82,7 +82,9 @@ EMOJI_SHOP = "🛍️"
 EMOJI_DISCOUNT = "🏷️"
 EMOJI_PAY_NOW = "💳" # <<< ADDED Emoji for Pay Now
 
-# --- Define Supported Crypto Assets ---
+# --- NEW: Define Supported Crypto Assets with Network Specificity ---
+# Key: NOWPayments API currency code (lowercase)
+# Value: User-friendly display name for the button
 # SOL-only payment system
 SUPPORTED_CRYPTO = {
     'btc': 'BTC',
@@ -656,49 +658,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_worker(user_id) and not is_primary_admin(user_id):
         return await handle_worker_dashboard(update, context)
     
-    # Check UI Mode Setting (MOVED TO TOP)
-    from utils import get_bot_setting
-    ui_mode = get_bot_setting("ui_mode", "bot")  # Default to "bot" if not set
-    logger.info(f"start: User {user_id} accessed bot. UI Mode: {ui_mode}")
-    
-    # If Mini App Only mode is enabled, show mini-app prompt instead of regular menu
-    if ui_mode == "miniapp":
-        # Check if this is an admin using /start to access admin panel
-        # Admins might need to access bot UI to manage things, but main UI should be hidden
-        # For now, enforce for everyone, admins can toggle via /admin command wrapper which works
-        
-        webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
-        
-        # Get custom welcome text and button text from settings
-        miniapp_text = get_bot_setting("miniapp_welcome_text", 
-            f"👋 Welcome, {{username}}!\n\n"
-            f"🎮 This bot uses a Mini App interface for the best experience.\n\n"
-            f"Click the button below to open the shop:"
-        )
-        
-        logger.info(f"start: Using Mini App Text: {miniapp_text[:50]}...")
-        
-        # If username placeholder is used, replace it
-        if "{username}" in miniapp_text:
-            miniapp_text = miniapp_text.replace("{username}", username)
-            
-        miniapp_btn_text = get_bot_setting("miniapp_button_text", "📱 Open Shop")
-        
-        miniapp_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(miniapp_btn_text, web_app=WebAppInfo(url=webapp_url))]
-        ])
-        
-        if is_callback:
-            query = update.callback_query
-            try:
-                await query.edit_message_text(miniapp_text, reply_markup=miniapp_keyboard, parse_mode=None)
-            except Exception as e:
-                logger.warning(f"Failed to edit message for mini-app mode: {e}")
-                await send_message_with_retry(context.bot, chat_id, miniapp_text, reply_markup=miniapp_keyboard, parse_mode=None)
-        else:
-            await send_message_with_retry(context.bot, chat_id, miniapp_text, reply_markup=miniapp_keyboard, parse_mode=None)
-        return
-
     # LANGUAGE SELECTION CHECK - Before verification if enabled
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
         # Skip language selection for admins
@@ -953,9 +912,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         logger.info(f"start: Using existing language '{lang}' from context for user {user_id}.")
 
-    # UI Mode check moved to top
-    
-    # Build and Send/Edit Menu (Bot UI mode)
+    # Build and Send/Edit Menu
     lang, lang_data = _get_lang_data(context)
     full_welcome, reply_markup = _build_start_menu_content(user_id, username, lang_data, context, user)
 
@@ -2976,7 +2933,10 @@ async def handle_refill_amount_message(update: Update, context: ContextTypes.DEF
         # BETTER APPROACH: Since we are in a message handler, we can't easily use a callback handler that relies on `query.edit_message_text`.
         # We should replicate the logic of handle_select_refill_crypto but for message context.
         
-        # Create SOL payment invoice
+        # ... OR ... we create a new state `awaiting_refill_confirmation`? No, user just wants to pay.
+        
+        # Let's call create_nowpayments_payment directly here, similar to handle_select_refill_crypto logic.
+        
         preparing_invoice_msg = lang_data.get("preparing_invoice", "⏳ Preparing your payment invoice...")
         await send_message_with_retry(context.bot, chat_id, preparing_invoice_msg, parse_mode=None)
         
@@ -2999,7 +2959,21 @@ async def handle_refill_amount_message(update: Update, context: ContextTypes.DEF
             context.user_data.pop('refill_eur_amount', None)
             context.user_data.pop('state', None)
             
-            # Display SOL invoice
+            # We need to mock a query object for display_nowpayments_invoice because it uses query.message.chat_id
+            # But wait, display_nowpayments_invoice uses query.message.chat_id. 
+            # If update.callback_query is None, it might fail.
+            
+            # Let's modify display_nowpayments_invoice to be robust or handle it here.
+            # Actually display_nowpayments_invoice expects a callback update.
+            # We can just send the invoice message manually here or refactor display_nowpayments_invoice.
+            
+            # Let's use a hack: set `update.callback_query` on the update object if we can, or just copy the display logic.
+            # Copying display logic is safest to avoid breaking other things.
+            
+            # ...Actually, let's just try to pass a dummy query object or modify display_nowpayments_invoice to handle message updates.
+            # But since I can't easily modify payment.py display logic without risk, I will implement the display here for this specific case.
+            
+            # -- Display Logic for Message Context --
             pay_address = payment_result.get('pay_address')
             pay_amount = payment_result.get('pay_amount')
             pay_currency = 'SOL'

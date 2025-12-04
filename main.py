@@ -2426,36 +2426,46 @@ def webapp_debug_data():
 
 @flask_app.route("/webapp/api/locations", methods=['GET'])
 def webapp_get_locations():
-    """API endpoint to fetch cities and districts with available products"""
+    """API endpoint to fetch ONLY admin-added cities and districts with available stock"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get all cities and districts that have products available
+        # Get only cities that are in the cities table AND have stock
         c.execute("""
-            SELECT DISTINCT p.city, p.district, c.id as city_id
-            FROM products p
-            LEFT JOIN cities c ON c.name = p.city
+            SELECT DISTINCT c.id as city_id, c.name as city_name
+            FROM cities c
+            INNER JOIN products p ON p.city = c.name
             WHERE p.available > 0
-            ORDER BY p.city, p.district
+            ORDER BY c.name
         """)
         
-        rows = c.fetchall()
+        cities_with_stock = c.fetchall()
         
-        # Group by city
+        # Build locations dict
         locations = {}
-        for row in rows:
-            city = row['city']
-            district = row['district']
+        for city_row in cities_with_stock:
+            city_name = city_row['city_name']
+            city_id = city_row['city_id']
             
-            if city not in locations:
-                locations[city] = {
-                    'city_id': row['city_id'],
-                    'districts': []
+            # Get only districts that are in the districts table AND have stock for this city
+            c.execute("""
+                SELECT DISTINCT d.name as district_name
+                FROM districts d
+                INNER JOIN products p ON p.district = d.name AND p.city = %s
+                WHERE p.available > 0
+                ORDER BY d.name
+            """, (city_name,))
+            
+            district_rows = c.fetchall()
+            districts = [row['district_name'] for row in district_rows]
+            
+            # Only add city if it has districts with stock
+            if districts:
+                locations[city_name] = {
+                    'city_id': city_id,
+                    'districts': districts
                 }
-            
-            if district and district not in locations[city]['districts']:
-                locations[city]['districts'].append(district)
         
         conn.close()
         

@@ -10,7 +10,7 @@ import uuid # For generating unique order IDs
 import requests # For making API calls to NOWPayments
 from decimal import Decimal, ROUND_UP, ROUND_DOWN # Use Decimal for precision
 import json # For parsing potential error messages
-from datetime import datetime, timezone, timedelta # Added import
+from datetime import datetime, timezone # Added import
 from collections import Counter, defaultdict # Added import
 
 # --- Telegram Imports ---

@@ -4903,26 +4903,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </svg>
                     
                             <!-- Signal Emitters -->
-                            <!-- City Pins - Geographically Accurate (verified via Google Maps) -->
-                            <div class="city-pin" style="top: 55%; left: 85%;" onclick="zoomToCity('Vilnius', 55, 85)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: VILNIUS</div>
-                            </div>
-                            <div class="city-pin" style="top: 52%; left: 48%;" onclick="zoomToCity('Kaunas', 52, 48)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: KAUNAS</div>
-                            </div>
-                            <div class="city-pin" style="top: 38%; left: 10%;" onclick="zoomToCity('Klaipeda', 38, 10)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: KLAIPEDA</div>
-                            </div>
-                            <div class="city-pin" style="top: 28%; left: 58%;" onclick="zoomToCity('Panevezys', 28, 58)">
-                                <div class="pin-core"></div>
-                                <div class="pin-pulse"></div>
-                                <div class="city-label">SIGNAL: PANEVEZYS</div>
+                            <!-- City Pins - Dynamically Generated from API -->
+                            <div id="dynamic-city-pins">
+                                <!-- City pins will be generated dynamically based on admin-added cities -->
                             </div>
                             
                             <!-- District Polygon Overlays -->
@@ -5662,6 +5645,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(locationsData.success && locationsData.locations) {
                     appLocations = locationsData.locations;
                     console.log("Loaded locations:", Object.keys(appLocations));
+                    // Generate city pins dynamically
+                    generateCityPins();
                 }
                 
                 if(productsData.success && productsData.products) {
@@ -5790,8 +5775,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const container = document.getElementById('city-filters');
             
             if (city === 'all') {
-                renderFilters(allProducts);
-                renderProducts(allProducts);
+                // Only show products with stock
+                const availableProducts = allProducts.filter(p => p.available > 0);
+                renderFilters(availableProducts);
+                renderProducts(availableProducts);
                 const label = document.querySelector('.search-label');
                 if(label) label.innerText = `LSPD DATABASE > SEARCH:`;
                 return;
@@ -5913,6 +5900,47 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // District Data - Now loaded dynamically from API via appLocations
         // Removed hardcoded districtData - districts now come from /webapp/api/locations
 
+        // Generate City Pins Dynamically from API
+        function generateCityPins() {
+            const container = document.getElementById('dynamic-city-pins');
+            if (!container) return;
+            
+            // Clear existing pins
+            container.innerHTML = '';
+            
+            // Default city positions (can be customized per city)
+            const cityPositions = {
+                'Vilnius': { top: 55, left: 85 },
+                'Kaunas': { top: 52, left: 48 },
+                'Klaipeda': { top: 38, left: 10 },
+                'Panevezys': { top: 28, left: 58 },
+                // Add more default positions as needed
+            };
+            
+            // Generate pins only for cities that have stock (from API)
+            Object.keys(appLocations).forEach(city => {
+                // Get position for this city, or use default
+                const pos = cityPositions[city] || { top: 50, left: 50 };
+                
+                // Create city pin element
+                const pin = document.createElement('div');
+                pin.className = 'city-pin';
+                pin.style.top = pos.top + '%';
+                pin.style.left = pos.left + '%';
+                pin.onclick = () => zoomToCity(city, pos.top, pos.left);
+                
+                pin.innerHTML = `
+                    <div class="pin-core"></div>
+                    <div class="pin-pulse"></div>
+                    <div class="city-label">SIGNAL: ${city.toUpperCase()}</div>
+                `;
+                
+                container.appendChild(pin);
+            });
+            
+            console.log(`Generated ${Object.keys(appLocations).length} city pins`);
+        }
+
         // Map Zoom (Legacy support, redirects to menu)
         function zoomMap(cityName, topPerc, leftPerc) {
             openDistrictMenu(cityName);
@@ -5949,13 +5977,27 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
                 districts = appLocations[city].districts.map(d => ({name: d, type: 'grove'}));
             } else {
-                // Fallback: extract from products
-                const districtNames = [...new Set(allProducts.filter(p => p.city === city).map(p => p.district))];
+                // Fallback: extract from products that have stock
+                const districtNames = [...new Set(allProducts.filter(p => p.city === city && p.available > 0).map(p => p.district))];
                 districts = districtNames.map(name => ({name, type: 'grove'}));
             }
             
+            // Only show districts with stock (already filtered by API, but double-check)
+            districts = districts.filter(d => {
+                // Check if this district actually has products with stock
+                const hasStock = allProducts.some(p => 
+                    p.city === city && 
+                    p.district === d.name && 
+                    p.available > 0
+                );
+                return hasStock;
+            });
+
+            // If no districts with stock, don't show the menu
             if(districts.length === 0) {
-                 districts = [{name: 'All Areas', type: 'grove'}];
+                list.innerHTML = '<div class="dm-item" style="opacity: 0.5; cursor: default;"><span>NO STOCK AVAILABLE</span><span>❌</span></div>';
+                menu.classList.add('active');
+                return;
             }
 
             districts.forEach(d => {
@@ -6517,11 +6559,34 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
                 districts = appLocations[city].districts;
             } else {
-                // Fallback: extract districts from loaded products
-                districts = [...new Set(allProducts.filter(p => p.city === city).map(p => p.district))];
+                // Fallback: extract districts from loaded products that have stock
+                districts = [...new Set(allProducts.filter(p => p.city === city && p.available > 0).map(p => p.district))];
             }
             
-            (districts.length > 0 ? districts : ['All Areas']).forEach(d => {
+            // Filter to only districts with stock
+            districts = districts.filter(d => {
+                return allProducts.some(p => 
+                    p.city === city && 
+                    p.district === d && 
+                    p.available > 0
+                );
+            });
+            
+            // If no districts with stock, show message
+            if(districts.length === 0) {
+                const item = document.createElement('div');
+                item.className = 'dm-item'; 
+                item.innerText = 'NO STOCK AVAILABLE';
+                item.style.padding = '15px';
+                item.style.borderBottom = '1px solid #333';
+                item.style.cursor = 'default';
+                item.style.opacity = '0.5';
+                list.appendChild(item);
+                panel.classList.add('active');
+                return;
+            }
+            
+            districts.forEach(d => {
                 const item = document.createElement('div');
                 item.className = 'dm-item'; 
                 item.innerText = d;
