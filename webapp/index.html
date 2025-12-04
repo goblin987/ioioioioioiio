@@ -6,13 +6,22 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Los Santos Shop v2.3-NOCACHE</title>
-    <!-- Force reload with timestamp -->
+    <title>Los Santos Shop v2.4-FINAL</title>
+    <!-- CRITICAL: Version check and cache nuke -->
     <script>
-        // Force cache clear
-        if(window.performance && performance.navigation.type === 1) {
-            console.log('Page reloaded - cache should be bypassed');
+        // IMMEDIATE CACHE NUKE - Runs before anything else
+        const APP_VERSION = '2.4-FINAL';
+        const lastVersion = localStorage.getItem('app_version_check');
+        
+        if(lastVersion !== APP_VERSION) {
+            console.log('🔥 NEW VERSION DETECTED - NUKING ALL CACHE');
+            localStorage.clear();
+            sessionStorage.clear();
+            localStorage.setItem('app_version_check', APP_VERSION);
         }
+        
+        // Visual confirmation this is the new page
+        console.log(`✅ Los Santos Shop ${APP_VERSION} loaded successfully`);
     </script>
     <link rel="preload" href="/webapp/intro.mp4?v=2.3" as="video" type="video/mp4">
     <link rel="preload" href="/webapp/ah_shit.mp3?v=2.3" as="audio">
@@ -2981,6 +2990,11 @@
     </style>
 </head>
 <body>
+    <!-- Version Indicator (bottom-right corner) -->
+    <div style="position: fixed; bottom: 5px; right: 5px; background: rgba(0,255,0,0.2); color: lime; padding: 4px 8px; font-size: 10px; font-family: monospace; z-index: 999999; border-radius: 4px;">
+        v2.4-FINAL
+    </div>
+    
     <!-- Wasted Overlay -->
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
         <div class="wasted-text">WASTED</div>

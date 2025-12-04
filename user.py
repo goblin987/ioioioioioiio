@@ -217,7 +217,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     # Default keyboard layout
     # Add timestamp to FORCE cache clear every time
     import time
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2&t={int(time.time())}"
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.4&t={int(time.time())}"
     default_keyboard = [
         [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))],
         [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],
