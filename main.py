@@ -2522,7 +2522,27 @@ def debug_cities():
         
         # Get all cities
         c.execute("SELECT id, name FROM cities ORDER BY id")
-        cities = [{'id': row['id'], 'name': row['name']} for row in c.fetchall()]
+        cities_data = []
+        cities_rows = c.fetchall()
+        
+        for city_row in cities_rows:
+            city_id = city_row['id']
+            city_name = city_row['name']
+            
+            # Get districts for this city
+            c.execute("SELECT id, name FROM districts WHERE city_id = %s", (city_id,))
+            city_districts = [{'id': d['id'], 'name': d['name']} for d in c.fetchall()]
+            
+            # Get product count
+            c.execute("SELECT COUNT(*) as count FROM products WHERE city = %s", (city_name,))
+            product_count = c.fetchone()['count']
+            
+            cities_data.append({
+                'id': city_id,
+                'name': city_name,
+                'districts': city_districts,
+                'product_count': product_count
+            })
         
         # Get all districts
         c.execute("""
@@ -2535,29 +2555,88 @@ def debug_cities():
                      'city_name': row['city_name'], 'name': row['name']} 
                     for row in c.fetchall()]
         
-        # Get products with invalid cities/districts
+        # Get products with their locations
         c.execute("""
-            SELECT DISTINCT p.city, p.district
+            SELECT DISTINCT p.city, p.district, COUNT(*) as count
             FROM products p
-            WHERE p.available > 0
+            GROUP BY p.city, p.district
+            ORDER BY p.city, p.district
         """)
-        product_locations = [{'city': row['city'], 'district': row['district']} 
+        product_locations = [{'city': row['city'], 'district': row['district'], 'count': row['count']} 
                            for row in c.fetchall()]
         
         conn.close()
         
-        response = jsonify({
-            'success': True,
-            'cities': cities,
-            'districts': districts,
-            'product_locations': product_locations
-        })
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
+        # Create HTML output for browser viewing
+        html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Database Debug - Cities & Districts</title>
+            <style>
+                body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+                h1 { color: #0f0; border-bottom: 2px solid #0f0; padding-bottom: 10px; }
+                h2 { color: #0a0; margin-top: 30px; }
+                .city { background: #2a2a2a; padding: 15px; margin: 10px 0; border-left: 3px solid #0f0; }
+                .district { margin-left: 20px; padding: 5px; color: #0a0; }
+                .count { color: #ff0; }
+                .warning { color: #f00; font-weight: bold; }
+                table { border-collapse: collapse; margin: 10px 0; }
+                th, td { border: 1px solid #0f0; padding: 8px; text-align: left; }
+                th { background: #0a0; color: #000; }
+                pre { background: #000; padding: 10px; border: 1px solid #0f0; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <h1>🔍 DATABASE DEBUG - CITIES & DISTRICTS</h1>
+        """
+        
+        html += f"<h2>📊 Summary</h2>"
+        html += f"<p>Total Cities: <span class='count'>{len(cities_data)}</span></p>"
+        html += f"<p>Total Districts: <span class='count'>{len(districts)}</span></p>"
+        html += f"<p>Product Locations: <span class='count'>{len(product_locations)}</span></p>"
+        
+        html += "<h2>🏙️ Cities in Database</h2>"
+        if cities_data:
+            for city in cities_data:
+                html += f"<div class='city'>"
+                html += f"<strong>ID {city['id']}: {city['name']}</strong> "
+                html += f"(<span class='count'>{city['product_count']} products</span>)<br>"
+                if city['districts']:
+                    html += "<div class='district'>Districts:"
+                    for dist in city['districts']:
+                        html += f"<br>  • {dist['name']} (ID: {dist['id']})"
+                    html += "</div>"
+                else:
+                    html += "<div class='district warning'>No districts!</div>"
+                html += "</div>"
+        else:
+            html += "<p class='count'>✅ No cities in database (clean!)</p>"
+        
+        html += "<h2>📦 Product Locations</h2>"
+        if product_locations:
+            html += "<table><tr><th>City</th><th>District</th><th>Products</th></tr>"
+            for loc in product_locations:
+                html += f"<tr><td>{loc['city']}</td><td>{loc['district']}</td><td>{loc['count']}</td></tr>"
+            html += "</table>"
+        else:
+            html += "<p class='count'>✅ No products in database</p>"
+        
+        html += "<h2>🔧 Actions</h2>"
+        html += "<p>To clean up the database:</p>"
+        html += "<pre>python cleanup_database.py</pre>"
+        html += "<p>Or use the Telegram bot: Admin Menu → Manage Locations → Manage Cities</p>"
+        
+        html += "<h2>📋 Raw JSON Data</h2>"
+        html += f"<pre>{jsonify({'cities': cities_data, 'districts': districts, 'product_locations': product_locations}).get_data(as_text=True)}</pre>"
+        
+        html += "</body></html>"
+        
+        return html
         
     except Exception as e:
         logger.error(f"Error in debug endpoint: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return f"<html><body style='background:#000;color:#f00;font-family:monospace;padding:20px;'><h1>❌ Error</h1><pre>{str(e)}</pre></body></html>", 500
 
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
