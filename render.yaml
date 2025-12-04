@@ -5,10 +5,11 @@ services:
     region: frankfurt
     plan: free
     buildCommand: |
+      echo "🔥 NUCLEAR OPTION: Completely replace webapp directory from git"
+      rm -rf webapp
       git reset --hard HEAD
       git clean -fd
-      rm -f webapp/index.html
-      echo "🔥 Deleted old index.html (if exists)"
+      echo "📂 Files in webapp after git reset:"
       ls -la webapp/
       pip install -r requirements.txt
     startCommand: python main.py
