@@ -2978,11 +2978,12 @@ def webapp_user_balance():
 
 @flask_app.route("/webapp", methods=['GET'])
 @flask_app.route("/webapp/index.html", methods=['GET'])
+@flask_app.route("/webapp/app.html", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App with JavaScript hotfix injection and DYNAMIC VERSIONING"""
     try:
-        # Read the original HTML
-        with open('webapp/index.html', 'r', encoding='utf-8') as f:
+        # Read the original HTML (renamed to app.html to bypass Cloudflare CDN cache)
+        with open('webapp/app.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
         
         # Generate UNIQUE version with timestamp to FORCE cache invalidation
@@ -3108,10 +3109,10 @@ def webapp_index():
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
-    """Serve static files for Web App (except index.html which is served dynamically)"""
-    # Block direct access to index.html - force them to use dynamic route
-    if filename == 'index.html':
-        logger.info("🔀 Redirecting index.html request to dynamic route")
+    """Serve static files for Web App (except HTML files which are served dynamically)"""
+    # Redirect HTML requests to dynamic route to bypass Cloudflare CDN cache
+    if filename in ['index.html', 'app.html']:
+        logger.info(f"🔀 Redirecting {filename} request to dynamic route")
         return webapp_index()
     
     # Serve other static files normally
