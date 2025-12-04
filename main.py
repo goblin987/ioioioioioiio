@@ -3022,58 +3022,58 @@ def webapp_index():
             localStorage.setItem('app_cache_version', CACHE_VERSION);
             
             // Global function to force cache clear
-            window.clearShopCache = function() {
+            window.clearShopCache = function() {{
                 localStorage.clear();
                 sessionStorage.clear();
                 console.log('🧹 Shop cache cleared! Refreshing...');
                 location.reload();
-            };
-        })();
+            }};
+        }})();
         
         // 🔧 BULLETPROOF CART FIX - Make cart button work
         console.log('🔧 Injecting cart button fix...');
         
         // Override openBasket function
-        window.openBasket = function() {
+        window.openBasket = function() {{
             console.log('🛒 openBasket called');
             const modal = document.getElementById('basket-modal');
-            if(modal) {
+            if(modal) {{
                 modal.style.display = 'flex';
-                if(typeof window.renderBasketContent === 'function') {
+                if(typeof window.renderBasketContent === 'function') {{
                     window.renderBasketContent();
-                }
-            } else {
+                }}
+            }} else {{
                 console.error('❌ basket-modal not found!');
-            }
-        };
+            }}
+        }};
         
         // Override closeBasket function
-        window.closeBasket = function() {
+        window.closeBasket = function() {{
             console.log('🛒 closeBasket called');
             const modal = document.getElementById('basket-modal');
-            if(modal) {
+            if(modal) {{
                 modal.style.display = 'none';
-            }
-        };
+            }}
+        }};
         
         // Wait for DOM to load, then fix cart button
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {{
             console.log('🔧 DOM loaded, fixing cart button...');
             
             // Find all cart buttons in navigation
             const navButtons = document.querySelectorAll('.nav-btn, .bottom-nav button, [onclick*="openBasket"]');
-            navButtons.forEach(btn => {
+            navButtons.forEach(btn => {{
                 const btnText = btn.textContent || btn.innerText;
-                if(btnText.includes('🛒') || btnText.includes('Cart') || btn.id === 'cart-btn') {
+                if(btnText.includes('🛒') || btnText.includes('Cart') || btn.id === 'cart-btn') {{
                     console.log('✅ Found cart button, attaching listener');
-                    btn.onclick = function(e) {
+                    btn.onclick = function(e) {{
                         e.preventDefault();
                         e.stopPropagation();
                         window.openBasket();
-                    };
-                }
-            });
-        });
+                    }};
+                }}
+            }});
+        }});
         </script>
         """
         
