@@ -215,7 +215,9 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     logger.info(f"🎁 Daily Rewards enabled check: {show_daily_rewards} for user {user_id}")
     
     # Default keyboard layout
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2"
+    # Add timestamp to FORCE cache clear every time
+    import time
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2&t={int(time.time())}"
     default_keyboard = [
         [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))],
         [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],

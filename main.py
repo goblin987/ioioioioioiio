@@ -2864,27 +2864,31 @@ def webapp_index():
         with open('webapp/index.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        # JavaScript hotfix for cart button AND cache management
+        # NUCLEAR CACHE CLEAR - Inject at the very start
+        nuclear_cache_clear = """
+        <script>
+        // 🔥 NUCLEAR CACHE CLEAR - Runs IMMEDIATELY before anything else
+        (function() {
+            console.log('🔥 FORCING COMPLETE CACHE CLEAR...');
+            localStorage.clear(); // Clear EVERYTHING
+            sessionStorage.clear(); // Clear session too
+            console.log('✅ All cache destroyed. Loading fresh.');
+        })();
+        </script>
+        """
+        
+        # JavaScript hotfix for cart button
         hotfix_script = """
         <script>
-        // 🔧 CACHE MANAGEMENT - Clear old cached data
+        // 🔧 CACHE MANAGEMENT
         (function() {
-            const CACHE_VERSION = 'v2.1';
-            const lastVersion = localStorage.getItem('app_cache_version');
-            
-            if(lastVersion !== CACHE_VERSION) {
-                console.log('🧹 Clearing old cache data...');
-                localStorage.removeItem('shop_cache');
-                localStorage.removeItem('locations_cache');
-                localStorage.setItem('app_cache_version', CACHE_VERSION);
-                console.log('✅ Cache cleared! Fresh data will load.');
-            }
+            const CACHE_VERSION = 'v2.3';
+            localStorage.setItem('app_cache_version', CACHE_VERSION);
             
             // Global function to force cache clear
             window.clearShopCache = function() {
-                localStorage.removeItem('shop_cache');
-                localStorage.removeItem('locations_cache');
-                localStorage.removeItem('app_cache_version');
+                localStorage.clear();
+                sessionStorage.clear();
                 console.log('🧹 Shop cache cleared! Refreshing...');
                 location.reload();
             };
@@ -2937,7 +2941,11 @@ def webapp_index():
         </script>
         """
         
-        # Inject before closing </body> tag
+        # Inject nuclear cache clear at the VERY TOP (after <head>)
+        if '<head>' in html_content:
+            html_content = html_content.replace('<head>', '<head>' + nuclear_cache_clear, 1)
+        
+        # Inject hotfix before closing </body> tag
         if '</body>' in html_content:
             html_content = html_content.replace('</body>', hotfix_script + '</body>')
         else:
@@ -2945,9 +2953,10 @@ def webapp_index():
         
         response = Response(html_content, mimetype='text/html')
         # FORCE NO CACHE
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+        response.headers["Last-Modified"] = "Thu, 01 Jan 1970 00:00:00 GMT"
         return response
         
     except Exception as e:
