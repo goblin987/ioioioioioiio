@@ -26,6 +26,30 @@
         
         // Visual confirmation this is the new page
         console.log(`✅ Los Santos Shop ${APP_VERSION} loaded successfully`);
+        
+        // KILL ALL SERVICE WORKERS - Prevent service worker caching
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                if (registrations.length > 0) {
+                    console.log('🔥 Unregistering ' + registrations.length + ' service workers');
+                    registrations.forEach(function(registration) {
+                        registration.unregister();
+                        console.log('✅ Service worker unregistered:', registration.scope);
+                    });
+                }
+            }).catch(function(err) {
+                console.log('Service worker unregister error:', err);
+            });
+        }
+        
+        // FORCE RELOAD if old version detected in title
+        // This catches cases where the HTML is cached but script runs
+        if (document.title.includes('v2.3') || document.title.includes('v2.4') || document.title.includes('v2.5')) {
+            console.log('🔄 OLD VERSION DETECTED IN TITLE - FORCING HARD RELOAD');
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload(true); // Hard reload bypassing cache
+        }
     </script>
     <link rel="preload" href="/webapp/intro.mp4?v=2.3" as="video" type="video/mp4">
     <link rel="preload" href="/webapp/ah_shit.mp3?v=2.3" as="audio">
@@ -2994,9 +3018,14 @@
     </style>
 </head>
 <body>
+    <!-- Force Refresh Button (top-right corner) -->
+    <button onclick="forceRefreshApp()" style="position: fixed; top: 10px; right: 10px; z-index: 999999; background: rgba(255, 0, 0, 0.8); color: white; border: 2px solid lime; padding: 8px 12px; font-family: monospace; font-size: 11px; cursor: pointer; border-radius: 4px; font-weight: bold; box-shadow: 0 0 10px rgba(0,255,0,0.5);" title="Clear all cache and reload fresh data">
+        🔄 FORCE REFRESH
+    </button>
+    
     <!-- Version Indicator (bottom-right corner) -->
     <div style="position: fixed; bottom: 5px; right: 5px; background: rgba(0,255,0,0.2); color: lime; padding: 4px 8px; font-size: 10px; font-family: monospace; z-index: 999999; border-radius: 4px;">
-        v2.4-FINAL
+        v2.8-DYNAMIC
     </div>
     
     <!-- Wasted Overlay -->
@@ -6912,6 +6941,33 @@ const CHAR_ASSETS = {
         
         // Remove Metro Init
         function goToStation(){}; // Stub
+        
+        // FORCE REFRESH FUNCTION - User-triggered cache clear
+        function forceRefreshApp() {
+            console.log('🔥 USER TRIGGERED FORCE REFRESH');
+            
+            // Clear all storage
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('✅ All storage cleared');
+            
+            // Unregister service workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    registrations.forEach(function(registration) {
+                        registration.unregister();
+                        console.log('✅ Service worker unregistered');
+                    });
+                }).catch(function(err) {
+                    console.log('Service worker error:', err);
+                });
+            }
+            
+            // Hard reload with cache bust
+            const cacheBuster = '?_force=' + Date.now() + '&v=' + Math.random();
+            console.log('🔄 Performing hard reload with cache buster:', cacheBuster);
+            window.location.href = window.location.href.split('?')[0] + cacheBuster;
+        }
 
         // Apple Polish: Dynamic Parallax
         const mapContainer = document.getElementById('map-container');

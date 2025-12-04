@@ -2977,32 +2977,48 @@ def webapp_user_balance():
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
+@flask_app.route("/webapp/index.html", methods=['GET'])
 def webapp_index():
-    """Serve Telegram Web App with JavaScript hotfix injection"""
+    """Serve Telegram Web App with JavaScript hotfix injection and DYNAMIC VERSIONING"""
     try:
         # Read the original HTML
         with open('webapp/index.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
         
+        # Generate UNIQUE version with timestamp to FORCE cache invalidation
+        from datetime import datetime
+        dynamic_version = f'v2.8-DYNAMIC-{int(datetime.now().timestamp())}'
+        
         # NUCLEAR CACHE CLEAR - Inject at the very start
-        nuclear_cache_clear = """
+        nuclear_cache_clear = f"""
         <script>
         // 🔥 NUCLEAR CACHE CLEAR - Runs IMMEDIATELY before anything else
-        (function() {
-            console.log('🔥 FORCING COMPLETE CACHE CLEAR...');
-            localStorage.clear(); // Clear EVERYTHING
-            sessionStorage.clear(); // Clear session too
-            console.log('✅ All cache destroyed. Loading fresh.');
-        })();
+        (function() {{
+            const DYNAMIC_VERSION = '{dynamic_version}';
+            const lastVersion = localStorage.getItem('app_version_check');
+            
+            console.log('🔥 Version Check: Current=' + DYNAMIC_VERSION + ', Cached=' + lastVersion);
+            
+            // ALWAYS clear on new deployment (version changes every deploy due to timestamp)
+            if(lastVersion !== DYNAMIC_VERSION) {{
+                console.log('🔥 NEW DEPLOYMENT DETECTED - CLEARING ALL CACHE');
+                localStorage.clear(); // Clear EVERYTHING
+                sessionStorage.clear(); // Clear session too
+                localStorage.setItem('app_version_check', DYNAMIC_VERSION);
+                console.log('✅ All cache destroyed. Loading fresh data.');
+            }} else {{
+                console.log('✅ Same version, cache preserved');
+            }}
+        }})();
         </script>
         """
         
         # JavaScript hotfix for cart button
-        hotfix_script = """
+        hotfix_script = f"""
         <script>
         // 🔧 CACHE MANAGEMENT
-        (function() {
-            const CACHE_VERSION = '2.7-FORCE-FRESH-20251204';
+        (function() {{
+            const CACHE_VERSION = '{dynamic_version}';
             localStorage.setItem('app_cache_version', CACHE_VERSION);
             
             // Global function to force cache clear
@@ -3071,13 +3087,19 @@ def webapp_index():
         else:
             html_content += hotfix_script
         
+        # Replace title with dynamic version
+        if '<title>' in html_content:
+            html_content = html_content.split('<title>')[0] + f'<title>Los Santos Shop {dynamic_version}</title>' + html_content.split('</title>', 1)[1]
+        
         response = Response(html_content, mimetype='text/html')
-        # FORCE NO CACHE
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        # AGGRESSIVE NO-CACHE HEADERS - Prevent ANY caching
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
         response.headers["Last-Modified"] = "Thu, 01 Jan 1970 00:00:00 GMT"
-        # FORCE VERSION: 2.5-PANEVEZYS-REMOVED
+        response.headers["ETag"] = f'"{dynamic_version}"'
+        # Log the version being served
+        logger.info(f"🌐 Serving webapp with DYNAMIC VERSION: {dynamic_version}")
         return response
         
     except Exception as e:
@@ -3086,8 +3108,17 @@ def webapp_index():
 
 @flask_app.route("/webapp/<path:filename>", methods=['GET'])
 def webapp_static(filename):
-    """Serve static files for Web App"""
-    return send_from_directory('webapp', filename)
+    """Serve static files for Web App (except index.html which is served dynamically)"""
+    # Block direct access to index.html - force them to use dynamic route
+    if filename == 'index.html':
+        logger.info("🔀 Redirecting index.html request to dynamic route")
+        return webapp_index()
+    
+    # Serve other static files normally
+    response = send_from_directory('webapp', filename)
+    # Add no-cache headers for all static files too
+    response.headers["Cache-Control"] = "no-cache, max-age=0"
+    return response
 
 @flask_app.route("/", methods=['GET'])
 def root():
