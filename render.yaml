@@ -7,6 +7,9 @@ services:
     buildCommand: |
       git reset --hard HEAD
       git clean -fd
+      rm -f webapp/index.html
+      echo "🔥 Deleted old index.html (if exists)"
+      ls -la webapp/
       pip install -r requirements.txt
     startCommand: python main.py
     envVars:
