@@ -1002,7 +1002,8 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
         keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
     
     # Add Web App Button
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+    import time
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2&t={int(time.time())}"
     keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Classic 6-button layout with translations
@@ -1057,7 +1058,8 @@ async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAUL
         keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_menu")])
     
     # Add Web App Button
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+    import time
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2&t={int(time.time())}"
     keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Add regular user buttons
@@ -1868,7 +1870,8 @@ def apply_custom_layout_to_keyboard(menu_name, default_keyboard, user_language='
         
         # Inject Web App Button for start menu (Always visible)
         if menu_name == 'start_menu':
-             webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+             import time
+             webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2&t={int(time.time())}"
              custom_keyboard.insert(0, [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
         
         return custom_keyboard
@@ -2276,7 +2279,8 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
         keyboard.append([InlineKeyboardButton("🔧 Admin Control Center", callback_data="admin_menu")])
     
     # Add Web App Button
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp"
+    import time
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp?v=2.2&t={int(time.time())}"
     keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Modern premium button layout

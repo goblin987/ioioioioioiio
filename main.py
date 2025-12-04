@@ -2426,48 +2426,77 @@ def webapp_debug_data():
 
 @flask_app.route("/webapp/api/locations", methods=['GET'])
 def webapp_get_locations():
-    """API endpoint to fetch ONLY admin-added cities and districts with available stock"""
+    """API endpoint to fetch cities and districts with available products (STRICT VALIDATION)"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get only cities that are in the cities table AND have stock
+        # 1. Get all valid cities
+        c.execute("SELECT id, name FROM cities")
+        valid_cities = {row['name'].strip().lower(): row['id'] for row in c.fetchall()}
+        
+        # 2. Get all valid districts
+        c.execute("SELECT id, city_id, name FROM districts")
+        # Map: city_id -> set of district names (lowercase)
+        valid_districts = {}
+        for row in c.fetchall():
+            cid = row['city_id']
+            dname = row['name'].strip().lower()
+            if cid not in valid_districts:
+                valid_districts[cid] = set()
+            valid_districts[cid].add(dname)
+            
+        # 3. Get candidate locations from products
         c.execute("""
-            SELECT DISTINCT c.id as city_id, c.name as city_name
-            FROM cities c
-            INNER JOIN products p ON p.city = c.name
-            WHERE p.available > 0
-            ORDER BY c.name
+            SELECT DISTINCT city, district
+            FROM products
+            WHERE available > 0
         """)
-        
-        cities_with_stock = c.fetchall()
-        
-        # Build locations dict
-        locations = {}
-        for city_row in cities_with_stock:
-            city_name = city_row['city_name']
-            city_id = city_row['city_id']
-            
-            # Get only districts that are in the districts table AND have stock for this city
-            c.execute("""
-                SELECT DISTINCT d.name as district_name
-                FROM districts d
-                INNER JOIN products p ON p.district = d.name AND p.city = %s
-                WHERE p.available > 0
-                ORDER BY d.name
-            """, (city_name,))
-            
-            district_rows = c.fetchall()
-            districts = [row['district_name'] for row in district_rows]
-            
-            # Only add city if it has districts with stock
-            if districts:
-                locations[city_name] = {
-                    'city_id': city_id,
-                    'districts': districts
-                }
-        
+        rows = c.fetchall()
         conn.close()
+        
+        locations = {}
+        
+        for row in rows:
+            # Normalize product data
+            p_city_raw = row['city']
+            p_dist_raw = row['district']
+            
+            if not p_city_raw or not p_dist_raw:
+                continue
+                
+            p_city = p_city_raw.strip().lower()
+            p_dist = p_dist_raw.strip().lower()
+            
+            # STRICT CHECK 1: City must exist
+            if p_city not in valid_cities:
+                continue
+                
+            city_id = valid_cities[p_city]
+            
+            # STRICT CHECK 2: District must exist for that city
+            if city_id not in valid_districts or p_dist not in valid_districts[city_id]:
+                continue
+                
+            # If we pass checks, add to response (preserve original casing from Product or City? Let's use City table casing for tidiness)
+            # Actually, better to use Product casing if that's what we filter by in frontend?
+            # Or better: Use the casing from the Cities/Districts tables to be clean.
+            
+            # Let's find the "Display Name" from the cities table
+            # We need to invert the valid_cities dict or store it differently.
+            # For now, let's just use the product's string but we know it's valid.
+            # Actually, let's use the capitalized version from product to match frontend expectations.
+            
+            if p_city_raw not in locations:
+                locations[p_city_raw] = {
+                    'city_id': city_id,
+                    'districts': []
+                }
+            
+            if p_dist_raw not in locations[p_city_raw]['districts']:
+                locations[p_city_raw]['districts'].append(p_dist_raw)
+        
+        logger.info(f"Returning active locations (Python Filtered): {locations.keys()}")
         
         response = jsonify({'success': True, 'locations': locations})
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -2479,13 +2508,26 @@ def webapp_get_locations():
 
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
-    """API endpoint to fetch available products for the Web App"""
+    """API endpoint to fetch available products for the Web App (STRICT FILTERING)"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Fetch products grouped by city/district
-        # We want to show available products
+        # 1. Get all valid cities (STRICT SOURCE OF TRUTH)
+        c.execute("SELECT id, name FROM cities")
+        valid_cities = {row['name'].strip().lower(): row['id'] for row in c.fetchall()}
+        
+        # 2. Get all valid districts (STRICT SOURCE OF TRUTH)
+        c.execute("SELECT id, city_id, name FROM districts")
+        valid_districts = {}
+        for row in c.fetchall():
+            cid = row['city_id']
+            dname = row['name'].strip().lower()
+            if cid not in valid_districts:
+                valid_districts[cid] = set()
+            valid_districts[cid].add(dname)
+
+        # Fetch products
         c.execute("""
             SELECT id, name, price, size, product_type, city, district, available
             FROM products
@@ -2497,6 +2539,21 @@ def webapp_get_products():
         rows = c.fetchall()
         
         for row in rows:
+            # Normalize for check
+            p_city = row['city'].strip().lower() if row['city'] else ''
+            p_dist = row['district'].strip().lower() if row['district'] else ''
+            
+            # STRICT CHECK 1: City must exist
+            if p_city not in valid_cities:
+                continue
+                
+            city_id = valid_cities[p_city]
+            
+            # STRICT CHECK 2: District must exist
+            if city_id not in valid_districts or p_dist not in valid_districts[city_id]:
+                continue
+                
+            # If we pass checks, include the product
             products.append({
                 'id': row['id'],
                 'name': row['name'],
@@ -2807,25 +2864,31 @@ def webapp_index():
         with open('webapp/index.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        # JavaScript hotfix for cart button AND cache management
+        # NUCLEAR CACHE CLEAR - Inject at the very start
+        nuclear_cache_clear = """
+        <script>
+        // 🔥 NUCLEAR CACHE CLEAR - Runs IMMEDIATELY before anything else
+        (function() {
+            console.log('🔥 FORCING COMPLETE CACHE CLEAR...');
+            localStorage.clear(); // Clear EVERYTHING
+            sessionStorage.clear(); // Clear session too
+            console.log('✅ All cache destroyed. Loading fresh.');
+        })();
+        </script>
+        """
+        
+        # JavaScript hotfix for cart button
         hotfix_script = """
         <script>
-        // 🔧 CACHE MANAGEMENT - Clear old cached data
+        // 🔧 CACHE MANAGEMENT
         (function() {
-            const CACHE_VERSION = 'v2.0';
-            const lastVersion = localStorage.getItem('app_cache_version');
-            
-            if(lastVersion !== CACHE_VERSION) {
-                console.log('🧹 Clearing old cache data...');
-                localStorage.removeItem('shop_cache');
-                localStorage.setItem('app_cache_version', CACHE_VERSION);
-                console.log('✅ Cache cleared! Fresh data will load.');
-            }
+            const CACHE_VERSION = 'v2.3';
+            localStorage.setItem('app_cache_version', CACHE_VERSION);
             
             // Global function to force cache clear
             window.clearShopCache = function() {
-                localStorage.removeItem('shop_cache');
-                localStorage.removeItem('app_cache_version');
+                localStorage.clear();
+                sessionStorage.clear();
                 console.log('🧹 Shop cache cleared! Refreshing...');
                 location.reload();
             };
@@ -2878,13 +2941,23 @@ def webapp_index():
         </script>
         """
         
-        # Inject before closing </body> tag
+        # Inject nuclear cache clear at the VERY TOP (after <head>)
+        if '<head>' in html_content:
+            html_content = html_content.replace('<head>', '<head>' + nuclear_cache_clear, 1)
+        
+        # Inject hotfix before closing </body> tag
         if '</body>' in html_content:
             html_content = html_content.replace('</body>', hotfix_script + '</body>')
         else:
             html_content += hotfix_script
         
-        return Response(html_content, mimetype='text/html')
+        response = Response(html_content, mimetype='text/html')
+        # FORCE NO CACHE
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        response.headers["Last-Modified"] = "Thu, 01 Jan 1970 00:00:00 GMT"
+        return response
         
     except Exception as e:
         logger.error(f"Error serving webapp with hotfix: {e}")

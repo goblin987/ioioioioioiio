@@ -6,13 +6,22 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Los Santos Shop v2.3-NOCACHE</title>
-    <!-- Force reload with timestamp -->
+    <title>Los Santos Shop v2.4-FINAL</title>
+    <!-- CRITICAL: Version check and cache nuke -->
     <script>
-        // Force cache clear
-        if(window.performance && performance.navigation.type === 1) {
-            console.log('Page reloaded - cache should be bypassed');
+        // IMMEDIATE CACHE NUKE - Runs before anything else
+        const APP_VERSION = '2.4-FINAL';
+        const lastVersion = localStorage.getItem('app_version_check');
+        
+        if(lastVersion !== APP_VERSION) {
+            console.log('🔥 NEW VERSION DETECTED - NUKING ALL CACHE');
+            localStorage.clear();
+            sessionStorage.clear();
+            localStorage.setItem('app_version_check', APP_VERSION);
         }
+        
+        // Visual confirmation this is the new page
+        console.log(`✅ Los Santos Shop ${APP_VERSION} loaded successfully`);
     </script>
     <link rel="preload" href="/webapp/intro.mp4?v=2.3" as="video" type="video/mp4">
     <link rel="preload" href="/webapp/ah_shit.mp3?v=2.3" as="audio">
@@ -2981,6 +2990,11 @@
     </style>
 </head>
 <body>
+    <!-- Version Indicator (bottom-right corner) -->
+    <div style="position: fixed; bottom: 5px; right: 5px; background: rgba(0,255,0,0.2); color: lime; padding: 4px 8px; font-size: 10px; font-family: monospace; z-index: 999999; border-radius: 4px;">
+        v2.4-FINAL
+    </div>
+    
     <!-- Wasted Overlay -->
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
         <div class="wasted-text">WASTED</div>
@@ -4903,9 +4917,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     </svg>
                     
                             <!-- Signal Emitters -->
-                            <!-- City Pins - Dynamically Generated from API -->
-                            <div id="dynamic-city-pins">
-                                <!-- City pins will be generated dynamically based on admin-added cities -->
+                            <!-- City Pins - Dynamic Container -->
+                            <div id="city-pins-container">
+                                <!-- Dynamic pins will be injected here -->
                             </div>
                             
                             <!-- District Polygon Overlays -->
@@ -5604,11 +5618,84 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if(nav) nav.classList.add('active');
         }
 
+        // Coordinates for known cities (top%, left%)
+        const CITY_COORDINATES = {
+            'vilnius': { top: 55, left: 85 },
+            'kaunas': { top: 52, left: 48 },
+            'klaipeda': { top: 38, left: 10 },
+            'panevezys': { top: 28, left: 58 },
+            'siauliai': { top: 22, left: 45 },
+            'palanga': { top: 32, left: 8 },
+            'druskininkai': { top: 85, left: 70 },
+            'marijampole': { top: 65, left: 40 },
+            'alytus': { top: 70, left: 60 },
+            'utena': { top: 40, left: 85 },
+            'mazeikiai': { top: 10, left: 35 },
+            'telsiai': { top: 20, left: 25 },
+            'taurage': { top: 45, left: 25 },
+            'jonava': { top: 48, left: 60 },
+            'kedainiai': { top: 38, left: 50 },
+            'pasvalys': { top: 18, left: 60 }
+        };
+
+        function renderMapPins() {
+            const container = document.getElementById('city-pins-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Get all cities from appLocations
+            const cities = Object.keys(appLocations);
+            
+            cities.forEach((city, index) => {
+                const cityLower = city.toLowerCase();
+                let coords = CITY_COORDINATES[cityLower];
+                
+                // If no coords, auto-position in a grid/list for visibility
+                if (!coords) {
+                    // Position unknown cities in a "New Locations" area
+                    // Start around 75% top, distributed horizontally
+                    coords = { 
+                        top: 75 + (index % 3) * 8, 
+                        left: 20 + (index % 4) * 15 
+                    };
+                }
+                
+                // Create Pin Element
+                const pin = document.createElement('div');
+                pin.className = 'city-pin';
+                pin.style.top = coords.top + '%';
+                pin.style.left = coords.left + '%';
+                
+                // Clean city name for display (remove special chars if any)
+                const displayName = city.toUpperCase();
+                
+                pin.onclick = () => zoomToCity(city, coords.top, coords.left);
+                
+                pin.innerHTML = `
+                    <div class="pin-core"></div>
+                    <div class="pin-pulse"></div>
+                    <div class="city-label">${displayName}</div>
+                `;
+                
+                container.appendChild(pin);
+            });
+        }
+
         async function loadProducts() {
             const grid = document.getElementById('product-grid');
             
             // CACHE STRATEGY: Instant Load
             const cached = localStorage.getItem('shop_cache');
+            
+            // CACHE STRATEGY: Locations
+            const cachedLocs = localStorage.getItem('locations_cache');
+            if(cachedLocs) {
+                try {
+                    appLocations = JSON.parse(cachedLocs);
+                    renderMapPins();
+                } catch(e) { console.log("Loc cache error", e); }
+            }
+            
             if(cached) {
                 try {
                     const cData = JSON.parse(cached);
@@ -5617,6 +5704,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         grid.innerHTML = ''; // Clear loading immediately
                         renderProducts(allProducts);
                         renderFilters(allProducts);
+                        
+                        // Try to render map pins if we have cached locations (stored separately or re-fetch)
+                        // Since we don't cache locations separately yet, we rely on fetch.
+                        // But if products have city data, we can infer some locations? 
+                        // Better to just wait for location fetch, or cache locations too.
                     }
                 } catch(e) { 
                     console.log("Cache error:", e);
@@ -5644,9 +5736,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // Load locations
                 if(locationsData.success && locationsData.locations) {
                     appLocations = locationsData.locations;
+                    localStorage.setItem('locations_cache', JSON.stringify(appLocations));
                     console.log("Loaded locations:", Object.keys(appLocations));
-                    // Generate city pins dynamically
-                    generateCityPins();
+                    renderMapPins(); // Render dynamic pins
                 }
                 
                 if(productsData.success && productsData.products) {
@@ -5657,7 +5749,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     renderProducts(allProducts);
                     renderFilters(allProducts);
                     updateStars(Math.floor(Math.random() * 6));
-                    refreshDistrictColors(); // Update map district colors 
+                    // refreshDistrictColors(); // Removed to prevent error if undefined
                 } else {
                     if(!cached) grid.innerHTML = '<div class="loading" style="color:red">NO DATA</div>';
                 }
@@ -5775,10 +5867,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const container = document.getElementById('city-filters');
             
             if (city === 'all') {
-                // Only show products with stock
-                const availableProducts = allProducts.filter(p => p.available > 0);
-                renderFilters(availableProducts);
-                renderProducts(availableProducts);
+                renderFilters(allProducts);
+                renderProducts(allProducts);
                 const label = document.querySelector('.search-label');
                 if(label) label.innerText = `LSPD DATABASE > SEARCH:`;
                 return;
@@ -5900,47 +5990,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // District Data - Now loaded dynamically from API via appLocations
         // Removed hardcoded districtData - districts now come from /webapp/api/locations
 
-        // Generate City Pins Dynamically from API
-        function generateCityPins() {
-            const container = document.getElementById('dynamic-city-pins');
-            if (!container) return;
-            
-            // Clear existing pins
-            container.innerHTML = '';
-            
-            // Default city positions (can be customized per city)
-            const cityPositions = {
-                'Vilnius': { top: 55, left: 85 },
-                'Kaunas': { top: 52, left: 48 },
-                'Klaipeda': { top: 38, left: 10 },
-                'Panevezys': { top: 28, left: 58 },
-                // Add more default positions as needed
-            };
-            
-            // Generate pins only for cities that have stock (from API)
-            Object.keys(appLocations).forEach(city => {
-                // Get position for this city, or use default
-                const pos = cityPositions[city] || { top: 50, left: 50 };
-                
-                // Create city pin element
-                const pin = document.createElement('div');
-                pin.className = 'city-pin';
-                pin.style.top = pos.top + '%';
-                pin.style.left = pos.left + '%';
-                pin.onclick = () => zoomToCity(city, pos.top, pos.left);
-                
-                pin.innerHTML = `
-                    <div class="pin-core"></div>
-                    <div class="pin-pulse"></div>
-                    <div class="city-label">SIGNAL: ${city.toUpperCase()}</div>
-                `;
-                
-                container.appendChild(pin);
-            });
-            
-            console.log(`Generated ${Object.keys(appLocations).length} city pins`);
-        }
-
         // Map Zoom (Legacy support, redirects to menu)
         function zoomMap(cityName, topPerc, leftPerc) {
             openDistrictMenu(cityName);
@@ -5972,32 +6021,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             };
             list.appendChild(allBtn);
 
-            // Use dynamic locations from API, fallback to products
+            // STRICT: Use dynamic locations from API ONLY. No fallbacks.
             let districts = [];
-            if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
+            if(appLocations[city] && appLocations[city].districts) {
                 districts = appLocations[city].districts.map(d => ({name: d, type: 'grove'}));
-            } else {
-                // Fallback: extract from products that have stock
-                const districtNames = [...new Set(allProducts.filter(p => p.city === city && p.available > 0).map(p => p.district))];
-                districts = districtNames.map(name => ({name, type: 'grove'}));
             }
             
-            // Only show districts with stock (already filtered by API, but double-check)
-            districts = districts.filter(d => {
-                // Check if this district actually has products with stock
-                const hasStock = allProducts.some(p => 
-                    p.city === city && 
-                    p.district === d.name && 
-                    p.available > 0
-                );
-                return hasStock;
-            });
-
-            // If no districts with stock, don't show the menu
             if(districts.length === 0) {
-                list.innerHTML = '<div class="dm-item" style="opacity: 0.5; cursor: default;"><span>NO STOCK AVAILABLE</span><span>❌</span></div>';
-                menu.classList.add('active');
-                return;
+                 districts = [{name: 'All Areas', type: 'grove'}];
             }
 
             districts.forEach(d => {
@@ -6554,39 +6585,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             header.innerText = city.toUpperCase();
             list.innerHTML = '';
 
-            // Use dynamic locations from API, fallback to extracting from products
+            // STRICT: Use dynamic locations from API ONLY. No fallbacks.
             let districts = [];
-            if(appLocations[city] && appLocations[city].districts && appLocations[city].districts.length > 0) {
+            if(appLocations[city] && appLocations[city].districts) {
                 districts = appLocations[city].districts;
-            } else {
-                // Fallback: extract districts from loaded products that have stock
-                districts = [...new Set(allProducts.filter(p => p.city === city && p.available > 0).map(p => p.district))];
             }
             
-            // Filter to only districts with stock
-            districts = districts.filter(d => {
-                return allProducts.some(p => 
-                    p.city === city && 
-                    p.district === d && 
-                    p.available > 0
-                );
-            });
-            
-            // If no districts with stock, show message
-            if(districts.length === 0) {
-                const item = document.createElement('div');
-                item.className = 'dm-item'; 
-                item.innerText = 'NO STOCK AVAILABLE';
-                item.style.padding = '15px';
-                item.style.borderBottom = '1px solid #333';
-                item.style.cursor = 'default';
-                item.style.opacity = '0.5';
-                list.appendChild(item);
-                panel.classList.add('active');
-                return;
-            }
-            
-            districts.forEach(d => {
+            (districts.length > 0 ? districts : ['All Areas']).forEach(d => {
                 const item = document.createElement('div');
                 item.className = 'dm-item'; 
                 item.innerText = d;
