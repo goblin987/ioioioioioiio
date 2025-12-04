@@ -2431,9 +2431,12 @@ def webapp_get_locations():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # 1. Get all valid cities
+        # 1. Get all valid cities from the cities table (admin-added only)
         c.execute("SELECT id, name FROM cities")
-        valid_cities = {row['name'].strip().lower(): row['id'] for row in c.fetchall()}
+        cities_rows = c.fetchall()
+        valid_cities = {row['name'].strip().lower(): {'id': row['id'], 'name': row['name']} for row in cities_rows}
+        
+        logger.info(f"🏙️ Valid cities in database: {list(valid_cities.keys())}")
         
         # 2. Get all valid districts
         c.execute("SELECT id, city_id, name FROM districts")
@@ -2456,6 +2459,8 @@ def webapp_get_locations():
         conn.close()
         
         locations = {}
+        skipped_cities = set()
+        skipped_districts = set()
         
         for row in rows:
             # Normalize product data
@@ -2468,35 +2473,37 @@ def webapp_get_locations():
             p_city = p_city_raw.strip().lower()
             p_dist = p_dist_raw.strip().lower()
             
-            # STRICT CHECK 1: City must exist
+            # STRICT CHECK 1: City must exist in cities table
             if p_city not in valid_cities:
+                skipped_cities.add(p_city_raw)
                 continue
                 
-            city_id = valid_cities[p_city]
+            city_info = valid_cities[p_city]
+            city_id = city_info['id']
+            city_display_name = city_info['name']  # Use name from cities table
             
             # STRICT CHECK 2: District must exist for that city
             if city_id not in valid_districts or p_dist not in valid_districts[city_id]:
+                skipped_districts.add(f"{p_city_raw}/{p_dist_raw}")
                 continue
-                
-            # If we pass checks, add to response (preserve original casing from Product or City? Let's use City table casing for tidiness)
-            # Actually, better to use Product casing if that's what we filter by in frontend?
-            # Or better: Use the casing from the Cities/Districts tables to be clean.
             
-            # Let's find the "Display Name" from the cities table
-            # We need to invert the valid_cities dict or store it differently.
-            # For now, let's just use the product's string but we know it's valid.
-            # Actually, let's use the capitalized version from product to match frontend expectations.
-            
-            if p_city_raw not in locations:
-                locations[p_city_raw] = {
+            # Use the display name from the cities table for consistency
+            if city_display_name not in locations:
+                locations[city_display_name] = {
                     'city_id': city_id,
                     'districts': []
                 }
             
-            if p_dist_raw not in locations[p_city_raw]['districts']:
-                locations[p_city_raw]['districts'].append(p_dist_raw)
+            if p_dist_raw not in locations[city_display_name]['districts']:
+                locations[city_display_name]['districts'].append(p_dist_raw)
         
-        logger.info(f"Returning active locations (Python Filtered): {locations.keys()}")
+        # Log what was skipped for debugging
+        if skipped_cities:
+            logger.warning(f"⚠️ Skipped cities NOT in cities table: {skipped_cities}")
+        if skipped_districts:
+            logger.warning(f"⚠️ Skipped districts NOT in districts table: {skipped_districts}")
+        
+        logger.info(f"✅ Returning active locations: {list(locations.keys())}")
         
         response = jsonify({'success': True, 'locations': locations})
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -2504,6 +2511,52 @@ def webapp_get_locations():
         
     except Exception as e:
         logger.error(f"Error fetching locations for webapp: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@flask_app.route("/webapp/api/debug/cities", methods=['GET'])
+def debug_cities():
+    """Debug endpoint to see all cities and districts in database"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get all cities
+        c.execute("SELECT id, name FROM cities ORDER BY id")
+        cities = [{'id': row['id'], 'name': row['name']} for row in c.fetchall()]
+        
+        # Get all districts
+        c.execute("""
+            SELECT d.id, d.city_id, d.name, c.name as city_name 
+            FROM districts d 
+            LEFT JOIN cities c ON d.city_id = c.id 
+            ORDER BY d.city_id, d.id
+        """)
+        districts = [{'id': row['id'], 'city_id': row['city_id'], 
+                     'city_name': row['city_name'], 'name': row['name']} 
+                    for row in c.fetchall()]
+        
+        # Get products with invalid cities/districts
+        c.execute("""
+            SELECT DISTINCT p.city, p.district
+            FROM products p
+            WHERE p.available > 0
+        """)
+        product_locations = [{'city': row['city'], 'district': row['district']} 
+                           for row in c.fetchall()]
+        
+        conn.close()
+        
+        response = jsonify({
+            'success': True,
+            'cities': cities,
+            'districts': districts,
+            'product_locations': product_locations
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @flask_app.route("/webapp/api/products", methods=['GET'])
