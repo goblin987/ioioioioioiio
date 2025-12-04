@@ -3014,7 +3014,7 @@ def webapp_index():
         <script>
         // 🔧 CACHE MANAGEMENT
         (function() {
-            const CACHE_VERSION = '2.5-PANEVEZYS-REMOVED-20251204';
+            const CACHE_VERSION = '2.6-PANEVEZYS-BLOCKED-20251204';
             localStorage.setItem('app_cache_version', CACHE_VERSION);
             
             // Global function to force cache clear

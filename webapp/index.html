@@ -6,18 +6,22 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Los Santos Shop v2.5-PANEVEZYS-REMOVED</title>
+    <title>Los Santos Shop v2.6-PANEVEZYS-BLOCKED</title>
     <!-- CRITICAL: Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '2.5-PANEVEZYS-REMOVED-20251204';
+        const APP_VERSION = '2.6-PANEVEZYS-BLOCKED-20251204';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
             console.log('🔥 NEW VERSION DETECTED - NUKING ALL CACHE');
             localStorage.clear();
             sessionStorage.clear();
+            // Specifically clear locations cache (critical for map pins)
+            localStorage.removeItem('locations_cache');
+            localStorage.removeItem('shop_cache');
             localStorage.setItem('app_version_check', APP_VERSION);
+            console.log('✅ All cache destroyed including locations_cache');
         }
         
         // Visual confirmation this is the new page
@@ -5595,8 +5599,18 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             if (!container) return;
             container.innerHTML = '';
 
+            // HARDCODED BLACKLIST: Cities that should NEVER appear (removed by admin)
+            const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
+            
             // Get all cities from appLocations
-            const cities = Object.keys(appLocations);
+            const cities = Object.keys(appLocations).filter(city => {
+                const cityLower = city.toLowerCase();
+                if (BLACKLISTED_CITIES.includes(cityLower)) {
+                    console.warn(`🚫 BLOCKED BLACKLISTED CITY: ${city}`);
+                    return false;
+                }
+                return true;
+            });
             
             cities.forEach((city, index) => {
                 const cityLower = city.toLowerCase();
@@ -5640,10 +5654,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const cached = localStorage.getItem('shop_cache');
             
             // CACHE STRATEGY: Locations
+            const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
             const cachedLocs = localStorage.getItem('locations_cache');
             if(cachedLocs) {
                 try {
-                    appLocations = JSON.parse(cachedLocs);
+                    const parsed = JSON.parse(cachedLocs);
+                    // Filter out blacklisted cities from cache
+                    const filtered = {};
+                    for (const [city, data] of Object.entries(parsed)) {
+                        if (!BLACKLISTED_CITIES.includes(city.toLowerCase())) {
+                            filtered[city] = data;
+                        } else {
+                            console.warn(`🚫 REMOVED BLACKLISTED CITY FROM CACHE: ${city}`);
+                        }
+                    }
+                    appLocations = filtered;
+                    // Update cache with filtered data
+                    localStorage.setItem('locations_cache', JSON.stringify(filtered));
                     renderMapPins();
                 } catch(e) { console.log("Loc cache error", e); }
             }
@@ -5687,7 +5714,17 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 // Load locations
                 if(locationsData.success && locationsData.locations) {
-                    appLocations = locationsData.locations;
+                    const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
+                    // Filter out blacklisted cities from API response
+                    const filtered = {};
+                    for (const [city, data] of Object.entries(locationsData.locations)) {
+                        if (!BLACKLISTED_CITIES.includes(city.toLowerCase())) {
+                            filtered[city] = data;
+                        } else {
+                            console.warn(`🚫 REMOVED BLACKLISTED CITY FROM API: ${city}`);
+                        }
+                    }
+                    appLocations = filtered;
                     localStorage.setItem('locations_cache', JSON.stringify(appLocations));
                     console.log("Loaded locations:", Object.keys(appLocations));
                     renderMapPins(); // Render dynamic pins
@@ -6528,6 +6565,13 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function openDistrictPanel(city) {
+            // HARDCODED BLACKLIST: Block blacklisted cities
+            const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
+            if (BLACKLISTED_CITIES.includes(city.toLowerCase())) {
+                console.warn(`🚫 BLOCKED BLACKLISTED CITY: ${city}`);
+                return; // Don't show panel for blacklisted cities
+            }
+            
             const panel = document.getElementById('district-panel');
             const header = document.getElementById('panel-header');
             const list = document.getElementById('panel-list');
