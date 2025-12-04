@@ -2365,7 +2365,7 @@ def webhook_test():
     logger.info(f"🔍 WEBHOOK TEST: Raw body: {request.get_data()}")
     return Response("Test webhook received successfully", status=200)
 
-@flask_app.route("/webapp/api/debug_data", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/debug_data", methods=['GET'])
 def webapp_debug_data():
     """DEBUG: Show raw data from database to diagnose district issues"""
     try:
@@ -2424,7 +2424,7 @@ def webapp_debug_data():
         logger.error(f"Error in debug endpoint: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/locations", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/locations", methods=['GET'])
 def webapp_get_locations():
     """API endpoint to fetch cities and districts with available products (STRICT VALIDATION)"""
     try:
@@ -2501,7 +2501,7 @@ def webapp_get_locations():
         logger.error(f"Error fetching locations for webapp: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/debug/cities", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/debug/cities", methods=['GET'])
 def debug_cities():
     """Debug endpoint to see all cities and districts in database"""
     try:
@@ -2626,7 +2626,7 @@ def debug_cities():
         logger.error(f"Error in debug endpoint: {e}")
         return f"<html><body style='background:#000;color:#f00;font-family:monospace;padding:20px;'><h1>❌ Error</h1><pre>{str(e)}</pre></body></html>", 500
 
-@flask_app.route("/webapp/api/debug/files", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/debug/files", methods=['GET'])
 def debug_files():
     """🔥 CRITICAL DEBUG: Check what files ACTUALLY exist on Render's filesystem"""
     import os
@@ -2655,9 +2655,9 @@ def debug_files():
         """
         
         # Check webapp directory
-        if os.path.exists('webapp'):
-            files = os.listdir('webapp')
-            html += f"<h2>📂 Files in webapp/ directory:</h2>"
+        if os.path.exists('webapp_fresh'):
+            files = os.listdir('webapp_fresh')
+            html += f"<h2>📂 Files in webapp_fresh/ directory:</h2>"
             html += f"<p>Total files: {len(files)}</p>"
             
             for f in sorted(files):
@@ -2678,16 +2678,16 @@ def debug_files():
                     html += f"<span class='timestamp'>Modified: {mtime} ({age_hours:.1f} hours ago)</span>"
                     html += f"</div>"
         else:
-            html += "<p class='warning'>⚠️ webapp/ directory does NOT exist!</p>"
+            html += "<p class='warning'>⚠️ webapp_fresh/ directory does NOT exist!</p>"
         
         html += "<h2>🎯 CRITICAL CHECK:</h2>"
         
         # Check for index.html (OLD)
-        index_exists = os.path.exists('webapp/index.html')
+        index_exists = os.path.exists('webapp_fresh/index.html')
         html += f"<div class='{'file' if index_exists else 'missing'}'>"
-        html += f"<strong>webapp/index.html (OLD FILE):</strong> "
+        html += f"<strong>webapp_fresh/index.html (OLD FILE):</strong> "
         if index_exists:
-            stat = os.stat('webapp/index.html')
+            stat = os.stat('webapp_fresh/index.html')
             mtime = datetime.fromtimestamp(stat.st_mtime)
             html += f"<span class='warning'>❌ EXISTS! {stat.st_size:,} bytes, modified {mtime}</span>"
             html += f"<br><span class='warning'>This file should be DELETED!</span>"
@@ -2696,11 +2696,11 @@ def debug_files():
         html += "</div>"
         
         # Check for app.html (NEW)
-        app_exists = os.path.exists('webapp/app.html')
+        app_exists = os.path.exists('webapp_fresh/app.html')
         html += f"<div class='{'file' if app_exists else 'missing'}'>"
-        html += f"<strong>webapp/app.html (NEW FILE):</strong> "
+        html += f"<strong>webapp_fresh/app.html (NEW FILE):</strong> "
         if app_exists:
-            stat = os.stat('webapp/app.html')
+            stat = os.stat('webapp_fresh/app.html')
             mtime = datetime.fromtimestamp(stat.st_mtime)
             html += f"<span class='size'>✅ EXISTS! {stat.st_size:,} bytes, modified {mtime}</span>"
         else:
@@ -2712,7 +2712,7 @@ def debug_files():
         # Try reading app.html title
         if app_exists:
             try:
-                with open('webapp/app.html', 'r', encoding='utf-8') as f:
+                with open('webapp_fresh/app.html', 'r', encoding='utf-8') as f:
                     content = f.read(2000)  # First 2000 chars
                     # Extract title
                     if '<title>' in content:
@@ -2728,7 +2728,7 @@ def debug_files():
         # Try reading index.html title
         if index_exists:
             try:
-                with open('webapp/index.html', 'r', encoding='utf-8') as f:
+                with open('webapp_fresh/index.html', 'r', encoding='utf-8') as f:
                     content = f.read(2000)
                     if '<title>' in content:
                         title_start = content.find('<title>') + 7
@@ -2760,7 +2760,7 @@ def debug_files():
         import traceback
         return f"<html><body style='background:#000;color:#f00;font-family:monospace;padding:20px;'><h1>❌ Error</h1><pre>{traceback.format_exc()}</pre></body></html>", 500
 
-@flask_app.route("/webapp/api/products", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/products", methods=['GET'])
 def webapp_get_products():
     """API endpoint to fetch available products for the Web App (STRICT FILTERING)"""
     try:
@@ -2830,7 +2830,7 @@ def webapp_get_products():
         logger.error(f"Error fetching products for webapp: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/validate_discount", methods=['POST'])
+@flask_app.route("/webapp_fresh/api/validate_discount", methods=['POST'])
 def webapp_validate_discount():
     """Validates a discount code and calculates reseller discounts"""
     try:
@@ -2903,7 +2903,7 @@ def webapp_validate_discount():
         logger.error(f"Error validating discount: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/create_invoice", methods=['POST'])
+@flask_app.route("/webapp_fresh/api/create_invoice", methods=['POST'])
 def webapp_create_invoice():
     """Create a Solana invoice for Web App items"""
     try:
@@ -3016,7 +3016,7 @@ def webapp_create_invoice():
         logger.error(f"Error creating invoice: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/check_payment/<payment_id>", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/check_payment/<payment_id>", methods=['GET'])
 def webapp_check_payment(payment_id):
     """Check payment status and return updated user balance"""
     try:
@@ -3060,7 +3060,7 @@ def webapp_check_payment(payment_id):
         logger.error(f"Error checking payment status: {e}")
         return jsonify({'error': str(e)}), 500
 
-@flask_app.route("/webapp/api/user_balance", methods=['GET'])
+@flask_app.route("/webapp_fresh/api/user_balance", methods=['GET'])
 def webapp_user_balance():
     """Get user's current EUR balance"""
     try:
@@ -3111,13 +3111,13 @@ def webapp_user_balance():
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
-@flask_app.route("/webapp/index.html", methods=['GET'])
-@flask_app.route("/webapp/app.html", methods=['GET'])
+@flask_app.route("/webapp_fresh/index.html", methods=['GET'])
+@flask_app.route("/webapp_fresh/app.html", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App with JavaScript hotfix injection and DYNAMIC VERSIONING"""
     try:
         # Read the original HTML (renamed to app.html to bypass Cloudflare CDN cache)
-        with open('webapp/app.html', 'r', encoding='utf-8') as f:
+        with open('webapp_fresh/app.html', 'r', encoding='utf-8') as f:
             html_content = f.read()
         
         # Generate UNIQUE version with timestamp to FORCE cache invalidation
@@ -3242,7 +3242,7 @@ def webapp_index():
         # Return error instead of falling back to cached file
         return Response(f"Error loading webapp: {e}", status=500)
 
-@flask_app.route("/webapp/<path:filename>", methods=['GET'])
+@flask_app.route("/webapp_fresh/<path:filename>", methods=['GET'])
 def webapp_static(filename):
     """Serve static files for Web App (except HTML files which are served dynamically)"""
     # Redirect HTML requests to dynamic route to bypass Cloudflare CDN cache

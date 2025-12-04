@@ -5,12 +5,11 @@ services:
     region: frankfurt
     plan: free
     buildCommand: |
-      echo "🔥 NUCLEAR OPTION: Completely replace webapp directory from git"
-      rm -rf webapp
+      echo "🔥 Directory renamed to webapp_fresh to bypass persistent volume"
       git reset --hard HEAD
       git clean -fd
-      echo "📂 Files in webapp after git reset:"
-      ls -la webapp/
+      echo "📂 Files in webapp_fresh after git reset:"
+      ls -la webapp_fresh/
       pip install -r requirements.txt
     startCommand: python main.py
     envVars:
