@@ -2508,13 +2508,26 @@ def webapp_get_locations():
 
 @flask_app.route("/webapp/api/products", methods=['GET'])
 def webapp_get_products():
-    """API endpoint to fetch available products for the Web App"""
+    """API endpoint to fetch available products for the Web App (STRICT FILTERING)"""
     try:
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Fetch products grouped by city/district
-        # We want to show available products
+        # 1. Get all valid cities (STRICT SOURCE OF TRUTH)
+        c.execute("SELECT id, name FROM cities")
+        valid_cities = {row['name'].strip().lower(): row['id'] for row in c.fetchall()}
+        
+        # 2. Get all valid districts (STRICT SOURCE OF TRUTH)
+        c.execute("SELECT id, city_id, name FROM districts")
+        valid_districts = {}
+        for row in c.fetchall():
+            cid = row['city_id']
+            dname = row['name'].strip().lower()
+            if cid not in valid_districts:
+                valid_districts[cid] = set()
+            valid_districts[cid].add(dname)
+
+        # Fetch products
         c.execute("""
             SELECT id, name, price, size, product_type, city, district, available
             FROM products
@@ -2526,6 +2539,21 @@ def webapp_get_products():
         rows = c.fetchall()
         
         for row in rows:
+            # Normalize for check
+            p_city = row['city'].strip().lower() if row['city'] else ''
+            p_dist = row['district'].strip().lower() if row['district'] else ''
+            
+            # STRICT CHECK 1: City must exist
+            if p_city not in valid_cities:
+                continue
+                
+            city_id = valid_cities[p_city]
+            
+            # STRICT CHECK 2: District must exist
+            if city_id not in valid_districts or p_dist not in valid_districts[city_id]:
+                continue
+                
+            # If we pass checks, include the product
             products.append({
                 'id': row['id'],
                 'name': row['name'],
