@@ -14,7 +14,7 @@ services:
         value: 3.11.0
       - key: PORT
         sync: false
-    # Explicitly include webapp directory
-    staticPublishPath: ./webapp
+    # Static files served through Flask for dynamic versioning
+    # staticPublishPath removed to prevent CDN caching
 
 
