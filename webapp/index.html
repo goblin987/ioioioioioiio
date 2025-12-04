@@ -4924,45 +4924,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                             
                             <!-- District Polygon Overlays -->
                             <div class="district-polygons">
-                                <!-- VILNIUS DISTRICTS -->
-                                <svg class="city-districts" id="districts-vilnius" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                    <polygon class="district-poly" data-city="Vilnius" data-district="Senamiestis" 
-                                        points="68,68 72,65 75,68 74,73 70,74 67,72" />
-                                    <polygon class="district-poly" data-city="Vilnius" data-district="Naujamiestis" 
-                                        points="65,72 68,70 72,73 71,78 66,77 64,74" />
-                                    <polygon class="district-poly" data-city="Vilnius" data-district="Zirmunai" 
-                                        points="72,63 77,61 80,64 79,68 74,69 71,66" />
-                                    <polygon class="district-poly" data-city="Vilnius" data-district="Antakalnis" 
-                                        points="75,67 80,65 84,68 82,73 77,72 74,70" />
-                                    <polygon class="district-poly" data-city="Vilnius" data-district="Fabijoniskes" 
-                                        points="66,62 70,59 74,62 73,66 68,67 65,65" />
-                                    <polygon class="district-poly" data-city="Vilnius" data-district="Pilaite" 
-                                        points="60,68 64,65 68,68 67,73 62,74 59,71" />
-                                </svg>
-                                
-                                <!-- KAUNAS DISTRICTS -->
-                                <svg class="city-districts" id="districts-kaunas" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                    <polygon class="district-poly" data-city="Kaunas" data-district="Centras" 
-                                        points="48,53 52,50 56,53 55,58 50,59 47,56" />
-                                    <polygon class="district-poly" data-city="Kaunas" data-district="Zaliakalnis" 
-                                        points="52,48 57,45 61,48 59,53 54,54 51,51" />
-                                    <polygon class="district-poly" data-city="Kaunas" data-district="Silainiai" 
-                                        points="42,52 46,49 50,52 49,57 44,58 41,55" />
-                                    <polygon class="district-poly" data-city="Kaunas" data-district="Dainava" 
-                                        points="48,58 53,55 57,58 55,63 50,64 47,61" />
-                                    <polygon class="district-poly" data-city="Kaunas" data-district="Aleksotas" 
-                                        points="44,58 48,55 52,58 51,63 46,64 43,61" />
-                                </svg>
-                                
-                                <!-- KLAIPEDA DISTRICTS -->
-                                <svg class="city-districts" id="districts-klaipeda" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                    <polygon class="district-poly" data-city="Klaipeda" data-district="Senamiestis" 
-                                        points="13,28 17,25 21,28 20,33 15,34 12,31" />
-                                    <polygon class="district-poly" data-city="Klaipeda" data-district="Baltija" 
-                                        points="14,33 18,30 22,33 21,38 16,39 13,36" />
-                                    <polygon class="district-poly" data-city="Klaipeda" data-district="Melnrage" 
-                                        points="10,25 14,22 18,25 17,30 12,31 9,28" />
-                                </svg>
+                                <!-- District polygons will be generated dynamically based on your cities -->
+                                <!-- No hardcoded districts - add your cities via admin panel -->
                             </div>
                             
                             <!-- Floating District Label -->
@@ -5619,23 +5582,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         // Coordinates for known cities (top%, left%)
+        // City coordinates for positioning on the map
+        // Add your cities here with their map coordinates (top%, left%)
+        // Example: 'cityname': { top: 50, left: 50 }
         const CITY_COORDINATES = {
-            'vilnius': { top: 55, left: 85 },
-            'kaunas': { top: 52, left: 48 },
-            'klaipeda': { top: 38, left: 10 },
-            'panevezys': { top: 28, left: 58 },
-            'siauliai': { top: 22, left: 45 },
-            'palanga': { top: 32, left: 8 },
-            'druskininkai': { top: 85, left: 70 },
-            'marijampole': { top: 65, left: 40 },
-            'alytus': { top: 70, left: 60 },
-            'utena': { top: 40, left: 85 },
-            'mazeikiai': { top: 10, left: 35 },
-            'telsiai': { top: 20, left: 25 },
-            'taurage': { top: 45, left: 25 },
-            'jonava': { top: 48, left: 60 },
-            'kedainiai': { top: 38, left: 50 },
-            'pasvalys': { top: 18, left: 60 }
+            // Empty - coordinates will be auto-generated if not specified
+            // You can add your own cities here after adding them via admin panel
         };
 
         function renderMapPins() {
@@ -6564,11 +6516,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function selectCity(city) {
             if(window.sfx) sfx.select();
             
-            // Rotate to city
+            // Rotate to city (custom rotations for specific cities)
+            // You can add your cities here if you want custom 3D globe rotation
             const rots = {
-                'Vilnius': { x: -10, y: 20 },
-                'Kaunas': { x: -5, y: 0 },
-                'Klaipeda': { x: -15, y: -30 }
+                // Example: 'YourCity': { x: -10, y: 20 }
             };
             if(rots[city]) globeRotation = rots[city];
             updateGlobeRotation();
