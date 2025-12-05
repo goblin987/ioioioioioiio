@@ -3126,6 +3126,7 @@ def webapp_legacy_redirect():
 @flask_app.route("/webapp_fresh/app.html", methods=['GET'])
 def webapp_index():
     """Serve Telegram Web App with JavaScript hotfix injection and DYNAMIC VERSIONING"""
+    logger.info(f"🚀 WebApp Request: {request.url}")
     try:
         # Read the original HTML (renamed to app.html to bypass Cloudflare CDN cache)
         with open('webapp_fresh/app.html', 'r', encoding='utf-8') as f:
@@ -3133,7 +3134,7 @@ def webapp_index():
         
         # Generate UNIQUE version with timestamp to FORCE cache invalidation
         from datetime import datetime
-        dynamic_version = f'v2.8-DYNAMIC-{int(datetime.now().timestamp())}'
+        dynamic_version = f'v3.0-DYNAMIC-{int(datetime.now().timestamp())}'
         
         # NUCLEAR CACHE CLEAR - Inject at the very start
         nuclear_cache_clear = f"""
@@ -3579,6 +3580,9 @@ def main() -> None:
         loop.stop()
 
     try:
+        logger.info("==================================================")
+        logger.info("🚀 STARTING BOTSHOP v3.0 - FINAL CACHE FIX DEPLOYMENT")
+        logger.info("==================================================")
         logger.info("🔧 About to start main event loop...")
         logger.info("🔧 Starting main event loop...")
         main_loop.run_until_complete(setup_webhooks_and_run())
