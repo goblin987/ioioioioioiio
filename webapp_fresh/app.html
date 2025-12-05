@@ -3525,29 +3525,51 @@
         .cart-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr); /* 2 columns */
-            gap: 15px;
+            gap: 12px;
             padding: 10px;
         }
         
         /* ═══════════════════════════════════════════════════════════════════
-           GTA SA "STATS MENU" STYLE ITEMS
+           GTA SA "STATS MENU" STYLE ITEMS - ENHANCED
            ═══════════════════════════════════════════════════════════════════ */
         .cart-item {
-            background: rgba(0, 0, 0, 0.6);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 20, 0.85) 100%);
             border: 2px solid var(--gta-green);
-            border-radius: 5px;
-            padding: 15px;
+            border-radius: 8px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            transition: all 0.2s;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Subtle gradient overlay on hover */
+        .cart-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(92, 184, 92, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .cart-item:hover::before {
+            left: 100%;
         }
 
         .cart-item:hover {
-            background: rgba(0, 0, 0, 0.8);
+            background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(30, 30, 30, 0.9) 100%);
             border-color: #fff;
-            transform: scale(1.02);
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 8px 20px rgba(92, 184, 92, 0.3),
+                        0 0 15px rgba(92, 184, 92, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
         
         .cart-item.removing {
@@ -3555,62 +3577,104 @@
         }
 
         .item-emoji {
-            font-size: 20px;
-            filter: grayscale(100%);
-            width: 30px;
+            font-size: 40px;
             text-align: center;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+            margin-bottom: 5px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .item-info {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .item-name {
             font-family: 'Impact', sans-serif;
             font-weight: normal;
-            font-size: 16px;
-            color: #999; /* Inactive menu item color */
+            font-size: 14px;
+            color: #ccc;
             text-transform: uppercase;
-            margin-bottom: 2px;
-            letter-spacing: 1px;
-            transition: color 0.2s;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            line-height: 1.2;
         }
         
         .cart-item:hover .item-name {
-            color: #fff; /* Active menu item color */
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
         }
 
         .item-meta {
             font-family: 'Courier New', monospace;
-            font-size: 10px;
-            color: #555;
+            font-size: 9px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .item-price {
             font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
+            font-size: 28px;
             color: var(--gta-green);
-            text-shadow: 1px 1px 0 #000;
-            margin-right: 10px;
+            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(92, 184, 92, 0.5);
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+        
+        /* Quantity Badge */
+        .item-quantity {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--gta-green);
+            color: #000;
+            font-family: 'Impact', sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 1;
         }
 
-        /* Spray Delete Button */
+        /* Delete Button - GTA Style */
         .item-delete {
-            background: transparent;
-            border: none;
-            color: #444;
-            font-family: 'Courier New', monospace;
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(192, 57, 43, 0.2);
+            border: 2px solid #c0392b;
+            color: #c0392b;
+            font-family: 'Impact', sans-serif;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 12px;
             cursor: pointer;
-            padding: 5px;
-            transition: all 0.2s;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .item-delete:hover {
-            color: #c0392b;
-            text-shadow: 0 0 5px #c0392b;
-            transform: scale(1.2);
+            background: #c0392b;
+            color: #fff;
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(192, 57, 43, 0.6);
+            transform: scale(1.1);
+        }
+        
+        .item-delete:active {
+            transform: scale(0.95);
         }
         
         /* RESPECT + Animation */
