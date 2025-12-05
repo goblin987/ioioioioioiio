@@ -1003,7 +1003,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     
     # Add Web App Button
     import time
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=2.8&t={int(time.time())}"
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
     keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Classic 6-button layout with translations
@@ -1059,7 +1059,7 @@ async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAUL
     
     # Add Web App Button
     import time
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=2.8&t={int(time.time())}"
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
     keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Add regular user buttons
@@ -2280,7 +2280,7 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
     
     # Add Web App Button
     import time
-    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=2.8&t={int(time.time())}"
+    webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
     keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
     
     # Modern premium button layout

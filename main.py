@@ -3118,7 +3118,7 @@ def webapp_legacy_redirect():
     """Redirect old /webapp URLs to new /webapp_fresh path with cache-busting timestamp"""
     from datetime import datetime
     timestamp = int(datetime.now().timestamp())
-    new_url = f"/webapp_fresh/app.html?v=2.8&t={timestamp}"
+    new_url = f"/webapp_fresh/app.html?v=3.0&t={timestamp}"
     logger.info(f"🔀 Redirecting legacy /webapp request to {new_url}")
     return redirect(new_url, code=301)
 
