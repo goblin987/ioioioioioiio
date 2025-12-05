@@ -3601,6 +3601,7 @@ def main() -> None:
         logger.info("Bot shutdown complete.")
 
 if __name__ == '__main__':
+    print("🚀 FORCE STARTING V3.0 SERVER - CACHE BUSTER ACTIVE")
     main()
 
 # --- END OF FILE main.py ---
