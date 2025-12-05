@@ -3423,6 +3423,7 @@ def main() -> None:
     
     logger.info("🔧 Adding command handlers...")
     application.add_handler(CommandHandler("start", start_command_wrapper)) # Use wrapped start with ban check
+    application.add_handler(CommandHandler("refresh", refresh_menu)) # Force refresh menu
     application.add_handler(CommandHandler("admin", admin_command_wrapper)) # Use wrapped admin with ban check
     application.add_handler(CallbackQueryHandler(handle_callback_query))
     application.add_handler(MessageHandler(

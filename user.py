@@ -945,6 +945,10 @@ async def handle_back_start(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     """Handles 'Back' button presses that should return to the main start menu."""
     await start(update, context)
 
+async def refresh_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Force refresh the start menu with new buttons (clears Telegram cache)."""
+    await start(update, context)
+
 # --- Shopping Handlers ---
 async def handle_shop(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     query = update.callback_query
