@@ -3523,27 +3523,31 @@
         
         /* Cart Grid - Product Card Style */
         .cart-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 0; /* No gap for stats list style */
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 columns */
+            gap: 15px;
+            padding: 10px;
         }
         
         /* ═══════════════════════════════════════════════════════════════════
            GTA SA "STATS MENU" STYLE ITEMS
            ═══════════════════════════════════════════════════════════════════ */
         .cart-item {
-            background: transparent;
-            border-bottom: 1px solid #222;
-            padding: 15px 5px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid var(--gta-green);
+            border-radius: 5px;
+            padding: 15px;
             display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: background 0.2s;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.2s;
             position: relative;
         }
 
         .cart-item:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.8);
+            border-color: #fff;
+            transform: scale(1.02);
         }
         
         .cart-item.removing {
@@ -5619,8 +5623,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Add your cities here with their map coordinates (top%, left%)
         // Example: 'cityname': { top: 50, left: 50 }
         const CITY_COORDINATES = {
-            // Empty - coordinates will be auto-generated if not specified
-            // You can add your own cities here after adding them via admin panel
+            // Lithuania city coordinates (top%, left% on the SVG map)
+            'kaunas': { top: 60, left: 35 },      // Center of Lithuania
+            'klaipeda': { top: 25, left: 15 },    // West coast (port city)
+            'vilnius': { top: 55, left: 70 },     // East (capital)
+            'panevezys': { top: 30, left: 50 },   // North-central
         };
 
         function renderMapPins() {
