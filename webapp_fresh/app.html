@@ -5624,10 +5624,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Example: 'cityname': { top: 50, left: 50 }
         const CITY_COORDINATES = {
             // Lithuania city coordinates (top%, left% on the SVG map)
-            'kaunas': { top: 60, left: 35 },      // Center of Lithuania
-            'klaipeda': { top: 25, left: 15 },    // West coast (port city)
-            'vilnius': { top: 55, left: 70 },     // East (capital)
-            'panevezys': { top: 30, left: 50 },   // North-central
+            // Based on actual geographic positions
+            'kaunas': { top: 60, left: 45 },       // Central Lithuania (slightly south)
+            'klaipeda': { top: 45, left: 10 },     // West coast port city
+            'vilnius': { top: 52, left: 85 },      // Far east (capital)
+            'panevezys': { top: 25, left: 55 },    // Northeast-central
+            'siauliai': { top: 20, left: 35 },     // North-central
+            'taurage': { top: 60, left: 20 },      // West
+            'marijampole': { top: 80, left: 35 },  // Southwest
         };
 
         function renderMapPins() {
