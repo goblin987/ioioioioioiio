@@ -6,6 +6,7 @@ services:
     plan: free
     buildCommand: |
       echo "🔥 Directory renamed to webapp_fresh to bypass persistent volume"
+      rm -rf webapp
       git reset --hard HEAD
       git clean -fd
       echo "📂 Files in webapp_fresh after git reset:"

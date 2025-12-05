@@ -27,7 +27,7 @@ from telegram.constants import ParseMode
 from telegram.error import Forbidden, BadRequest, NetworkError, RetryAfter, TelegramError
 
 # --- Flask Imports ---
-from flask import Flask, request, Response, send_from_directory, jsonify # Added for webhook server
+from flask import Flask, request, Response, send_from_directory, jsonify, redirect # Added for webhook server
 import nest_asyncio # Added to allow nested asyncio loops
 
 # --- Local Imports ---
@@ -3113,6 +3113,15 @@ def webapp_user_balance():
         return jsonify({'error': str(e)}), 500
 
 @flask_app.route("/webapp", methods=['GET'])
+@flask_app.route("/webapp/index.html", methods=['GET'])
+def webapp_legacy_redirect():
+    """Redirect old /webapp URLs to new /webapp_fresh path with cache-busting timestamp"""
+    from datetime import datetime
+    timestamp = int(datetime.now().timestamp())
+    new_url = f"/webapp_fresh/app.html?v=2.8&t={timestamp}"
+    logger.info(f"🔀 Redirecting legacy /webapp request to {new_url}")
+    return redirect(new_url, code=301)
+
 @flask_app.route("/webapp_fresh/index.html", methods=['GET'])
 @flask_app.route("/webapp_fresh/app.html", methods=['GET'])
 def webapp_index():
