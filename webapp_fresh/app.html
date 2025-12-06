@@ -10,7 +10,7 @@
     <!-- CRITICAL: Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.0-FINAL-FIX-20251205';
+        const APP_VERSION = '3.1-GRID-FIX';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -51,8 +51,8 @@
             window.location.reload(true); // Hard reload bypassing cache
         }
     </script>
-    <link rel="preload" href="/webapp_fresh/intro.mp4?v=2.3" as="video" type="video/mp4">
-    <link rel="preload" href="/webapp_fresh/ah_shit.mp3?v=2.3" as="audio">
+    <link rel="preload" href="/webapp_fresh/intro.mp4?v=3.1" as="video" type="video/mp4">
+    <link rel="preload" href="/webapp_fresh/ah_shit.mp3?v=3.1" as="audio">
     <link rel="preload" href="https://raw.githubusercontent.com/marcoguglie/css-smoke-effect/master/smoke.png" as="image">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- assets.js removed, embedded inline -->
@@ -62,7 +62,7 @@
     <style>
         @font-face {
             font-family: 'Pricedown';
-            src: url('/webapp/pricedown.woff') format('woff');
+            src: url('/webapp_fresh/pricedown.woff') format('woff');
         }
         
         :root {
@@ -288,6 +288,63 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 15px;
+        }
+
+        /* Cart Grid - Fix for missing layout */
+        .cart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 10px;
+        }
+        .cart-item {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid var(--gta-green);
+            border-radius: 5px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .cart-item-title {
+            font-family: 'Impact', sans-serif;
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .cart-item-price {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 22px;
+            color: var(--gta-green);
+            margin-bottom: 10px;
+        }
+        .cart-controls {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .btn-cart-action {
+            flex: 1;
+            background: #000;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .btn-cart-action:hover {
+            background: var(--gta-green);
+            color: #000;
+            border-color: var(--gta-green);
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -5688,14 +5745,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Example: 'cityname': { top: 50, left: 50 }
         const CITY_COORDINATES = {
             // Lithuania city coordinates (top%, left% on the SVG map)
-            // Based on actual geographic positions
-            'kaunas': { top: 60, left: 45 },       // Central Lithuania (slightly south)
-            'klaipeda': { top: 45, left: 10 },     // West coast port city
-            'vilnius': { top: 52, left: 85 },      // Far east (capital)
-            'panevezys': { top: 25, left: 55 },    // Northeast-central
-            'siauliai': { top: 20, left: 35 },     // North-central
-            'taurage': { top: 60, left: 20 },      // West
-            'marijampole': { top: 80, left: 35 },  // Southwest
+            // Updated 2025-12-06 based on user feedback
+            'kaunas': { top: 60, left: 45 },
+            'klaipeda': { top: 45, left: 10 },
+            'vilnius': { top: 52, left: 85 },
+            'panevezys': { top: 25, left: 55 },
+            'siauliai': { top: 20, left: 35 },
+            'taurage': { top: 60, left: 20 },
+            'marijampole': { top: 80, left: 35 }
         };
 
         function renderMapPins() {
