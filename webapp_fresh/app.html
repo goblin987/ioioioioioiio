@@ -3504,7 +3504,12 @@
             width: 95%;
             max-width: 500px;
             max-height: 90vh;
-            background: #222; /* BRIGHT background */
+            background: rgba(10, 10, 10, 0.95);
+            /* RETRO GRID BACKGROUND RESTORED */
+            background-image: 
+                linear-gradient(rgba(63, 165, 53, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(63, 165, 53, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
             border: 2px solid #444;
             display: flex;
             flex-direction: column;
@@ -5723,6 +5728,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             // Ensure Emoji is gone just in case
             const emoji = document.getElementById('emoji-intro');
             if(emoji) emoji.style.display = 'none';
+
+            // PLAY SOUND EFFECT
+            const audioFx = new Audio('/webapp_fresh/ah_shit.mp3');
+            audioFx.volume = 0.5;
+            audioFx.play().catch(e => console.log("Audio play failed (autoplay policy):", e));
 
             showSection('shop'); 
             // Welcome message removed
