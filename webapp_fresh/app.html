@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.4-CART-FIX-REBUILD';
+        const APP_VERSION = '3.5-CART-STYLE-FIX';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -318,7 +318,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border-top: 3px solid var(--gta-green); /* Thicker High Visibility Border */
+            border-top: 2px solid var(--gta-green); /* High Visibility Border */
             will-change: transform;
         }
 
@@ -379,49 +379,61 @@
         }
         .cart-header-close:hover { background: rgba(255,255,255,0.2); }
 
-        /* OPTION: "Pro Tech" Cart Item (Fixed Layout) */
+        /* OPTION: "Deep Glass" Transparent Card (Ultra Pro Row) */
         .cart-item {
-            background: linear-gradient(90deg, rgba(30, 30, 35, 0.95), rgba(20, 20, 22, 0.98));
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-left: 3px solid var(--gta-green);
-            border-radius: 8px;
+            /* High Transparency Glass */
+            background: rgba(30, 30, 35, 0.6); /* Semi-transparent dark */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--gta-green); /* Accent bar */
+            border-radius: 12px;
             
+            /* Layout */
             display: flex;
-            flex-direction: row;
+            flex-direction: row; /* FORCE ROW */
             align-items: center;
-            padding: 12px 15px;
-            gap: 15px;
-            width: 100%;
-            min-height: 76px;
-            flex-shrink: 0; /* Prevent shrinking in list */
+            padding: 12px 16px;
+            gap: 16px;
+            width: 100%; /* Force full width */
+            min-height: 80px;
             
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            /* Glow & Depth */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease, background 0.2s;
             position: relative;
             overflow: hidden;
-            transition: transform 0.1s ease;
+        }
+        
+        .cart-item:hover {
+            background: rgba(40, 40, 45, 0.8);
+            transform: translateX(5px); /* Slide right on hover */
         }
 
         /* Card Hover Effect */
         .cart-item:active {
+            background: rgba(255, 255, 255, 0.08);
             transform: scale(0.98);
-            background: rgba(40, 40, 45, 1);
         }
 
-        /* Left: Icon Box */
+        /* Left: Icon Box (Floating) */
         .cart-item-left {
-            width: 48px;
-            height: 48px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #2c3e50, #000000);
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 2;
             flex-shrink: 0;
         }
         
         .cart-item-icon {
-            font-size: 24px;
+            font-size: 28px;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
 
@@ -431,17 +443,18 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 2px;
+            gap: 4px;
+            z-index: 2;
             min-width: 0;
         }
         
         .cart-item-title {
-            font-family: 'Impact', sans-serif;
-            font-size: 18px;
-            color: #eee;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            margin-bottom: 2px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 700;
+            font-size: 17px;
+            color: #fff;
+            letter-spacing: 0.3px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -3663,48 +3676,21 @@
         
         /* REMOVED DUPLICATE HEADER STYLES TO FIX LAYOUT */
         
-        /* Cart Content - Smooth Scroll */
+        /* Content Area - BRIGHT */
         .cart-content {
             flex: 1;
             overflow-y: auto;
             padding: 15px 20px;
             min-height: 200px;
-            /* Extra padding bottom to ensure last item is visible above checkout */
-            padding-bottom: 150px; 
-            background: transparent;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
+            max-height: 60vh;
+            background: #222; /* BRIGHT background - matches container */
         }
         
         .cart-content::-webkit-scrollbar { width: 6px; }
         .cart-content::-webkit-scrollbar-thumb { background: var(--gta-green); }
         .cart-content::-webkit-scrollbar-track { background: #111; }
         
-        /* Cart Grid - Product Card Style */
-        .cart-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 2 columns */
-            gap: 12px;
-            padding: 10px;
-        }
-        
-        /* ═══════════════════════════════════════════════════════════════════
-           GTA SA "STATS MENU" STYLE ITEMS - ENHANCED
-           ═══════════════════════════════════════════════════════════════════ */
-        .cart-item {
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 20, 0.85) 100%);
-            border: 2px solid var(--gta-green);
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
+        /* Legacy Cart Styles Removed */
         
         /* Subtle gradient overlay on hover */
         .cart-item::before {
