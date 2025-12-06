@@ -1729,13 +1729,14 @@ async def post_init(application: Application) -> None:
     # This replaces pyaes.AESModeOfOperationIGE with our correct AES-256-IGE implementation
     if USERBOT_AVAILABLE:
         try:
-            logger.info("🔧 [DEPLOY v3] Applying pyaes IGE replacement patch...")
-            from telethon_secret_patch import apply_all_patches
-            patch_success = apply_all_patches()
-            if patch_success:
-                logger.info("✅ [DEPLOY v3] pyaes patch applied - videos will use correct encryption!")
-            else:
-                logger.error("❌ [DEPLOY v3] Patch FAILED - videos will be corrupted!")
+            # logger.info("🔧 [DEPLOY v3] Applying pyaes IGE replacement patch...")
+            # from telethon_secret_patch import apply_all_patches
+            # patch_success = apply_all_patches()
+            # if patch_success:
+            #     logger.info("✅ [DEPLOY v3] pyaes patch applied - videos will use correct encryption!")
+            # else:
+            #     logger.error("❌ [DEPLOY v3] Patch FAILED - videos will be corrupted!")
+            pass
         except Exception as patch_err:
             logger.error(f"❌ Failed to apply patches: {patch_err}", exc_info=True)
     

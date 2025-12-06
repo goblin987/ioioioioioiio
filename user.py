@@ -948,6 +948,8 @@ async def handle_back_start(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 
 async def refresh_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Force refresh the start menu with new buttons (clears Telegram cache)."""
+    user = update.effective_user
+    logger.info(f"🔄 REFRESH COMMAND CALLED by user {user.id} - Generating FRESH v3.0 buttons")
     await start(update, context)
 
 # --- Shopping Handlers ---
