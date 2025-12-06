@@ -2840,7 +2840,7 @@ def webapp_validate_discount():
     """Validates a discount code and calculates reseller discounts"""
     try:
         data = request.json
-        code = data.get('code', '').strip()
+        code = (data.get('code') or '').strip()  # Handle None value
         user_id = data.get('user_id')
         items = data.get('items', [])
         
@@ -2915,7 +2915,7 @@ def webapp_create_invoice():
         data = request.json
         user_id = data.get('user_id')
         items = data.get('items', [])
-        discount_code = data.get('discount_code', '').strip()
+        discount_code = (data.get('discount_code') or '').strip()  # Handle None value
         
         if not user_id or not items:
             return jsonify({'error': 'Invalid data'}), 400
