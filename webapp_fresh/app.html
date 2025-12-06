@@ -300,42 +300,54 @@
             padding-bottom: 80px;
         }
         
-        /* Cart Grid - Vertical Stack with Spacing */
+        /* Cart Grid - iOS/GTA Hybrid List */
         .cart-grid {
             display: flex;
             flex-direction: column;
-            gap: 12px; /* Increased gap */
+            gap: 12px;
             padding: 15px;
-            padding-bottom: 80px; /* Extra space for checkout area */
+            padding-bottom: 100px;
         }
         
-        /* Cart Item - Mobile Optimized Row */
+        /* The "App" Card - Apple Style with GTA Accents */
         .cart-item {
-            background: linear-gradient(90deg, rgba(30, 40, 30, 0.95), rgba(15, 20, 15, 0.98));
-            border: 1px solid rgba(63, 165, 53, 0.3);
-            border-left: 4px solid var(--gta-green);
-            border-radius: 8px;
-            padding: 16px;
+            background: rgba(28, 28, 30, 0.95); /* iOS Dark Mode Gray */
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px; /* iOS Rounded Corners */
+            padding: 12px;
             display: flex;
             align-items: center;
             gap: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease;
             position: relative;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            transition: all 0.2s ease;
-            min-height: 70px; /* Ensure touch target size */
+            overflow: hidden;
         }
         
-        .cart-item:hover {
-            transform: translateX(5px);
-            border-color: var(--gta-green);
-            box-shadow: 0 5px 15px rgba(63, 165, 53, 0.2);
+        /* GTA Accent Bar (Left) */
+        .cart-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+            background: var(--gta-green);
+            opacity: 0.8;
         }
 
+        /* App Icon Style */
         .cart-item-icon {
-            font-size: 28px; /* Larger Icon */
-            width: 40px;
-            text-align: center;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #2c3e50, #000000);
+            border-radius: 12px; /* App Icon shape */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            filter: none; /* Remove drop shadow from old style */
         }
 
         .cart-item-details {
@@ -343,63 +355,70 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+            gap: 2px;
             overflow: hidden;
         }
 
         .cart-item-title {
-            font-family: 'Impact', sans-serif;
-            font-size: 18px; /* Larger Title */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 600;
+            font-size: 16px;
             color: #fff;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            margin-bottom: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            text-transform: none; /* Regular case for Apple style */
         }
 
         .cart-item-sub {
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #aaa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            color: #8e8e93; /* iOS Gray */
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .cart-item-right {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 8px;
-            min-width: 80px; /* Fixed width for alignment */
+            gap: 5px;
+            min-width: auto;
         }
 
         .cart-item-price {
             font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
+            font-size: 22px;
             color: var(--gta-green);
-            text-shadow: 1px 1px 0 #000;
+            text-shadow: none;
         }
 
-        /* Touch-Friendly Remove Button */
+        /* iOS Style Delete Button */
         .btn-cart-remove {
-            background: rgba(200, 50, 50, 0.15);
-            border: 1px solid #d32f2f;
-            color: #ffaaaa;
-            font-size: 11px;
-            padding: 8px 12px; /* Larger hit area */
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 59, 48, 0.15); /* iOS Red transparent */
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            border-radius: 4px;
-            font-family: 'Impact', sans-serif;
-            text-transform: uppercase;
             transition: all 0.2s;
-            width: 100%;
-            text-align: center;
+            padding: 0;
+            font-size: 16px; /* For the X */
+            font-family: sans-serif;
+            font-weight: bold;
         }
-
+        
         .btn-cart-remove:hover {
-            background: #d32f2f;
-            color: #fff;
-            box-shadow: 0 0 8px #d32f2f;
+            background: #ff3b30;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(255, 59, 48, 0.4);
         }
         
         .btn-cart-remove:active {
@@ -7139,7 +7158,7 @@ const CHAR_ASSETS = {
                         </div>
                         <div class="cart-item-right">
                             <div class="cart-item-price">€${item.price.toFixed(2)}</div>
-                            <button class="btn-cart-remove" onclick="removeFromBasket(${index})">REMOVE</button>
+                            <button class="btn-cart-remove" onclick="removeFromBasket(${index})">✕</button>
                         </div>
                     `;
                     container.appendChild(div);
