@@ -286,15 +286,9 @@
         /* Product Grid */
         .product-grid {
             display: grid;
-            grid-template-columns: 1fr; /* Force 1 column per line (Mobile First) */
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 15px;
             padding: 15px;
-        }
-        
-        @media (min-width: 700px) {
-             .product-grid {
-                grid-template-columns: repeat(2, 1fr); /* 2 columns on tablets/desktop */
-             }
         }
 
         /* Cart Grid - Apple/GTA San Andreas Premium Style */
