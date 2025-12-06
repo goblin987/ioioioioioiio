@@ -292,141 +292,94 @@
 
         /* Cart Grid - Apple/GTA San Andreas Premium Style */
         .cart-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            padding: 10px;
-        }
-        
-        /* Cart Item - Premium Design */
-        .cart-item {
-            background: linear-gradient(135deg, 
-                rgba(30, 40, 30, 0.98) 0%, 
-                rgba(15, 20, 15, 0.98) 100%
-            );
-            border: 1px solid rgba(63, 165, 53, 0.3);
-            border-left: 3px solid var(--gta-green);
-            border-radius: 8px;
-            padding: 18px 15px;
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
-            justify-content: space-between;
+            gap: 10px;
+            padding: 15px;
+        }
+        
+        /* Cart Item - Premium Row Layout */
+        .cart-item {
+            background: linear-gradient(90deg, rgba(30, 40, 30, 0.95), rgba(15, 20, 15, 0.98));
+            border: 1px solid rgba(63, 165, 53, 0.3);
+            border-left: 4px solid var(--gta-green);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
             position: relative;
-            box-shadow: 
-                0 8px 20px rgba(0, 0, 0, 0.6),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            transition: all 0.3s var(--spring-smooth);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 0.2s ease;
             overflow: hidden;
         }
         
-        /* Subtle noise texture overlay */
-        .cart-item::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-            opacity: 0.03;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        /* Green glow accent */
-        .cart-item::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 3px; height: 100%;
-            background: linear-gradient(to bottom, 
-                transparent 0%,
-                var(--gta-green) 50%,
-                transparent 100%
-            );
-            box-shadow: 0 0 10px var(--gta-green);
-            opacity: 0.5;
-            z-index: 2;
-        }
-        
         .cart-item:hover {
+            transform: translateX(5px);
             border-color: var(--gta-green);
-            transform: translateX(3px);
-            box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.8),
-                0 0 20px rgba(63, 165, 53, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(63, 165, 53, 0.2);
         }
-        
-        .cart-item:hover::after {
-            opacity: 1;
-            box-shadow: 0 0 20px var(--gta-green);
+
+        .cart-item-icon {
+            font-size: 24px;
+            width: 40px;
+            text-align: center;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
         }
-        
-        /* Item Content */
-        .cart-item > * {
-            position: relative;
-            z-index: 3;
+
+        .cart-item-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        
+
         .cart-item-title {
-            font-family: 'Pricedown', 'Impact', sans-serif;
-            font-size: 18px;
+            font-family: 'Impact', sans-serif;
+            font-size: 16px;
             color: #fff;
-            margin-bottom: 8px;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-            line-height: 1.2;
+            margin-bottom: 2px;
         }
-        
+
+        .cart-item-sub {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .cart-item-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
         .cart-item-price {
             font-family: 'Pricedown', sans-serif;
-            font-size: 26px;
+            font-size: 24px;
             color: var(--gta-green);
-            margin-bottom: 12px;
-            text-shadow: 
-                0 0 10px rgba(63, 165, 53, 0.6),
-                1px 1px 0 #000;
-            letter-spacing: 1px;
+            text-shadow: 1px 1px 0 #000;
         }
-        
-        .cart-controls {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-            margin-top: auto;
-        }
-        
-        .btn-cart-action {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            border: 1px solid #333;
-            padding: 10px 8px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
+
+        .btn-cart-remove {
+            background: rgba(200, 50, 50, 0.2);
+            border: 1px solid #d32f2f;
+            color: #ffaaaa;
+            font-size: 10px;
+            padding: 4px 8px;
             cursor: pointer;
+            border-radius: 3px;
+            font-family: 'Impact', sans-serif;
             text-transform: uppercase;
-            transition: all 0.2s var(--spring-smooth);
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            transition: all 0.2s;
         }
-        
-        .btn-cart-action:hover {
-            background: var(--gta-green);
-            color: #000;
-            border-color: var(--gta-green);
-            box-shadow: 
-                0 4px 10px rgba(0,0,0,0.6),
-                0 0 15px rgba(63, 165, 53, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        .btn-cart-action:active {
-            transform: translateY(0px);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+
+        .btn-cart-remove:hover {
+            background: #d32f2f;
+            color: #fff;
+            box-shadow: 0 0 8px #d32f2f;
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -5833,14 +5786,14 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Example: 'cityname': { top: 50, left: 50 }
         const CITY_COORDINATES = {
             // Lithuania city coordinates (top%, left% on the SVG map)
-            // Updated 2025-12-06 based on user feedback
-            'kaunas': { top: 60, left: 45 },
-            'klaipeda': { top: 45, left: 10 },
-            'vilnius': { top: 52, left: 85 },
-            'panevezys': { top: 25, left: 55 },
-            'siauliai': { top: 20, left: 35 },
-            'taurage': { top: 60, left: 20 },
-            'marijampole': { top: 80, left: 35 }
+            // Updated 2025-12-06: Shifted UP by ~10% based on user feedback
+            'kaunas': { top: 50, left: 45 },
+            'klaipeda': { top: 35, left: 10 },
+            'vilnius': { top: 42, left: 85 },
+            'panevezys': { top: 15, left: 55 },
+            'siauliai': { top: 10, left: 35 },
+            'taurage': { top: 50, left: 20 },
+            'marijampole': { top: 70, left: 35 }
         };
 
         function renderMapPins() {
@@ -7169,11 +7122,16 @@ const CHAR_ASSETS = {
                 basket.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'cart-item';
+                    const typeIcon = getProductEmoji(item.type, item.name); // Use helper for consistent icons
                     div.innerHTML = `
-                        <div class="cart-item-title">${item.name}</div>
-                        <div class="cart-item-price">€${item.price.toFixed(2)}</div>
-                        <div class="cart-controls">
-                            <button class="btn-cart-action" onclick="removeFromBasket(${index})">REMOVE</button>
+                        <div class="cart-item-icon">${typeIcon}</div>
+                        <div class="cart-item-details">
+                            <div class="cart-item-title">${item.name}</div>
+                            <div class="cart-item-sub">${item.city || 'Unknown'} | ${item.district || 'Zone'}</div>
+                        </div>
+                        <div class="cart-item-right">
+                            <div class="cart-item-price">€${item.price.toFixed(2)}</div>
+                            <button class="btn-cart-remove" onclick="removeFromBasket(${index})">REMOVE</button>
                         </div>
                     `;
                     container.appendChild(div);
