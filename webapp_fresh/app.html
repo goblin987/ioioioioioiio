@@ -294,24 +294,34 @@
         .cart-grid {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px; /* Increased gap */
             padding: 15px;
+            padding-bottom: 80px;
         }
         
-        /* Cart Item - Premium Row Layout */
+        /* Cart Grid - Vertical Stack with Spacing */
+        .cart-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* Increased gap */
+            padding: 15px;
+            padding-bottom: 80px; /* Extra space for checkout area */
+        }
+        
+        /* Cart Item - Mobile Optimized Row */
         .cart-item {
             background: linear-gradient(90deg, rgba(30, 40, 30, 0.95), rgba(15, 20, 15, 0.98));
             border: 1px solid rgba(63, 165, 53, 0.3);
             border-left: 4px solid var(--gta-green);
-            border-radius: 6px;
-            padding: 12px;
+            border-radius: 8px;
+            padding: 16px;
             display: flex;
             align-items: center;
             gap: 15px;
             position: relative;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             transition: all 0.2s ease;
-            overflow: hidden;
+            min-height: 70px; /* Ensure touch target size */
         }
         
         .cart-item:hover {
@@ -321,7 +331,7 @@
         }
 
         .cart-item-icon {
-            font-size: 24px;
+            font-size: 28px; /* Larger Icon */
             width: 40px;
             text-align: center;
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
@@ -331,20 +341,25 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
         }
 
         .cart-item-title {
             font-family: 'Impact', sans-serif;
-            font-size: 16px;
+            font-size: 18px; /* Larger Title */
             color: #fff;
             letter-spacing: 1px;
             text-transform: uppercase;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .cart-item-sub {
             font-family: 'Courier New', monospace;
-            font-size: 10px;
+            font-size: 11px;
             color: #aaa;
             text-transform: uppercase;
         }
@@ -353,7 +368,8 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 5px;
+            gap: 8px;
+            min-width: 80px; /* Fixed width for alignment */
         }
 
         .cart-item-price {
@@ -363,23 +379,30 @@
             text-shadow: 1px 1px 0 #000;
         }
 
+        /* Touch-Friendly Remove Button */
         .btn-cart-remove {
-            background: rgba(200, 50, 50, 0.2);
+            background: rgba(200, 50, 50, 0.15);
             border: 1px solid #d32f2f;
             color: #ffaaaa;
-            font-size: 10px;
-            padding: 4px 8px;
+            font-size: 11px;
+            padding: 8px 12px; /* Larger hit area */
             cursor: pointer;
-            border-radius: 3px;
+            border-radius: 4px;
             font-family: 'Impact', sans-serif;
             text-transform: uppercase;
             transition: all 0.2s;
+            width: 100%;
+            text-align: center;
         }
 
         .btn-cart-remove:hover {
             background: #d32f2f;
             color: #fff;
             box-shadow: 0 0 8px #d32f2f;
+        }
+        
+        .btn-cart-remove:active {
+            transform: scale(0.95);
         }
 
         /* RETRO CYBER CARD (V2) */
