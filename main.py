@@ -3115,6 +3115,236 @@ def webapp_user_balance():
         logger.error(f"Error getting user balance: {e}")
         return jsonify({'error': str(e)}), 500
 
+@flask_app.route("/webapp_fresh/api/basket/add", methods=['POST'])
+def webapp_basket_add():
+    """Reserve a product and add to user's basket (Mini App)"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        product_id = data.get('product_id')
+        
+        if not user_id or not product_id:
+            return jsonify({'success': False, 'error': 'Missing user_id or product_id'}), 400
+        
+        user_id = int(user_id)
+        product_id = int(product_id)
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN")
+        
+        # Atomic reservation with race condition protection
+        c.execute("""
+            UPDATE products 
+            SET reserved = reserved + 1 
+            WHERE id = %s AND available > reserved
+        """, (product_id,))
+        
+        if c.rowcount == 0:
+            conn.rollback()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Product unavailable (sold out or reserved)'}), 409
+        
+        # Get product details for response
+        c.execute("""
+            SELECT id, name, size, type, price, city, district, available, reserved
+            FROM products
+            WHERE id = %s
+        """, (product_id,))
+        product = c.fetchone()
+        
+        if not product:
+            conn.rollback()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Product not found'}), 404
+        
+        # Add to user's basket in DB with timestamp
+        timestamp = time.time()
+        c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
+        user_res = c.fetchone()
+        
+        if not user_res:
+            # Create user if doesn't exist
+            c.execute("""
+                INSERT INTO users (user_id, balance, basket)
+                VALUES (%s, 0.0, %s)
+            """, (user_id, f"{product_id}:{timestamp}"))
+        else:
+            current_basket = user_res['basket'] or ''
+            new_basket = f"{current_basket},{product_id}:{timestamp}" if current_basket else f"{product_id}:{timestamp}"
+            c.execute("UPDATE users SET basket = %s WHERE user_id = %s", (new_basket, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"✅ Mini App: User {user_id} reserved product {product_id}")
+        
+        response = jsonify({
+            'success': True,
+            'product': {
+                'id': product['id'],
+                'name': product['name'],
+                'size': product['size'],
+                'type': product['type'],
+                'price': float(product['price']),
+                'city': product['city'],
+                'district': product['district'],
+                'available': product['available'],
+                'reserved': product['reserved'] + 1  # Updated value
+            },
+            'timestamp': timestamp
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid user_id or product_id format'}), 400
+    except Exception as e:
+        logger.error(f"Error adding to basket (Mini App): {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@flask_app.route("/webapp_fresh/api/basket/remove", methods=['POST'])
+def webapp_basket_remove():
+    """Unreserve a product and remove from user's basket (Mini App)"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        product_id = data.get('product_id')
+        timestamp = data.get('timestamp')  # To identify exact item in basket
+        
+        if not user_id or not product_id:
+            return jsonify({'success': False, 'error': 'Missing user_id or product_id'}), 400
+        
+        user_id = int(user_id)
+        product_id = int(product_id)
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("BEGIN")
+        
+        # Unreserve the product
+        c.execute("""
+            UPDATE products 
+            SET reserved = GREATEST(0, reserved - 1)
+            WHERE id = %s
+        """, (product_id,))
+        
+        # Remove from user's basket
+        c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
+        user_res = c.fetchone()
+        
+        if user_res and user_res['basket']:
+            basket_items = user_res['basket'].split(',')
+            # Remove the specific item (product_id:timestamp)
+            item_to_remove = f"{product_id}:{timestamp}" if timestamp else None
+            
+            if item_to_remove and item_to_remove in basket_items:
+                basket_items.remove(item_to_remove)
+            else:
+                # Fallback: remove first occurrence of product_id with any timestamp
+                basket_items = [item for i, item in enumerate(basket_items) 
+                               if not (item.startswith(f"{product_id}:") and i == next((j for j, x in enumerate(basket_items) if x.startswith(f"{product_id}:")), -1))]
+            
+            new_basket = ','.join(basket_items) if basket_items else ''
+            c.execute("UPDATE users SET basket = %s WHERE user_id = %s", (new_basket, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"✅ Mini App: User {user_id} unreserved product {product_id}")
+        
+        response = jsonify({'success': True})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid user_id or product_id format'}), 400
+    except Exception as e:
+        logger.error(f"Error removing from basket (Mini App): {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@flask_app.route("/webapp_fresh/api/basket/get", methods=['GET'])
+def webapp_basket_get():
+    """Get user's basket with full product details (Mini App)"""
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'user_id parameter required'}), 400
+        
+        user_id = int(user_id)
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Get basket from DB
+        c.execute("SELECT basket FROM users WHERE user_id = %s", (user_id,))
+        user_res = c.fetchone()
+        
+        if not user_res or not user_res['basket']:
+            conn.close()
+            response = jsonify({'success': True, 'items': []})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
+        
+        # Parse basket items
+        basket_items = []
+        for item_str in user_res['basket'].split(','):
+            try:
+                parts = item_str.split(':')
+                if len(parts) == 2:
+                    prod_id = int(parts[0])
+                    ts = float(parts[1])
+                    basket_items.append({'product_id': prod_id, 'timestamp': ts})
+            except (ValueError, IndexError):
+                logger.warning(f"Invalid basket item format: {item_str}")
+        
+        if not basket_items:
+            conn.close()
+            response = jsonify({'success': True, 'items': []})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
+        
+        # Fetch product details
+        product_ids = [item['product_id'] for item in basket_items]
+        placeholders = ','.join(['%s'] * len(product_ids))
+        c.execute(f"""
+            SELECT id, name, size, type, price, city, district, available, reserved
+            FROM products
+            WHERE id IN ({placeholders})
+        """, product_ids)
+        
+        products_dict = {row['id']: row for row in c.fetchall()}
+        conn.close()
+        
+        # Merge basket items with product details
+        result = []
+        for item in basket_items:
+            prod_id = item['product_id']
+            if prod_id in products_dict:
+                prod = products_dict[prod_id]
+                result.append({
+                    'product_id': prod_id,
+                    'timestamp': item['timestamp'],
+                    'name': prod['name'],
+                    'size': prod['size'],
+                    'type': prod['type'],
+                    'price': float(prod['price']),
+                    'city': prod['city'],
+                    'district': prod['district'],
+                    'available': prod['available'],
+                    'reserved': prod['reserved']
+                })
+        
+        response = jsonify({'success': True, 'items': result})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid user_id format'}), 400
+    except Exception as e:
+        logger.error(f"Error getting basket (Mini App): {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @flask_app.route("/webapp", methods=['GET'])
 @flask_app.route("/webapp/index.html", methods=['GET'])
 def webapp_legacy_redirect():

@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.7-MOBILE-FIT';
+        const APP_VERSION = '3.8-RESERVATION-SYSTEM';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -6388,7 +6388,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }, 600);
         }
 
-        function addToBasket(ids, name, price, e) {
+        async function addToBasket(ids, name, price, e) {
             // 1. Smart ID Selection (Robust)
             let id = ids;
             if(Array.isArray(ids)) {
@@ -6424,7 +6424,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // 4. Check stock availability
+            // 4. Check stock availability (client-side pre-check)
             const countInBasket = basket.filter(item => item.id === id).length;
             if(countInBasket >= product.available) {
                 if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
@@ -6437,25 +6437,69 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // 5. Add to basket
-            if(e) flyToCart(e);
-            
-            basket.push({
-                id: id,
-                name: name,
-                price: price,
-                city: product.city || 'Unknown',
-                district: product.district || 'Unknown',
-                type: product.type || 'misc'
-            });
-            
-            updateBasketUI();
-            currentDiscount = null;
-            if(window.charSystem) charSystem.show('cj', 'NICE CHOICE!');
-            const nav = document.getElementById('nav-basket');
-            if(nav) {
-                nav.style.color = '#fff';
-                setTimeout(() => nav.style.color = '', 200);
+            // 5. Call Backend API to Reserve Product
+            try {
+                const user = tg.initDataUnsafe?.user;
+                const userId = user ? user.id : 0;
+                
+                if(!userId) {
+                    tg.showAlert('⚠️ Could not identify user');
+                    return;
+                }
+                
+                const response = await fetch('/webapp_fresh/api/basket/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId,
+                        product_id: id
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if(!data.success) {
+                    // Product unavailable or race condition
+                    if(window.charSystem) charSystem.show('cj', 'PRODUCT TAKEN!');
+                    tg.showAlert(data.error || '⚠️ Product unavailable');
+                    // Refresh products to update stock
+                    await loadProducts();
+                    return;
+                }
+                
+                // 6. Add to local basket with server timestamp
+                if(e) flyToCart(e);
+                
+                basket.push({
+                    id: id,
+                    name: name,
+                    price: price,
+                    city: product.city || 'Unknown',
+                    district: product.district || 'Unknown',
+                    type: product.type || 'misc',
+                    timestamp: data.timestamp // Server timestamp for reservation tracking
+                });
+                
+                updateBasketUI();
+                currentDiscount = null;
+                if(window.charSystem) charSystem.show('cj', 'NICE CHOICE!');
+                const nav = document.getElementById('nav-basket');
+                if(nav) {
+                    nav.style.color = '#fff';
+                    setTimeout(() => nav.style.color = '', 200);
+                }
+                
+                // Update product stock in allProducts array
+                if(data.product) {
+                    const prod = allProducts.find(p => p.id === id);
+                    if(prod) {
+                        prod.reserved = data.product.reserved;
+                    }
+                }
+                
+            } catch(err) {
+                console.error('Error adding to basket:', err);
+                tg.showAlert('⚠️ Network error. Please try again.');
             }
         }
         
@@ -7230,11 +7274,48 @@ const CHAR_ASSETS = {
             if(totalEl) totalEl.innerText = "€" + total.toFixed(2);
         }
 
-        function removeFromBasket(index) {
-            basket.splice(index, 1);
-            updateBasketUI();
-            renderBasketContent();
-            if(currentDiscount) checkDiscounts(currentDiscount.code);
+        async function removeFromBasket(index) {
+            const item = basket[index];
+            if(!item) return;
+            
+            try {
+                const user = tg.initDataUnsafe?.user;
+                const userId = user ? user.id : 0;
+                
+                if(!userId) {
+                    tg.showAlert('⚠️ Could not identify user');
+                    return;
+                }
+                
+                // Call Backend API to Unreserve Product
+                const response = await fetch('/webapp_fresh/api/basket/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId,
+                        product_id: item.id,
+                        timestamp: item.timestamp || 0
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    // Remove from local basket
+                    basket.splice(index, 1);
+                    updateBasketUI();
+                    renderBasketContent();
+                    if(currentDiscount) checkDiscounts(currentDiscount.code);
+                } else {
+                    tg.showAlert('⚠️ Error removing item');
+                }
+            } catch(err) {
+                console.error('Error removing from basket:', err);
+                // Still remove locally even if API call fails (fail-safe)
+                basket.splice(index, 1);
+                updateBasketUI();
+                renderBasketContent();
+            }
         }
 
         function simulateCall(city, districtName) {
