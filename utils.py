@@ -1541,13 +1541,30 @@ def init_db():
             c.execute('''CREATE TABLE IF NOT EXISTS pending_deposits (
                 payment_id TEXT PRIMARY KEY NOT NULL, user_id BIGINT NOT NULL,
                 currency TEXT NOT NULL, target_eur_amount REAL NOT NULL,
-                expected_crypto_amount REAL NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expected_crypto_amount REAL NOT NULL,
+                pay_address TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_purchase BOOLEAN DEFAULT FALSE, basket_snapshot_json TEXT DEFAULT NULL,
                 discount_code_used TEXT DEFAULT NULL
             )''')
             logger.info("✅ Pending_deposits table created successfully")
             # Note: pending_deposits table columns already included in CREATE TABLE statement
             logger.info("✅ Pending_deposits table created successfully")
+            
+            # Migrate pending_deposits table if needed (add missing columns to existing tables)
+            try:
+                c.execute("""
+                    ALTER TABLE pending_deposits 
+                    ADD COLUMN IF NOT EXISTS pay_address TEXT
+                """)
+                c.execute("""
+                    ALTER TABLE pending_deposits 
+                    ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'
+                """)
+                logger.info("✅ Migrated pending_deposits table with new columns (pay_address, status)")
+            except Exception as e:
+                logger.warning(f"Migration note for pending_deposits: {e}")
 
             # Admin Log table
             logger.info("🔧 Creating admin_log table...")
