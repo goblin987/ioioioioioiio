@@ -290,73 +290,143 @@
             gap: 15px;
         }
 
-        /* Cart Grid - Improved Retro Cyber Style */
+        /* Cart Grid - Apple/GTA San Andreas Premium Style */
         .cart-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             padding: 10px;
         }
+        
+        /* Cart Item - Premium Design */
         .cart-item {
-            background: linear-gradient(135deg, rgba(20, 30, 20, 0.95), rgba(10, 10, 10, 0.95));
-            border: 1px solid #333;
-            border-left: 4px solid var(--gta-green);
-            border-radius: 4px;
-            padding: 15px;
+            background: linear-gradient(135deg, 
+                rgba(30, 40, 30, 0.98) 0%, 
+                rgba(15, 20, 15, 0.98) 100%
+            );
+            border: 1px solid rgba(63, 165, 53, 0.3);
+            border-left: 3px solid var(--gta-green);
+            border-radius: 8px;
+            padding: 18px 15px;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             justify-content: space-between;
             position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            transition: all 0.2s ease;
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.3s var(--spring-smooth);
+            overflow: hidden;
         }
+        
+        /* Subtle noise texture overlay */
+        .cart-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Green glow accent */
+        .cart-item::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 3px; height: 100%;
+            background: linear-gradient(to bottom, 
+                transparent 0%,
+                var(--gta-green) 50%,
+                transparent 100%
+            );
+            box-shadow: 0 0 10px var(--gta-green);
+            opacity: 0.5;
+            z-index: 2;
+        }
+        
         .cart-item:hover {
             border-color: var(--gta-green);
-            transform: translateX(5px);
-            box-shadow: 0 5px 20px rgba(63, 165, 53, 0.2);
-            z-index: 10;
+            transform: translateX(3px);
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.8),
+                0 0 20px rgba(63, 165, 53, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
+        
+        .cart-item:hover::after {
+            opacity: 1;
+            box-shadow: 0 0 20px var(--gta-green);
+        }
+        
+        /* Item Content */
+        .cart-item > * {
+            position: relative;
+            z-index: 3;
+        }
+        
         .cart-item-title {
-            font-family: 'Impact', sans-serif;
-            font-size: 16px;
+            font-family: 'Pricedown', 'Impact', sans-serif;
+            font-size: 18px;
             color: #fff;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 1.5px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            line-height: 1.2;
         }
+        
         .cart-item-price {
             font-family: 'Pricedown', sans-serif;
-            font-size: 22px;
+            font-size: 26px;
             color: var(--gta-green);
-            margin-bottom: 10px;
-            text-shadow: 1px 1px 0 #000;
+            margin-bottom: 12px;
+            text-shadow: 
+                0 0 10px rgba(63, 165, 53, 0.6),
+                1px 1px 0 #000;
+            letter-spacing: 1px;
         }
+        
         .cart-controls {
             display: flex;
             gap: 10px;
             width: 100%;
-            margin-top: 5px;
+            margin-top: auto;
         }
+        
         .btn-cart-action {
             flex: 1;
-            background: #000;
+            background: rgba(0, 0, 0, 0.8);
             color: #fff;
-            border: 1px solid #444;
-            padding: 5px;
+            border: 1px solid #333;
+            padding: 10px 8px;
             font-family: 'Courier New', monospace;
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
-            transition: all 0.2s;
-            font-size: 12px;
+            transition: all 0.2s var(--spring-smooth);
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
+        
         .btn-cart-action:hover {
             background: var(--gta-green);
             color: #000;
             border-color: var(--gta-green);
-            box-shadow: 0 0 10px var(--gta-green);
+            box-shadow: 
+                0 4px 10px rgba(0,0,0,0.6),
+                0 0 15px rgba(63, 165, 53, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .btn-cart-action:active {
+            transform: translateY(0px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -6964,7 +7034,16 @@ const CHAR_ASSETS = {
                  if(cityKey) districts = appLocations[cityKey];
             }
             
-            const dList = districts || [];
+            // Convert to array if it's an object
+            let dList = [];
+            if (districts) {
+                if (Array.isArray(districts)) {
+                    dList = districts;
+                } else if (typeof districts === 'object') {
+                    // If it's an object like {"district": count}, extract keys
+                    dList = Object.keys(districts);
+                }
+            }
             
             // Sort alphabetically
             dList.sort();
