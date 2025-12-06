@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Los Santos Shop v3.0-FINAL-FIX</title>
-    <!-- CRITICAL: Version check and cache nuke -->
+    <title>Los Santos Shop</title>
+    <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
         const APP_VERSION = '3.1-GRID-FIX';
@@ -290,7 +290,7 @@
             gap: 15px;
         }
 
-        /* Cart Grid - Fix for missing layout */
+        /* Cart Grid - Improved Retro Cyber Style */
         .cart-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -298,17 +298,24 @@
             padding: 10px;
         }
         .cart-item {
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid var(--gta-green);
-            border-radius: 5px;
+            background: linear-gradient(135deg, rgba(20, 30, 20, 0.95), rgba(10, 10, 10, 0.95));
+            border: 1px solid #333;
+            border-left: 4px solid var(--gta-green);
+            border-radius: 4px;
             padding: 15px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             position: relative;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: all 0.2s ease;
+        }
+        .cart-item:hover {
+            border-color: var(--gta-green);
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(63, 165, 53, 0.2);
+            z-index: 10;
         }
         .cart-item-title {
             font-family: 'Impact', sans-serif;
@@ -317,17 +324,20 @@
             margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         .cart-item-price {
             font-family: 'Pricedown', sans-serif;
             font-size: 22px;
             color: var(--gta-green);
             margin-bottom: 10px;
+            text-shadow: 1px 1px 0 #000;
         }
         .cart-controls {
             display: flex;
             gap: 10px;
             width: 100%;
+            margin-top: 5px;
         }
         .btn-cart-action {
             flex: 1;
@@ -340,11 +350,13 @@
             cursor: pointer;
             text-transform: uppercase;
             transition: all 0.2s;
+            font-size: 12px;
         }
         .btn-cart-action:hover {
             background: var(--gta-green);
             color: #000;
             border-color: var(--gta-green);
+            box-shadow: 0 0 10px var(--gta-green);
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -3075,15 +3087,9 @@
     </style>
 </head>
 <body>
-    <!-- Force Refresh Button (top-right corner) -->
-    <button onclick="forceRefreshApp()" style="position: fixed; top: 10px; right: 10px; z-index: 999999; background: rgba(255, 0, 0, 0.8); color: white; border: 2px solid lime; padding: 8px 12px; font-family: monospace; font-size: 11px; cursor: pointer; border-radius: 4px; font-weight: bold; box-shadow: 0 0 10px rgba(0,255,0,0.5);" title="Clear all cache and reload fresh data">
-        🔄 FORCE REFRESH
-    </button>
+    <!-- Force Refresh Button removed for production -->
     
-    <!-- Version Indicator (bottom-right corner) -->
-    <div style="position: fixed; bottom: 5px; right: 5px; background: rgba(0,255,0,0.2); color: lime; padding: 4px 8px; font-size: 10px; font-family: monospace; z-index: 999999; border-radius: 4px;">
-        v2.8-DYNAMIC
-    </div>
+    <!-- Version Indicator removed for production -->
     
     <!-- Wasted Overlay -->
     <div id="wasted-overlay" class="wasted-overlay" onclick="closeWasted()">
@@ -5761,7 +5767,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             container.innerHTML = '';
 
             // HARDCODED BLACKLIST: Cities that should NEVER appear (removed by admin)
-            const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
+            const BLACKLISTED_CITIES = [];
             
             // Get all cities from appLocations
             const cities = Object.keys(appLocations).filter(city => {
@@ -6935,19 +6941,30 @@ const CHAR_ASSETS = {
             // 1. Add "ALL ZONES" contact
             addPhoneContact(city, "ALL ZONES", 5, 0); 
             
-            // 2. Add Districts
-            const dList = districtData[city] || [];
+            // 2. Add Districts (Dynamic from API)
+            // Use appLocations which contains only districts with available products
+            let districts = appLocations[city];
+            if (!districts) {
+                 // Try case-insensitive lookup
+                 const cityKey = Object.keys(appLocations).find(k => k.toLowerCase() === city.toLowerCase());
+                 if(cityKey) districts = appLocations[cityKey];
+            }
             
-            dList.forEach((d, i) => {
-                // Stock Check
+            const dList = districts || [];
+            
+            // Sort alphabetically
+            dList.sort();
+            
+            dList.forEach((distName, i) => {
+                // Calculate signal strength based on product count
                 const count = allProducts.filter(p => 
                     p.city && p.city.toLowerCase() === city.toLowerCase() &&
-                    p.district && p.district.toLowerCase().includes(d.name.toLowerCase())
+                    p.district && p.district.toLowerCase() === distName.toLowerCase()
                 ).length;
                 
                 // Signal bars (0-5)
-                const bars = count > 5 ? 5 : (count > 0 ? 3 : 0);
-                addPhoneContact(city, d.name, bars, i + 1);
+                const bars = count > 5 ? 5 : (count > 0 ? 3 : 1);
+                addPhoneContact(city, distName, bars, i + 1);
             });
             
             // Reset classes to force restart animation
