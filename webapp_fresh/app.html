@@ -300,129 +300,113 @@
             padding-bottom: 80px;
         }
         
-        /* Cart Grid - iOS/GTA Hybrid List */
+        /* Cart Grid - 2 Column Grid (Restored) */
         .cart-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 15px;
-            padding-bottom: 100px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 Side-by-side */
+            gap: 10px;
+            padding: 10px;
+            padding-bottom: 80px;
         }
         
-        /* The "App" Card - Apple Style with GTA Accents */
+        /* Cart Item - Compact Vertical Card */
         .cart-item {
-            background: rgba(28, 28, 30, 0.95); /* iOS Dark Mode Gray */
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px; /* iOS Rounded Corners */
-            padding: 12px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid rgba(63, 165, 53, 0.3);
+            border-radius: 8px;
+            padding: 10px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease;
+            text-align: center;
+            gap: 8px;
             position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             overflow: hidden;
         }
         
-        /* GTA Accent Bar (Left) */
-        .cart-item::before {
-            content: '';
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 4px;
-            background: var(--gta-green);
-            opacity: 0.8;
-        }
+        /* Remove the side accent bar */
+        .cart-item::before { display: none; }
 
-        /* App Icon Style */
         .cart-item-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #2c3e50, #000000);
-            border-radius: 12px; /* App Icon shape */
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.1);
-            filter: none; /* Remove drop shadow from old style */
+            box-shadow: none;
         }
 
         .cart-item-details {
-            flex: 1;
+            width: 100%;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             gap: 2px;
-            overflow: hidden;
         }
 
         .cart-item-title {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            font-weight: 600;
-            font-size: 16px;
+            font-family: 'Impact', sans-serif; /* Back to GTA style */
+            font-weight: normal;
+            font-size: 14px;
             color: #fff;
             letter-spacing: 0.5px;
-            margin-bottom: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-transform: none; /* Regular case for Apple style */
         }
 
         .cart-item-sub {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            font-size: 12px;
-            color: #8e8e93; /* iOS Gray */
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            color: #aaa;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .cart-item-right {
+            width: 100%;
             display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 5px;
-            min-width: auto;
+            flex-direction: row; /* Horizontal at bottom */
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 5px;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
         .cart-item-price {
             font-family: 'Pricedown', sans-serif;
-            font-size: 22px;
+            font-size: 18px;
             color: var(--gta-green);
-            text-shadow: none;
         }
 
-        /* iOS Style Delete Button */
+        /* Small Text Button for Remove */
         .btn-cart-remove {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(255, 59, 48, 0.15); /* iOS Red transparent */
-            color: #ff3b30;
-            border: 1px solid rgba(255, 59, 48, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 0;
-            font-size: 16px; /* For the X */
+            background: rgba(200, 50, 50, 0.2);
+            color: #ffaaaa;
+            border: 1px solid #d32f2f;
+            border-radius: 4px;
+            width: auto;
+            height: auto;
+            padding: 2px 6px;
+            font-size: 10px;
             font-family: sans-serif;
             font-weight: bold;
+            text-transform: uppercase;
         }
         
         .btn-cart-remove:hover {
-            background: #ff3b30;
+            background: #d32f2f;
             color: white;
-            transform: scale(1.1);
-            box-shadow: 0 2px 8px rgba(255, 59, 48, 0.4);
+            transform: none;
+            box-shadow: none;
         }
         
-        .btn-cart-remove:active {
-            transform: scale(0.95);
+        .btn-cart-remove::after {
+            content: 'DEL'; /* Text instead of Icon */
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -7158,7 +7142,7 @@ const CHAR_ASSETS = {
                         </div>
                         <div class="cart-item-right">
                             <div class="cart-item-price">€${item.price.toFixed(2)}</div>
-                            <button class="btn-cart-remove" onclick="removeFromBasket(${index})">✕</button>
+                            <button class="btn-cart-remove" onclick="removeFromBasket(${index})"></button>
                         </div>
                     `;
                     container.appendChild(div);
