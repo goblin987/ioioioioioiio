@@ -3147,7 +3147,7 @@ def webapp_basket_add():
         
         # Get product details for response
         c.execute("""
-            SELECT id, name, size, type, price, city, district, available, reserved
+            SELECT id, name, size, product_type, price, city, district, available, reserved
             FROM products
             WHERE id = %s
         """, (product_id,))
@@ -3185,7 +3185,7 @@ def webapp_basket_add():
                 'id': product['id'],
                 'name': product['name'],
                 'size': product['size'],
-                'type': product['type'],
+                'type': product['product_type'],
                 'price': float(product['price']),
                 'city': product['city'],
                 'district': product['district'],
@@ -3308,7 +3308,7 @@ def webapp_basket_get():
         product_ids = [item['product_id'] for item in basket_items]
         placeholders = ','.join(['%s'] * len(product_ids))
         c.execute(f"""
-            SELECT id, name, size, type, price, city, district, available, reserved
+            SELECT id, name, size, product_type, price, city, district, available, reserved
             FROM products
             WHERE id IN ({placeholders})
         """, product_ids)
@@ -3327,7 +3327,7 @@ def webapp_basket_get():
                     'timestamp': item['timestamp'],
                     'name': prod['name'],
                     'size': prod['size'],
-                    'type': prod['type'],
+                    'type': prod['product_type'],
                     'price': float(prod['price']),
                     'city': prod['city'],
                     'district': prod['district'],
