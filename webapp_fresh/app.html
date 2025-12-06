@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.6-CART-ANIMATIONS';
+        const APP_VERSION = '3.7-MOBILE-FIT';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -387,25 +387,26 @@
 
         /* PRO ROW CARD (FINAL) */
         .cart-item {
-            background: rgba(30, 30, 35, 0.6); /* Semi-transparent dark */
+            background: rgba(30, 30, 35, 0.6);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-left: 4px solid var(--gta-green); /* Accent bar */
+            border-left: 4px solid var(--gta-green);
             border-radius: 12px;
             
             /* Layout */
             display: flex;
-            flex-direction: row; /* FORCE ROW */
+            flex-direction: row;
             align-items: center;
-            padding: 12px 16px;
-            gap: 16px;
-            width: 100%; /* Force full width */
-            min-height: 80px;
+            padding: 10px 12px; /* Reduced Padding */
+            gap: 12px; /* Reduced Gap */
+            width: 100%; /* Ensure full width but constrained */
+            box-sizing: border-box; /* Prevent padding overflow */
+            min-height: 72px;
             
             /* Glow & Depth */
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s; /* Bouncy hover */
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
             position: relative;
             overflow: hidden;
             
@@ -416,7 +417,7 @@
         
         .cart-item:hover {
             background: rgba(40, 40, 45, 0.8);
-            transform: scale(1.02) translateX(5px); /* 3D Pop */
+            transform: scale(1.01) translateX(2px); /* Reduced scale to prevent overflow */
             z-index: 10;
             box-shadow: 0 8px 25px rgba(0,0,0,0.4);
         }
@@ -429,10 +430,10 @@
 
         /* Left: Icon Box (Floating) */
         .cart-item-left {
-            width: 56px;
-            height: 56px;
+            width: 48px; /* Reduced Size */
+            height: 48px;
             background: linear-gradient(135deg, #2c3e50, #000000);
-            border-radius: 14px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -440,11 +441,11 @@
             border: 1px solid rgba(255,255,255,0.1);
             position: relative;
             z-index: 2;
-            flex-shrink: 0;
+            flex-shrink: 0; /* Prevent shrinking */
         }
         
         .cart-item-icon {
-            font-size: 28px;
+            font-size: 24px; /* Adjusted Size */
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
 
