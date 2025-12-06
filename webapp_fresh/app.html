@@ -7025,6 +7025,93 @@ const CHAR_ASSETS = {
             list.appendChild(item);
         }
 
+        // --- Cart Logic Restoration ---
+        function openBasket() {
+            const modal = document.getElementById('basket-modal');
+            if(modal) {
+                modal.style.display = 'flex';
+                renderBasketContent();
+                const content = document.querySelector('.content');
+                if(content) content.style.filter = 'blur(5px)';
+            }
+            if(window.sfx) sfx.slide();
+        }
+
+        function closeBasket() {
+            const modal = document.getElementById('basket-modal');
+            if(modal) {
+                modal.style.display = 'none';
+                const content = document.querySelector('.content');
+                if(content) content.style.filter = 'none';
+            }
+            if(window.sfx) sfx.slide();
+        }
+
+        function updateBasketUI() {
+            const count = basket.length;
+            const nav = document.getElementById('nav-basket');
+            if(nav) {
+                 // Try to find span
+                 let span = nav.querySelector('span');
+                 if(!span) {
+                     // If structure changed, create span
+                     span = document.createElement('span');
+                     nav.appendChild(span);
+                 }
+                 span.innerHTML = `CART <span style="color:var(--gta-gold)">(${count})</span>`;
+            }
+            
+            const modalCount = document.getElementById('cart-nav-count');
+            if(modalCount) modalCount.innerText = `(${count})`;
+        }
+
+        function renderBasketContent() {
+            const container = document.getElementById('basket-items');
+            const emptyState = document.getElementById('cart-empty-state');
+            const invCount = document.getElementById('inv-count');
+            const totalEl = document.getElementById('basket-total');
+            
+            if(basket.length === 0) {
+                if(container) container.innerHTML = '';
+                if(emptyState) emptyState.style.display = 'flex';
+                if(invCount) invCount.innerText = "0 ITEMS";
+                if(totalEl) totalEl.innerText = "€0.00";
+                return;
+            }
+            
+            if(emptyState) emptyState.style.display = 'none';
+            if(invCount) invCount.innerText = `${basket.length} ITEMS`;
+            
+            if(container) {
+                container.innerHTML = '';
+                basket.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'cart-item';
+                    div.innerHTML = `
+                        <div class="cart-item-title">${item.name}</div>
+                        <div class="cart-item-price">€${item.price.toFixed(2)}</div>
+                        <div class="cart-controls">
+                            <button class="btn-cart-action" onclick="removeFromBasket(${index})">REMOVE</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            
+            let total = basket.reduce((sum, item) => sum + item.price, 0);
+            if(currentDiscount && currentDiscount.final_total !== undefined) {
+                total = currentDiscount.final_total;
+            }
+            if(totalEl) totalEl.innerText = "€" + total.toFixed(2);
+        }
+
+        function removeFromBasket(index) {
+            basket.splice(index, 1);
+            updateBasketUI();
+            renderBasketContent();
+            if(currentDiscount) checkDiscounts(currentDiscount.code);
+        }
+
         function simulateCall(city, districtName) {
             const contacts = document.getElementById('phone-contacts');
             const header = document.getElementById('phone-header');
