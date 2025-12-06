@@ -308,14 +308,14 @@
             position: relative; /* Changed from fixed */
             width: 100%;
             height: 85vh;
-            background: rgba(10, 10, 12, 0.85); /* Dark transparent base */
+            background: rgba(15, 15, 18, 0.98); /* Less transparent for better visibility */
             backdrop-filter: blur(50px); /* Heavy blur for depth */
             -webkit-backdrop-filter: blur(50px);
             border-radius: 24px 24px 0 0;
             box-shadow: 0 -10px 50px rgba(0,0,0,0.6);
             transform: translateY(100%); /* Hidden by default */
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            z-index: 2;
+            z-index: 10; /* Above backdrop */
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -334,15 +334,15 @@
             top: 0; left: 0; right: 0; height: 100%;
             /* Retro Cyber Grid Pattern */
             background-image: 
-                linear-gradient(rgba(63, 165, 53, 0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(63, 165, 53, 0.1) 1px, transparent 1px);
+                linear-gradient(rgba(63, 165, 53, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(63, 165, 53, 0.15) 1px, transparent 1px);
             background-size: 40px 40px;
             /* Fade out at bottom */
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
             z-index: 0;
             pointer-events: none;
-            opacity: 0.7;
+            opacity: 0.8; /* Increased visibility */
         }
 
         /* Cart Header Bar - Transparent */
@@ -382,10 +382,10 @@
         /* OPTION: "Deep Glass" Transparent Card */
         .cart-item {
             /* High Transparency Glass */
-            background: rgba(255, 255, 255, 0.03); 
+            background: rgba(255, 255, 255, 0.08); /* Increased visibility */
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15); /* Brighter border */
             border-radius: 20px;
             
             /* Layout */
@@ -400,7 +400,7 @@
             /* Glow & Depth */
             box-shadow: 
                 0 4px 24px -1px rgba(0, 0, 0, 0.3),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08);
             transition: transform 0.2s ease, background 0.2s;
             position: relative;
             overflow: hidden;
@@ -3587,7 +3587,7 @@
         .cart-backdrop {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95); /* Increased opacity for better visibility */
             animation: fadeIn 0.2s ease;
             z-index: 1; /* Behind the content */
         }
