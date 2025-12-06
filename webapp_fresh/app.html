@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.5-CART-STYLE-FIX';
+        const APP_VERSION = '3.6-CART-ANIMATIONS';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -379,9 +379,14 @@
         }
         .cart-header-close:hover { background: rgba(255,255,255,0.2); }
 
-        /* OPTION: "Deep Glass" Transparent Card (Ultra Pro Row) */
+        /* Staggered Entrance Animation */
+        @keyframes slideInStagger {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* PRO ROW CARD (FINAL) */
         .cart-item {
-            /* High Transparency Glass */
             background: rgba(30, 30, 35, 0.6); /* Semi-transparent dark */
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
@@ -400,14 +405,20 @@
             
             /* Glow & Depth */
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s ease, background 0.2s;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s; /* Bouncy hover */
             position: relative;
             overflow: hidden;
+            
+            /* Initial state for animation */
+            opacity: 0; 
+            animation: slideInStagger 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
         
         .cart-item:hover {
             background: rgba(40, 40, 45, 0.8);
-            transform: translateX(5px); /* Slide right on hover */
+            transform: scale(1.02) translateX(5px); /* 3D Pop */
+            z-index: 10;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
         }
 
         /* Card Hover Effect */
@@ -7184,6 +7195,15 @@ const CHAR_ASSETS = {
                 basket.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'cart-item';
+                    div.style.animationDelay = `${index * 0.07}s`; // Stagger Effect
+                    
+                    // Haptic Touch Interaction
+                    div.addEventListener('touchstart', () => {
+                        if(window.Telegram?.WebApp?.HapticFeedback) {
+                            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                        }
+                    });
+
                     const typeIcon = getProductEmoji(item.type, item.name);
                     div.innerHTML = `
                         <div class="cart-item-left">
