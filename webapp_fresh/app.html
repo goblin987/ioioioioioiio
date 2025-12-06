@@ -305,21 +305,19 @@
 
         /* Cart Container - Glass & Grid Theme */
         .cart-container {
-            position: relative; /* Changed from fixed */
+            position: relative;
             width: 100%;
             height: 85vh;
-            background: rgba(15, 15, 18, 0.98); /* Less transparent for better visibility */
-            backdrop-filter: blur(50px); /* Heavy blur for depth */
-            -webkit-backdrop-filter: blur(50px);
+            background: rgba(25, 25, 30, 1); /* Fully Opaque to prevent bleed-through */
             border-radius: 24px 24px 0 0;
-            box-shadow: 0 -10px 50px rgba(0,0,0,0.6);
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
             transform: translateY(100%); /* Hidden by default */
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            z-index: 10; /* Above backdrop */
+            z-index: 10;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         /* ACTIVE STATE - Applied by JS */
@@ -7120,14 +7118,16 @@ const CHAR_ASSETS = {
                 modal.style.display = 'flex';
                 renderBasketContent();
                 
-                // Force Browser Reflow/Repaint
-                void modal.offsetWidth;
-
-                // Add Active Class to Container
-                const container = modal.querySelector('.cart-container');
-                if(container) {
-                    container.classList.add('active');
-                }
+                // Double RAF ensures the browser has painted the display:flex state
+                // before we try to animate the transform.
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const container = modal.querySelector('.cart-container');
+                        if(container) {
+                            container.classList.add('active');
+                        }
+                    });
+                });
 
                 const content = document.querySelector('.content');
                 if(content) content.style.filter = 'blur(5px)';
@@ -7138,7 +7138,6 @@ const CHAR_ASSETS = {
         function closeBasket() {
             const modal = document.getElementById('basket-modal');
             if(modal) {
-                // Remove Active Class
                 const container = modal.querySelector('.cart-container');
                 if(container) {
                     container.classList.remove('active');
