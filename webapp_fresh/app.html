@@ -5880,8 +5880,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             
             // CACHE STRATEGY: Locations - DISABLED TO FORCE FRESH FETCH
             // DO NOT load cached locations - always fetch fresh from API
-            // This prevents stale data (like Panevezys) from appearing
-            const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
+            // This prevents stale data from appearing
             // Clear any existing cached locations to force fresh fetch
             localStorage.removeItem('locations_cache');
             appLocations = {}; // Start with empty object
@@ -5934,17 +5933,8 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 // Load locations
                 if(locationsData.success && locationsData.locations) {
-                    const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
-                    // Filter out blacklisted cities from API response
-                    const filtered = {};
-                    for (const [city, data] of Object.entries(locationsData.locations)) {
-                        if (!BLACKLISTED_CITIES.includes(city.toLowerCase())) {
-                            filtered[city] = data;
-                        } else {
-                            console.warn(`🚫 REMOVED BLACKLISTED CITY FROM API: ${city}`);
-                        }
-                    }
-                    appLocations = filtered;
+                    // Load all cities from API (no blacklist)
+                    appLocations = locationsData.locations;
                     localStorage.setItem('locations_cache', JSON.stringify(appLocations));
                     console.log("Loaded locations:", Object.keys(appLocations));
                     renderMapPins(); // Render dynamic pins
@@ -6785,13 +6775,6 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function openDistrictPanel(city) {
-            // HARDCODED BLACKLIST: Block blacklisted cities
-            const BLACKLISTED_CITIES = ['panevezys', 'panevėžys', 'Panevezys', 'PANEVEZYS'];
-            if (BLACKLISTED_CITIES.includes(city.toLowerCase())) {
-                console.warn(`🚫 BLOCKED BLACKLISTED CITY: ${city}`);
-                return; // Don't show panel for blacklisted cities
-            }
-            
             const panel = document.getElementById('district-panel');
             const header = document.getElementById('panel-header');
             const list = document.getElementById('panel-list');

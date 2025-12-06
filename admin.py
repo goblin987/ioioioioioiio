@@ -886,10 +886,10 @@ async def handle_admin_bot_ui_menu(update: Update, context: ContextTypes.DEFAULT
     msg = f"{breadcrumb}\n\n🎨 **Bot UI Management**\n\nManage bot interface, themes, and media:"
     keyboard = [
         [InlineKeyboardButton(
-            f"{'📱 Using: Mini App Only' if ui_mode == 'miniapp' else '🤖 Using: Bot UI'}",
+            f"{'🤖 Switch to Bot UI' if ui_mode == 'miniapp' else '📱 Switch to Mini App Only'}",
             callback_data=f"toggle_ui_mode|{'bot' if ui_mode == 'miniapp' else 'miniapp'}"
         )],
-        [InlineKeyboardButton("✏️ Edit Mini App Text", callback_data="edit_miniapp_text_start")],
+        [InlineKeyboardButton("✏️ Edit Welcome Text", callback_data="edit_miniapp_text_start")],
         [InlineKeyboardButton("🔘 Edit Button Text", callback_data="edit_miniapp_btn_start")],
         [InlineKeyboardButton("🎨 UI Theme Designer", callback_data="marketing_promotions_menu")],
         [InlineKeyboardButton("📸 Set Bot Media", callback_data="adm_set_media")],
