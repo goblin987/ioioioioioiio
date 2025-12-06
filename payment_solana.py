@@ -323,6 +323,12 @@ async def check_solana_deposits(context):
                             # Handle new format: basket_snapshot is a dict with 'items' key
                             if isinstance(basket_snapshot, dict) and 'items' in basket_snapshot:
                                 basket_snapshot = basket_snapshot['items']
+                            
+                            # Normalize item format: Mini App uses 'id', payment code expects 'product_id'
+                            if isinstance(basket_snapshot, list):
+                                for item in basket_snapshot:
+                                    if 'id' in item and 'product_id' not in item:
+                                        item['product_id'] = item['id']
                                 
                             discount_code = deposit_info.get('discount_code')
                             
