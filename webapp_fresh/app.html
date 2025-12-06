@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.1-GRID-FIX';
+        const APP_VERSION = '3.3-CART-FIX';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -303,21 +303,23 @@
             z-index: 1;
         }
 
-        /* Cart Container - Glass & Grid Theme */
+        /* Cart Container - Glass & Grid Theme (Fixed) */
         .cart-container {
             position: relative;
             width: 100%;
             height: 85vh;
-            background: rgba(25, 25, 30, 1); /* Fully Opaque to prevent bleed-through */
+            background: #181818; /* Fallback */
+            background: rgba(25, 25, 30, 0.98); /* High Opacity */
             border-radius: 24px 24px 0 0;
-            box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
-            transform: translateY(100%); /* Hidden by default */
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.9);
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             z-index: 10;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 2px solid var(--gta-green); /* High Visibility Border */
+            will-change: transform;
         }
 
         /* ACTIVE STATE - Applied by JS */
@@ -7111,28 +7113,34 @@ const CHAR_ASSETS = {
             list.appendChild(item);
         }
 
-        // --- Cart Logic Restoration ---
+        // --- Cart Logic Restoration (Robust V3) ---
         function openBasket() {
             const modal = document.getElementById('basket-modal');
             if(modal) {
                 modal.style.display = 'flex';
-                renderBasketContent();
                 
-                // Double RAF ensures the browser has painted the display:flex state
-                // before we try to animate the transform.
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        const container = modal.querySelector('.cart-container');
-                        if(container) {
-                            container.classList.add('active');
-                        }
-                    });
-                });
+                try {
+                    renderBasketContent();
+                } catch(e) {
+                    console.error("Cart render error:", e);
+                }
+                
+                // Force reflow
+                void modal.offsetWidth;
+
+                // Use simple Timeout for compatibility
+                setTimeout(() => {
+                    const container = modal.querySelector('.cart-container');
+                    if(container) {
+                        container.style.transform = 'translateY(0)';
+                        container.classList.add('active');
+                    }
+                }, 50);
 
                 const content = document.querySelector('.content');
                 if(content) content.style.filter = 'blur(5px)';
             }
-            if(window.sfx) sfx.slide();
+            if(window.sfx) try { sfx.slide(); } catch(e){}
         }
 
         function closeBasket() {
@@ -7140,17 +7148,17 @@ const CHAR_ASSETS = {
             if(modal) {
                 const container = modal.querySelector('.cart-container');
                 if(container) {
+                    container.style.transform = 'translateY(100%)';
                     container.classList.remove('active');
                 }
                 
-                // Wait for animation to finish before hiding modal
                 setTimeout(() => {
                     modal.style.display = 'none';
                     const content = document.querySelector('.content');
                     if(content) content.style.filter = 'none';
-                }, 400); // Match CSS transition duration
+                }, 350);
             }
-            if(window.sfx) sfx.slide();
+            if(window.sfx) try { sfx.slide(); } catch(e){}
         }
 
         function updateBasketUI() {
