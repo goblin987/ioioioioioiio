@@ -7171,6 +7171,15 @@ const CHAR_ASSETS = {
             if(modal) {
                 modal.style.display = 'flex';
                 renderBasketContent();
+                
+                // Trigger Slide Up Animation
+                setTimeout(() => {
+                    const container = modal.querySelector('.cart-container');
+                    if(container) {
+                        container.style.bottom = '0';
+                    }
+                }, 10);
+
                 const content = document.querySelector('.content');
                 if(content) content.style.filter = 'blur(5px)';
             }
@@ -7180,9 +7189,18 @@ const CHAR_ASSETS = {
         function closeBasket() {
             const modal = document.getElementById('basket-modal');
             if(modal) {
-                modal.style.display = 'none';
-                const content = document.querySelector('.content');
-                if(content) content.style.filter = 'none';
+                // Trigger Slide Down Animation
+                const container = modal.querySelector('.cart-container');
+                if(container) {
+                    container.style.bottom = '-100%';
+                }
+                
+                // Wait for animation to finish before hiding modal
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    const content = document.querySelector('.content');
+                    if(content) content.style.filter = 'none';
+                }, 400); // Match CSS transition duration
             }
             if(window.sfx) sfx.slide();
         }
