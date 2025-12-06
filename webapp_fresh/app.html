@@ -300,124 +300,141 @@
             padding-bottom: 80px;
         }
         
-        /* Cart Grid - Single Column Stack */
+        /* Cart Grid - Single Column List */
         .cart-grid {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             padding: 15px;
             padding-bottom: 80px;
         }
 
-        /* GTA Inventory Item Style - Horizontal Card */
+        /* OPTION 1: "iFruit Dark Mode" (Clean Apple + GTA Accents) */
         .cart-item {
-            background: linear-gradient(90deg, rgba(15, 15, 15, 0.95), rgba(25, 30, 25, 0.98));
-            border: 1px solid #333;
-            border-left: 4px solid var(--gta-green);
-            padding: 0; /* Layout handled by children */
+            /* iOS Glassmorphism Base */
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px; /* Smooth iOS corners */
+            
+            /* Layout */
             display: flex;
             flex-direction: row;
-            align-items: stretch;
-            min-height: 80px;
+            align-items: center;
+            padding: 12px;
+            gap: 14px;
+            min-height: 72px;
+            
+            /* Shadow */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
             position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            clip-path: polygon(0 0, 100% 0, 100% 85%, 95% 100%, 0 100%); /* Tech Cut Corner */
         }
 
-        /* Left: Icon Section (Inventory Slot Look) */
+        /* Green Accent Line (Subtle GTA touch) */
+        .cart-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: var(--gta-green);
+            opacity: 0.8;
+        }
+
+        .cart-item:active {
+            transform: scale(0.98);
+        }
+
+        /* Left: Icon Container (Soft Square) */
         .cart-item-left {
-            width: 80px;
-            background: rgba(255, 255, 255, 0.02);
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-right: 1px solid rgba(63, 165, 53, 0.2);
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.05);
         }
         
         .cart-item-icon {
-            width: auto; height: auto; background: none; border: none; box-shadow: none; /* Reset old styles */
-            font-size: 36px;
-            filter: drop-shadow(0 0 8px rgba(255,255,255,0.1));
+            font-size: 24px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
 
-        /* Middle: Details */
+        /* Middle: Text Info */
         .cart-item-details {
             flex: 1;
-            padding: 10px 15px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 4px;
-            overflow: hidden;
+            gap: 2px;
+            min-width: 0; /* Flexbox text truncation fix */
         }
         
         .cart-item-title {
-            font-family: 'Pricedown', sans-serif; /* GTA Font Header */
-            font-size: 22px;
-            color: #fff;
-            letter-spacing: 1px;
-            margin-bottom: 0;
-            text-shadow: 2px 2px 0px #000;
+            /* Clean Apple-style font for readability */
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            color: #ffffff;
+            letter-spacing: -0.3px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
         .cart-item-sub {
-            font-family: 'Courier New', monospace; /* Terminal Font Sub */
-            font-size: 10px;
-            color: var(--gta-green);
+            /* Small caps for location */
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 11px;
+            color: #8e8e93; /* iOS Gray */
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: rgba(63, 165, 53, 0.1);
-            padding: 2px 4px;
-            border-radius: 2px;
-            align-self: flex-start;
+            font-weight: 500;
         }
 
         /* Right: Price & Action */
         .cart-item-right {
-            width: 90px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-end;
             justify-content: center;
-            background: rgba(0, 0, 0, 0.2);
-            border-left: 1px solid #333;
-            gap: 8px;
-            padding: 5px;
+            gap: 4px;
+            flex-shrink: 0;
         }
         
         .cart-item-price {
+            /* THEME MOMENT: GTA Font for money */
             font-family: 'Pricedown', sans-serif;
-            font-size: 24px;
+            font-size: 20px;
             color: var(--gta-green);
-            text-shadow: 1px 1px 0 #000;
+            text-align: right;
         }
         
-        /* Trash Button */
         .btn-cart-remove {
-            background: transparent;
-            color: #d32f2f;
-            border: 1px solid #d32f2f;
-            border-radius: 3px;
-            padding: 4px 12px;
+            /* Minimalist Remove Button */
+            background: rgba(255, 59, 48, 0.1); /* iOS Red low opacity */
+            color: #ff3b30; /* iOS Red */
+            border: none;
+            border-radius: 12px;
+            padding: 4px 10px;
             font-size: 10px;
-            font-family: 'Impact', sans-serif;
+            font-weight: 600;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.2s;
-            width: auto;
         }
         
-        .btn-cart-remove:hover {
-            background: #d32f2f;
-            color: #fff;
-            box-shadow: 0 0 10px #d32f2f;
+        .btn-cart-remove:active {
+            background: rgba(255, 59, 48, 0.3);
         }
         
         .btn-cart-remove::after {
-            content: 'TRASH'; 
+            content: 'REMOVE'; 
         }
 
         /* RETRO CYBER CARD (V2) */
