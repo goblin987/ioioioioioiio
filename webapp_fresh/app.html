@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.3-CART-FIX';
+        const APP_VERSION = '3.4-CART-FIX-REBUILD';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -7113,7 +7113,7 @@ const CHAR_ASSETS = {
             list.appendChild(item);
         }
 
-        // --- Cart Logic Restoration (Robust V3) ---
+        // --- Cart Logic Restoration (Robust V3 - FORCE REBUILD) ---
         function openBasket() {
             const modal = document.getElementById('basket-modal');
             if(modal) {
@@ -7134,6 +7134,9 @@ const CHAR_ASSETS = {
                     if(container) {
                         container.style.transform = 'translateY(0)';
                         container.classList.add('active');
+                        console.log('✅ Cart animated to visible');
+                    } else {
+                        console.error('❌ cart-container not found!');
                     }
                 }, 50);
 
