@@ -315,8 +315,14 @@ async def check_solana_deposits(context):
                             # Reconstruct basket snapshot if stored as JSON string
                             basket_snapshot = deposit_info.get('basket_snapshot')
                             if isinstance(basket_snapshot, str):
-                                try: basket_snapshot = json.loads(basket_snapshot)
-                                except: pass
+                                try: 
+                                    basket_snapshot = json.loads(basket_snapshot)
+                                except: 
+                                    pass
+                            
+                            # Handle new format: basket_snapshot is a dict with 'items' key
+                            if isinstance(basket_snapshot, dict) and 'items' in basket_snapshot:
+                                basket_snapshot = basket_snapshot['items']
                                 
                             discount_code = deposit_info.get('discount_code')
                             
