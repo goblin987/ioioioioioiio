@@ -824,6 +824,9 @@ def callback_query_router(func):
                 "admin_users_menu": admin.handle_admin_users_menu,
                 "admin_marketing_menu": admin.handle_admin_marketing_menu,
                 "admin_bot_ui_menu": admin.handle_admin_bot_ui_menu,
+                "toggle_ui_mode": admin.handle_toggle_ui_mode,
+                "edit_miniapp_text_start": admin.handle_admin_edit_miniapp_text_start,
+                "edit_miniapp_btn_start": admin.handle_admin_edit_miniapp_btn_start,
                 "toggle_daily_rewards_button": handle_toggle_daily_rewards_button,
                 "admin_system_menu": admin.handle_admin_system_menu,
                 "toggle_human_verification": admin.handle_toggle_human_verification,
@@ -2465,7 +2468,6 @@ def webapp_get_locations():
             INNER JOIN cities c ON LOWER(TRIM(p.city)) = LOWER(TRIM(c.name))
             INNER JOIN districts d ON d.city_id = c.id AND LOWER(TRIM(p.district)) = LOWER(TRIM(d.name))
             WHERE p.available > 0
-            AND LOWER(TRIM(p.city)) NOT IN ('panevezys', 'panevėžys')
         """)
         rows = c.fetchall()
         conn.close()
