@@ -300,115 +300,124 @@
             padding-bottom: 80px;
         }
         
-        /* Cart Grid - Single Column List (User Request) */
+        /* Cart Grid - Single Column Stack */
         .cart-grid {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
             padding: 15px;
             padding-bottom: 80px;
         }
-        
-        /* Cart Item - Horizontal List Card */
-        .cart-item {
-            background: linear-gradient(90deg, rgba(20, 25, 20, 0.95), rgba(10, 10, 10, 0.98));
-            border: 1px solid rgba(63, 165, 53, 0.4);
-            border-left: 4px solid var(--gta-green);
-            border-radius: 6px;
-            padding: 12px;
-            display: flex;
-            flex-direction: row; /* Horizontal Layout */
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            position: relative;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-            min-height: 70px;
-        }
-        
-        .cart-item::before { display: none; }
 
-        .cart-item-icon {
-            width: 45px;
-            height: 45px;
-            font-size: 24px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
+        /* GTA Inventory Item Style - Horizontal Card */
+        .cart-item {
+            background: linear-gradient(90deg, rgba(15, 15, 15, 0.95), rgba(25, 30, 25, 0.98));
+            border: 1px solid #333;
+            border-left: 4px solid var(--gta-green);
+            padding: 0; /* Layout handled by children */
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            min-height: 80px;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 95% 100%, 0 100%); /* Tech Cut Corner */
+        }
+
+        /* Left: Icon Section (Inventory Slot Look) */
+        .cart-item-left {
+            width: 80px;
+            background: rgba(255, 255, 255, 0.02);
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            border-right: 1px solid rgba(63, 165, 53, 0.2);
+        }
+        
+        .cart-item-icon {
+            width: auto; height: auto; background: none; border: none; box-shadow: none; /* Reset old styles */
+            font-size: 36px;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.1));
         }
 
+        /* Middle: Details */
         .cart-item-details {
             flex: 1;
+            padding: 10px 15px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 3px;
+            gap: 4px;
             overflow: hidden;
         }
-
+        
         .cart-item-title {
-            font-family: 'Impact', sans-serif;
-            font-size: 16px;
+            font-family: 'Pricedown', sans-serif; /* GTA Font Header */
+            font-size: 22px;
             color: #fff;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            margin-bottom: 0;
+            text-shadow: 2px 2px 0px #000;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-align: left;
-            font-weight: normal;
         }
-
+        
         .cart-item-sub {
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: #aaa;
+            font-family: 'Courier New', monospace; /* Terminal Font Sub */
+            font-size: 10px;
+            color: var(--gta-green);
             text-transform: uppercase;
-            text-align: left;
+            letter-spacing: 0.5px;
+            background: rgba(63, 165, 53, 0.1);
+            padding: 2px 4px;
+            border-radius: 2px;
+            align-self: flex-start;
         }
 
+        /* Right: Price & Action */
         .cart-item-right {
+            width: 90px;
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
-            gap: 5px;
-            min-width: 70px;
-            border-top: none;
-            margin-top: 0;
-            padding-top: 0;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 1px solid #333;
+            gap: 8px;
+            padding: 5px;
         }
-
+        
         .cart-item-price {
             font-family: 'Pricedown', sans-serif;
-            font-size: 20px;
+            font-size: 24px;
             color: var(--gta-green);
+            text-shadow: 1px 1px 0 #000;
         }
-
-        /* Compact Remove Button */
+        
+        /* Trash Button */
         .btn-cart-remove {
-            background: rgba(200, 50, 50, 0.2);
-            color: #ffaaaa;
+            background: transparent;
+            color: #d32f2f;
             border: 1px solid #d32f2f;
-            border-radius: 4px;
-            padding: 4px 8px;
+            border-radius: 3px;
+            padding: 4px 12px;
             font-size: 10px;
-            font-family: sans-serif;
-            font-weight: bold;
+            font-family: 'Impact', sans-serif;
             text-transform: uppercase;
             cursor: pointer;
-            width: 100%; /* Full width of right section */
+            transition: all 0.2s;
+            width: auto;
         }
         
         .btn-cart-remove:hover {
             background: #d32f2f;
-            color: white;
+            color: #fff;
+            box-shadow: 0 0 10px #d32f2f;
         }
         
         .btn-cart-remove::after {
-            content: 'REMOVE'; 
+            content: 'TRASH'; 
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -7135,9 +7144,11 @@ const CHAR_ASSETS = {
                 basket.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'cart-item';
-                    const typeIcon = getProductEmoji(item.type, item.name); // Use helper for consistent icons
+                    const typeIcon = getProductEmoji(item.type, item.name);
                     div.innerHTML = `
-                        <div class="cart-item-icon">${typeIcon}</div>
+                        <div class="cart-item-left">
+                            <div class="cart-item-icon">${typeIcon}</div>
+                        </div>
                         <div class="cart-item-details">
                             <div class="cart-item-title">${item.name}</div>
                             <div class="cart-item-sub">${item.city || 'Unknown'} | ${item.district || 'Zone'}</div>
