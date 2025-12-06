@@ -286,8 +286,15 @@
         /* Product Grid */
         .product-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: 1fr; /* Force 1 column per line (Mobile First) */
             gap: 15px;
+            padding: 15px;
+        }
+        
+        @media (min-width: 700px) {
+             .product-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on tablets/desktop */
+             }
         }
 
         /* Cart Grid - Apple/GTA San Andreas Premium Style */
@@ -5866,7 +5873,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 pin.innerHTML = `
                     <div class="pin-core"></div>
                     <div class="pin-pulse"></div>
-                    <div class="city-label">SIGNAL: ${displayName}</div>
+                    <div class="city-label">${displayName}</div>
                 `;
                 
                 container.appendChild(pin);
