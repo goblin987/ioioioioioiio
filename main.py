@@ -3007,7 +3007,7 @@ def webapp_create_invoice():
             INSERT INTO pending_deposits 
             (user_id, payment_id, target_eur_amount, currency, expected_crypto_amount, 
              pay_address, status, is_purchase, basket_snapshot_json)
-            VALUES (%s, %s, %s, %s, %s, %s, 'pending', 1, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending', TRUE, %s)
         """, (user_id, order_id, float(final_total), 'SOL', float(payment_res['pay_amount']), 
               payment_res['pay_address'], json.dumps(basket_snapshot)))
         
