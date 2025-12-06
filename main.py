@@ -69,7 +69,7 @@ from user import (
     handle_profile, handle_language_selection, handle_price_list,
     handle_price_list_city, handle_reviews_menu, handle_leave_review,
     handle_view_reviews, handle_leave_review_message, handle_back_start,
-    refresh_menu, # Force refresh menu command
+    refresh_menu, check_version_command, # Force refresh menu command
     handle_user_discount_code_message, apply_discount_start, remove_discount,
     handle_leave_review_now, handle_refill, handle_view_history,
     handle_refill_amount_message, validate_discount_code,
@@ -3436,6 +3436,7 @@ def main() -> None:
     logger.info("🔧 Adding command handlers...")
     application.add_handler(CommandHandler("start", start_command_wrapper)) # Use wrapped start with ban check
     application.add_handler(CommandHandler("refresh", refresh_menu)) # Force refresh menu
+    application.add_handler(CommandHandler("v3", check_version_command)) # Debug version check
     application.add_handler(CommandHandler("admin", admin_command_wrapper)) # Use wrapped admin with ban check
     application.add_handler(CallbackQueryHandler(handle_callback_query))
     application.add_handler(MessageHandler(

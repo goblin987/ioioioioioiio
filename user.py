@@ -952,6 +952,11 @@ async def refresh_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"🔄 REFRESH COMMAND CALLED by user {user.id} - Generating FRESH v3.0 buttons")
     await start(update, context)
 
+async def check_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Debug command to check running version."""
+    await update.message.reply_text("✅ BOT IS RUNNING VERSION 3.1 - GRID FIXED - PINS FIXED")
+    await start(update, context)
+
 # --- Shopping Handlers ---
 async def handle_shop(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     query = update.callback_query
