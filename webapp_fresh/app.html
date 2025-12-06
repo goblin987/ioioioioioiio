@@ -291,150 +291,233 @@
             padding: 10px;
         }
 
-        /* Cart Grid - Apple/GTA San Andreas Premium Style */
+        /* Cart Grid - Strictly Vertical Single Column */
         .cart-grid {
             display: flex;
             flex-direction: column;
-            gap: 12px; /* Increased gap */
-            padding: 15px;
-            padding-bottom: 80px;
-        }
-        
-        /* Cart Grid - Single Column List */
-        .cart-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 15px;
-            padding-bottom: 80px;
+            gap: 16px; /* Spacing between cards */
+            padding: 20px;
+            padding-bottom: 100px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 1;
         }
 
-        /* OPTION 1: "iFruit Dark Mode" (Clean Apple + GTA Accents) */
+        /* Cart Container - Glass & Grid Theme */
+        .cart-container {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            height: 85vh;
+            background: rgba(10, 10, 12, 0.85); /* Dark transparent base */
+            backdrop-filter: blur(50px); /* Heavy blur for depth */
+            -webkit-backdrop-filter: blur(50px);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.6);
+            transition: bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* "Deep Feeling" Grid Background */
+        .cart-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 100%;
+            /* Retro Cyber Grid Pattern */
+            background-image: 
+                linear-gradient(rgba(63, 165, 53, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(63, 165, 53, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            /* Fade out at bottom */
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* Cart Header Bar - Transparent */
+        .cart-header-bar {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: transparent; /* Transparent to show grid */
+            position: relative;
+            z-index: 2;
+        }
+
+        .cart-header-title {
+            font-size: 28px;
+            font-family: 'Pricedown', sans-serif;
+            color: #fff;
+            text-shadow: 0 2px 15px rgba(63, 165, 53, 0.5);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .cart-header-close {
+            width: 36px; height: 36px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+            backdrop-filter: blur(10px);
+        }
+        .cart-header-close:hover { background: rgba(255,255,255,0.2); }
+
+        /* OPTION: "Deep Glass" Transparent Card */
         .cart-item {
-            /* iOS Glassmorphism Base */
-            background: rgba(28, 28, 30, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px; /* Smooth iOS corners */
+            /* High Transparency Glass */
+            background: rgba(255, 255, 255, 0.03); 
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
             
             /* Layout */
             display: flex;
             flex-direction: row;
             align-items: center;
-            padding: 12px;
-            gap: 14px;
-            min-height: 72px;
+            padding: 16px;
+            gap: 16px;
+            width: 100%; /* Force full width */
+            min-height: 85px;
             
-            /* Shadow */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            overflow: hidden;
+            /* Glow & Depth */
+            box-shadow: 
+                0 4px 24px -1px rgba(0, 0, 0, 0.3),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s ease, background 0.2s;
             position: relative;
+            overflow: hidden;
         }
 
-        /* Green Accent Line (Subtle GTA touch) */
-        .cart-item::before {
-            content: '';
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 3px;
-            background: var(--gta-green);
-            opacity: 0.8;
-        }
-
+        /* Card Hover Effect */
         .cart-item:active {
+            background: rgba(255, 255, 255, 0.08);
             transform: scale(0.98);
         }
 
-        /* Left: Icon Container (Soft Square) */
+        /* Left: Icon Box (Floating) */
         .cart-item-left {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
-            border-radius: 10px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #2c3e50, #000000);
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 2;
             flex-shrink: 0;
-            border: 1px solid rgba(255,255,255,0.05);
         }
         
         .cart-item-icon {
-            font-size: 24px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            font-size: 28px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
 
-        /* Middle: Text Info */
+        /* Middle: Details */
         .cart-item-details {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 2px;
-            min-width: 0; /* Flexbox text truncation fix */
+            gap: 4px;
+            z-index: 2;
+            min-width: 0;
         }
         
         .cart-item-title {
-            /* Clean Apple-style font for readability */
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            font-weight: 600;
-            font-size: 16px;
-            color: #ffffff;
-            letter-spacing: -0.3px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 700;
+            font-size: 17px;
+            color: #fff;
+            letter-spacing: 0.3px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
         .cart-item-sub {
-            /* Small caps for location */
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Courier New', monospace;
             font-size: 11px;
-            color: #8e8e93; /* iOS Gray */
+            color: rgba(255, 255, 255, 0.6);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
+            letter-spacing: 1px;
         }
 
-        /* Right: Price & Action */
+        /* Right: Price & Delete */
         .cart-item-right {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             justify-content: center;
-            gap: 4px;
+            gap: 8px;
+            z-index: 2;
             flex-shrink: 0;
         }
         
         .cart-item-price {
-            /* THEME MOMENT: GTA Font for money */
             font-family: 'Pricedown', sans-serif;
-            font-size: 20px;
+            font-size: 24px;
             color: var(--gta-green);
-            text-align: right;
+            text-shadow: 0 0 10px rgba(63, 165, 53, 0.4);
         }
         
         .btn-cart-remove {
-            /* Minimalist Remove Button */
-            background: rgba(255, 59, 48, 0.1); /* iOS Red low opacity */
-            color: #ff3b30; /* iOS Red */
-            border: none;
-            border-radius: 12px;
-            padding: 4px 10px;
-            font-size: 10px;
-            font-weight: 600;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            text-transform: uppercase;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 59, 48, 0.15);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            color: #ff453a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0; /* Hide text */
+            padding: 0;
         }
         
-        .btn-cart-remove:active {
+        .btn-cart-remove:hover {
             background: rgba(255, 59, 48, 0.3);
+            transform: scale(1.1);
+        }
+
+        .btn-cart-remove::after {
+            content: '✕';
+            font-size: 14px;
+            font-weight: bold;
+            font-family: sans-serif;
+            color: #ff453a;
         }
         
-        .btn-cart-remove::after {
-            content: 'REMOVE'; 
+        /* GTA Accent Bar (Glow) */
+        .cart-item::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 20px; right: 20px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            z-index: 1;
+        }
+        
+        .cart-item::before {
+            display: none; /* Remove old green bar */
         }
 
         /* RETRO CYBER CARD (V2) */
@@ -3580,25 +3663,8 @@
             transform: scale(0.96);
         }
         
-        .cart-container {
-            position: relative;
-            z-index: 10; /* Lift above backdrop */
-            width: 95%;
-            max-width: 500px;
-            max-height: 90vh;
-            /* GLASS + GRADIENT */
-            background: linear-gradient(160deg, rgba(20, 30, 20, 0.98), rgba(10, 10, 10, 0.98));
-            border: 1px solid rgba(63, 165, 53, 0.4);
-            box-shadow: 
-                0 0 30px rgba(0, 0, 0, 0.8),
-                0 0 15px rgba(63, 165, 53, 0.1),
-                inset 0 0 50px rgba(0, 0, 0, 0.8);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            overflow: hidden;
-        }
+        /* CONFLICTING STYLE REMOVED - SEE TOP OF FILE FOR ACTUAL CART STYLES */
+        /* .cart-container { ... } REMOVED */
         
         /* Header Bar - BRIGHT & CLEAR */
         .cart-header-bar {
