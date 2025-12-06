@@ -560,10 +560,17 @@ try:
         handle_reseller_edit_discount,
         handle_reseller_percent_message,
         handle_reseller_delete_discount_confirm,
+        get_reseller_discount,  # Add this for Mini App API endpoints
     )
 except ImportError:
     logger_dummy_reseller = logging.getLogger(__name__ + "_dummy_reseller")
     logger_dummy_reseller.error("Could not import handlers from reseller_management.py.")
+    
+    # Dummy function for get_reseller_discount
+    def get_reseller_discount(user_id: int, product_type: str):
+        from decimal import Decimal
+        return Decimal('0.0')
+    
     async def handle_manage_resellers_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
         query = update.callback_query; msg = "Reseller Status Mgmt handler not found."
         if query: await query.edit_message_text(msg)
