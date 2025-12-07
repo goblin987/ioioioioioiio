@@ -900,7 +900,47 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.warning(f"BOT_MEDIA path {media_path} not found on disk when trying to send.")
 
 
-    # Ensure user exists and language context is set
+    # ALWAYS update username and first_name in database on every /start (not just first time)
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Ensure user exists and update username AND first_name
+        try:
+            # Use display_name which is ALWAYS set (never None)
+            first_name_to_store = display_name if display_name else f"User_{user_id}"
+            c.execute("""
+                INSERT INTO users (user_id, username, first_name, language, is_reseller) 
+                VALUES (%s, %s, %s, 'en', FALSE)
+                ON CONFLICT(user_id) DO UPDATE SET 
+                    username=excluded.username,
+                    first_name=excluded.first_name
+            """, (user_id, db_username, first_name_to_store))
+            conn.commit()
+            logger.info(f"✅ Updated user {user_id} - username: {db_username}, first_name: {first_name_to_store}")
+        except Exception as insert_err:
+            # If first_name column doesn't exist yet, try without it
+            if "first_name" in str(insert_err).lower() or "column" in str(insert_err).lower():
+                logger.warning(f"first_name column doesn't exist yet, inserting without it")
+                conn.rollback()  # Rollback failed transaction
+                c.execute("""
+                    INSERT INTO users (user_id, username, language, is_reseller) 
+                    VALUES (%s, %s, 'en', FALSE)
+                    ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
+                """, (user_id, db_username))
+                conn.commit()
+                logger.info(f"✅ Updated user {user_id} - username: {db_username} (without first_name)")
+            else:
+                logger.error(f"Error inserting user: {insert_err}")
+                raise  # Re-raise if it's a different error
+    except Exception as e:
+        logger.error(f"DB error updating username for {user_id}: {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
+    
+    # Ensure language context is set
     lang = context.user_data.get("lang", None)
     if lang is None:
         conn = None
@@ -908,50 +948,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn = get_db_connection()
             c = conn.cursor()
             
-            # Try to get actual username from Telegram if fallback was used
-            if username.startswith("User_"):
-                try:
-                    # Fetch full user info from Telegram to get real username
-                    chat = await context.bot.get_chat(user_id)
-                    if chat and chat.username:
-                        username = chat.username
-                        logger.info(f"✅ Updated username from Telegram API: @{username} for user {user_id}")
-                except Exception as e:
-                    logger.info(f"Could not fetch username from Telegram API for {user_id}: {e}")
-            
-            # DEBUG: Check table structure and user_id value
-            logger.info(f"🔧 DEBUG: user_id={user_id}, type={type(user_id)}, username={username}")
-            try:
-                c.execute("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'user_id'")
-                col_info = c.fetchone()
-                logger.info(f"🔧 DEBUG: users.user_id column info: {col_info}")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not check column info: {e}")
-            
-            # Ensure user exists and update username AND first_name
-            try:
-                # Use display_name which is ALWAYS set (never None)
-                first_name_to_store = display_name if display_name else f"User_{user_id}"
-                c.execute("""
-                    INSERT INTO users (user_id, username, first_name, language, is_reseller) 
-                    VALUES (%s, %s, %s, 'en', FALSE)
-                    ON CONFLICT(user_id) DO UPDATE SET 
-                        username=excluded.username,
-                        first_name=excluded.first_name
-                """, (user_id, db_username, first_name_to_store))
-                logger.info(f"✅ Updated user {user_id} - username: {db_username}, first_name: {first_name_to_store}")
-            except Exception as insert_err:
-                # If first_name column doesn't exist yet, try without it
-                if "first_name" in str(insert_err).lower() or "column" in str(insert_err).lower():
-                    logger.warning(f"first_name column doesn't exist yet, inserting without it")
-                    c.execute("""
-                        INSERT INTO users (user_id, username, language, is_reseller) 
-                        VALUES (%s, %s, 'en', FALSE)
-                        ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
-                    """, (user_id, db_username))
-                else:
-                    logger.error(f"Error inserting user: {insert_err}")
-                    raise  # Re-raise if it's a different error
             # Get language
             c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
             result = c.fetchone()
@@ -959,13 +955,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try: from utils import LANGUAGES as UTILS_LANGUAGES_START
             except ImportError: UTILS_LANGUAGES_START = {'en': {}}
             lang = db_lang if db_lang and db_lang in UTILS_LANGUAGES_START else 'en'
-            conn.commit()
             context.user_data["lang"] = lang
             logger.info(f"start: Set language for user {user_id} to '{lang}' from DB/default.")
             
             # Update user activity status (they successfully interacted with the bot)
             update_user_broadcast_status(user_id, success=True)
-        except sqlite3.Error as e:
+        except Exception as e:
             logger.error(f"DB error ensuring user/language in start for {user_id}: {e}")
             lang = 'en'
             context.user_data["lang"] = lang
