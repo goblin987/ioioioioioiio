@@ -225,7 +225,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     
     # Check UI mode setting (bot or miniapp)
     ui_mode = get_bot_setting("ui_mode", "bot")
-    logger.info(f"📱 UI Mode: {ui_mode} for user {user_id}")
+    logger.info(f"📱 UI Mode: {ui_mode} for user {user_id} (Build: 05f9c9d)")  # Force rebuild
     
     # Default keyboard layout
     # Add timestamp to FORCE cache clear every time
