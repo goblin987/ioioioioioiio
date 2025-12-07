@@ -6548,10 +6548,14 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                 # Fallback: first_name column might not exist yet
                 if "first_name" in str(first_name_err).lower() or "column" in str(first_name_err).lower():
                     logger.warning(f"first_name column doesn't exist, searching username only")
-                    # Debug: Show a sample of usernames in the database
-                    c.execute("SELECT user_id, username FROM users WHERE username IS NOT NULL LIMIT 5")
+                    # Debug: Show ALL users in the database for debugging
+                    c.execute("SELECT user_id, username FROM users ORDER BY user_id LIMIT 20")
+                    all_users = c.fetchall()
+                    logger.info(f"📋 ALL users in DB (showing max 20): {all_users}")
+                    # Also show non-null usernames specifically
+                    c.execute("SELECT user_id, username FROM users WHERE username IS NOT NULL LIMIT 10")
                     sample_users = c.fetchall()
-                    logger.info(f"📋 Sample usernames in DB: {sample_users}")
+                    logger.info(f"📋 Users with NON-NULL usernames: {sample_users}")
                     
                     c.execute("""
                         SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
