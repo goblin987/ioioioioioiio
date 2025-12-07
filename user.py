@@ -901,6 +901,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
     # ALWAYS update username and first_name in database on every /start (not just first time)
+    logger.info(f"🔧 ATTEMPTING to update username for user {user_id}: db_username={db_username}, display_name={display_name}")
     conn = None
     try:
         conn = get_db_connection()
@@ -910,6 +911,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             # Use display_name which is ALWAYS set (never None)
             first_name_to_store = display_name if display_name else f"User_{user_id}"
+            logger.info(f"🔧 Executing INSERT/UPDATE for user {user_id}")
             c.execute("""
                 INSERT INTO users (user_id, username, first_name, language, is_reseller) 
                 VALUES (%s, %s, %s, 'en', FALSE)
