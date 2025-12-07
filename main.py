@@ -3046,6 +3046,63 @@ def webapp_create_invoice():
         logger.error(f"Error creating invoice: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@flask_app.route("/webapp_fresh/api/create_refill", methods=['POST'])
+def webapp_create_refill():
+    """Create a Solana refill invoice for Web App"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        amount = data.get('amount')
+        
+        if not user_id or not amount:
+            return jsonify({'error': 'Invalid data'}), 400
+        
+        amount_eur = Decimal(str(amount))
+        if amount_eur <= 0:
+            return jsonify({'error': 'Invalid amount'}), 400
+        
+        # Create unique order ID
+        order_id = f"REFILL_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
+        
+        # Create Solana Payment
+        loop = main_loop if main_loop else asyncio.new_event_loop()
+        payment_res = asyncio.run_coroutine_threadsafe(
+            create_solana_payment(user_id, order_id, amount_eur), 
+            loop
+        ).result()
+        
+        if 'error' in payment_res:
+            return jsonify(payment_res), 500
+        
+        # Insert into pending_deposits
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute("""
+            INSERT INTO pending_deposits 
+            (user_id, payment_id, target_eur_amount, currency, expected_crypto_amount, 
+             pay_address, status, is_purchase, basket_snapshot_json)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending', FALSE, NULL)
+        """, (user_id, order_id, float(amount_eur), 'SOL', float(payment_res['pay_amount']), 
+              payment_res['pay_address']))
+        
+        conn.commit()
+        conn.close()
+        
+        response = jsonify({
+            'success': True,
+            'payment_id': order_id,
+            'pay_address': payment_res['pay_address'],
+            'pay_amount': payment_res['pay_amount'],
+            'amount_eur': float(amount_eur)
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error creating refill: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @flask_app.route("/webapp_fresh/api/check_payment/<payment_id>", methods=['GET'])
 def webapp_check_payment(payment_id):
     """Check payment status and return updated user balance"""
