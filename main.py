@@ -3171,16 +3171,34 @@ def webapp_check_payment(payment_id):
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Get payment status and user_id
-        c.execute("SELECT status, user_id FROM solana_wallets WHERE order_id = %s", (payment_id,))
-        res = c.fetchone()
+        status = 'unknown'
+        user_id = None
         
-        if not res:
-            conn.close()
-            return jsonify({'status': 'unknown'}), 404
+        # 1. Check pending_deposits first (Primary source for WebApp orders)
+        c.execute("SELECT status, user_id FROM pending_deposits WHERE payment_id = %s", (payment_id,))
+        pending_res = c.fetchone()
         
-        status = res['status']
-        user_id = res['user_id']
+        if pending_res:
+            status = pending_res['status'] # 'pending', 'paid', 'confirmed'
+            user_id = pending_res['user_id']
+            
+            # If pending, check if it's a SOL payment that was actually paid in solana_wallets
+            if status == 'pending':
+                c.execute("SELECT status FROM solana_wallets WHERE order_id = %s", (payment_id,))
+                wallet_res = c.fetchone()
+                if wallet_res and wallet_res['status'] in ['paid', 'confirmed']:
+                    status = 'paid'
+        else:
+            # 2. Fallback: Check solana_wallets directly
+            c.execute("SELECT status, user_id FROM solana_wallets WHERE order_id = %s", (payment_id,))
+            wallet_res = c.fetchone()
+            
+            if wallet_res:
+                status = wallet_res['status']
+                user_id = wallet_res['user_id']
+            else:
+                conn.close()
+                return jsonify({'status': 'unknown'}), 404
         
         # Get user's current balance if payment is completed
         user_balance = None
@@ -3189,6 +3207,9 @@ def webapp_check_payment(payment_id):
             user_res = c.fetchone()
             if user_res:
                 user_balance = float(user_res['balance'])
+            
+            # Normalize status for frontend (frontend expects 'paid')
+            status = 'paid'
         
         conn.close()
         

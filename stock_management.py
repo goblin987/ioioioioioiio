@@ -45,7 +45,7 @@ async def check_low_stock_alerts():
             SELECT id, city, district, product_type, size, price, available, 
                    low_stock_threshold, last_stock_alert
             FROM products 
-            WHERE stock_alerts_enabled = 1 
+            WHERE stock_alerts_enabled IS TRUE 
             AND available > 0 
             AND available <= low_stock_threshold
             AND (last_stock_alert IS NULL OR last_stock_alert < %s)
