@@ -1703,9 +1703,15 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
         # Notify User
         bot_instance = context.bot if hasattr(context, 'bot') else None
         if bot_instance:
-            # Get user language for notification
-            lang = context.user_data.get("lang", "en") # Get from context if available
-            if not lang: # Fallback: Get from DB if not in context
+            # Get user language for notification - handle None context.user_data
+            lang = "en"  # Default
+            try:
+                if hasattr(context, 'user_data') and context.user_data:
+                    lang = context.user_data.get("lang", "en")
+            except:
+                pass
+            
+            if not lang or lang == "en":  # Fallback: Get from DB if not in context
                 conn_lang = None
                 try:
                     conn_lang = get_db_connection()
