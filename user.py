@@ -1,3 +1,4 @@
+# VERSION: e3b8914 - Force cache clear for Mini App Only mode fix
 import sqlite3
 import time
 import logging
@@ -675,6 +676,7 @@ async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_T
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the /start command and the initial welcome message."""
+    logger.info("🚀 START COMMAND - VERSION e3b8914 - Mini App Only Fix Active")
     user = update.effective_user
     chat_id = update.effective_chat.id
     is_callback = update.callback_query is not None
