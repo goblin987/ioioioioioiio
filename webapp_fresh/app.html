@@ -6488,6 +6488,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // 6. Add to local basket with server timestamp
                 if(e) flyToCart(e);
                 
+                // Haptic feedback
+                if(window.Telegram?.WebApp?.HapticFeedback) {
+                    Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+                }
+                
                 basket.push({
                     id: id,
                     name: name,
@@ -6729,15 +6734,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         
                         // Update balance if provided
                         if(data.new_balance !== undefined) {
-                            // TODO: Update balance display in cart
-                            console.log('New balance:', data.new_balance);
+                            await loadUserBalance();
                         }
                         
                         // Show success alert
-                        tg.showAlert(`✅ Top-up successful! Your balance has been updated.`);
-                        
-                        // Reload profile/balance section
-                        await loadUserBalance();
+                        tg.showAlert(`✅ Top-up successful! New balance: €${parseFloat(data.new_balance || 0).toFixed(2)}`);
                     } else {
                         // Purchase success - show Mission Passed
                         onPaymentSuccess();
@@ -6749,6 +6750,30 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
             } catch(e) {
                 console.log("Poll error", e);
+            }
+        }
+        
+        async function loadUserBalance() {
+            try {
+                const user = tg.initDataUnsafe?.user;
+                const userId = user ? user.id : 0;
+                
+                if(!userId) return;
+                
+                const response = await fetch(`/webapp_fresh/api/user_balance?user_id=${userId}`);
+                const data = await response.json();
+                
+                if(data.balance !== undefined) {
+                    // Update all balance displays
+                    document.querySelectorAll('.mt-value-sm, [id*="balance"]').forEach(el => {
+                        if(el.innerText.includes('EUR') || el.innerText.includes('€')) {
+                            el.innerText = `€${parseFloat(data.balance).toFixed(2)}`;
+                        }
+                    });
+                    console.log('✅ Balance updated:', data.balance);
+                }
+            } catch(e) {
+                console.error('Error loading balance:', e);
             }
         }
         
@@ -7338,6 +7363,20 @@ const CHAR_ASSETS = {
         async function removeFromBasket(index) {
             const item = basket[index];
             if(!item) return;
+            
+            // Haptic feedback
+            if(window.Telegram?.WebApp?.HapticFeedback) {
+                Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+            
+            // Animate removal
+            const cartItems = document.querySelectorAll('.cart-item');
+            if(cartItems[index]) {
+                cartItems[index].style.transition = 'all 0.3s ease';
+                cartItems[index].style.opacity = '0';
+                cartItems[index].style.transform = 'translateX(-100%)';
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
             
             try {
                 const user = tg.initDataUnsafe?.user;
