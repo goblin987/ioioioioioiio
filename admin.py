@@ -72,6 +72,26 @@ except ImportError:
     logger_dummy_viewer.error("Could not import handlers from viewer_admin.py.")
 
 # === BREADCRUMB NAVIGATION SYSTEM ===
+def clean_username_display(raw_username, user_id):
+    """
+    Cleans username for display in admin panel.
+    Converts legacy 'User_xxx' or 'ID_xxx' formats to just the numeric ID.
+    Returns: '@username' if real username exists, otherwise just the user_id as string
+    """
+    if not raw_username:
+        return str(user_id)
+    
+    # Check if it's a legacy fallback format (case-insensitive)
+    lower_username = raw_username.lower()
+    if lower_username.startswith("user_") or lower_username.startswith("id_"):
+        return str(user_id)
+    
+    # Real username - ensure it has @ prefix for display
+    if not raw_username.startswith('@'):
+        return f"@{raw_username}"
+    
+    return raw_username
+
 def update_breadcrumb(context: ContextTypes.DEFAULT_TYPE, page_name: str, callback: str):
     """Add a page to breadcrumb trail"""
     if 'breadcrumbs' not in context.user_data:
@@ -5843,7 +5863,7 @@ async def handle_adm_price_message(update: Update, context: ContextTypes.DEFAULT
 async def display_user_search_results(bot, chat_id: int, user_info: dict):
     """Displays user overview with buttons to view detailed sections."""
     user_id = user_info['user_id']
-    username = user_info['username'] or f"ID_{user_id}"
+    username = clean_username_display(user_info['username'], user_id)
     balance = Decimal(str(user_info['balance']))
     total_purchases = user_info['total_purchases']
     is_banned = user_info['is_banned'] == 1
@@ -6609,7 +6629,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         keyboard = []
         
         for user in users_found:
-            u_name = user['username'] or f"User_{user['user_id']}"
+            u_name = clean_username_display(user['username'], user['user_id'])
             u_id = user['user_id']
             btn_text = f"{u_name} (ID: {u_id})"
             keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"adm_user_overview|{u_id}")])
@@ -6646,7 +6666,7 @@ async def handle_adm_user_deposits(update: Update, context: ContextTypes.DEFAULT
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
         
-        username = user_result['username'] or f"ID_{user_id}"
+        username = clean_username_display(user_result['username'], user_id)
         
         # Get all pending deposits
         c.execute("""
@@ -6721,7 +6741,7 @@ async def handle_adm_user_purchases(update: Update, context: ContextTypes.DEFAUL
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
         
-        username = user_result['username'] or f"ID_{user_id}"
+        username = clean_username_display(user_result['username'], user_id)
         
         # Get total count
         c.execute("SELECT COUNT(*) as count FROM purchases WHERE user_id = %s", (user_id,))
@@ -6815,7 +6835,7 @@ async def handle_adm_user_actions(update: Update, context: ContextTypes.DEFAULT_
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
         
-        username = user_result['username'] or f"ID_{user_id}"
+        username = clean_username_display(user_result['username'], user_id)
         
         # Get total count
         c.execute("SELECT COUNT(*) as count FROM admin_log WHERE target_user_id = %s", (user_id,))
@@ -6906,7 +6926,7 @@ async def handle_adm_user_discounts(update: Update, context: ContextTypes.DEFAUL
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
         
-        username = user_result['username'] or f"ID_{user_id}"
+        username = clean_username_display(user_result['username'], user_id)
         is_reseller = user_result['is_reseller'] == 1
         
         if not is_reseller:
@@ -7459,7 +7479,7 @@ async def handle_adm_debug_reseller_discount(update: Update, context: ContextTyp
         if not user_result:
             return await query.answer("User not found.", show_alert=True)
         
-        username = user_result['username'] or f"ID_{user_id}"
+        username = clean_username_display(user_result['username'], user_id)
         is_reseller = user_result['is_reseller']
         
         # Get all product types for testing
@@ -7585,7 +7605,7 @@ async def handle_adm_recent_purchases(update: Update, context: ContextTypes.DEFA
             product_emoji = PRODUCT_TYPES.get(product_type, '📦')
             
             # Format buyer info
-            username = purchase['username'] or f"ID_{purchase['user_id']}"
+            username = clean_username_display(purchase['username'], purchase['user_id'])
             
             # Format location
             city = purchase['city'] or "Unknown"
