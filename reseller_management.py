@@ -159,7 +159,9 @@ async def handle_manage_resellers_menu(update: Update, context: ContextTypes.DEF
     context.user_data['state'] = 'awaiting_reseller_manage_id'
 
     prompt_msg = ("👤 Manage Reseller Status\n\n"
-                  "Please reply with the Telegram User ID of the person you want to manage as a reseller.")
+                  "Please reply with either:\n"
+                  "• User ID (e.g., 123456789)\n"
+                  "• Username with @ (e.g., @username)")
     keyboard = [[InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_menu")]]
 
     await query.edit_message_text(prompt_msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
@@ -176,16 +178,43 @@ async def handle_reseller_manage_id_message(update: Update, context: ContextType
 
     entered_id_text = update.message.text.strip()
 
-    try:
-        target_user_id = int(entered_id_text)
-        if target_user_id == admin_id:
-            await send_message_with_retry(context.bot, chat_id, "❌ You cannot manage your own reseller status.", parse_mode=None)
-            # Keep state awaiting another ID
+    target_user_id = None
+    
+    # Try to resolve username first (if starts with @)
+    if entered_id_text.startswith('@'):
+        username_to_find = entered_id_text[1:]  # Remove @
+        conn = None
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute("SELECT user_id FROM users WHERE username = %s", (username_to_find,))
+            user_row = c.fetchone()
+            if user_row:
+                target_user_id = user_row['user_id']
+                logger.info(f"✅ Resolved @{username_to_find} to user ID {target_user_id}")
+            else:
+                await send_message_with_retry(context.bot, chat_id, f"❌ Username @{username_to_find} not found in database.", parse_mode=None)
+                return
+        except Exception as e:
+            logger.error(f"Error resolving username {entered_id_text}: {e}")
+            await send_message_with_retry(context.bot, chat_id, "❌ Database error. Try again.", parse_mode=None)
+            return
+        finally:
+            if conn: conn.close()
+    else:
+        # Try to parse as numeric ID
+        try:
+            target_user_id = int(entered_id_text)
+        except ValueError:
+            await send_message_with_retry(context.bot, chat_id, "❌ Invalid input. Enter either:\n• Numeric User ID (e.g., 123456789)\n• Username with @ (e.g., @username)", parse_mode=None)
             return
 
-    except ValueError:
-        await send_message_with_retry(context.bot, chat_id, "❌ Invalid User ID. Please enter a number.", parse_mode=None)
-        # Keep state awaiting another ID
+    if not target_user_id:
+        await send_message_with_retry(context.bot, chat_id, "❌ Could not resolve user.", parse_mode=None)
+        return
+
+    if target_user_id == admin_id:
+        await send_message_with_retry(context.bot, chat_id, "❌ You cannot manage your own reseller status.", parse_mode=None)
         return
 
     # Clear state now that we have a potential ID
