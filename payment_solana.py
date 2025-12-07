@@ -324,11 +324,27 @@ async def check_solana_deposits(context):
                             if isinstance(basket_snapshot, dict) and 'items' in basket_snapshot:
                                 basket_snapshot = basket_snapshot['items']
                             
-                            # Normalize item format: Mini App uses 'id', payment code expects 'product_id'
+                            # Normalize item format: Mini App uses different keys than payment code expects
                             if isinstance(basket_snapshot, list):
                                 for item in basket_snapshot:
+                                    # Map: id -> product_id
                                     if 'id' in item and 'product_id' not in item:
                                         item['product_id'] = item['id']
+                                    
+                                    # Map: type -> product_type
+                                    if 'type' in item and 'product_type' not in item:
+                                        item['product_type'] = item['type']
+                                    
+                                    # Add missing fields with defaults
+                                    if 'size' not in item:
+                                        # Try to extract size from name (e.g., "alus 2g" -> "2g")
+                                        name = item.get('name', '')
+                                        parts = name.split()
+                                        item['size'] = parts[-1] if parts else 'N/A'
+                                    
+                                    if 'original_text' not in item:
+                                        # Generate original_text from available data
+                                        item['original_text'] = f"{item.get('name', 'Product')} | {item.get('city', 'City')} | {item.get('district', 'District')}"
                                 
                             discount_code = deposit_info.get('discount_code')
                             
