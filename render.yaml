@@ -5,7 +5,9 @@ services:
     plan: starter
     branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true; find . -name '*.pyc' -delete 2>/dev/null || true; python main.py
+    startCommand: find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true; find . -name '*.pyc' -delete 2>/dev/null || true; python -B -u main.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.4
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
