@@ -1249,6 +1249,25 @@ def init_db():
                     logger.warning(f"⚠️ Could not add first_name column: {e}")
                 conn.rollback()
             
+            # Clean up legacy fake usernames (user_123456789 format)
+            try:
+                logger.info(f"🔧 Cleaning up legacy fake usernames in users table...")
+                c.execute("""
+                    UPDATE users 
+                    SET username = NULL 
+                    WHERE username LIKE 'user_%' 
+                      AND username ~ '^user_[0-9]+$'
+                """)
+                cleaned_count = c.rowcount
+                conn.commit()
+                if cleaned_count > 0:
+                    logger.info(f"✅ Cleaned {cleaned_count} legacy fake usernames from users table")
+                else:
+                    logger.info(f"✅ No legacy fake usernames found in users table")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not clean legacy usernames: {e}")
+                conn.rollback()
+            
             # Add is_human_verified column if it doesn't exist
             try:
                 logger.info(f"🔧 Adding is_human_verified column to users table...")
