@@ -1304,29 +1304,15 @@ To receive your products securely via encrypted chat, please:
                             for item in photo_video_group_details:
                                 input_media = None
                                 
-                                # 🚀 YOLO FIX: 3-tier fallback for maximum reliability
-                                # 1. Try telegram_file_id (fastest, Telegram cloud storage)
-                                # 2. Try binary data from PostgreSQL (RENDER-SAFE!)
-                                # 3. Fail gracefully
+                                # 🚀 YOLO FIX: Prioritize PostgreSQL binary for reliability
+                                # Telegram file_ids can expire, so use binary data if available
                                 
                                 file_id = item.get('id')
                                 media_binary = item.get('binary')  # PostgreSQL BYTEA data
                                 
-                                if file_id:
-                                    logger.debug(f"Using Telegram file_id for P{prod_id}: {file_id[:20]}...")
-                                    try:
-                                        if item['type'] == 'photo': 
-                                            input_media = InputMediaPhoto(media=file_id)
-                                        elif item['type'] == 'video': 
-                                            input_media = InputMediaVideo(media=file_id)
-                                        logger.debug(f"✅ Created InputMedia for P{prod_id} from file_id")
-                                    except Exception as media_err:
-                                        logger.warning(f"file_id failed for P{prod_id}, trying PostgreSQL backup: {media_err}")
-                                        input_media = None
-                                
-                                # Fallback to PostgreSQL binary data
-                                if not input_media and media_binary:
-                                    logger.info(f"🔄 Using PostgreSQL binary data for P{prod_id} ({len(media_binary)} bytes)")
+                                # PREFER binary data over file_id for maximum reliability
+                                if media_binary:
+                                    logger.info(f"🔄 Using PostgreSQL binary data for P{prod_id} ({len(media_binary)} bytes) - PREFERRED METHOD")
                                     try:
                                         # Convert binary data to file-like object
                                         import io
@@ -1341,6 +1327,22 @@ To receive your products securely via encrypted chat, please:
                                     except Exception as binary_err:
                                         logger.error(f"PostgreSQL binary failed for P{prod_id}: {binary_err}")
                                         input_media = None
+                                
+                                # Fallback to file_id only if binary not available
+                                elif file_id:
+                                    logger.warning(f"⚠️ Using Telegram file_id for P{prod_id} (binary not available): {file_id[:20]}...")
+                                    try:
+                                        if item['type'] == 'photo': 
+                                            input_media = InputMediaPhoto(media=file_id)
+                                        elif item['type'] == 'video': 
+                                            input_media = InputMediaVideo(media=file_id)
+                                        logger.debug(f"✅ Created InputMedia for P{prod_id} from file_id")
+                                    except Exception as media_err:
+                                        logger.warning(f"file_id failed for P{prod_id}: {media_err}")
+                                        input_media = None
+                                else:
+                                    input_media = None
+                                    logger.error(f"❌ No media source available for P{prod_id}: no binary and no file_id")
                                 
                                 if not input_media:
                                     logger.error(f"❌ All methods failed for P{prod_id} media: {item}")
