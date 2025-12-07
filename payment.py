@@ -1483,11 +1483,6 @@ To receive your products securely via encrypted chat, please:
                     if await asyncio.to_thread(os.path.exists, media_dir_to_delete):
                         asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_delete, ignore_errors=True))
                         logger.info(f"Scheduled deletion of media dir: {media_dir_to_delete}")
-        elif processed_product_ids and not media_delivery_successful:
-            logger.critical(f"🚨 SKIPPING product deletion for user {user_id} because media delivery FAILED. Products retained: {processed_product_ids}")
-            logger.critical(f"🚨 These products need manual delivery or refund. Payment was processed but delivery failed.")
-                        asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_delete, ignore_errors=True))
-                        logger.info(f"Scheduled deletion of media dir: {media_dir_to_delete}")
                         
             except sqlite3.Error as e: 
                 logger.error(f"DB error deleting purchased products: {e}", exc_info=True)
@@ -1500,6 +1495,10 @@ To receive your products securely via encrypted chat, please:
                 logger.error(f"Unexpected error deleting purchased products: {e}", exc_info=True)
             finally:
                 if conn_del: conn_del.close()
+        elif processed_product_ids and not media_delivery_successful:
+            logger.critical(f"🚨 SKIPPING product deletion for user {user_id} because media delivery FAILED. Products retained: {processed_product_ids}")
+            logger.critical(f"🚨 These products need manual delivery or refund. Payment was processed but delivery failed.")
+
 
         # Only return success if both database and media delivery were successful
         if media_delivery_successful:
