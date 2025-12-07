@@ -1456,14 +1456,14 @@ To receive your products securely via encrypted chat, please:
                     "⚠️ Your payment was successful, but there was an issue delivering your product. Please contact support immediately with your payment details.", 
                     parse_mode=None)
 
-        # --- Product Record Deletion (NOW MOVED TO END - AFTER media delivery) ---
-        if processed_product_ids:
+        # --- Product Record Deletion (ONLY IF MEDIA DELIVERY SUCCESSFUL) ---
+        if processed_product_ids and media_delivery_successful:
             conn_del = None
             try:
                 conn_del = get_db_connection()
                 c_del = conn_del.cursor()
                 ids_tuple_list = [(pid,) for pid in processed_product_ids]
-                logger.info(f"Purchase Finalization: Attempting to delete product records AFTER media delivery for user {user_id}. IDs: {processed_product_ids}")
+                logger.info(f"Purchase Finalization: Deleting product records AFTER SUCCESSFUL media delivery for user {user_id}. IDs: {processed_product_ids}")
                 
                 # Delete product media records first
                 media_delete_placeholders = ','.join(['%s'] * len(processed_product_ids))
@@ -1473,12 +1473,17 @@ To receive your products securely via encrypted chat, please:
                 c_del.executemany("DELETE FROM products WHERE id = %s", ids_tuple_list)
                 conn_del.commit()
                 deleted_count = c_del.rowcount
-                logger.info(f"Deleted {deleted_count} purchased product records and their media records for user {user_id}. IDs: {processed_product_ids}")
+                logger.info(f"✅ Deleted {deleted_count} purchased product records after successful delivery for user {user_id}. IDs: {processed_product_ids}")
                 
                 # Schedule media directory deletion AFTER successful delivery
                 for prod_id in processed_product_ids:
                     media_dir_to_delete = os.path.join(MEDIA_DIR, str(prod_id))
                     if await asyncio.to_thread(os.path.exists, media_dir_to_delete):
+                        asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_delete, ignore_errors=True))
+                        logger.info(f"Scheduled deletion of media dir: {media_dir_to_delete}")
+        elif processed_product_ids and not media_delivery_successful:
+            logger.critical(f"🚨 SKIPPING product deletion for user {user_id} because media delivery FAILED. Products retained: {processed_product_ids}")
+            logger.critical(f"🚨 These products need manual delivery or refund. Payment was processed but delivery failed.")
                         asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir_to_delete, ignore_errors=True))
                         logger.info(f"Scheduled deletion of media dir: {media_dir_to_delete}")
                         
