@@ -6504,14 +6504,15 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
             c.execute("SELECT user_id, username, balance, total_purchases, is_banned, is_reseller FROM users WHERE user_id = %s", (user_id_search,))
             users_found = c.fetchall()
         else:
-            # Search by username (partial match)
+            # Search by username OR first_name (partial match)
             search_pattern = f"%{search_term}%"
             c.execute("""
                 SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
                 FROM users 
-                WHERE LOWER(username) LIKE LOWER(%s)
+                WHERE LOWER(username) LIKE LOWER(%s) 
+                   OR LOWER(first_name) LIKE LOWER(%s)
                 LIMIT 10
-            """, (search_pattern,))
+            """, (search_pattern, search_pattern))
             users_found = c.fetchall()
         
     except Exception as e:
