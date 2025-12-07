@@ -660,21 +660,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     display_name = None
     db_username = None  # Actual Telegram @username for database
     
+    # First, get from Update object as baseline
+    db_username = user.username  # Actual @username from Telegram
+    display_name = user.first_name or user.username or user.last_name or f"User_{user_id}"
+    
+    # Then try to get more complete info from bot.get_chat
     try:
-        # Try to get full chat info from Telegram
         chat_info = await context.bot.get_chat(user_id)
         if chat_info:
-            db_username = chat_info.username  # This is the @username
-            display_name = chat_info.first_name or chat_info.username or chat_info.last_name
+            if chat_info.username:  # Only override if we got a username
+                db_username = chat_info.username
+            if chat_info.first_name:  # Only override if we got first_name
+                display_name = chat_info.first_name
             logger.info(f"✅ Got user info from bot.get_chat: @{db_username} / {display_name} for user {user_id}")
     except Exception as e:
-        logger.warning(f"Could not fetch chat info for {user_id}: {e}")
-    
-    # Fallback to Update object
-    if not db_username:
-        db_username = user.username  # Actual @username from Telegram
-    if not display_name:
-        display_name = user.first_name or user.username or user.last_name or f"User_{user_id}"
+        logger.warning(f"Could not fetch chat info for {user_id}: {e}, using Update object data")
     
     logger.info(f"👤 User {user_id} - DB username: @{db_username}, Display: {display_name}")
 
@@ -909,13 +909,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.warning(f"⚠️ Could not check column info: {e}")
             
             # Ensure user exists and update username AND first_name
-            c.execute("""
-                INSERT INTO users (user_id, username, first_name, language, is_reseller) 
-                VALUES (%s, %s, %s, 'en', FALSE)
-                ON CONFLICT(user_id) DO UPDATE SET 
-                    username=excluded.username,
-                    first_name=excluded.first_name
-            """, (user_id, db_username, user.first_name))
+            try:
+                c.execute("""
+                    INSERT INTO users (user_id, username, first_name, language, is_reseller) 
+                    VALUES (%s, %s, %s, 'en', FALSE)
+                    ON CONFLICT(user_id) DO UPDATE SET 
+                        username=excluded.username,
+                        first_name=excluded.first_name
+                """, (user_id, db_username, user.first_name if user.first_name else display_name))
+                logger.info(f"✅ Updated user {user_id} - username: {db_username}, first_name: {user.first_name if user.first_name else display_name}")
+            except Exception as insert_err:
+                # If first_name column doesn't exist yet, try without it
+                if "first_name" in str(insert_err).lower():
+                    logger.warning(f"first_name column doesn't exist yet, inserting without it")
+                    c.execute("""
+                        INSERT INTO users (user_id, username, language, is_reseller) 
+                        VALUES (%s, %s, 'en', FALSE)
+                        ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
+                    """, (user_id, db_username))
+                else:
+                    raise  # Re-raise if it's a different error
             # Get language
             c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
             result = c.fetchone()
