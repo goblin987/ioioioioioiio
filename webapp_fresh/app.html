@@ -6721,7 +6721,27 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 if(data.status === 'paid') {
                     clearInterval(pollInterval);
-                    onPaymentSuccess();
+                    
+                    // Check if it's a refill (payment_id starts with REFILL_)
+                    if(paymentId.startsWith('REFILL_')) {
+                        // Refill success
+                        closeInvoice();
+                        
+                        // Update balance if provided
+                        if(data.new_balance !== undefined) {
+                            // TODO: Update balance display in cart
+                            console.log('New balance:', data.new_balance);
+                        }
+                        
+                        // Show success alert
+                        tg.showAlert(`✅ Top-up successful! Your balance has been updated.`);
+                        
+                        // Reload profile/balance section
+                        await loadUserBalance();
+                    } else {
+                        // Purchase success - show Mission Passed
+                        onPaymentSuccess();
+                    }
                 } else if (data.status === 'expired' || data.status === 'refunded') {
                     clearInterval(pollInterval);
                     closeInvoice();
