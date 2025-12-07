@@ -236,11 +236,94 @@ async def create_solana_payment(user_id, order_id, eur_amount):
         'payment_id': order_id
     }
 
+async def check_balance_only_payments(context):
+    """
+    Check for balance-only payments (status='paid', pay_address='balance_payment')
+    These bypass Solana and need immediate processing.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    try:
+        # Find balance-only payments marked as 'paid' but not yet finalized
+        c.execute("""
+            SELECT payment_id, user_id, basket_snapshot_json as basket_snapshot
+            FROM pending_deposits
+            WHERE status = 'paid' 
+            AND pay_address = 'balance_payment'
+            AND is_purchase = TRUE
+        """)
+        balance_payments = c.fetchall()
+        
+        if not balance_payments:
+            return
+        
+        logger.info(f"🔍 Found {len(balance_payments)} balance-only payments to process")
+        
+        for payment in balance_payments:
+            order_id = payment['payment_id']
+            user_id = payment['user_id']
+            
+            try:
+                logger.info(f"💰 Processing balance-only payment {order_id} for user {user_id}")
+                
+                # Parse basket snapshot
+                basket_snapshot = payment.get('basket_snapshot')
+                if isinstance(basket_snapshot, str):
+                    try:
+                        basket_snapshot = json.loads(basket_snapshot)
+                    except:
+                        logger.error(f"Failed to parse basket snapshot for {order_id}")
+                        continue
+                
+                # Extract items
+                items = basket_snapshot
+                if isinstance(basket_snapshot, dict) and 'items' in basket_snapshot:
+                    items = basket_snapshot['items']
+                
+                # Normalize item format
+                if isinstance(items, list):
+                    for item in items:
+                        if 'id' in item and 'product_id' not in item:
+                            item['product_id'] = item['id']
+                        if 'type' in item and 'product_type' not in item:
+                            item['product_type'] = item['type']
+                
+                # Call finalize_purchase from payment.py
+                from payment import _finalize_purchase
+                
+                # Balance was already deducted in main.py when creating the invoice
+                await _finalize_purchase(
+                    user_id=user_id,
+                    order_id=order_id,
+                    items=items,
+                    discount_code=None,
+                    context=context
+                )
+                
+                # Update status to 'confirmed' to prevent reprocessing
+                c.execute("UPDATE pending_deposits SET status = 'confirmed' WHERE payment_id = %s", (order_id,))
+                conn.commit()
+                
+                logger.info(f"✅ Balance-only payment {order_id} finalized successfully")
+                
+            except Exception as process_err:
+                logger.error(f"Error processing balance-only payment {order_id}: {process_err}", exc_info=True)
+                # Don't mark as confirmed so it can retry
+                
+    except Exception as e:
+        logger.error(f"Error in check_balance_only_payments: {e}", exc_info=True)
+    finally:
+        conn.close()
+
 async def check_solana_deposits(context):
     """
     Background task to check all pending wallets for deposits.
     Call this periodically (e.g., every 30-60 seconds).
     """
+    # FIRST: Check for balance-only payments (status='paid' in pending_deposits, no Solana wallet)
+    await check_balance_only_payments(context)
+    
     conn = get_db_connection()
     c = conn.cursor()
     

@@ -660,9 +660,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     display_name = None
     db_username = None  # Actual Telegram @username for database
     
+    # DEBUG: Log what we get from Update object
+    logger.info(f"🔍 DEBUG user data: first_name={repr(user.first_name)}, username={repr(user.username)}, last_name={repr(user.last_name)}")
+    
     # First, get from Update object as baseline
     db_username = user.username  # Actual @username from Telegram
     display_name = user.first_name or user.username or user.last_name or f"User_{user_id}"
+    
+    # Filter out weird characters (dots, underscores, etc.) from display name
+    if display_name and len(display_name) > 3 and all(c in '._' for c in display_name):
+        # Name is just dots/underscores - use username or fallback
+        logger.warning(f"⚠️ Display name is just dots/underscores: {repr(display_name)}, using fallback")
+        display_name = user.username or f"User_{user_id}"
     
     # Then try to get more complete info from bot.get_chat
     try:
@@ -670,8 +679,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if chat_info:
             if chat_info.username:  # Only override if we got a username
                 db_username = chat_info.username
-            if chat_info.first_name:  # Only override if we got first_name
-                display_name = chat_info.first_name
+            if chat_info.first_name and chat_info.first_name != display_name:  # Only override if different
+                # Also filter here
+                if not (len(chat_info.first_name) > 3 and all(c in '._' for c in chat_info.first_name)):
+                    display_name = chat_info.first_name
             logger.info(f"✅ Got user info from bot.get_chat: @{db_username} / {display_name} for user {user_id}")
     except Exception as e:
         logger.warning(f"Could not fetch chat info for {user_id}: {e}, using Update object data")
