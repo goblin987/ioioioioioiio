@@ -2996,7 +2996,64 @@ def webapp_create_invoice():
         # Create unique order ID
         order_id = f"WEBAPP_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
         
-        # Create Solana Payment for the REMAINING amount after balance
+        # If balance covers everything, skip Solana payment and process immediately
+        if final_amount_to_pay <= Decimal('0.01'):  # Essentially 0
+            logger.info(f"💰 User {user_id} paying ENTIRELY with balance ({balance_to_use:.2f} EUR)")
+            
+            # Process purchase immediately without crypto payment
+            conn = get_db_connection()
+            c = conn.cursor()
+            
+            try:
+                # Deduct balance
+                c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s", (float(balance_to_use), user_id))
+                
+                # Store basket snapshot for processing
+                basket_snapshot = {
+                    'items': items,
+                    'discounts': discount_info,
+                    'original_total': float(total_eur),
+                    'final_total': float(final_total_before_balance),
+                    'balance_used': float(balance_to_use),
+                    'crypto_amount': 0.0
+                }
+                
+                # Mark as paid immediately (no crypto needed)
+                c.execute("""
+                    INSERT INTO pending_deposits 
+                    (user_id, payment_id, target_eur_amount, currency, expected_crypto_amount, 
+                     pay_address, status, is_purchase, basket_snapshot_json)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'paid', TRUE, %s)
+                """, (user_id, order_id, 0.0, 'BALANCE', 0.0, 'balance_payment', json.dumps(basket_snapshot)))
+                
+                conn.commit()
+                conn.close()
+                
+                logger.info(f"✅ Balance-only payment {order_id} processed for user {user_id}")
+                
+                # Return success without crypto payment info
+                response = jsonify({
+                    'success': True,
+                    'payment_id': order_id,
+                    'balance_only': True,
+                    'pay_address': None,
+                    'pay_amount': 0,
+                    'amount_eur': 0.0,
+                    'original_total': float(total_eur),
+                    'total_after_discounts': float(final_total_before_balance),
+                    'balance_used': float(balance_to_use),
+                    'user_balance': float(user_balance)
+                })
+                response.headers.add('Access-Control-Allow-Origin', '*')
+                return response
+            except Exception as balance_err:
+                logger.error(f"Error processing balance-only payment: {balance_err}")
+                if conn:
+                    conn.rollback()
+                    conn.close()
+                return jsonify({'error': str(balance_err)}), 500
+        
+        # Otherwise, create Solana Payment for the REMAINING amount after balance
         # Use main_loop if available, else new loop
         loop = main_loop if main_loop else asyncio.new_event_loop()
         payment_res = asyncio.run_coroutine_threadsafe(

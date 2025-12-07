@@ -6658,6 +6658,27 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const data = await response.json();
                 
                 if(data.success) {
+                    // SPECIAL CASE: Balance-only payment (no crypto needed)
+                    if(data.balance_only) {
+                        document.getElementById('basket-modal').style.display = 'none';
+                        
+                        // Start polling immediately since it's already marked as paid
+                        activePaymentId = data.payment_id;
+                        
+                        // Show loading overlay
+                        tg.showAlert("✅ Paid with balance! Processing order...");
+                        
+                        // Poll once immediately to trigger purchase finalization
+                        pollInterval = setInterval(() => pollPayment(data.payment_id), 1000);
+                        
+                        if(btn) {
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        }
+                        return;
+                    }
+                    
+                    // NORMAL CASE: Crypto payment needed
                     document.getElementById('basket-modal').style.display = 'none';
                     const invModal = document.getElementById('invoice-modal');
                     

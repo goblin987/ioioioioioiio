@@ -8430,20 +8430,8 @@ async def handle_confirm_remove_city(update: Update, context: ContextTypes.DEFAU
         
         product_ids = [p['id'] for p in products]
         
-        # Delete product media FIRST
-        if product_ids:
-            placeholders = ','.join(['%s'] * len(product_ids))
-            c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids)
-            logger.info(f"City removal: Deleted media records for {len(product_ids)} products")
-            
-            # Schedule media directory deletion
-            for pid in product_ids:
-                media_dir = os.path.join(MEDIA_DIR, str(pid))
-                if await asyncio.to_thread(os.path.exists, media_dir):
-                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
-                    logger.info(f"City removal: Scheduled deletion of media dir: {media_dir}")
-        
-        # Delete products
+        # DON'T delete media yet - we need it to send to admin first!
+        # Just delete the product records
         c.execute("DELETE FROM products WHERE id = ANY(%s)", (product_ids,))
         conn.commit()
         
@@ -8469,6 +8457,29 @@ async def handle_confirm_remove_city(update: Update, context: ContextTypes.DEFAU
     # Send each product WITH MEDIA
     for i, product in enumerate(removed_products, 1):
         await send_removed_product_with_media(context, user_id, product, i, len(removed_products))
+    
+    # NOW cleanup media after sending
+    if removed_products:
+        conn_cleanup = None
+        try:
+            conn_cleanup = get_db_connection()
+            c_cleanup = conn_cleanup.cursor()
+            product_ids_cleanup = [p['id'] for p in removed_products]
+            placeholders = ','.join(['%s'] * len(product_ids_cleanup))
+            c_cleanup.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_cleanup)
+            conn_cleanup.commit()
+            logger.info(f"✅ City removal: Cleaned up media for {len(product_ids_cleanup)} products")
+            
+            # Schedule media directory deletion
+            for pid in product_ids_cleanup:
+                media_dir = os.path.join(MEDIA_DIR, str(pid))
+                if await asyncio.to_thread(os.path.exists, media_dir):
+                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
+        except Exception as cleanup_err:
+            logger.error(f"City removal: Error cleaning up media: {cleanup_err}")
+        finally:
+            if conn_cleanup:
+                conn_cleanup.close()
     
     # Final summary
     keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
@@ -8519,20 +8530,8 @@ async def handle_confirm_remove_category(update: Update, context: ContextTypes.D
         
         product_ids = [p['id'] for p in products]
         
-        # Delete product media FIRST
-        if product_ids:
-            placeholders = ','.join(['%s'] * len(product_ids))
-            c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids)
-            logger.info(f"Category removal: Deleted media records for {len(product_ids)} products")
-            
-            # Schedule media directory deletion
-            for pid in product_ids:
-                media_dir = os.path.join(MEDIA_DIR, str(pid))
-                if await asyncio.to_thread(os.path.exists, media_dir):
-                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
-                    logger.info(f"Category removal: Scheduled deletion of media dir: {media_dir}")
-        
-        # Delete products
+        # DON'T delete media yet - we need it to send to admin first!
+        # Just delete the product records
         c.execute("DELETE FROM products WHERE id = ANY(%s)", (product_ids,))
         conn.commit()
         
@@ -8558,6 +8557,29 @@ async def handle_confirm_remove_category(update: Update, context: ContextTypes.D
     # Send each product WITH MEDIA
     for i, product in enumerate(removed_products, 1):
         await send_removed_product_with_media(context, user_id, product, i, len(removed_products))
+    
+    # NOW cleanup media after sending
+    if removed_products:
+        conn_cleanup = None
+        try:
+            conn_cleanup = get_db_connection()
+            c_cleanup = conn_cleanup.cursor()
+            product_ids_cleanup = [p['id'] for p in removed_products]
+            placeholders = ','.join(['%s'] * len(product_ids_cleanup))
+            c_cleanup.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_cleanup)
+            conn_cleanup.commit()
+            logger.info(f"✅ Category removal: Cleaned up media for {len(product_ids_cleanup)} products")
+            
+            # Schedule media directory deletion
+            for pid in product_ids_cleanup:
+                media_dir = os.path.join(MEDIA_DIR, str(pid))
+                if await asyncio.to_thread(os.path.exists, media_dir):
+                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
+        except Exception as cleanup_err:
+            logger.error(f"Category removal: Error cleaning up media: {cleanup_err}")
+        finally:
+            if conn_cleanup:
+                conn_cleanup.close()
     
     # Final summary
     keyboard = [[InlineKeyboardButton("🗑️ Remove More", callback_data="remove_products_menu")],
@@ -8616,20 +8638,8 @@ async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_T
         
         product_ids = [p['id'] for p in products]
         
-        # Delete product media FIRST
-        if product_ids:
-            placeholders = ','.join(['%s'] * len(product_ids))
-            c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids)
-            logger.info(f"Deleted media records for {len(product_ids)} products")
-            
-            # Schedule media directory deletion
-            for pid in product_ids:
-                media_dir = os.path.join(MEDIA_DIR, str(pid))
-                if await asyncio.to_thread(os.path.exists, media_dir):
-                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
-                    logger.info(f"Scheduled deletion of media dir: {media_dir}")
-        
-        # Delete products
+        # DON'T delete media yet - we need it to send to admin first!
+        # Just delete the product records
         c.execute("""
             DELETE FROM products 
             WHERE id = ANY(%s)
@@ -8665,6 +8675,29 @@ async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_T
     # Send each product WITH MEDIA
     for i, product in enumerate(removed_products, 1):
         await send_removed_product_with_media(context, user_id, product, i, len(removed_products))
+    
+    # NOW cleanup media after sending
+    if removed_products:
+        conn_cleanup = None
+        try:
+            conn_cleanup = get_db_connection()
+            c_cleanup = conn_cleanup.cursor()
+            product_ids_cleanup = [p['id'] for p in removed_products]
+            placeholders = ','.join(['%s'] * len(product_ids_cleanup))
+            c_cleanup.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids_cleanup)
+            conn_cleanup.commit()
+            logger.info(f"✅ Execute removal: Cleaned up media for {len(product_ids_cleanup)} products")
+            
+            # Schedule media directory deletion
+            for pid in product_ids_cleanup:
+                media_dir = os.path.join(MEDIA_DIR, str(pid))
+                if await asyncio.to_thread(os.path.exists, media_dir):
+                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
+        except Exception as cleanup_err:
+            logger.error(f"Execute removal: Error cleaning up media: {cleanup_err}")
+        finally:
+            if conn_cleanup:
+                conn_cleanup.close()
     
     # Final summary
     summary_msg = (

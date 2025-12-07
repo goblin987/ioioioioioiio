@@ -910,17 +910,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Ensure user exists and update username AND first_name
             try:
+                # Use display_name which is ALWAYS set (never None)
+                first_name_to_store = display_name if display_name else f"User_{user_id}"
                 c.execute("""
                     INSERT INTO users (user_id, username, first_name, language, is_reseller) 
                     VALUES (%s, %s, %s, 'en', FALSE)
                     ON CONFLICT(user_id) DO UPDATE SET 
                         username=excluded.username,
                         first_name=excluded.first_name
-                """, (user_id, db_username, user.first_name if user.first_name else display_name))
-                logger.info(f"✅ Updated user {user_id} - username: {db_username}, first_name: {user.first_name if user.first_name else display_name}")
+                """, (user_id, db_username, first_name_to_store))
+                logger.info(f"✅ Updated user {user_id} - username: {db_username}, first_name: {first_name_to_store}")
             except Exception as insert_err:
                 # If first_name column doesn't exist yet, try without it
-                if "first_name" in str(insert_err).lower():
+                if "first_name" in str(insert_err).lower() or "column" in str(insert_err).lower():
                     logger.warning(f"first_name column doesn't exist yet, inserting without it")
                     c.execute("""
                         INSERT INTO users (user_id, username, language, is_reseller) 
@@ -928,6 +930,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
                     """, (user_id, db_username))
                 else:
+                    logger.error(f"Error inserting user: {insert_err}")
                     raise  # Re-raise if it's a different error
             # Get language
             c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
