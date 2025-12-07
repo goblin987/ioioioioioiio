@@ -265,6 +265,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
             logger.info(f"Preset theme '{active_theme.get('theme_name')}' is active - using default layout")
             # For classic theme, use the 6-button layout we defined
             if active_theme.get('theme_name') == 'classic':
+                logger.info(f"🎨 CLASSIC THEME: Building keyboard for user {user_id}, ui_mode={ui_mode}")
                 import time
                 webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
                 keyboard = [
@@ -273,7 +274,10 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
                 
                 # Only add old Shop button if NOT in Mini App Only mode
                 if ui_mode == "bot":
+                    logger.info(f"🎨 CLASSIC: ui_mode is 'bot', adding Shop button")
                     keyboard.append([InlineKeyboardButton("🛍️ Shop", callback_data="shop")])
+                else:
+                    logger.info(f"🎨 CLASSIC: ui_mode is '{ui_mode}', SKIPPING Shop button")
                 
                 # Conditionally add Daily Rewards button for classic theme
                 if show_daily_rewards:
