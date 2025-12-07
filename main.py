@@ -2917,7 +2917,7 @@ def webapp_validate_discount():
 
 @flask_app.route("/webapp_fresh/api/create_invoice", methods=['POST'])
 def webapp_create_invoice():
-    """Create a Solana invoice for Web App items"""
+    """Create a Solana invoice for Web App items with automatic balance deduction"""
     try:
         data = request.json
         user_id = data.get('user_id')
@@ -2948,6 +2948,11 @@ def webapp_create_invoice():
                     item_discount = (price * r_disc_percent) / Decimal('100.0')
                     reseller_discount_total += item_discount
         
+        # Fetch user's current balance
+        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        user_row = c.fetchone()
+        user_balance = Decimal(str(user_row['balance'])) if user_row else Decimal('0.0')
+        
         conn.close()
         
         if total_eur == 0:
@@ -2974,17 +2979,24 @@ def webapp_create_invoice():
                 discount_info['code'] = discount_code
                 discount_info['code_discount'] = float(code_discount_amount)
         
-        final_total = base_total_after_reseller - code_discount_amount
-        final_total = max(Decimal('0.0'), final_total)
+        final_total_before_balance = base_total_after_reseller - code_discount_amount
+        final_total_before_balance = max(Decimal('0.0'), final_total_before_balance)
+        
+        # Apply balance deduction
+        balance_to_use = min(user_balance, final_total_before_balance)
+        final_amount_to_pay = final_total_before_balance - balance_to_use
+        final_amount_to_pay = max(Decimal('0.0'), final_amount_to_pay)
+        
+        logger.info(f"📊 Invoice calculation for user {user_id}: Original: {total_eur:.2f}, After discounts: {final_total_before_balance:.2f}, User balance: {user_balance:.2f}, Balance used: {balance_to_use:.2f}, Crypto to pay: {final_amount_to_pay:.2f}")
 
         # Create unique order ID
         order_id = f"WEBAPP_{int(time.time())}_{user_id}_{uuid.uuid4().hex[:6]}"
         
-        # Create Solana Payment
+        # Create Solana Payment for the REMAINING amount after balance
         # Use main_loop if available, else new loop
         loop = main_loop if main_loop else asyncio.new_event_loop()
         payment_res = asyncio.run_coroutine_threadsafe(
-            create_solana_payment(user_id, order_id, final_total), 
+            create_solana_payment(user_id, order_id, final_amount_to_pay), 
             loop
         ).result()
         
@@ -2995,12 +3007,14 @@ def webapp_create_invoice():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # Store basket snapshot WITH discount info
+        # Store basket snapshot WITH discount info AND balance info
         basket_snapshot = {
             'items': items,
             'discounts': discount_info,
             'original_total': float(total_eur),
-            'final_total': float(final_total)
+            'final_total': float(final_total_before_balance),
+            'balance_used': float(balance_to_use),
+            'crypto_amount': float(final_amount_to_pay)
         }
         
         c.execute("""
@@ -3008,7 +3022,7 @@ def webapp_create_invoice():
             (user_id, payment_id, target_eur_amount, currency, expected_crypto_amount, 
              pay_address, status, is_purchase, basket_snapshot_json)
             VALUES (%s, %s, %s, %s, %s, %s, 'pending', TRUE, %s)
-        """, (user_id, order_id, float(final_total), 'SOL', float(payment_res['pay_amount']), 
+        """, (user_id, order_id, float(final_amount_to_pay), 'SOL', float(payment_res['pay_amount']), 
               payment_res['pay_address'], json.dumps(basket_snapshot)))
         
         conn.commit()
@@ -3019,7 +3033,11 @@ def webapp_create_invoice():
             'payment_id': order_id,
             'pay_address': payment_res['pay_address'],
             'pay_amount': payment_res['pay_amount'],
-            'amount_eur': float(final_total)
+            'amount_eur': float(final_amount_to_pay),
+            'original_total': float(total_eur),
+            'total_after_discounts': float(final_total_before_balance),
+            'balance_used': float(balance_to_use),
+            'user_balance': float(user_balance)
         })
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response

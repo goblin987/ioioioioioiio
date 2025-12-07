@@ -320,6 +320,11 @@ async def check_solana_deposits(context):
                                 except: 
                                     pass
                             
+                            # Extract balance_used if present (new format)
+                            balance_to_deduct = Decimal('0.0')
+                            if isinstance(basket_snapshot, dict):
+                                balance_to_deduct = Decimal(str(basket_snapshot.get('balance_used', 0)))
+                            
                             # Handle new format: basket_snapshot is a dict with 'items' key
                             if isinstance(basket_snapshot, dict) and 'items' in basket_snapshot:
                                 basket_snapshot = basket_snapshot['items']
@@ -345,6 +350,20 @@ async def check_solana_deposits(context):
                                     if 'original_text' not in item:
                                         # Generate original_text from available data
                                         item['original_text'] = f"{item.get('name', 'Product')} | {item.get('city', 'City')} | {item.get('district', 'District')}"
+                            
+                            # Deduct balance if specified
+                            if balance_to_deduct > 0:
+                                try:
+                                    logger.info(f"💰 Deducting {balance_to_deduct} EUR from user {user_id} balance (auto-applied)")
+                                    c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s AND balance >= %s", 
+                                             (float(balance_to_deduct), user_id, float(balance_to_deduct)))
+                                    if c.rowcount > 0:
+                                        conn.commit()
+                                        logger.info(f"✅ Successfully deducted {balance_to_deduct} EUR balance for user {user_id}")
+                                    else:
+                                        logger.warning(f"⚠️ Could not deduct balance for user {user_id} - insufficient funds or user not found")
+                                except Exception as balance_err:
+                                    logger.error(f"Error deducting balance for user {user_id}: {balance_err}")
                                 
                             discount_code = deposit_info.get('discount_code')
                             

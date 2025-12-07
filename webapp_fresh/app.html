@@ -6652,7 +6652,30 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     document.getElementById('basket-modal').style.display = 'none';
                     const invModal = document.getElementById('invoice-modal');
                     
-                    document.getElementById('invoice-amount').innerText = `${data.pay_amount} SOL`;
+                    // Display balance info if used
+                    let amountText = `${data.pay_amount} SOL`;
+                    if(data.balance_used && data.balance_used > 0) {
+                        amountText = `${data.pay_amount} SOL`;
+                        // Add balance breakdown below
+                        const amountHero = document.querySelector('.amount-hero');
+                        if(amountHero) {
+                            // Remove old balance info if exists
+                            const oldBalanceInfo = amountHero.querySelector('.balance-info');
+                            if(oldBalanceInfo) oldBalanceInfo.remove();
+                            
+                            // Add new balance info
+                            const balanceInfo = document.createElement('div');
+                            balanceInfo.className = 'balance-info';
+                            balanceInfo.style.cssText = 'font-size: 14px; color: var(--gta-green); margin-top: 10px; font-family: Impact; letter-spacing: 1px;';
+                            balanceInfo.innerHTML = `
+                                <div style="opacity: 0.7;">Original: €${data.total_after_discounts.toFixed(2)}</div>
+                                <div style="color: var(--gta-gold);">Balance Used: -€${data.balance_used.toFixed(2)}</div>
+                            `;
+                            amountHero.appendChild(balanceInfo);
+                        }
+                    }
+                    
+                    document.getElementById('invoice-amount').innerText = amountText;
                     document.getElementById('invoice-address').innerText = data.pay_address;
                     
                     // Generate QR
