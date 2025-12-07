@@ -1,4 +1,5 @@
-# VERSION: e3b8914 - Force cache clear for Mini App Only mode fix
+# VERSION: 463ae15 - NUCLEAR CACHE CLEAR - Force Python recompile
+# FORCE RECOMPILE: Adding random comment to change bytecode hash
 import sqlite3
 import time
 import logging
