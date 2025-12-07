@@ -293,12 +293,12 @@ async def check_balance_only_payments(context):
                 from payment import _finalize_purchase
                 
                 # Balance was already deducted in main.py when creating the invoice
+                # Correct signature: _finalize_purchase(user_id, basket_snapshot, discount_code_used, context)
                 await _finalize_purchase(
-                    user_id=user_id,
-                    order_id=order_id,
-                    items=items,
-                    discount_code=None,
-                    context=context
+                    user_id, 
+                    items,  # This is the basket_snapshot (list of items)
+                    None,   # discount_code_used
+                    context
                 )
                 
                 # Update status to 'confirmed' to prevent reprocessing
