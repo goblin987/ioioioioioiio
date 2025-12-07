@@ -1619,6 +1619,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_welcome_description': admin.handle_adm_welcome_description_message,
         'awaiting_welcome_description_edit': admin.handle_adm_welcome_description_message,
         
+        # Bot UI Management States (from admin.py)
+        'awaiting_miniapp_text': admin.handle_admin_save_miniapp_text,
+        'awaiting_miniapp_btn': admin.handle_admin_save_miniapp_btn,
+        
         
         
     }

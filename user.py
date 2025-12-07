@@ -175,6 +175,15 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
         logger.warning("Falling back to default welcome message defined in LANGUAGES.")
         welcome_template_to_use = lang_data.get('welcome', DEFAULT_WELCOME_MESSAGE) # Use language file default OR hardcoded default
 
+    # --- Check for Custom Mini App Welcome Text ---
+    # If in Mini App Only mode and custom text exists, use it instead
+    ui_mode_for_welcome = get_bot_setting("ui_mode", "bot")
+    custom_miniapp_welcome = get_bot_setting("miniapp_welcome_text", None)
+    
+    if ui_mode_for_welcome == "miniapp" and custom_miniapp_welcome:
+        logger.info(f"📱 Using custom Mini App welcome text for user {user_id}")
+        welcome_template_to_use = custom_miniapp_welcome
+
     # --- Format the chosen template ---
     status = get_user_status(purchases)
     balance_str = format_currency(balance)
@@ -210,9 +219,13 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     admin_button_text = lang_data.get("admin_button", "🔧 Admin Panel")
     
     # Check if Daily Rewards should be shown
-    from utils import is_daily_rewards_enabled
+    from utils import is_daily_rewards_enabled, get_bot_setting
     show_daily_rewards = is_daily_rewards_enabled()
     logger.info(f"🎁 Daily Rewards enabled check: {show_daily_rewards} for user {user_id}")
+    
+    # Check UI mode setting (bot or miniapp)
+    ui_mode = get_bot_setting("ui_mode", "bot")
+    logger.info(f"📱 UI Mode: {ui_mode} for user {user_id}")
     
     # Default keyboard layout
     # Add timestamp to FORCE cache clear every time
@@ -220,8 +233,11 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
     default_keyboard = [
         [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))],
-        [InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")],
     ]
+    
+    # Only add old Shop button if NOT in Mini App Only mode
+    if ui_mode == "bot":
+        default_keyboard.append([InlineKeyboardButton(f"{EMOJI_SHOP} {shop_button_text}", callback_data="shop")])
     
     # Conditionally add Daily Rewards button
     if show_daily_rewards:
@@ -252,8 +268,11 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
                 webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
                 keyboard = [
                     [InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))],
-                    [InlineKeyboardButton("🛍️ Shop", callback_data="shop")],
                 ]
+                
+                # Only add old Shop button if NOT in Mini App Only mode
+                if ui_mode == "bot":
+                    keyboard.append([InlineKeyboardButton("🛍️ Shop", callback_data="shop")])
                 
                 # Conditionally add Daily Rewards button for classic theme
                 if show_daily_rewards:
