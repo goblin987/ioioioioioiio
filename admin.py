@@ -8430,6 +8430,19 @@ async def handle_confirm_remove_city(update: Update, context: ContextTypes.DEFAU
         
         product_ids = [p['id'] for p in products]
         
+        # Delete product media FIRST
+        if product_ids:
+            placeholders = ','.join(['%s'] * len(product_ids))
+            c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids)
+            logger.info(f"City removal: Deleted media records for {len(product_ids)} products")
+            
+            # Schedule media directory deletion
+            for pid in product_ids:
+                media_dir = os.path.join(MEDIA_DIR, str(pid))
+                if await asyncio.to_thread(os.path.exists, media_dir):
+                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
+                    logger.info(f"City removal: Scheduled deletion of media dir: {media_dir}")
+        
         # Delete products
         c.execute("DELETE FROM products WHERE id = ANY(%s)", (product_ids,))
         conn.commit()
@@ -8505,6 +8518,19 @@ async def handle_confirm_remove_category(update: Update, context: ContextTypes.D
             return
         
         product_ids = [p['id'] for p in products]
+        
+        # Delete product media FIRST
+        if product_ids:
+            placeholders = ','.join(['%s'] * len(product_ids))
+            c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids)
+            logger.info(f"Category removal: Deleted media records for {len(product_ids)} products")
+            
+            # Schedule media directory deletion
+            for pid in product_ids:
+                media_dir = os.path.join(MEDIA_DIR, str(pid))
+                if await asyncio.to_thread(os.path.exists, media_dir):
+                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
+                    logger.info(f"Category removal: Scheduled deletion of media dir: {media_dir}")
         
         # Delete products
         c.execute("DELETE FROM products WHERE id = ANY(%s)", (product_ids,))
@@ -8589,6 +8615,19 @@ async def handle_execute_removal(update: Update, context: ContextTypes.DEFAULT_T
             return
         
         product_ids = [p['id'] for p in products]
+        
+        # Delete product media FIRST
+        if product_ids:
+            placeholders = ','.join(['%s'] * len(product_ids))
+            c.execute(f"DELETE FROM product_media WHERE product_id IN ({placeholders})", product_ids)
+            logger.info(f"Deleted media records for {len(product_ids)} products")
+            
+            # Schedule media directory deletion
+            for pid in product_ids:
+                media_dir = os.path.join(MEDIA_DIR, str(pid))
+                if await asyncio.to_thread(os.path.exists, media_dir):
+                    asyncio.create_task(asyncio.to_thread(shutil.rmtree, media_dir, ignore_errors=True))
+                    logger.info(f"Scheduled deletion of media dir: {media_dir}")
         
         # Delete products
         c.execute("""
