@@ -1438,17 +1438,8 @@ To receive your products securely via encrypted chat, please:
                                 if not f.closed: await asyncio.to_thread(f.close)
                             except Exception as close_e: logger.warning(f"Error closing file handle during final cleanup: {close_e}")
 
-                # --- Final Message to User ---
-                leave_review_button = lang_data.get("leave_review_button", "Leave a Review")
-                keyboard = [[InlineKeyboardButton(f"✍️ {leave_review_button}", callback_data="leave_review_now")]]
-                
-                # Send review prompt via bot (not userbot)
-                if use_userbot_delivery:
-                    # For userbot delivery, send review prompt via bot
-                    await send_message_with_retry(context.bot, chat_id, "✅ Your order has been delivered securely!\n\n💬 How was your experience?", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
-                else:
-                    # For bot delivery, send standard message
-                    await send_message_with_retry(context.bot, chat_id, "Thank you for your purchase!", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=None)
+                # --- NO ADDITIONAL MESSAGES - User sees Mission Passed in Mini App ---
+                logger.info(f"✅ Purchase delivery completed for user {user_id}. Products sent to chat.")
                 
             except Exception as media_error:
                 logger.critical(f"🚨 CRITICAL: Media delivery failed for user {user_id} after successful payment! Error: {media_error}")

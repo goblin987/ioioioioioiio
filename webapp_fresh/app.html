@@ -3343,6 +3343,7 @@
     <div class="mission-passed-overlay" id="mp-overlay" style="display:none;">
         <div class="mp-text">MISSION PASSED!</div>
         <div class="mp-sub">RESPECT +</div>
+        <div class="mp-instruction">Check bot chat for product details</div>
     </div>
     <audio id="mp-sound" src="https://ia800501.us.archive.org/33/items/GTASAMissionPassed/GTA%20SA%20Mission%20Passed.mp3" preload="auto"></audio>
 
@@ -4174,6 +4175,29 @@
         }
 
         .mp-active .mp-sub {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .mp-instruction {
+            font-family: 'Pricedown', sans-serif;
+            font-size: 24px;
+            color: #FFD700; /* Bright gold for visibility */
+            text-shadow: 
+                2px 2px 0 #000,
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000;
+            margin-top: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease 1s; /* Delayed appearance */
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        
+        .mp-active .mp-instruction {
             opacity: 1;
             transform: translateY(0);
         }
@@ -6725,11 +6749,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             void overlay.offsetWidth;
             overlay.classList.add('mp-active');
             
-            // Hide Mission Passed after 4 seconds
+            // Hide Mission Passed after 6 seconds (extended to allow reading instruction)
             setTimeout(() => {
                 overlay.classList.remove('mp-active');
                 overlay.style.display = 'none';
-            }, 4000);
+            }, 6000);
         }
 
         function closeApp() {
