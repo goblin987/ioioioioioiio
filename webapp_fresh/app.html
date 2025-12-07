@@ -6026,8 +6026,11 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return;
             }
             
-            // Filter out sold-out products (available = 0)
-            const availableProducts = products.filter(p => p.available > 0);
+            // Filter out sold-out products (available - reserved <= 0)
+            const availableProducts = products.filter(p => {
+                const actualStock = (p.available || 0) - (p.reserved || 0);
+                return actualStock > 0;
+            });
             
             if(availableProducts.length === 0) {
                 grid.innerHTML = '<div class="loading">NO PRODUCTS AVAILABLE</div>';
@@ -6092,19 +6095,23 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // LSPD Search
         function filterSearch(query) {
             const term = query.toLowerCase();
-            const filtered = allProducts.filter(p => 
-                p.available > 0 && (
+            const filtered = allProducts.filter(p => {
+                const actualStock = (p.available || 0) - (p.reserved || 0);
+                return actualStock > 0 && (
                     p.name.toLowerCase().includes(term) || 
                     p.city.toLowerCase().includes(term)
-                )
-            );
+                );
+            });
             renderProducts(filtered);
         }
 
         // Filters
         function renderFilters(products) {
             // Only show cities that have available products
-            const availableProducts = products.filter(p => p.available > 0);
+            const availableProducts = products.filter(p => {
+                const actualStock = (p.available || 0) - (p.reserved || 0);
+                return actualStock > 0;
+            });
             const cities = [...new Set(availableProducts.map(p => p.city))];
             
             const container = document.getElementById('city-filters');
@@ -6131,7 +6138,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
 
             // Filter for the selected city first (case-insensitive) AND available products only
-            let cityProducts = allProducts.filter(p => p.available > 0 && p.city && p.city.toLowerCase() === city.toLowerCase());
+            let cityProducts = allProducts.filter(p => {
+                const actualStock = (p.available || 0) - (p.reserved || 0);
+                return actualStock > 0 && p.city && p.city.toLowerCase() === city.toLowerCase();
+            });
             
             // 1. Update Product Grid
             let displayProducts = cityProducts;

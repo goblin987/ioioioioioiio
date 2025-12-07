@@ -1235,6 +1235,18 @@ def init_db():
                     logger.info(f"✅ referral_code column already exists in users table")
                 else:
                     logger.warning(f"⚠️ Could not add referral_code column: {e}")
+            
+            # Add first_name column if it doesn't exist
+            try:
+                logger.info(f"🔧 Adding first_name column to users table...")
+                c.execute(f"ALTER TABLE users ADD COLUMN first_name {get_text_type()} DEFAULT NULL")
+                conn.commit()
+                logger.info(f"✅ first_name column added to users table")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    logger.info(f"✅ first_name column already exists in users table")
+                else:
+                    logger.warning(f"⚠️ Could not add first_name column: {e}")
                 conn.rollback()
             
             # Add is_human_verified column if it doesn't exist

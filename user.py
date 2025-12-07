@@ -657,22 +657,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     
     # PROPER USERNAME FETCHING - Priority: username > first_name > last_name > fallback
-    username = None
+    display_name = None
+    db_username = None  # Actual Telegram @username for database
+    
     try:
         # Try to get full chat info from Telegram
         chat_info = await context.bot.get_chat(user_id)
         if chat_info:
-            username = chat_info.username or chat_info.first_name or chat_info.last_name
-            if username:
-                logger.info(f"✅ Got username from bot.get_chat: {username} for user {user_id}")
+            db_username = chat_info.username  # This is the @username
+            display_name = chat_info.first_name or chat_info.username or chat_info.last_name
+            logger.info(f"✅ Got user info from bot.get_chat: @{db_username} / {display_name} for user {user_id}")
     except Exception as e:
         logger.warning(f"Could not fetch chat info for {user_id}: {e}")
     
     # Fallback to Update object
-    if not username:
-        username = user.username or user.first_name or user.last_name or f"User_{user_id}"
+    if not db_username:
+        db_username = user.username  # Actual @username from Telegram
+    if not display_name:
+        display_name = user.first_name or user.username or user.last_name or f"User_{user_id}"
     
-    logger.info(f"👤 User {user_id} display name: {username}")
+    logger.info(f"👤 User {user_id} - DB username: @{db_username}, Display: {display_name}")
 
     # WORKER REDIRECT
     if is_worker(user_id) and not is_primary_admin(user_id):
@@ -904,11 +908,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"⚠️ Could not check column info: {e}")
             
-            # Ensure user exists
+            # Ensure user exists and update username AND first_name
             c.execute("""
-                INSERT INTO users (user_id, username, language, is_reseller) VALUES (%s, %s, 'en', FALSE)
-                ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
-            """, (user_id, username))
+                INSERT INTO users (user_id, username, first_name, language, is_reseller) 
+                VALUES (%s, %s, %s, 'en', FALSE)
+                ON CONFLICT(user_id) DO UPDATE SET 
+                    username=excluded.username,
+                    first_name=excluded.first_name
+            """, (user_id, db_username, user.first_name))
             # Get language
             c.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
             result = c.fetchone()
@@ -934,7 +941,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Build and Send/Edit Menu
     lang, lang_data = _get_lang_data(context)
-    full_welcome, reply_markup = _build_start_menu_content(user_id, username, lang_data, context, user)
+    full_welcome, reply_markup = _build_start_menu_content(user_id, display_name, lang_data, context, user)
 
     if is_callback:
         query = update.callback_query
