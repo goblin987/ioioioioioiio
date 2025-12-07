@@ -6716,7 +6716,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         
         async function pollPayment(paymentId) {
             try {
-                const response = await fetch(`/webapp/api/check_payment/${paymentId}`);
+                const response = await fetch(`/webapp_fresh/api/check_payment/${paymentId}`);
                 const data = await response.json();
                 
                 if(data.status === 'paid') {
