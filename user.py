@@ -109,6 +109,7 @@ SUPPORTED_CRYPTO = {
 # --- Helper Function to Build Start Menu ---
 def _build_start_menu_content(user_id: int, username: str, lang_data: dict, context: ContextTypes.DEFAULT_TYPE, user_obj=None) -> tuple[str, InlineKeyboardMarkup]:
     """Builds the text and keyboard for the start menu using provided lang_data."""
+    logger.info(f"🚀 BUILD 003780b - Building menu for user {user_id}")
     logger.debug(f"_build_start_menu_content: Building menu for user {user_id} with lang_data.")
 
     balance, purchases, basket_count = Decimal('0.0'), 0, 0
