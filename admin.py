@@ -6507,6 +6507,11 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
     # Clear state
     context.user_data.pop('state', None)
     
+    # Strip @ symbol if present
+    search_term = search_term.strip()
+    if search_term.startswith('@'):
+        search_term = search_term[1:]  # Remove the @ prefix
+    
     # Try to find user by username or user ID
     conn = None
     users_found = []
@@ -6526,6 +6531,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
         else:
             # Search by username OR first_name (partial match)
             search_pattern = f"%{search_term}%"
+            logger.info(f"🔍 Searching for username pattern: '{search_pattern}'")
             try:
                 c.execute("""
                     SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
@@ -6542,6 +6548,11 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                 # Fallback: first_name column might not exist yet
                 if "first_name" in str(first_name_err).lower() or "column" in str(first_name_err).lower():
                     logger.warning(f"first_name column doesn't exist, searching username only")
+                    # Debug: Show a sample of usernames in the database
+                    c.execute("SELECT user_id, username FROM users WHERE username IS NOT NULL LIMIT 5")
+                    sample_users = c.fetchall()
+                    logger.info(f"📋 Sample usernames in DB: {sample_users}")
+                    
                     c.execute("""
                         SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
                         FROM users 
@@ -6549,6 +6560,7 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                         LIMIT 10
                     """, (search_pattern,))
                     users_found = c.fetchall()
+                    logger.info(f"🔎 Search results for '{search_pattern}': {len(users_found)} users found")
                 else:
                     raise  # Re-raise if it's a different error
         
