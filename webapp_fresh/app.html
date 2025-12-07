@@ -6071,10 +6071,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 // Staggered Animation
                 card.style.animationDelay = `${index * 0.05}s`;
                 
-                const countBadge = p.count > 1 ? `<div style="position:absolute; top:5px; right:5px; background:var(--gta-gold); color:#000; padding:2px 6px; font-size:12px; border-radius:4px; font-weight:bold;">x${p.count}</div>` : '';
+                // Remove stock count badge - no longer showing
                 
                 card.innerHTML = `
-                    ${countBadge}
                     <div class="product-emoji">${getProductEmoji(p.type, p.display_name)}</div>
                     <div class="product-name">${p.display_name}</div>
                     <div class="product-details">${p.size} | ${p.city}${p.district ? ' | ' + p.district : ''}</div>

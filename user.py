@@ -655,7 +655,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     is_callback = update.callback_query is not None
     user_id = user.id
-    username = user.username or user.first_name or f"User_{user_id}"
+    
+    # PROPER USERNAME FETCHING - Priority: username > first_name > last_name > fallback
+    username = None
+    try:
+        # Try to get full chat info from Telegram
+        chat_info = await context.bot.get_chat(user_id)
+        if chat_info:
+            username = chat_info.username or chat_info.first_name or chat_info.last_name
+            if username:
+                logger.info(f"✅ Got username from bot.get_chat: {username} for user {user_id}")
+    except Exception as e:
+        logger.warning(f"Could not fetch chat info for {user_id}: {e}")
+    
+    # Fallback to Update object
+    if not username:
+        username = user.username or user.first_name or user.last_name or f"User_{user_id}"
+    
+    logger.info(f"👤 User {user_id} display name: {username}")
 
     # WORKER REDIRECT
     if is_worker(user_id) and not is_primary_admin(user_id):
