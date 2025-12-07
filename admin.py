@@ -6536,6 +6536,9 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                 """, (search_pattern, search_pattern))
                 users_found = c.fetchall()
             except Exception as first_name_err:
+                # Rollback the failed transaction BEFORE trying fallback
+                conn.rollback()
+                
                 # Fallback: first_name column might not exist yet
                 if "first_name" in str(first_name_err).lower() or "column" in str(first_name_err).lower():
                     logger.warning(f"first_name column doesn't exist, searching username only")
