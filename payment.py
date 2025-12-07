@@ -977,12 +977,12 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
 
             # Product stock successfully decremented. Proceed to record purchase using snapshot data.
             # Details from snapshot:
-            item_original_price_decimal = Decimal(str(item_snapshot['price'])) # 'price' in snapshot is original price
-            item_product_type = item_snapshot['product_type']
-            item_name = item_snapshot['name']
-            item_size = item_snapshot['size']
-            item_city = item_snapshot['city'] 
-            item_district = item_snapshot['district'] 
+            item_original_price_decimal = Decimal(str(item_snapshot.get('price', 0))) 
+            item_product_type = item_snapshot.get('product_type', 'Product')
+            item_name = item_snapshot.get('name', 'Unknown Product')
+            item_size = item_snapshot.get('size', '')
+            item_city = item_snapshot.get('city', '') 
+            item_district = item_snapshot.get('district', '') 
             item_original_text_pickup = item_snapshot.get('original_text')
 
             # BULLETPROOF: Calculate reseller discount with comprehensive error handling
@@ -1493,13 +1493,18 @@ To receive your products securely via encrypted chat, please:
 
         # Only return success if both database and media delivery were successful
         if media_delivery_successful:
+            # Clear basket in user_data if context is valid
+            if context and context.user_data is not None:
+                context.user_data['basket'] = []
+                context.user_data.pop('applied_discount', None)
             return True # Indicate complete success
         else:
             logger.critical(f"🚨 CRITICAL: Purchase {user_id} - Database updated but media delivery failed! Manual intervention required!")
             return False # Indicate partial failure
     else: # Purchase failed at DB level
-        context.user_data['basket'] = []
-        context.user_data.pop('applied_discount', None)
+        if context and context.user_data is not None:
+            context.user_data['basket'] = []
+            context.user_data.pop('applied_discount', None)
         if chat_id: await send_message_with_retry(context.bot, chat_id, lang_data.get("error_processing_purchase_contact_support", "❌ Error processing purchase."), parse_mode=None)
         return False
 

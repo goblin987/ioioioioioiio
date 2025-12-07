@@ -288,6 +288,17 @@ async def check_balance_only_payments(context):
                             item['product_id'] = item['id']
                         if 'type' in item and 'product_type' not in item:
                             item['product_type'] = item['type']
+                        # Extract size from name if missing (common pattern "Name - Size")
+                        if 'size' not in item or not item['size']:
+                            if ' - ' in item.get('name', ''):
+                                item['size'] = item['name'].split(' - ')[-1]
+                            else:
+                                item['size'] = ''
+                        # Ensure other fields exist
+                        if 'city' not in item: item['city'] = 'Unknown'
+                        if 'district' not in item: item['district'] = ''
+                        if 'name' not in item: item['name'] = 'Product'
+                        if 'price' not in item: item['price'] = 0.0
                 
                 # Call finalize_purchase from payment.py
                 from payment import _finalize_purchase
