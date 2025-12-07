@@ -1,5 +1,6 @@
 # --- START OF FILE main.py ---
 # Version: 2.8.1 - Fixed webapp URL to webapp_fresh
+# Build: 3d06e3b - Mini App Only Mode Fix
 
 import logging
 import asyncio
@@ -3940,7 +3941,8 @@ def main() -> None:
 
     try:
         logger.info("==================================================")
-        logger.info("🚀 STARTING BOTSHOP v3.0 - FINAL CACHE FIX DEPLOYMENT")
+        logger.info("🚀 STARTING BOTSHOP v3.0 - BUILD 3d06e3b")
+        logger.info("🚀 MINI APP ONLY MODE FIX DEPLOYED")
         logger.info("==================================================")
         logger.info("🔧 About to start main event loop...")
         logger.info("🔧 Starting main event loop...")
