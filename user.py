@@ -1001,8 +1001,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"start: Using existing language '{lang}' from context for user {user_id}.")
 
     # Build and Send/Edit Menu
-    lang, lang_data = _get_lang_data(context)
-    full_welcome, reply_markup = _build_start_menu_content(user_id, display_name, lang_data, context, user)
+    logger.info(f"🔍 ABOUT TO CALL _get_lang_data for user {user_id}")
+    try:
+        lang, lang_data = _get_lang_data(context)
+        logger.info(f"✅ _get_lang_data SUCCESS for user {user_id}, lang={lang}")
+    except Exception as e:
+        logger.error(f"❌ _get_lang_data FAILED for user {user_id}: {e}", exc_info=True)
+        raise
+    
+    logger.info(f"🔍 ABOUT TO CALL _build_start_menu_content for user {user_id}")
+    try:
+        full_welcome, reply_markup = _build_start_menu_content(user_id, display_name, lang_data, context, user)
+        logger.info(f"✅ _build_start_menu_content SUCCESS for user {user_id}")
+    except Exception as e:
+        logger.error(f"❌ _build_start_menu_content FAILED for user {user_id}: {e}", exc_info=True)
+        raise
 
     if is_callback:
         query = update.callback_query
