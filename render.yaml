@@ -11,3 +11,7 @@ services:
         value: 3.13.4
       - key: PYTHONDONTWRITEBYTECODE
         value: "1"
+    disk:
+      name: media-storage
+      mountPath: /opt/render/media
+      sizeGB: 10
