@@ -981,14 +981,39 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     # Get status bar based on purchases
     status_bar = get_user_status_bar(total_purchases)
     
-    # Check if Mini App mode with custom welcome text
+    # Check for custom welcome message from admin (for both bot and miniapp modes)
     from utils import get_bot_setting
     ui_mode_check = get_bot_setting("ui_mode", "bot")
-    custom_miniapp_welcome = get_bot_setting("miniapp_welcome_text", None)
     
-    if ui_mode_check == "miniapp" and custom_miniapp_welcome:
-        logger.info(f"📱 CLASSIC: Using custom Mini App welcome text for user {user_id}")
-        msg = custom_miniapp_welcome.format(
+    # Try to get custom welcome message from database
+    custom_welcome_text = None
+    try:
+        conn_temp = get_db_connection()
+        c_temp = conn_temp.cursor()
+        
+        # First check if there's a specific miniapp welcome text (for miniapp mode)
+        if ui_mode_check == "miniapp":
+            custom_miniapp_welcome = get_bot_setting("miniapp_welcome_text", None)
+            if custom_miniapp_welcome:
+                custom_welcome_text = custom_miniapp_welcome
+                logger.info(f"📱 CLASSIC: Using custom Mini App welcome text for user {user_id}")
+        
+        # If no custom miniapp text (or in bot mode), check for general custom welcome message
+        if not custom_welcome_text:
+            c_temp.execute("SELECT template_text FROM welcome_messages WHERE name = 'custom'")
+            result = c_temp.fetchone()
+            if result and result['template_text']:
+                custom_welcome_text = result['template_text']
+                logger.info(f"✏️ CLASSIC: Using custom welcome message from admin editor for user {user_id}")
+        
+        conn_temp.close()
+    except Exception as e:
+        logger.error(f"Error fetching custom welcome message: {e}")
+    
+    # Build welcome message
+    if custom_welcome_text:
+        # Use custom text with placeholder replacement
+        msg = custom_welcome_text.format(
             username=username,
             balance=f"{balance:.2f}",
             total_purchases=total_purchases,
@@ -996,7 +1021,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
             status=status_bar
         )
     else:
-        # Classic welcome message with translations
+        # Use default translated welcome message
         welcome_text = get_translation('welcome', user_language)
         status_text = get_translation('status_new', user_language)
         balance_text = get_translation('balance', user_language)
