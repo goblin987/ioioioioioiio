@@ -953,9 +953,21 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username, balance, total_purchases, basket, language FROM users WHERE user_id = %s", (user_id,))
+        c.execute("SELECT username, first_name, balance, total_purchases, basket, language FROM users WHERE user_id = %s", (user_id,))
         user_data = c.fetchone()
-        username = user_data['username'] if user_data else "User"
+        
+        # Build display name with proper fallback: first_name > @username > User_ID
+        if user_data:
+            # Priority: first_name, then @username, then User_ID
+            if user_data.get('first_name'):
+                username = user_data['first_name']
+            elif user_data.get('username'):
+                username = f"@{user_data['username']}"
+            else:
+                username = f"User_{user_id}"
+        else:
+            username = f"User_{user_id}"
+        
         balance = user_data['balance'] if user_data else 0.0
         total_purchases = user_data['total_purchases'] if user_data else 0
         basket_str = user_data['basket'] if user_data else ""
@@ -2302,9 +2314,20 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT username, balance FROM users WHERE user_id = %s", (user_id,))
+        c.execute("SELECT username, first_name, balance FROM users WHERE user_id = %s", (user_id,))
         user_data = c.fetchone()
-        username = user_data['username'] if user_data else "VIP Member"
+        
+        # Build display name with proper fallback: first_name > @username > VIP Member
+        if user_data:
+            if user_data.get('first_name'):
+                username = user_data['first_name']
+            elif user_data.get('username'):
+                username = f"@{user_data['username']}"
+            else:
+                username = "VIP Member"
+        else:
+            username = "VIP Member"
+            
         balance = user_data['balance'] if user_data else 0.0
     except Exception as e:
         logger.error(f"Error getting user data: {e}")
