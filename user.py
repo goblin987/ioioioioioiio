@@ -1,5 +1,9 @@
-# VERSION: 463ae15 - NUCLEAR CACHE CLEAR - Force Python recompile
+# VERSION: dda26bc - NUCLEAR CACHE CLEAR - Force Python recompile
 # FORCE RECOMPILE: Adding random comment to change bytecode hash
+# !!!! DEPLOY MARKER: 2025-12-08 00:05 UTC - FINAL FIX !!!!
+print("=" * 80)
+print("🚨 USER.PY LOADED - VERSION dda26bc - CACHE CLEARED")
+print("=" * 80)
 import sqlite3
 import time
 import logging
