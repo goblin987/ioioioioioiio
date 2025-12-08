@@ -3781,7 +3781,7 @@
             margin-top: 4px;
             letter-spacing: 1px;
         }
-        
+
         /* Quantity Badge */
         .item-quantity {
             position: absolute;
@@ -6100,7 +6100,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 return actualStock > 0 && (
                     p.name.toLowerCase().includes(term) || 
                     p.city.toLowerCase().includes(term)
-                );
+            );
             });
             renderProducts(filtered);
         }
@@ -6440,7 +6440,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             // 2. Check basket limit
             if(basket.length >= 10) {
                 if(window.charSystem) charSystem.show('cj', 'BASKET FULL! MAX 10 ITEMS.');
-                tg.showAlert('⚠️ Maximum 10 items per order');
+                safeAlert('⚠️ Maximum 10 items per order');
                 return;
             }
             
@@ -6448,7 +6448,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             const product = allProducts.find(p => p.id === id);
             if(!product) {
                 console.error('Product not found:', id);
-                tg.showAlert('⚠️ Product not found');
+                safeAlert('⚠️ Product not found');
                 return;
             }
             
@@ -6458,9 +6458,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(window.charSystem) charSystem.show('cj', 'OUT OF STOCK!');
                 // Show helpful message if it's a group
                 if(Array.isArray(ids)) {
-                     tg.showAlert(`⚠️ Max stock reached! You have all ${ids.length} available units in your basket.`);
+                     safeAlert(`⚠️ Max stock reached! You have all ${ids.length} available units in your basket.`);
                 } else {
-                     tg.showAlert(`⚠️ Only ${product.available} available.`);
+                     safeAlert(`⚠️ Only ${product.available} available.`);
                 }
                 return;
             }
@@ -6471,7 +6471,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const userId = user ? user.id : 0;
                 
                 if(!userId) {
-                    tg.showAlert('⚠️ Could not identify user');
+                    safeAlert('⚠️ Could not identify user');
                     return;
                 }
                 
@@ -6489,38 +6489,38 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 if(!data.success) {
                     // Product unavailable or race condition
                     if(window.charSystem) charSystem.show('cj', 'PRODUCT TAKEN!');
-                    tg.showAlert(data.error || '⚠️ Product unavailable');
+                    safeAlert(data.error || '⚠️ Product unavailable');
                     // Refresh products to update stock
                     await loadProducts();
                     return;
                 }
                 
                 // 6. Add to local basket with server timestamp
-                if(e) flyToCart(e);
+            if(e) flyToCart(e);
                 
                 // Haptic feedback
                 if(window.Telegram?.WebApp?.HapticFeedback) {
                     Telegram.WebApp.HapticFeedback.impactOccurred('medium');
                 }
-                
-                basket.push({
-                    id: id,
-                    name: name,
-                    price: price,
-                    city: product.city || 'Unknown',
-                    district: product.district || 'Unknown',
+            
+            basket.push({
+                id: id,
+                name: name,
+                price: price,
+                city: product.city || 'Unknown',
+                district: product.district || 'Unknown',
                     type: product.type || 'misc',
                     timestamp: data.timestamp // Server timestamp for reservation tracking
-                });
-                
-                updateBasketUI();
-                currentDiscount = null;
-                if(window.charSystem) charSystem.show('cj', 'NICE CHOICE!');
-                const nav = document.getElementById('nav-basket');
-                if(nav) {
-                    nav.style.color = '#fff';
-                    setTimeout(() => nav.style.color = '', 200);
-                }
+            });
+            
+            updateBasketUI();
+            currentDiscount = null;
+            if(window.charSystem) charSystem.show('cj', 'NICE CHOICE!');
+            const nav = document.getElementById('nav-basket');
+            if(nav) {
+                nav.style.color = '#fff';
+                setTimeout(() => nav.style.color = '', 200);
+            }
                 
                 // Update product stock in allProducts array
                 if(data.product) {
@@ -6532,7 +6532,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
             } catch(err) {
                 console.error('Error adding to basket:', err);
-                tg.showAlert('⚠️ Network error. Please try again.');
+                safeAlert('⚠️ Network error. Please try again.');
             }
         }
         
@@ -6624,7 +6624,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 const original = el.style.color;
                 el.style.color = '#fff';
                 setTimeout(() => el.style.color = original, 200);
-                tg.showAlert("COPIED TO CLIPBOARD");
+                safeAlert("COPIED TO CLIPBOARD");
             });
         }
 
@@ -6666,7 +6666,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         activePaymentId = data.payment_id;
                         
                         // Show loading overlay
-                        tg.showAlert("✅ Paid with balance! Processing order...");
+                        safeAlert("✅ Paid with balance! Processing order...");
                         
                         // Poll once immediately to trigger purchase finalization
                         pollInterval = setInterval(() => pollPayment(data.payment_id), 1000);
@@ -6732,7 +6732,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     if(data.details && Array.isArray(data.details)) {
                         errorMsg = data.details.join('\n');
                     }
-                    tg.showAlert("⚠️ " + errorMsg);
+                    safeAlert("⚠️ " + errorMsg);
                     
                     // If items are unavailable, reload products to refresh availability
                     if(errorMsg.includes('unavailable') || errorMsg.includes('out of stock')) {
@@ -6741,7 +6741,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                     }
                 }
             } catch(e) {
-                tg.showAlert("Network Error: " + e.message);
+                safeAlert("Network Error: " + e.message);
             } finally {
                 if(btn) {
                     btn.innerText = originalText;
@@ -6769,10 +6769,10 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                         }
                         
                         // Show success alert
-                        tg.showAlert(`✅ Top-up successful! New balance: €${parseFloat(data.new_balance || 0).toFixed(2)}`);
+                        safeAlert(`✅ Top-up successful! New balance: €${parseFloat(data.new_balance || 0).toFixed(2)}`);
                     } else {
                         // Purchase success - show Mission Passed
-                        onPaymentSuccess();
+                    onPaymentSuccess();
                     }
                 } else if (data.status === 'expired' || data.status === 'refunded') {
                     clearInterval(pollInterval);
@@ -7414,7 +7414,7 @@ const CHAR_ASSETS = {
                 const userId = user ? user.id : 0;
                 
                 if(!userId) {
-                    tg.showAlert('⚠️ Could not identify user');
+                    safeAlert('⚠️ Could not identify user');
                     return;
                 }
                 
@@ -7438,7 +7438,7 @@ const CHAR_ASSETS = {
                     renderBasketContent();
                     if(currentDiscount) checkDiscounts(currentDiscount.code);
                 } else {
-                    tg.showAlert('⚠️ Error removing item');
+                    safeAlert('⚠️ Error removing item');
                 }
             } catch(err) {
                 console.error('Error removing from basket:', err);
