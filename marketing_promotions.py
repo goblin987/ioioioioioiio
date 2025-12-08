@@ -981,18 +981,33 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     # Get status bar based on purchases
     status_bar = get_user_status_bar(total_purchases)
     
-    # Classic welcome message with translations
-    welcome_text = get_translation('welcome', user_language)
-    status_text = get_translation('status_new', user_language)
-    balance_text = get_translation('balance', user_language)
-    total_purchases_text = get_translation('total_purchases', user_language)
-    basket_items_text = get_translation('basket_items', user_language)
+    # Check if Mini App mode with custom welcome text
+    from utils import get_bot_setting
+    ui_mode_check = get_bot_setting("ui_mode", "bot")
+    custom_miniapp_welcome = get_bot_setting("miniapp_welcome_text", None)
     
-    msg = f"{welcome_text}, {username}!\n\n"
-    msg += f"👤 {status_text.replace('New', status_bar).replace('Naujas', status_bar).replace('Новый', status_bar)}\n"
-    msg += f"💰 {balance_text}: {balance:.2f} EUR\n"
-    msg += f"🛒 {total_purchases_text}: {total_purchases}\n"
-    msg += f"🛍️ {basket_items_text}: {basket_items}"
+    if ui_mode_check == "miniapp" and custom_miniapp_welcome:
+        logger.info(f"📱 CLASSIC: Using custom Mini App welcome text for user {user_id}")
+        msg = custom_miniapp_welcome.format(
+            username=username,
+            balance=f"{balance:.2f}",
+            total_purchases=total_purchases,
+            basket_items=basket_items,
+            status=status_bar
+        )
+    else:
+        # Classic welcome message with translations
+        welcome_text = get_translation('welcome', user_language)
+        status_text = get_translation('status_new', user_language)
+        balance_text = get_translation('balance', user_language)
+        total_purchases_text = get_translation('total_purchases', user_language)
+        basket_items_text = get_translation('basket_items', user_language)
+        
+        msg = f"{welcome_text}, {username}!\n\n"
+        msg += f"👤 {status_text.replace('New', status_bar).replace('Naujas', status_bar).replace('Новый', status_bar)}\n"
+        msg += f"💰 {balance_text}: {balance:.2f} EUR\n"
+        msg += f"🛒 {total_purchases_text}: {total_purchases}\n"
+        msg += f"🛍️ {basket_items_text}: {basket_items}"
     
     # YOLO MODE: Hardcoded 6-button classic layout exactly as requested
     keyboard = []
@@ -1014,14 +1029,31 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     price_list_btn = get_translation('price_list', user_language)
     language_btn = get_translation('language', user_language)
     
-    keyboard.extend([
-        [InlineKeyboardButton(shop_btn, callback_data="shop")],
-        [InlineKeyboardButton(profile_btn, callback_data="profile"), 
-         InlineKeyboardButton(top_up_btn, callback_data="refill")],
-        [InlineKeyboardButton(reviews_btn, callback_data="reviews"),
-         InlineKeyboardButton(price_list_btn, callback_data="price_list"),
-         InlineKeyboardButton(language_btn, callback_data="language")]
-    ])
+    # Check UI mode - hide Shop button if in Mini App Only mode
+    from utils import get_bot_setting
+    ui_mode = get_bot_setting("ui_mode", "bot")
+    logger.info(f"🎨 CLASSIC WELCOME: ui_mode={ui_mode} for user {user_id}")
+    
+    if ui_mode == "bot":
+        # Full bot UI mode - show all buttons
+        keyboard.extend([
+            [InlineKeyboardButton(shop_btn, callback_data="shop")],
+            [InlineKeyboardButton(profile_btn, callback_data="profile"), 
+             InlineKeyboardButton(top_up_btn, callback_data="refill")],
+            [InlineKeyboardButton(reviews_btn, callback_data="reviews"),
+             InlineKeyboardButton(price_list_btn, callback_data="price_list"),
+             InlineKeyboardButton(language_btn, callback_data="language")]
+        ])
+    else:
+        # Mini App Only mode - hide Shop button
+        logger.info(f"🎨 CLASSIC: Mini App Only mode - hiding Shop button")
+        keyboard.extend([
+            [InlineKeyboardButton(profile_btn, callback_data="profile"), 
+             InlineKeyboardButton(top_up_btn, callback_data="refill")],
+            [InlineKeyboardButton(reviews_btn, callback_data="reviews"),
+             InlineKeyboardButton(price_list_btn, callback_data="price_list"),
+             InlineKeyboardButton(language_btn, callback_data="language")]
+        ])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
