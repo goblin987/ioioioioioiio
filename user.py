@@ -731,6 +731,43 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"👤 User {user_id} - DB username: @{db_username}, Display: {display_name}")
 
+    # IMMEDIATELY save username to database (before any early returns!)
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Try to update with first_name, fallback if column doesn't exist
+        try:
+            first_name_to_store = display_name if display_name else f"User_{user_id}"
+            c.execute("""
+                INSERT INTO users (user_id, username, first_name, language, is_reseller) 
+                VALUES (%s, %s, %s, 'en', FALSE)
+                ON CONFLICT(user_id) DO UPDATE SET 
+                    username=COALESCE(excluded.username, users.username),
+                    first_name=COALESCE(excluded.first_name, users.first_name)
+            """, (user_id, db_username, first_name_to_store))
+            conn.commit()
+            logger.info(f"✅ SAVED username to DB: user={user_id}, username={db_username}, first_name={first_name_to_store}")
+        except Exception as insert_err:
+            if "first_name" in str(insert_err).lower() or "column" in str(insert_err).lower():
+                logger.warning(f"first_name column doesn't exist, saving username only")
+                conn.rollback()
+                c.execute("""
+                    INSERT INTO users (user_id, username, language, is_reseller) 
+                    VALUES (%s, %s, 'en', FALSE)
+                    ON CONFLICT(user_id) DO UPDATE SET username=COALESCE(excluded.username, users.username)
+                """, (user_id, db_username))
+                conn.commit()
+                logger.info(f"✅ SAVED username to DB (no first_name): user={user_id}, username={db_username}")
+            else:
+                logger.error(f"❌ Failed to save username: {insert_err}")
+    except Exception as e:
+        logger.error(f"❌ DB error saving username for {user_id}: {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
+
     # WORKER REDIRECT
     if is_worker(user_id) and not is_primary_admin(user_id):
         return await handle_worker_dashboard(update, context)
