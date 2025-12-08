@@ -959,21 +959,33 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
             c.execute("SELECT username, first_name, balance, total_purchases, basket, language FROM users WHERE user_id = %s", (user_id,))
             user_data = c.fetchone()
             has_first_name_col = True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"first_name column query failed: {e}, trying without it")
             conn.rollback()
             c.execute("SELECT username, balance, total_purchases, basket, language FROM users WHERE user_id = %s", (user_id,))
             user_data = c.fetchone()
             has_first_name_col = False
+        
+        # DEBUG: Log what we got from database
+        if user_data:
+            db_username = user_data.get('username')
+            db_first_name = user_data.get('first_name') if has_first_name_col else None
+            logger.info(f"🔍 DB READ for user {user_id}: username={repr(db_username)}, first_name={repr(db_first_name)}")
+        else:
+            logger.warning(f"⚠️ No user_data found in DB for user {user_id}")
         
         # Build display name with proper fallback: first_name > @username > User_ID
         if user_data:
             # Priority: first_name (if column exists), then @username, then User_ID
             if has_first_name_col and user_data.get('first_name'):
                 username = user_data['first_name']
+                logger.info(f"✅ Using first_name for user {user_id}: {username}")
             elif user_data.get('username'):
                 username = f"@{user_data['username']}"
+                logger.info(f"✅ Using @username for user {user_id}: {username}")
             else:
                 username = f"User_{user_id}"
+                logger.warning(f"⚠️ No username/first_name in DB, falling back to User_ID for {user_id}")
         else:
             username = f"User_{user_id}"
         
