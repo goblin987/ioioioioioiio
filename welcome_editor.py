@@ -413,6 +413,15 @@ async def handle_welcome_text_message(update: Update, context: ContextTypes.DEFA
         conn = get_db_connection()
         c = conn.cursor()
         
+        # Ensure welcome_messages table exists
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS welcome_messages (
+                name TEXT PRIMARY KEY,
+                template_text TEXT NOT NULL,
+                description TEXT
+            )
+        """)
+        
         # Update the welcome message using existing structure
         c.execute("""
             INSERT INTO welcome_messages (name, template_text, description)
@@ -428,6 +437,7 @@ async def handle_welcome_text_message(update: Update, context: ContextTypes.DEFA
         """)
         
         conn.commit()
+        logger.info(f"✅ Welcome message saved successfully for admin {user_id}")
         
         # Clear state
         context.user_data.pop('state', None)
@@ -449,8 +459,8 @@ async def handle_welcome_text_message(update: Update, context: ContextTypes.DEFA
             reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
         
     except Exception as e:
-        logger.error(f"Error saving welcome message: {e}")
-        await send_message_with_retry(context.bot, chat_id, "❌ Error saving welcome message. Please try again.", parse_mode=None)
+        logger.error(f"❌ Error saving welcome message: {e}", exc_info=True)
+        await send_message_with_retry(context.bot, chat_id, f"❌ Error saving welcome message: {str(e)}\n\nPlease check server logs.", parse_mode=None)
     finally:
         if conn:
             conn.close()

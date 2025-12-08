@@ -1044,7 +1044,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     # Add Web App Button
     import time
     webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
-    keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
+    keyboard.append([InlineKeyboardButton(text="🛍️ Shop", web_app=WebAppInfo(url=webapp_url))])
     
     # Classic 6-button layout with translations
     shop_btn = get_translation('shop', user_language)
@@ -1054,7 +1054,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     price_list_btn = get_translation('price_list', user_language)
     language_btn = get_translation('language', user_language)
     
-    # Check UI mode - Mini App Only mode shows ONLY the Open Shop App button
+    # Check UI mode - Mini App Only mode shows ONLY the Shop button
     from utils import get_bot_setting
     ui_mode = get_bot_setting("ui_mode", "bot")
     logger.info(f"🎨 CLASSIC WELCOME: ui_mode={ui_mode} for user {user_id}")
@@ -1070,9 +1070,9 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
              InlineKeyboardButton(language_btn, callback_data="language")]
         ])
     else:
-        # Mini App Only mode - show ONLY Open Shop App button (already added above)
-        logger.info(f"🎨 CLASSIC: Mini App Only mode - hiding ALL bot UI buttons, keeping only Open Shop App")
-        # Don't add any additional buttons - just leave the Open Shop App button
+        # Mini App Only mode - show ONLY Shop button (already added above)
+        logger.info(f"🎨 CLASSIC: Mini App Only mode - hiding ALL bot UI buttons, keeping only Shop button")
+        # Don't add any additional buttons - just leave the Shop button
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1111,7 +1111,7 @@ async def handle_minimalist_welcome(update: Update, context: ContextTypes.DEFAUL
     # Add Web App Button
     import time
     webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
-    keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
+    keyboard.append([InlineKeyboardButton(text="🛍️ Shop", web_app=WebAppInfo(url=webapp_url))])
     
     # Add regular user buttons
     keyboard.extend([
@@ -2332,7 +2332,7 @@ async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TY
     # Add Web App Button
     import time
     webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
-    keyboard.append([InlineKeyboardButton(text="🌐 Open Shop App", web_app=WebAppInfo(url=webapp_url))])
+    keyboard.append([InlineKeyboardButton(text="🛍️ Shop", web_app=WebAppInfo(url=webapp_url))])
     
     # Modern premium button layout
     keyboard.extend([
