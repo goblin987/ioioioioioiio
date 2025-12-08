@@ -2802,9 +2802,9 @@ def webapp_get_products():
                 valid_districts[cid] = set()
             valid_districts[cid].add(dname)
 
-        # Fetch products
+        # Fetch products with reservation count
         c.execute("""
-            SELECT id, name, price, size, product_type, city, district, available
+            SELECT id, name, price, size, product_type, city, district, available, COALESCE(reserved, 0) as reserved
             FROM products
             WHERE available > 0
             ORDER BY city, district, product_type, price
@@ -2837,7 +2837,8 @@ def webapp_get_products():
                 'type': row['product_type'],
                 'city': row['city'],
                 'district': row['district'],
-                'available': row['available']
+                'available': row['available'],
+                'reserved': row['reserved']  # Include reservation count for stock calculation
             })
             
         conn.close()
