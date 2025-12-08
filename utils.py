@@ -4019,10 +4019,12 @@ def set_bot_setting(key: str, value: str):
         """, (key, value))
         conn.commit()
         logger.info(f"Bot setting '{key}' set to '{value}'")
+        return True  # SUCCESS
     except Exception as e:
         logger.error(f"Error writing bot setting {key}: {e}")
         if conn and conn.status == 1:
             conn.rollback()
+        return False  # FAILURE
     finally:
         if conn:
             conn.close()
