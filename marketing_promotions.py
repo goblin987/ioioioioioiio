@@ -1029,7 +1029,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
     price_list_btn = get_translation('price_list', user_language)
     language_btn = get_translation('language', user_language)
     
-    # Check UI mode - hide Shop button if in Mini App Only mode
+    # Check UI mode - Mini App Only mode shows ONLY the Open Shop App button
     from utils import get_bot_setting
     ui_mode = get_bot_setting("ui_mode", "bot")
     logger.info(f"🎨 CLASSIC WELCOME: ui_mode={ui_mode} for user {user_id}")
@@ -1045,15 +1045,9 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
              InlineKeyboardButton(language_btn, callback_data="language")]
         ])
     else:
-        # Mini App Only mode - hide Shop button
-        logger.info(f"🎨 CLASSIC: Mini App Only mode - hiding Shop button")
-        keyboard.extend([
-            [InlineKeyboardButton(profile_btn, callback_data="profile"), 
-             InlineKeyboardButton(top_up_btn, callback_data="refill")],
-            [InlineKeyboardButton(reviews_btn, callback_data="reviews"),
-             InlineKeyboardButton(price_list_btn, callback_data="price_list"),
-             InlineKeyboardButton(language_btn, callback_data="language")]
-        ])
+        # Mini App Only mode - show ONLY Open Shop App button (already added above)
+        logger.info(f"🎨 CLASSIC: Mini App Only mode - hiding ALL bot UI buttons, keeping only Open Shop App")
+        # Don't add any additional buttons - just leave the Open Shop App button
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
