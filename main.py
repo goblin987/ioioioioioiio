@@ -3622,8 +3622,8 @@ def webapp_static(filename):
         logger.info(f"🔀 Redirecting {filename} request to dynamic route")
         return webapp_index()
     
-    # Serve other static files normally
-    response = send_from_directory('webapp', filename)
+    # Serve other static files normally from webapp_fresh directory
+    response = send_from_directory('webapp_fresh', filename)
     # Add no-cache headers for all static files too
     response.headers["Cache-Control"] = "no-cache, max-age=0"
     return response
