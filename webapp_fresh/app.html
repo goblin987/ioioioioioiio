@@ -5522,17 +5522,28 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         }
 
         function safeAlert(msg) {
-            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showPopup) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Notice',
-                    message: msg,
-                    buttons: [{type: 'ok'}]
-                });
-            } else if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
-                window.Telegram.WebApp.showAlert(msg);
-            } else {
-                alert(msg);
+            // Use try-catch because Telegram methods exist but throw errors in browser
+            try {
+                if(window.Telegram && window.Telegram.WebApp) {
+                    // Check version - showPopup requires version 6.2+
+                    const version = parseFloat(window.Telegram.WebApp.version || '0');
+                    if(version >= 6.2 && window.Telegram.WebApp.showPopup) {
+                        window.Telegram.WebApp.showPopup({
+                            title: 'Notice',
+                            message: msg,
+                            buttons: [{type: 'ok'}]
+                        });
+                        return;
+                    } else if(version >= 6.1 && window.Telegram.WebApp.showAlert) {
+                        window.Telegram.WebApp.showAlert(msg);
+                        return;
+                    }
+                }
+            } catch(e) {
+                console.log('Telegram popup not available, using fallback');
             }
+            // Fallback to native alert
+            alert(msg);
         }
 
         async function initRefill(amount) {

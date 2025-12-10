@@ -1,0 +1,15 @@
+# Binary files - prevent git from modifying line endings
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.mp3 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
