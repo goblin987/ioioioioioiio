@@ -6533,9 +6533,9 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
             search_pattern = f"%{search_term}%"
             logger.info(f"🔍 Searching for username pattern: '{search_pattern}'")
             try:
-                c.execute("""
-                    SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
-                    FROM users 
+            c.execute("""
+                SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
+                FROM users 
                     WHERE LOWER(COALESCE(username, '')) LIKE LOWER(%s) 
                        OR LOWER(COALESCE(first_name, '')) LIKE LOWER(%s)
                     LIMIT 10
@@ -6561,9 +6561,9 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
                         SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
                         FROM users 
                         WHERE LOWER(COALESCE(username, '')) LIKE LOWER(%s)
-                        LIMIT 10
-                    """, (search_pattern,))
-                    users_found = c.fetchall()
+                LIMIT 10
+            """, (search_pattern,))
+            users_found = c.fetchall()
                     logger.info(f"🔎 Search results for '{search_pattern}': {len(users_found)} users found")
                 else:
                     raise  # Re-raise if it's a different error

@@ -1503,8 +1503,8 @@ To receive your products securely via encrypted chat, please:
             return False # Indicate partial failure
     else: # Purchase failed at DB level
         if context and context.user_data is not None:
-            context.user_data['basket'] = []
-            context.user_data.pop('applied_discount', None)
+        context.user_data['basket'] = []
+        context.user_data.pop('applied_discount', None)
         if chat_id: 
             await send_message_with_retry(context.bot, chat_id, lang_data.get("error_processing_purchase_contact_support", "❌ Error processing purchase."), parse_mode=None)
         return False

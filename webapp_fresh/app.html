@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.8-RESERVATION-SYSTEM';
+        const APP_VERSION = '3.9-COLD-START-FIX';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -59,10 +59,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
+    <!-- Bungee as fallback for corrupted Pricedown font -->
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
     <style>
         @font-face {
             font-family: 'Pricedown';
-            src: url('/webapp_fresh/pricedown.woff') format('woff');
+            src: url('/webapp_fresh/pricedown.woff2') format('woff2'),
+                 url('/webapp_fresh/pricedown.woff') format('woff');
+            font-display: swap;
+        }
+        
+        /* Fallback font stack - Bungee as backup */
+        .gta-font {
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
         }
         
         :root {
@@ -96,7 +105,7 @@
             padding: 0;
             background-color: var(--gta-black);
             color: #fff;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             overflow: hidden;
             height: 100vh;
             display: flex;
@@ -159,7 +168,7 @@
         }
 
         .zone-text {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 32px;
             color: #fff;
             letter-spacing: 2px;
@@ -171,7 +180,7 @@
         .money {
             color: var(--gta-green);
             font-size: 26px;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             text-shadow: 2px 2px 0 #000;
             letter-spacing: 1px;
         }
@@ -359,7 +368,7 @@
 
         .cart-header-title {
             font-size: 28px;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             color: #fff;
             text-shadow: 0 2px 15px rgba(63, 165, 53, 0.5);
             display: flex; align-items: center; gap: 10px;
@@ -492,7 +501,7 @@
         }
         
         .cart-item-price {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 24px;
             color: var(--gta-green);
             text-shadow: 0 0 10px rgba(63, 165, 53, 0.4);
@@ -1100,7 +1109,7 @@
         }
         
         .district-header {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 42px;
             color: var(--gta-gold);
             margin-bottom: 20px;
@@ -1381,7 +1390,7 @@
         }
 
         .marker-label {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             color: #fff;
             font-size: 22px;
             text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
@@ -1452,7 +1461,7 @@
         .dm-header {
             background: var(--gta-green);
             color: #000;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 28px;
             padding: 10px;
             text-align: center;
@@ -1565,7 +1574,7 @@
         }
         
         .district-header {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 42px;
             color: var(--gta-gold);
             margin-bottom: 20px;
@@ -1983,7 +1992,7 @@
             border: none;
             color: var(--gta-gold);
             padding: 0;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 48px;
             line-height: 0.9;
             text-shadow: 3px 3px 0 #000; /* Keep hard shadow, cheap */
@@ -2037,7 +2046,7 @@
         @keyframes wastedFade { from { opacity: 0; } to { opacity: 1; } }
         
         .wasted-text {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 80px;
             color: #fff; /* GTA Wasted is usually white/grey with black outline, rarely red in older ones */
             text-shadow: 4px 4px 0 #000;
@@ -2213,7 +2222,7 @@
         }
 
         .marker-label {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             color: #fff;
             font-size: 22px;
             text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
@@ -2281,7 +2290,7 @@
         .dm-header {
             background: var(--gta-green);
             color: #000;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 28px;
             padding: 10px;
             text-align: center;
@@ -3516,7 +3525,7 @@
         }
 
         .cim-price {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 22px;
             color: var(--gta-green);
             text-shadow: 1px 1px 0 #000;
@@ -3555,7 +3564,7 @@
         }
 
         .cim-price {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 18px;
             color: var(--gta-green);
             letter-spacing: 0.5px;
@@ -3774,7 +3783,7 @@
         }
 
         .item-price {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 28px;
             color: var(--gta-green);
             text-shadow: 2px 2px 0 #000, 0 0 10px rgba(92, 184, 92, 0.5);
@@ -3838,7 +3847,7 @@
         }
 
         .respect-plus {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             color: var(--gta-green);
             font-size: 24px;
             animation: respectSlide 3s ease forwards;
@@ -3974,7 +3983,7 @@
             border-top: 1px dashed #333;
             margin-top: 8px;
             padding-top: 10px;
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 24px;
             color: var(--gta-gold);
         }
@@ -4133,7 +4142,7 @@
         }
 
         .mp-text {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 90px;
             color: #C4A000; /* Authentic Gold */
             text-shadow: 
@@ -4153,7 +4162,7 @@
         }
 
         .mp-sub {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 40px;
             color: #fff;
             text-shadow: 
@@ -4174,7 +4183,7 @@
         }
         
         .mp-instruction {
-            font-family: 'Pricedown', sans-serif;
+            font-family: 'Pricedown', 'Bungee', 'Impact', sans-serif;
             font-size: 24px;
             color: #FFD700; /* Bright gold for visibility */
             text-shadow: 
@@ -5941,7 +5950,12 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             });
         }
 
-        async function loadProducts() {
+        // Track retry attempts for cold start handling
+        let loadRetryCount = 0;
+        const MAX_RETRIES = 3;
+        const RETRY_DELAYS = [2000, 4000, 6000]; // Increasing delays
+        
+        async function loadProducts(isAutoRetry = false) {
             const grid = document.getElementById('product-grid');
             
             // CACHE STRATEGY: Instant Load
@@ -5975,11 +5989,21 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
 
             const loader = document.getElementById('stock-loader');
+            
+            // Show connecting message with retry info
+            if(!cached) {
+                if(isAutoRetry) {
+                    grid.innerHTML = `<div class="loading" style="color:var(--gta-gold)">🔄 CONNECTING... (${loadRetryCount}/${MAX_RETRIES})<br><small style="color:#888;font-size:12px;">Server waking up, please wait...</small></div>`;
+                } else {
+                    grid.innerHTML = '<div class="loading" style="color:var(--gta-gold)">⏳ CONNECTING...</div>';
+                }
+            }
             if(loader && !cached) loader.innerHTML = "SYNCING...";
             
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                // Increased timeout for cold start (10s instead of 4s)
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
                 // Fetch products AND locations in parallel with cache-busting
                 const cacheBuster = '?v=' + Date.now() + '&_=' + APP_VERSION;
@@ -5999,6 +6023,9 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 
                 const productsData = await productsRes.json();
                 const locationsData = await locationsRes.json();
+                
+                // Reset retry count on success
+                loadRetryCount = 0;
                 
                 // Load locations
                 if(locationsData.success && locationsData.locations) {
@@ -6023,7 +6050,30 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
                 }
             } catch (e) {
                 console.error("Fetch error:", e);
-                if(!cached) grid.innerHTML = '<div class="loading" style="color:red">OFFLINE<br><button onclick="loadProducts()" style="background:#333;color:#fff;border:1px solid #fff;padding:8px 16px;cursor:pointer;font-family:\'Pricedown\',serif;">RETRY</button></div>';
+                
+                // Auto-retry logic for cold start
+                if(loadRetryCount < MAX_RETRIES) {
+                    loadRetryCount++;
+                    const delay = RETRY_DELAYS[loadRetryCount - 1] || 4000;
+                    console.log(`🔄 Auto-retry ${loadRetryCount}/${MAX_RETRIES} in ${delay}ms...`);
+                    
+                    if(!cached) {
+                        grid.innerHTML = `<div class="loading" style="color:var(--gta-gold)">🔄 WAKING UP SERVER... (${loadRetryCount}/${MAX_RETRIES})<br><small style="color:#888;font-size:12px;">Retry in ${delay/1000}s...</small></div>`;
+                    }
+                    
+                    setTimeout(() => loadProducts(true), delay);
+                } else {
+                    // All retries exhausted - show manual retry button
+                    if(!cached) {
+                        grid.innerHTML = `<div class="loading" style="color:red">
+                            ⚠️ SERVER OFFLINE<br>
+                            <small style="color:#888;font-size:12px;display:block;margin:8px 0;">Check connection or try again later</small>
+                            <button onclick="loadRetryCount=0;loadProducts()" style="background:var(--gta-green);color:#000;border:none;padding:10px 20px;cursor:pointer;font-family:'Pricedown','Bungee',sans-serif;font-size:16px;border-radius:4px;margin-top:8px;">
+                                🔄 RETRY
+                            </button>
+                        </div>`;
+                    }
+                }
             }
         }
 
