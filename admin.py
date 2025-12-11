@@ -6533,9 +6533,9 @@ async def handle_adm_search_username_message(update: Update, context: ContextTyp
             search_pattern = f"%{search_term}%"
             logger.info(f"🔍 Searching for username pattern: '{search_pattern}'")
             try:
-            c.execute("""
-                SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
-                FROM users 
+                c.execute("""
+                    SELECT user_id, username, balance, total_purchases, is_banned, is_reseller 
+                    FROM users 
                     WHERE LOWER(COALESCE(username, '')) LIKE LOWER(%s) 
                        OR LOWER(COALESCE(first_name, '')) LIKE LOWER(%s)
                     LIMIT 10
