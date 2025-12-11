@@ -10,7 +10,7 @@
     <!-- Version check and cache nuke -->
     <script>
         // IMMEDIATE CACHE NUKE - Runs before anything else
-        const APP_VERSION = '3.9-COLD-START-FIX';
+        const APP_VERSION = '4.0-POST-PURCHASE-REFRESH';
         const lastVersion = localStorage.getItem('app_version_check');
         
         if(lastVersion !== APP_VERSION) {
@@ -6877,6 +6877,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         function onPaymentSuccess() {
             closeInvoice();
             basket = []; // Clear basket
+            localStorage.removeItem('basket_cache'); // Clear basket cache
             updateBasketUI();
             
             // Pause Radio for Mission Passed
@@ -6903,10 +6904,16 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             void overlay.offsetWidth;
             overlay.classList.add('mp-active');
             
-            // Hide Mission Passed after 6 seconds (extended to allow reading instruction)
+            // Hide Mission Passed after 6 seconds, then refresh data
             setTimeout(() => {
                 overlay.classList.remove('mp-active');
                 overlay.style.display = 'none';
+                
+                // 🔄 CRITICAL: Refresh products and balance after purchase
+                console.log('🔄 Refreshing products and balance after purchase...');
+                localStorage.removeItem('shop_cache'); // Force fresh product load
+                loadProducts(); // Reload products to show updated stock
+                loadUserBalance(); // Update balance display
             }, 6000);
         }
 

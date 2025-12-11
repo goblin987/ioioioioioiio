@@ -448,14 +448,26 @@ async def check_solana_deposits(context):
                             # Deduct balance if specified
                             if balance_to_deduct > 0:
                                 try:
-                                    logger.info(f"💰 Deducting {balance_to_deduct} EUR from user {user_id} balance (auto-applied)")
-                                    c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s AND balance >= %s", 
-                                             (float(balance_to_deduct), user_id, float(balance_to_deduct)))
+                                    # Round to 2 decimal places to avoid floating point precision issues
+                                    balance_to_deduct_rounded = round(float(balance_to_deduct), 2)
+                                    logger.info(f"💰 Deducting {balance_to_deduct_rounded} EUR from user {user_id} balance (auto-applied)")
+                                    
+                                    # Use ROUND() in SQL as well to handle any precision issues in DB
+                                    c.execute("""
+                                        UPDATE users 
+                                        SET balance = ROUND(balance - %s, 2) 
+                                        WHERE user_id = %s AND ROUND(balance, 2) >= %s
+                                    """, (balance_to_deduct_rounded, user_id, balance_to_deduct_rounded))
+                                    
                                     if c.rowcount > 0:
                                         conn.commit()
-                                        logger.info(f"✅ Successfully deducted {balance_to_deduct} EUR balance for user {user_id}")
+                                        logger.info(f"✅ Successfully deducted {balance_to_deduct_rounded} EUR balance for user {user_id}")
                                     else:
-                                        logger.warning(f"⚠️ Could not deduct balance for user {user_id} - insufficient funds or user not found")
+                                        # Check actual balance for debugging
+                                        c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+                                        result = c.fetchone()
+                                        actual_balance = result[0] if result else 0
+                                        logger.warning(f"⚠️ Could not deduct balance for user {user_id} - actual balance: {actual_balance}, needed: {balance_to_deduct_rounded}")
                                 except Exception as balance_err:
                                     logger.error(f"Error deducting balance for user {user_id}: {balance_err}")
                                 

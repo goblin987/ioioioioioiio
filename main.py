@@ -2992,9 +2992,9 @@ def webapp_create_invoice():
         final_total_before_balance = base_total_after_reseller - code_discount_amount
         final_total_before_balance = max(Decimal('0.0'), final_total_before_balance)
         
-        # Apply balance deduction
-        balance_to_use = min(user_balance, final_total_before_balance)
-        final_amount_to_pay = final_total_before_balance - balance_to_use
+        # Apply balance deduction (round to 2 decimal places to avoid floating point issues)
+        balance_to_use = min(user_balance, final_total_before_balance).quantize(Decimal('0.01'))
+        final_amount_to_pay = (final_total_before_balance - balance_to_use).quantize(Decimal('0.01'))
         final_amount_to_pay = max(Decimal('0.0'), final_amount_to_pay)
         
         logger.info(f"📊 Invoice calculation for user {user_id}: Original: {total_eur:.2f}, After discounts: {final_total_before_balance:.2f}, User balance: {user_balance:.2f}, Balance used: {balance_to_use:.2f}, Crypto to pay: {final_amount_to_pay:.2f}")
