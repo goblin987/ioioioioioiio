@@ -452,12 +452,12 @@ async def check_solana_deposits(context):
                                     balance_to_deduct_rounded = round(float(balance_to_deduct), 2)
                                     logger.info(f"💰 Deducting {balance_to_deduct_rounded} EUR from user {user_id} balance (auto-applied)")
                                     
-                                    # Use ROUND() in SQL as well to handle any precision issues in DB
+                                    # PostgreSQL needs explicit NUMERIC cast for ROUND function
                                     c.execute("""
                                         UPDATE users 
-                                        SET balance = ROUND(balance - %s, 2) 
-                                        WHERE user_id = %s AND ROUND(balance, 2) >= %s
-                                    """, (balance_to_deduct_rounded, user_id, balance_to_deduct_rounded))
+                                        SET balance = ROUND((balance - %s)::numeric, 2) 
+                                        WHERE user_id = %s AND balance >= %s
+                                    """, (balance_to_deduct_rounded, user_id, balance_to_deduct_rounded - 0.01))
                                     
                                     if c.rowcount > 0:
                                         conn.commit()

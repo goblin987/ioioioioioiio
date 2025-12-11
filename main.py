@@ -2942,10 +2942,14 @@ def webapp_create_invoice():
         total_eur = Decimal('0.0')
         reseller_discount_total = Decimal('0.0')
         
-        # Validate items and calculate total
+        # Validate items and calculate total - ALSO fetch product details for basket_snapshot
+        enriched_items = []
         for item in items:
             p_id = item.get('id')
-            c.execute("SELECT price, product_type FROM products WHERE id = %s", (p_id,))
+            c.execute("""
+                SELECT id, name, size, price, product_type, city, district, original_text 
+                FROM products WHERE id = %s
+            """, (p_id,))
             row = c.fetchone()
             if row:
                 price = Decimal(str(row['price']))
@@ -2957,6 +2961,19 @@ def webapp_create_invoice():
                 if r_disc_percent > 0:
                     item_discount = (price * r_disc_percent) / Decimal('100.0')
                     reseller_discount_total += item_discount
+                
+                # Store enriched item with all product details for basket_snapshot
+                enriched_items.append({
+                    'id': row['id'],
+                    'product_id': row['id'],
+                    'name': row['name'],
+                    'size': row['size'],
+                    'price': float(price),
+                    'product_type': p_type,
+                    'city': row['city'],
+                    'district': row['district'],
+                    'original_text': row['original_text'] or ''
+                })
         
         # Fetch user's current balance
         c.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
@@ -2965,8 +2982,8 @@ def webapp_create_invoice():
         
         conn.close()
         
-        if total_eur == 0:
-             return jsonify({'error': 'Empty basket'}), 400
+        if total_eur == 0 or not enriched_items:
+             return jsonify({'error': 'Empty basket or products not found'}), 400
 
         base_total_after_reseller = total_eur - reseller_discount_total
         base_total_after_reseller = max(Decimal('0.0'), base_total_after_reseller)
@@ -3014,9 +3031,9 @@ def webapp_create_invoice():
                 # Deduct balance
                 c.execute("UPDATE users SET balance = balance - %s WHERE user_id = %s", (float(balance_to_use), user_id))
                 
-                # Store basket snapshot for processing
+                # Store basket snapshot for processing - use enriched_items with product details
                 basket_snapshot = {
-                    'items': items,
+                    'items': enriched_items,
                     'discounts': discount_info,
                     'original_total': float(total_eur),
                     'final_total': float(final_total_before_balance),
@@ -3075,8 +3092,9 @@ def webapp_create_invoice():
         c = conn.cursor()
         
         # Store basket snapshot WITH discount info AND balance info
+        # Use enriched_items which includes original_text and all product details
         basket_snapshot = {
-            'items': items,
+            'items': enriched_items,
             'discounts': discount_info,
             'original_total': float(total_eur),
             'final_total': float(final_total_before_balance),
