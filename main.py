@@ -1,6 +1,6 @@
 # --- START OF FILE main.py ---
-# Version: 2.8.1 - Fixed webapp URL to webapp_fresh
-# Build: 3d06e3b - Mini App Only Mode Fix
+# Version: 2.9.0 - Post-Purchase Refresh + Balance Precision Fix
+# Build: 790fe87 - FORCE DEPLOY 2024-12-11
 
 import logging
 import asyncio

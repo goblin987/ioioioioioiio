@@ -683,7 +683,7 @@ async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_T
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the /start command and the initial welcome message."""
-    logger.info("🚀 START COMMAND - VERSION e3b8914 - Mini App Only Fix Active")
+    logger.info("🚀 START COMMAND - VERSION 790fe87 - Post-Purchase Refresh Fix Active")
     user = update.effective_user
     chat_id = update.effective_chat.id
     is_callback = update.callback_query is not None
