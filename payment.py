@@ -1108,7 +1108,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                 conn_media = get_db_connection()
                 c_media = conn_media.cursor()
                 media_placeholders = ','.join(['%s'] * len(processed_product_ids))
-                # 🚀 YOLO: Fetch media_binary from PostgreSQL for RENDER-SAFE storage
+                # 🚀  Fetch media_binary from PostgreSQL for RENDER-SAFE storage
                 c_media.execute(f"SELECT product_id, media_type, telegram_file_id, file_path, media_binary FROM product_media WHERE product_id IN ({media_placeholders})", processed_product_ids)
                 media_rows = c_media.fetchall()
                 logger.info(f"Fetched {len(media_rows)} media records for products {processed_product_ids} for user {user_id}")
@@ -1125,7 +1125,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
         media_delivery_successful = True
         if chat_id:
             try:
-                # 🚀 YOLO MODE: Use userbot for secret chat delivery with Saved Messages strategy
+                # 🚀 MODE: Use userbot for secret chat delivery with Saved Messages strategy
                 from userbot_manager import userbot_manager
                 from userbot_config import userbot_config
                 
@@ -1160,7 +1160,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                     success_title = lang_data.get("purchase_success", "🎉 Purchase Complete! Pickup details below:")
                     await send_message_with_retry(context.bot, chat_id, success_title, parse_mode=None)
 
-                # 🚀 YOLO MODE: New delivery flow - userbot or bot fallback
+                # 🚀 MODE: New delivery flow - userbot or bot fallback
                 fallback_to_bot = False
                 if use_userbot_delivery:
                     # Use userbot for secure delivery with Saved Messages forwarding
@@ -1224,7 +1224,7 @@ async def _finalize_purchase(user_id: int, basket_snapshot: list, discount_code_
                         else:
                             logger.error(f"❌ Userbot delivery failed for P{prod_id}: {result.get('error')}")
                             
-                            # 🚨 YOLO: Handle PEER_ID_INVALID - tell user to start chat with userbot
+                            # 🚨  Handle PEER_ID_INVALID - tell user to start chat with userbot
                             if result.get('error') == 'PEER_ID_INVALID' and result.get('requires_user_action'):
                                 userbot_username = result.get('userbot_username', 'our_delivery_bot')
                                 instruction_msg = f"""🔐 <b>Secure Delivery Setup Required</b>
@@ -1310,7 +1310,7 @@ To receive your products securely via encrypted chat, please:
                             for item in photo_video_group_details:
                                 input_media = None
                                 
-                                # 🚀 YOLO FIX: Prioritize PostgreSQL binary for reliability
+                                # 🚀  FIX: Prioritize PostgreSQL binary for reliability
                                 # Telegram file_ids can expire, so use binary data if available
                                 
                                 file_id = item.get('id')
@@ -1402,7 +1402,7 @@ To receive your products securely via encrypted chat, please:
                         logger.info(f"Attempting to send {len(animations_to_send_details)} animations for P{prod_id} user {user_id}")
                         for item in animations_to_send_details:
                             try:
-                                # 🚀 YOLO FIX: Use telegram_file_id instead of ephemeral file paths
+                                # 🚀  FIX: Use telegram_file_id instead of ephemeral file paths
                                 file_id = item.get('id')
                                 
                                 if file_id:

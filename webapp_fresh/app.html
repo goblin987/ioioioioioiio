@@ -5481,7 +5481,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
             }
         }, 2000); // Increased to 2s to ensure DOM is ready
         
-        // NUCLEAR OPTION: Force load after 5s no matter what
+        // Force load after 5s timeout
         setTimeout(() => {
             const grid = document.getElementById('product-grid');
             if(grid && grid.innerHTML.includes('LOADING')) {
@@ -5886,7 +5886,7 @@ l-6 60 60 45 c48 36 63 54 76 93 25 73 66 90 220 91 l120 1 95 49 c52 27 97
         // Example: 'cityname': { top: 50, left: 50 }
         const CITY_COORDINATES = {
             // Lithuania city coordinates (top%, left% on the SVG map)
-            // Updated 2025-12-06: Adjusted Panevezys lower, added Pasvalys
+            // City marker positions
             'kaunas': { top: 50, left: 45 },        // Center (reference point - good)
             'klaipeda': { top: 35, left: 10 },      // West coast (reference point - good)
             'vilnius': { top: 42, left: 85 },       // East

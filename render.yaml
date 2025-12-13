@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dsdsasdasaddsa
+    name: telegram-bot
     runtime: python
     plan: starter
     branch: main

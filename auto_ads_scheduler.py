@@ -8,8 +8,6 @@ Background scheduler that runs campaigns based on their schedule type:
 - weekly: Every 7 days
 - once: Manual execution only
 
-Author: BotShop Development Team
-License: MIT
 Version: 1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

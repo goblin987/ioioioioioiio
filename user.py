@@ -1,8 +1,8 @@
-# VERSION: dda26bc - NUCLEAR CACHE CLEAR - Force Python recompile
-# FORCE RECOMPILE: Adding random comment to change bytecode hash
+# Telegram Bot User Module
+# User interaction handlers
 # !!!! DEPLOY MARKER: 2025-12-08 00:05 UTC - FINAL FIX !!!!
 print("=" * 80)
-print("🚨 USER.PY LOADED - VERSION dda26bc - CACHE CLEARED")
+# Module loaded
 print("=" * 80)
 import sqlite3
 import time
@@ -116,7 +116,7 @@ SUPPORTED_CRYPTO = {
 def _build_start_menu_content(user_id: int, username: str, lang_data: dict, context: ContextTypes.DEFAULT_TYPE, user_obj=None) -> tuple[str, InlineKeyboardMarkup]:
     """Builds the text and keyboard for the start menu using provided lang_data."""
     logger.info(f"=" * 80)
-    logger.info(f"🚨 EXECUTING _build_start_menu_content FOR USER {user_id} - VERSION 47c3393")
+    logger.info(f"Building start menu content for user {user_id}")
     logger.info(f"=" * 80)
     logger.debug(f"_build_start_menu_content: Building menu for user {user_id} with lang_data.")
 
@@ -234,10 +234,10 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
     
     # Check UI mode setting (bot or miniapp)
     ui_mode = get_bot_setting("ui_mode", "bot")
-    logger.info(f"📱 UI Mode: {ui_mode} for user {user_id} (Build: 05f9c9d)")  # Force rebuild
+    logger.info(f"📱 UI Mode: {ui_mode} for user {user_id}")
     
     # Default keyboard layout
-    # Add timestamp to FORCE cache clear every time
+    # Add timestamp for cache busting
     import time
     webapp_url = f"{WEBHOOK_URL.rstrip('/')}/webapp_fresh/app.html?v=3.0&t={int(time.time())}"
     default_keyboard = [
@@ -261,7 +261,7 @@ def _build_start_menu_content(user_id: int, username: str, lang_data: dict, cont
          InlineKeyboardButton(f"{EMOJI_LANG} {language_button_text}", callback_data="language")]
     ])
     
-    # YOLO MODE: Only apply custom layout if NO preset theme is active
+    # Only apply custom layout if NO preset theme is active
     custom_header_message = None
     try:
         from marketing_promotions import apply_custom_layout_to_keyboard, get_custom_layout, process_dynamic_variables, get_active_ui_theme
@@ -431,7 +431,7 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
         # Get user's language preference
         user_language = context.user_data.get('lang', 'en')
         
-        # 🚀 YOLO MODE: Show verification text in all 3 languages if placement is AFTER
+        # Show verification text in all 3 languages if placement is AFTER
         placement = get_language_prompt_placement()
         if placement == 'after':
             # User hasn't selected language yet, show all 3 languages with proper spacing
@@ -471,7 +471,7 @@ async def handle_human_verification(update: Update, context: ContextTypes.DEFAUL
         # Fallback to text-based verification
         user_language = context.user_data.get('lang', 'en')
         
-        # 🚀 YOLO MODE: Show fallback text in all 3 languages if placement is AFTER
+        # Show fallback text in all 3 languages if placement is AFTER
         placement = get_language_prompt_placement()
         if placement == 'after':
             # User hasn't selected language yet, show all 3 languages with proper spacing
@@ -518,8 +518,8 @@ async def handle_verification_message(update: Update, context: ContextTypes.DEFA
         # Verification successful
         logger.info(f"✅ User {user_id} entered correct verification code: {correct_code}")
         
-        # YOLO MODE: Just set verification status directly, skip user creation complexity
-        logger.info(f"🚀 YOLO MODE: Setting verification status directly for user {user_id}")
+        # Set verification status directly
+        logger.info(f"Setting verification status for user {user_id}")
         
         # Also use the utility function as backup
         verification_result = set_user_verified(user_id, True)
@@ -609,7 +609,7 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
         [InlineKeyboardButton("Lietuvių 🇱🇹", callback_data="select_language|lt")]
     ]
     
-    # 🚀 YOLO: Handle both callback queries and regular messages
+    # Handle both callback queries and regular messages
     if update.callback_query:
         await update.callback_query.edit_message_text(
             msg, 
@@ -637,7 +637,7 @@ async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_T
     
     # Save language preference
     context.user_data['lang'] = language
-    context.user_data['language_selection_completed'] = True  # 🚀 YOLO: Mark as completed
+    context.user_data['language_selection_completed'] = True  # Mark as completed
     
     # Update user's language in database
     conn = None
@@ -683,7 +683,7 @@ async def handle_select_language(update: Update, context: ContextTypes.DEFAULT_T
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the /start command and the initial welcome message."""
-    logger.info("🚀 START COMMAND - VERSION 790fe87 - Post-Purchase Refresh Fix Active")
+    logger.info("🚀 Processing /start command")
     user = update.effective_user
     chat_id = update.effective_chat.id
     is_callback = update.callback_query is not None
@@ -693,8 +693,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     display_name = None
     db_username = None  # Actual Telegram @username for database
     
-    # DEBUG: Log what we get from Update object
-    logger.info(f"🔍 DEBUG user data: first_name={repr(user.first_name)}, username={repr(user.username)}, last_name={repr(user.last_name)}")
+    # Extract user info from update
+    logger.info(f"User info: {user.first_name}, @{user.username}")
     
     # First, get from Update object as baseline
     db_username = user.username  # Actual @username from Telegram
@@ -776,9 +776,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_language_selection_enabled() and get_language_prompt_placement() == 'before':
         # Skip language selection for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            # 🚀 YOLO MODE: Show language selection if not completed in this session (before verification)
+            # Show language selection if not completed in this session (before verification)
             if not context.user_data.get('language_selection_completed'):
-                logger.info(f"🌍 YOLO: Showing language selection for user {user_id} (before verification)")
+                logger.info(f"🌍 Showing language selection for user {user_id} (before verification)")
                 return await handle_language_selection(update, context)
             
             # Load language from context or database
@@ -815,13 +815,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Check verification status normally (no auto-reset)
             
-            # 🚀 YOLO MODE: Debug commands for testing
+            # Admin debug commands
             if update.message and update.message.text:
                 message_text = update.message.text.lower()
                 
                 # Reset verification command
                 if "reset verification" in message_text:
-                    logger.info(f"🔄 YOLO: Resetting verification for user {user_id}")
+                    logger.info(f"🔄 Resetting verification for user {user_id}")
                     conn = None
                     try:
                         conn = get_db_connection()
@@ -866,11 +866,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_language_selection_enabled() and get_language_prompt_placement() == 'after':
         # Skip language selection for admins
         if not (is_primary_admin(user_id) or is_secondary_admin(user_id)):
-            # 🚀 YOLO MODE: Only show language selection if user is verified AND hasn't completed language selection
+            # Only show language selection if user is verified AND hasn't completed language selection
             is_user_already_verified = is_user_verified(user_id)
             
             if is_user_already_verified and not context.user_data.get('language_selection_completed'):
-                logger.info(f"🌍 YOLO: User {user_id} is verified, showing language selection (after verification)")
+                logger.info(f"🌍 User {user_id} is verified, showing language selection (after verification)")
                 return await handle_language_selection(update, context)
             elif not is_user_already_verified:
                 logger.info(f"🔍 User {user_id} not verified yet, skipping language selection (placement=after)")

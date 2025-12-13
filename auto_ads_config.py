@@ -3,11 +3,8 @@ Auto Ads Configuration Management
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Configuration settings for the auto ads campaign system.
-Integrates with botshop's existing environment while maintaining
-separate configuration for auto ads functionality.
+Maintains separate configuration for auto ads functionality.
 
-Author: BotShop Development Team
-License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

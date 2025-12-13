@@ -1,6 +1,5 @@
 # --- START OF FILE main.py ---
-# Version: 2.9.0 - Post-Purchase Refresh + Balance Precision Fix
-# Build: 790fe87 - FORCE DEPLOY 2024-12-11
+# Version: 2.9.0
 
 import logging
 import asyncio
@@ -200,21 +199,21 @@ from viewer_admin import (
 )
 
 # Userbot system imports
-print("🔍 YOLO DEBUG: Starting userbot imports...")
+print("🔍 Starting userbot imports...")
 try:
-    print("🔍 YOLO DEBUG: Importing userbot_database...")
+    print("🔍 DEBUG: Importing userbot_database...")
     from userbot_database import init_userbot_tables
-    print("✅ YOLO DEBUG: userbot_database imported successfully")
+    print("✅ DEBUG: userbot_database imported successfully")
     
-    print("🔍 YOLO DEBUG: Importing userbot_manager...")
+    print("🔍 DEBUG: Importing userbot_manager...")
     from userbot_manager import userbot_manager
-    print("✅ YOLO DEBUG: userbot_manager imported successfully")
+    print("✅ DEBUG: userbot_manager imported successfully")
     
-    print("🔍 YOLO DEBUG: Importing userbot_config...")
+    print("🔍 DEBUG: Importing userbot_config...")
     from userbot_config import userbot_config
-    print("✅ YOLO DEBUG: userbot_config imported successfully")
+    print("✅ DEBUG: userbot_config imported successfully")
     
-    print("🔍 YOLO DEBUG: Importing userbot_admin handlers...")
+    print("🔍 DEBUG: Importing userbot_admin handlers...")
     from userbot_admin import (
         handle_userbot_control,
         handle_userbot_add_new,
@@ -245,7 +244,7 @@ try:
         handle_telethon_setup,
     )
     
-    print("🔍 YOLO DEBUG: Importing scout system handlers...")
+    print("🔍 DEBUG: Importing scout system handlers...")
     from userbot_scout_admin import (
         handle_scout_menu,
         handle_scout_keywords,
@@ -284,16 +283,16 @@ try:
         handle_userbot_connect_single,
         handle_userbot_disconnect_single
     )
-    print("✅ YOLO DEBUG: userbot_admin handlers imported successfully")
+    print("✅ DEBUG: userbot_admin handlers imported successfully")
     
     USERBOT_AVAILABLE = True
-    print("✅ YOLO DEBUG: USERBOT_AVAILABLE = True")
+    print("✅ DEBUG: USERBOT_AVAILABLE = True")
     logging.getLogger(__name__).info("✅ Userbot system available")
 except Exception as e:
-    print(f"❌ YOLO DEBUG: Userbot import failed! Error type: {type(e).__name__}")
-    print(f"❌ YOLO DEBUG: Error message: {str(e)}")
+    print(f"❌ DEBUG: Userbot import failed! Error type: {type(e).__name__}")
+    print(f"❌ DEBUG: Error message: {str(e)}")
     import traceback
-    print(f"❌ YOLO DEBUG: Full traceback:\n{traceback.format_exc()}")
+    print(f"❌ DEBUG: Full traceback:\n{traceback.format_exc()}")
     logging.getLogger(__name__).warning(f"⚠️ Userbot system not available: {e}")
     USERBOT_AVAILABLE = False
 
@@ -430,7 +429,7 @@ try:
         handle_referral_how_it_works, handle_referral_view_details, handle_referral_tips,
         handle_referral_admin_stats, handle_referral_admin_top_referrers,
         handle_referral_admin_settings, handle_referral_admin_reset,
-        # 🚀 YOLO MODE: NEW ADMIN HANDLERS!
+        # 🚀 ADMIN: NEW ADMIN HANDLERS!
         handle_referral_admin_toggle, handle_referral_admin_set_percentage,
         handle_referral_admin_set_bonus, handle_referral_admin_set_min_purchase,
         handle_referral_admin_reset_confirm,
@@ -896,7 +895,7 @@ def callback_query_router(func):
                 "referral_admin_top_referrers": handle_referral_admin_top_referrers,
                 "referral_admin_settings": handle_referral_admin_settings,
                 "referral_admin_reset": handle_referral_admin_reset,
-                # 🚀 YOLO MODE: NEW ADMIN CALLBACK HANDLERS!
+                # 🚀 ADMIN: NEW ADMIN CALLBACK HANDLERS!
                 "referral_admin_toggle": handle_referral_admin_toggle,
                 "referral_admin_set_percentage": handle_referral_admin_set_percentage,
                 "referral_admin_set_bonus": handle_referral_admin_set_bonus,
@@ -1123,14 +1122,14 @@ def callback_query_router(func):
                 "admin_edit_app_info": handle_admin_edit_app_info,
                 "admin_toggle_info_status": handle_admin_toggle_info_status,
                 "admin_delete_app_info": handle_admin_delete_app_info,
-                # YOLO MODE: Simple auto deals control - dummy proof
+                # ADMIN: Simple auto deals control - dummy proof
                 "admin_disable_auto_deals": handle_admin_disable_auto_deals,
                 "admin_enable_auto_deals": handle_admin_enable_auto_deals,
-                # YOLO MODE: Fix Info button - register info callback
+                # ADMIN: Fix Info button - register info callback
                 "info": handle_modern_app,
-                # YOLO MODE: Add Reviews button for custom UI
+                # ADMIN: Add Reviews button for custom UI
                 "reviews": user.handle_reviews_menu,
-                # YOLO MODE: Add missing original UI callbacks
+                # ADMIN: Add missing original UI callbacks
                 "price_list": user.handle_price_list,
                 "language": user.handle_language_selection,
                 # Visual Button Board Editor Handlers
@@ -1505,7 +1504,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'awaiting_refill_crypto_choice': None,
         'awaiting_basket_crypto_choice': None,
         
-        # 🚀 YOLO MODE: REFERRAL ADMIN MESSAGE HANDLERS!
+        # 🚀 ADMIN: REFERRAL ADMIN MESSAGE HANDLERS!
         'awaiting_referral_percentage': handle_referral_percentage_message,
         'awaiting_referral_bonus': handle_referral_bonus_message,
         'awaiting_referral_min_purchase': handle_referral_min_purchase_message,
@@ -3557,10 +3556,10 @@ def webapp_index():
         from datetime import datetime
         dynamic_version = f'v3.0-DYNAMIC-{int(datetime.now().timestamp())}'
         
-        # NUCLEAR CACHE CLEAR - Inject at the very start
-        nuclear_cache_clear = f"""
+        # Cache clear - Inject at the very start
+        cache_clear_script = f"""
         <script>
-        // 🔥 NUCLEAR CACHE CLEAR - Runs IMMEDIATELY before anything else
+        // Cache clear - Runs before anything else
         (function() {{
             const DYNAMIC_VERSION = '{dynamic_version}';
             const lastVersion = localStorage.getItem('app_version_check');
@@ -3602,9 +3601,9 @@ def webapp_index():
         </script>
         """
         
-        # Inject nuclear cache clear at the VERY TOP (after <head>)
+        # Inject cache clear at the VERY TOP (after <head>)
         if '<head>' in html_content:
-            html_content = html_content.replace('<head>', '<head>' + nuclear_cache_clear, 1)
+            html_content = html_content.replace('<head>', '<head>' + cache_clear_script, 1)
         
         # Inject hotfix before closing </body> tag
         if '</body>' in html_content:
@@ -3685,7 +3684,7 @@ def main() -> None:
     except Exception as e:
         logger.error(f"❌ Failed to initialize marketing tables: {e}", exc_info=True)
     
-    # 🚀 YOLO MODE: INITIALIZE REFERRAL SYSTEM!
+    # 🚀 ADMIN: INITIALIZE REFERRAL SYSTEM!
     try:
         from referral_system import init_referral_tables
         init_referral_tables()
@@ -3888,7 +3887,7 @@ def main() -> None:
             await application.start()
             logger.info("✅ Telegram application started (webhook mode).")
             
-            # 🔥 YOLO FIX: Manually call post_init in webhook mode!
+            # Manually call post_init in webhook mode
             logger.info("🔧 Manually calling post_init for webhook mode...")
             await post_init(application)
             logger.info("✅ post_init completed successfully")
@@ -3960,7 +3959,7 @@ def main() -> None:
 
     try:
         logger.info("==================================================")
-        logger.info("🚀 STARTING BOTSHOP v3.0 - BUILD 3d06e3b")
+        logger.info("🚀 STARTING BOT v3.0")
         logger.info("🚀 MINI APP ONLY MODE FIX DEPLOYED")
         logger.info("==================================================")
         logger.info("🔧 About to start main event loop...")

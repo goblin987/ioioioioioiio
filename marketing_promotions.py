@@ -247,7 +247,7 @@ def init_marketing_tables():
             logger.warning(f"⚠️ Error processing themes: {themes_error}")
             conn.rollback()
         
-        # YOLO MODE: Create hot deals settings table for simple admin controls
+        # MODE: Create hot deals settings table for simple admin controls
         c.execute('''CREATE TABLE IF NOT EXISTS hot_deals_settings (
             id SERIAL PRIMARY KEY,
             setting_name TEXT NOT NULL UNIQUE,
@@ -282,7 +282,7 @@ def get_active_ui_theme():
         conn = get_db_connection()
         c = conn.cursor()
         
-        # YOLO MODE: Check ui_themes table FIRST (preset themes take priority over custom layouts)
+        # MODE: Check ui_themes table FIRST (preset themes take priority over custom layouts)
         c.execute("""
             SELECT theme_name, welcome_message, button_layout, style_config
             FROM ui_themes 
@@ -382,7 +382,7 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
     active_theme = get_active_ui_theme()
     active_theme_name = active_theme.get('theme_name', 'classic') if active_theme else 'classic'
     
-    # YOLO MODE: Determine what's actually active (preset vs custom)
+    # MODE: Determine what's actually active (preset vs custom)
     conn_check = None
     actually_active_custom_template_id = None
     try:
@@ -464,7 +464,7 @@ async def handle_ui_theme_designer(update: Update, context: ContextTypes.DEFAULT
                 description = template['template_description'] or "Custom layout"
                 template_id = template['id']
                 
-                # YOLO MODE: Check if THIS template is the actually active one
+                # MODE: Check if THIS template is the actually active one
                 is_actually_active = (actually_active_custom_template_id == template_id)
                 
                 # Single line format like system presets
@@ -680,7 +680,7 @@ async def handle_edit_custom_theme(update: Update, context: ContextTypes.DEFAULT
         template_name = template['template_name']
         layout_config = template['layout_config']
         
-        # YOLO MODE: Pre-load the saved layout into editor context
+        # MODE: Pre-load the saved layout into editor context
         import json
         try:
             parsed_config = json.loads(layout_config) if layout_config else {}
@@ -1067,7 +1067,7 @@ async def handle_classic_welcome(update: Update, context: ContextTypes.DEFAULT_T
         msg += f"🛒 {total_purchases_text}: {total_purchases}\n"
         msg += f"🛍️ {basket_items_text}: {basket_items}"
     
-    # YOLO MODE: Hardcoded 6-button classic layout exactly as requested
+    # MODE: Hardcoded 6-button classic layout exactly as requested
     keyboard = []
     
     # Add admin panel button for admins at the top
@@ -1361,7 +1361,7 @@ async def handle_minimalist_district_select(update: Update, context: ContextType
     
     keyboard = []
     
-    # YOLO MODE: BACK TO SIMPLE PRODUCT NAME BUTTONS ONLY
+    # MODE: BACK TO SIMPLE PRODUCT NAME BUTTONS ONLY
     # Click product name → shows price/weight options
     
     # SAVED FOR SUPER-INTERACTIVE EDITOR (commented out):
@@ -1458,7 +1458,7 @@ async def handle_minimalist_product_type(update: Update, context: ContextTypes.D
     
     keyboard = []
     
-    # YOLO MODE: Deduplicate variants by size and price (like original version)
+    # MODE: Deduplicate variants by size and price (like original version)
     unique_variants = {}
     for variant in variants:
         size = variant['size']
@@ -1944,7 +1944,7 @@ def apply_custom_layout_to_keyboard(menu_name, default_keyboard, user_language='
         for row in custom_layout:
             keyboard_row = []
             for button_text in row:
-                # 🚀 YOLO MODE: TRANSLATE BUTTON TEXT!
+                # 🚀 MODE: TRANSLATE BUTTON TEXT!
                 translated_text = translate_button_text(button_text, user_language)
                 # Map button text to callback data
                 callback_data = map_button_text_to_callback(button_text)
@@ -2322,7 +2322,7 @@ async def handle_user_preview_minimalist(update: Update, context: ContextTypes.D
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
-# YOLO MODE: MODERN CARD STYLE UI IMPLEMENTATION
+# MODE: MODERN CARD STYLE UI IMPLEMENTATION
 # Full creative freedom - premium visual experience with card-style design
 
 async def handle_modern_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
@@ -3201,7 +3201,7 @@ async def handle_modern_app(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 
 async def handle_modern_home(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Return to appropriate home - custom UI or modern UI"""
-    # YOLO MODE: Dynamic navigation - check if user came from custom UI
+    # MODE: Dynamic navigation - check if user came from custom UI
     active_theme = get_active_ui_theme()
     
     if active_theme and active_theme.get('theme_name') == 'custom':
@@ -3212,7 +3212,7 @@ async def handle_modern_home(update: Update, context: ContextTypes.DEFAULT_TYPE,
         # User using modern UI - go to modern welcome
         return await handle_modern_welcome(update, context, params)
 
-# YOLO MODE: HOT DEALS MANAGEMENT SYSTEM FOR ADMINS
+# MODE: HOT DEALS MANAGEMENT SYSTEM FOR ADMINS
 async def handle_admin_hot_deals_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin hot deals management menu"""
     query = update.callback_query
@@ -4042,7 +4042,7 @@ async def handle_admin_delete_hot_deal(update: Update, context: ContextTypes.DEF
         if conn:
             conn.close()
 
-# YOLO MODE: SIMPLE AUTO DEALS CONTROL - DUMMY PROOF
+# MODE: SIMPLE AUTO DEALS CONTROL - DUMMY PROOF
 async def handle_admin_disable_auto_deals(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """SIMPLE: Disable all automatic hot deals"""
     query = update.callback_query
@@ -4107,7 +4107,7 @@ async def handle_admin_enable_auto_deals(update: Update, context: ContextTypes.D
         if conn:
             conn.close()
 
-# YOLO MODE: APP INFO MANAGEMENT SYSTEM FOR ADMINS
+# MODE: APP INFO MANAGEMENT SYSTEM FOR ADMINS
 async def handle_admin_app_info_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Admin app info management menu"""
     query = update.callback_query
@@ -4338,7 +4338,7 @@ async def handle_admin_manage_app_info(update: Update, context: ContextTypes.DEF
     
     keyboard = []
     
-    # YOLO MODE: Show detailed info with simple actions
+    # MODE: Show detailed info with simple actions
     for i, info in enumerate(info_items, 1):
         status = "✅ ACTIVE" if info['is_active'] else "❌ INACTIVE"
         title = info['info_title']
@@ -4362,9 +4362,9 @@ async def handle_admin_manage_app_info(update: Update, context: ContextTypes.DEF
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
-# YOLO MODE: MISSING DELETE HANDLER - DUMMY PROOF
+# MODE: MISSING DELETE HANDLER - DUMMY PROOF
 async def handle_admin_delete_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
-    """Delete app info - YOLO MODE DUMMY PROOF"""
+    """Delete app info -  MODE DUMMY PROOF"""
     query = update.callback_query
     if not is_primary_admin(query.from_user.id):
         return await query.answer("Access denied.", show_alert=True)
@@ -4388,7 +4388,7 @@ async def handle_admin_delete_app_info(update: Update, context: ContextTypes.DEF
             await query.answer("Info not found", show_alert=True)
             return
         
-        # YOLO MODE: Simple delete - no confirmation needed
+        # MODE: Simple delete - no confirmation needed
         c.execute("DELETE FROM app_info WHERE id = %s", (info_id,))
         deleted_count = c.rowcount
         conn.commit()
@@ -4499,7 +4499,7 @@ async def handle_admin_toggle_info_status(update: Update, context: ContextTypes.
         if conn:
             conn.close()
 
-# YOLO MODE: VISUAL BUTTON BOARD EDITOR SYSTEM
+# MODE: VISUAL BUTTON BOARD EDITOR SYSTEM
 # Available buttons for different menu types
 AVAILABLE_BUTTONS = {
     'start_menu': [
@@ -4701,7 +4701,7 @@ async def handle_bot_preset_select(update: Update, context: ContextTypes.DEFAULT
         conn = get_db_connection()
         c = conn.cursor()
         
-        # YOLO MODE: Clear ALL custom layouts when selecting preset (DO THIS FIRST!)
+        # MODE: Clear ALL custom layouts when selecting preset (DO THIS FIRST!)
         c.execute("DELETE FROM bot_menu_layouts")  # Clear all custom layouts
         c.execute("UPDATE bot_layout_templates SET is_active = FALSE")  # Clear all templates
         c.execute("UPDATE ui_themes SET is_active = FALSE")  # Clear all ui themes
@@ -5577,7 +5577,7 @@ async def handle_bot_save_layout(update: Update, context: ContextTypes.DEFAULT_T
         if saved_menus:
             conn.commit()
         
-        # YOLO MODE: Check if we're editing an existing custom theme
+        # MODE: Check if we're editing an existing custom theme
         editing_existing_theme = context.user_data.get('editing_custom_theme')
         
         if editing_existing_theme:

@@ -52,7 +52,7 @@ def init_referral_tables():
             FOREIGN KEY (referred_user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )''')
         
-        # 🚀 YOLO MODE: ADD MISSING COLUMNS TO USERS TABLE!
+        # 🚀 MODE: ADD MISSING COLUMNS TO USERS TABLE!
         try:
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_referrals INTEGER DEFAULT 0")
             logger.info("✅ Added total_referrals column to users table")
@@ -941,7 +941,7 @@ async def handle_referral_admin_settings(update: Update, context: ContextTypes.D
     
     await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
-# 🚀 YOLO MODE: COMPLETE ALL ADMIN HANDLERS!
+# 🚀 MODE: COMPLETE ALL ADMIN HANDLERS!
 
 async def handle_referral_admin_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE, params=None):
     """Toggle referral program on/off"""
@@ -1106,7 +1106,7 @@ async def handle_referral_percentage_message(update: Update, context: ContextTyp
         if set_referral_setting('referrer_percentage', str(percentage)):
             context.user_data.pop('state', None)
             
-            # 🚀 YOLO MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
+            # 🚀 MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
             msg = f"✅ **Referrer Percentage Updated**\n\n"
             msg += f"Referrers will now earn **{percentage}%** commission on their referrals' first purchase.\n\n"
             msg += f"💡 **What's Next?**\n"
@@ -1153,7 +1153,7 @@ async def handle_referral_bonus_message(update: Update, context: ContextTypes.DE
         if set_referral_setting('referred_bonus', str(bonus)):
             context.user_data.pop('state', None)
             
-            # 🚀 YOLO MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
+            # 🚀 MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
             msg = f"✅ **New User Bonus Updated**\n\n"
             msg += f"New users will now receive **{format_currency(Decimal(str(bonus)))}** when using a referral code.\n\n"
             msg += f"💡 **What's Next?**\n"
@@ -1200,7 +1200,7 @@ async def handle_referral_min_purchase_message(update: Update, context: ContextT
         if set_referral_setting('min_purchase', str(min_purchase)):
             context.user_data.pop('state', None)
             
-            # 🚀 YOLO MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
+            # 🚀 MODE: DUMMY-PROOF NAVIGATION WITH BACK BUTTON!
             msg = f"✅ **Minimum Purchase Updated**\n\n"
             msg += f"Referrers will now earn commission only when their referrals spend at least **{format_currency(Decimal(str(min_purchase)))}**.\n\n"
             msg += f"💡 **What's Next?**\n"

@@ -176,7 +176,7 @@ class UserbotConfig:
             force_fresh: If True, bypasses cache and reads directly from DB
         """
         if force_fresh:
-            # 🚀 YOLO: Force fresh read from DB, bypass cache completely
+            # 🚀  Force fresh read from DB, bypass cache completely
             fresh_config = get_userbot_config()
             if fresh_config:
                 self._config = fresh_config  # Update cache for next time

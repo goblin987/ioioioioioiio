@@ -5,8 +5,6 @@ Auto Ads Telethon Client Manager
 Handles Telethon client management for auto ads campaigns including session management,
 message forwarding, and bridge channel integration.
 
-Author: BotShop Development Team
-License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

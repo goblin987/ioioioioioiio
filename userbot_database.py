@@ -150,14 +150,14 @@ def get_userbot_config() -> Dict[str, Any]:
             'api_hash': userbot.get('api_hash'),
             'phone_number': userbot.get('phone_number'),
             'session_string': userbot.get('session_string'),
-            'enabled': userbot.get('is_enabled', True),  # 🚀 YOLO: Map is_enabled → enabled for UI
+            'enabled': userbot.get('is_enabled', True),  # 🚀  Map is_enabled → enabled for UI
             'is_enabled': userbot.get('is_enabled', True),  # Keep both for compatibility
             'max_retries': 3,  # Default values for legacy compatibility
             'retry_delay': 5,
             'secret_chat_ttl': 86400,  # 24 hours in seconds
             'ttl_hours': 24,
             'auto_reconnect': True,
-            'send_notifications': True,  # 🚀 YOLO: Add this key for UI
+            'send_notifications': True,  # 🚀  Add this key for UI
             'notifications_enabled': True
         }
     return {}
@@ -318,7 +318,7 @@ def create_multi_userbot_schema():
             )
         """)
         
-        # 🚀 YOLO: Add session_file column if it doesn't exist (for existing databases)
+        # 🚀  Add session_file column if it doesn't exist (for existing databases)
         try:
             c.execute("ALTER TABLE userbots ADD COLUMN IF NOT EXISTS session_file BYTEA")
             conn.commit()
@@ -445,16 +445,16 @@ def create_multi_userbot_schema():
         c.execute("CREATE INDEX IF NOT EXISTS idx_userbots_scout_mode ON userbots(scout_mode_enabled)")
         
         conn.commit()
-        print("✅ YOLO: Multi-userbot schema committed successfully")
+        print("✅  Multi-userbot schema committed successfully")
         logger.info("✅ Multi-userbot database schema created successfully")
         return True
         
     except Exception as e:
-        print(f"❌ YOLO: Error creating multi-userbot schema!")
-        print(f"❌ YOLO: Error type: {type(e).__name__}")
-        print(f"❌ YOLO: Error message: {str(e)}")
+        print(f"❌  Error creating multi-userbot schema!")
+        print(f"❌  Error type: {type(e).__name__}")
+        print(f"❌  Error message: {str(e)}")
         import traceback
-        print(f"❌ YOLO: Traceback:\n{traceback.format_exc()}")
+        print(f"❌  Traceback:\n{traceback.format_exc()}")
         logger.error(f"❌ Error creating multi-userbot schema: {e}", exc_info=True)
         if conn:
             try:

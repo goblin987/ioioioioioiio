@@ -1377,7 +1377,7 @@ def init_db():
             )''')
             logger.info(f"✅ Product_media table created successfully")
             
-            # 🚀 YOLO: Add media_binary column if it doesn't exist (for existing databases)
+            # 🚀  Add media_binary column if it doesn't exist (for existing databases)
             try:
                 c.execute("ALTER TABLE product_media ADD COLUMN IF NOT EXISTS media_binary BYTEA")
                 conn.commit()
@@ -1515,8 +1515,8 @@ def init_db():
             except ImportError:
                 logger.warning("Enhanced auto ads system not available, skipping enhanced auto ads table initialization")
             
-            # YOLO MODE: Temporarily disable problematic module initializations to get bot running
-            logger.info("🚀 YOLO MODE: Skipping referral system initialization (causing hang)")
+            # MODE: Temporarily disable problematic module initializations to get bot running
+            logger.info("🚀 MODE: Skipping referral system initialization (causing hang)")
             # # Initialize referral system tables
             # logger.info("🔧 About to initialize referral system tables...")
             # try:
@@ -1530,7 +1530,7 @@ def init_db():
             # except Exception as e:
             #     logger.error(f"❌ Failed to initialize referral tables: {e}", exc_info=True)
             
-            logger.info("🚀 YOLO MODE: Skipping testforwarder initialization (causing hang)")
+            logger.info("🚀 MODE: Skipping testforwarder initialization (causing hang)")
             # # Initialize testforwarder database tables
             # logger.info("🔧 About to initialize testforwarder database tables...")
             # try:
@@ -3742,7 +3742,7 @@ def set_user_verified(user_id, verified=True):
         conn = get_db_connection()
         c = conn.cursor()
         
-        # YOLO MODE: Insert or update user with verification status
+        # MODE: Insert or update user with verification status
         c.execute("""
             INSERT INTO users (user_id, username, is_human_verified, verification_attempts) 
             VALUES (%s, %s, %s, 0)
@@ -3752,7 +3752,7 @@ def set_user_verified(user_id, verified=True):
         
         rows_affected = c.rowcount
         conn.commit()
-        logger.info(f"🚀 YOLO: User {user_id} verification set to {verified}, rows affected: {rows_affected}")
+        logger.info(f"🚀  User {user_id} verification set to {verified}, rows affected: {rows_affected}")
         return True
     except Exception as e:
         logger.error(f"Error setting user verification status: {e}")

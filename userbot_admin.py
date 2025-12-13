@@ -286,12 +286,12 @@ async def _show_setup_wizard(query, context):
 
 async def _show_status_dashboard(query, context):
     """Show userbot status dashboard"""
-    # 🚀 YOLO: Force FRESH read from DB, bypass cache completely
+    # 🚀  Force FRESH read from DB, bypass cache completely
     config = userbot_config.get_dict(force_fresh=True)
     status = get_connection_status()
     stats = get_delivery_stats()
     
-    # 🚀 YOLO: Add timestamp to force message update
+    # 🚀  Add timestamp to force message update
     import time
     update_time = time.strftime("%H:%M:%S")
     
@@ -659,10 +659,10 @@ async def handle_userbot_settings(update: Update, context: ContextTypes.DEFAULT_
         await query.answer("Access denied", show_alert=True)
         return
     
-    # 🚀 YOLO: Force FRESH read from DB, bypass cache completely
+    # 🚀  Force FRESH read from DB, bypass cache completely
     config = userbot_config.get_dict(force_fresh=True)
     
-    # 🚀 YOLO: Add microsecond timestamp to force message text change
+    # 🚀  Add microsecond timestamp to force message text change
     import time
     update_time = time.strftime("%H:%M:%S")
     
@@ -720,7 +720,7 @@ async def handle_userbot_toggle_enabled(update: Update, context: ContextTypes.DE
     enabled = params[0] == 'True'
     userbot_config.set_enabled(enabled)
     
-    # 🚀 YOLO: Add timestamp to force message change (Telegram won't reject "unchanged" message)
+    # 🚀  Add timestamp to force message change (Telegram won't reject "unchanged" message)
     import time
     status = "enabled" if enabled else "disabled"
     timestamp = time.strftime("%H:%M:%S")
@@ -749,7 +749,7 @@ async def handle_userbot_toggle_reconnect(update: Update, context: ContextTypes.
     auto_reconnect = params[0] == 'True'
     userbot_config.set_auto_reconnect(auto_reconnect)
     
-    # 🚀 YOLO: Add timestamp to force UI update
+    # 🚀  Add timestamp to force UI update
     import time
     status = "enabled" if auto_reconnect else "disabled"
     timestamp = time.strftime("%H:%M:%S")
@@ -777,7 +777,7 @@ async def handle_userbot_toggle_notifications(update: Update, context: ContextTy
     notifications = params[0] == 'True'
     userbot_config.set_notifications(notifications)
     
-    # 🚀 YOLO: Add timestamp to force UI update
+    # 🚀  Add timestamp to force UI update
     import time
     status = "enabled" if notifications else "disabled"
     timestamp = time.strftime("%H:%M:%S")

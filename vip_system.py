@@ -17,7 +17,6 @@ Features:
 - Level-up notifications and celebrations
 - Admin dashboard for VIP management
 
-Author: BotShop Development Team
 Version: 1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -65,7 +64,7 @@ class VIPManager:
                 updated_at TEXT
             )''')
             
-            # YOLO MODE: Force convert is_active column to BOOLEAN if it exists as INTEGER
+            # MODE: Force convert is_active column to BOOLEAN if it exists as INTEGER
             try:
                 # First check current column type
                 c.execute("SELECT data_type FROM information_schema.columns WHERE table_name = 'vip_levels' AND column_name = 'is_active'")

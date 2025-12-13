@@ -1,12 +1,10 @@
 """
-Auto Ads Bump Service (Simplified for Botshop)
+Auto Ads Bump Service
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Service for managing automated ad campaigns with scheduling and anti-ban protection.
-Simplified version adapted for botshop PostgreSQL integration.
+Simplified version adapted for PostgreSQL integration.
 
-Author: BotShop Development Team
-License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

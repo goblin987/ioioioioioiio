@@ -5,8 +5,6 @@ Auto Ads Database Management (PostgreSQL)
 Professional database layer for auto ads system using PostgreSQL.
 Provides secure data persistence, account management, campaign storage, and performance analytics.
 
-Author: BotShop Development Team
-License: MIT
 Version: 2.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -22,7 +20,7 @@ class AutoAdsDatabase:
     """PostgreSQL database manager for auto ads system"""
     
     def __init__(self):
-        """Initialize database connection using botshop's utils.get_db_connection()"""
+        """Initialize database connection using utils.get_db_connection()"""
         pass  # Connection is managed per-query via get_db_connection()
     
     def _get_conn(self):

@@ -7,7 +7,7 @@ import shutil
 import time
 import secrets # For generating random codes
 import asyncio
-import psycopg2  # 🚀 YOLO: For Binary() wrapper in PostgreSQL storage
+import psycopg2  # 🚀  For Binary() wrapper in PostgreSQL storage
 from datetime import datetime, timedelta, timezone # <<< Added timezone import
 from collections import defaultdict
 import math # Add math for pagination calculation
@@ -2164,7 +2164,7 @@ async def handle_confirm_add_drop(update: Update, context: ContextTypes.DEFAULT_
                         try:
                             await asyncio.to_thread(shutil.copy2, temp_file_path, final_persistent_path)
                             
-                            # 🚀 YOLO: Read file as binary for PostgreSQL storage (RENDER-SAFE!)
+                            # 🚀  Read file as binary for PostgreSQL storage (RENDER-SAFE!)
                             media_binary = None
                             try:
                                 with open(temp_file_path, 'rb') as f:
@@ -2903,7 +2903,7 @@ async def handle_adm_bulk_execute(update: Update, context: ContextTypes.DEFAULT_
                             try:
                                 await asyncio.to_thread(shutil.copy2, temp_file_path, final_persistent_path)
                                 
-                                # 🚀 YOLO: Read media binary for PostgreSQL (RENDER-SAFE for userbot delivery)
+                                # 🚀  Read media binary for PostgreSQL (RENDER-SAFE for userbot delivery)
                                 media_binary = None
                                 try:
                                     with open(final_persistent_path, 'rb') as f:
@@ -6100,7 +6100,7 @@ async def handle_adm_bulk_execute_messages(update: Update, context: ContextTypes
                             try:
                                 await asyncio.to_thread(shutil.copy2, temp_file_path, final_persistent_path)
                                 
-                                # 🚀 YOLO: Read media binary for PostgreSQL (RENDER-SAFE for userbot delivery)
+                                # 🚀  Read media binary for PostgreSQL (RENDER-SAFE for userbot delivery)
                                 media_binary = None
                                 try:
                                     with open(final_persistent_path, 'rb') as f:

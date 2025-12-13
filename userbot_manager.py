@@ -74,7 +74,7 @@ class UserbotManager:
             # Get session string from database
             session_string = get_session_string()
             
-            # 🚀 YOLO MODE: Load session file from PostgreSQL for persistent peer cache!
+            # 🚀 MODE: Load session file from PostgreSQL for persistent peer cache!
             from userbot_database import get_session_file, save_session_file
             import os
             
@@ -93,7 +93,7 @@ class UserbotManager:
                 logger.info("ℹ️ No session file in PostgreSQL, starting fresh")
             
             # Create Pyrogram client
-            # 🚀 YOLO FIX: in_memory=False to persist peer cache!
+            # 🚀  FIX: in_memory=False to persist peer cache!
             self.client = Client(
                 name="userbot_session",
                 api_id=int(api_id),
@@ -113,7 +113,7 @@ class UserbotManager:
             self.is_connected = True
             await asyncio.to_thread(update_connection_status, True, f"Connected as @{me.username or me.first_name}")
             
-            # 🚀 YOLO MODE: Save session file to PostgreSQL for persistence!
+            # 🚀 MODE: Save session file to PostgreSQL for persistence!
             try:
                 session_file_path = "./userbot_data/userbot_session.session"
                 if os.path.exists(session_file_path):
@@ -124,7 +124,7 @@ class UserbotManager:
             except Exception as save_err:
                 logger.warning(f"⚠️ Could not save session file to PostgreSQL: {save_err}")
             
-            # 🔐 YOLO MODE: Initialize Telethon for secret chat support!
+            # 🔐 MODE: Initialize Telethon for secret chat support!
             try:
                 from userbot_telethon_secret import telethon_secret_chat
                 
@@ -488,7 +488,7 @@ class UserbotManager:
         telegram_bot = None
     ) -> dict:
         """
-        🚀 YOLO MODE: Deliver product using Saved Messages storage + Main Bot delivery
+        🚀 MODE: Deliver product using Saved Messages storage + Main Bot delivery
         
         This prevents media corruption and PEER_ID_INVALID by:
         1. Uploading media to userbot's Saved Messages (preserves quality, safe storage)
