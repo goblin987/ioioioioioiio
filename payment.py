@@ -885,7 +885,13 @@ _{helpers.escape_markdown(f"({lang_data.get('invoice_amount_label_text', 'Amount
 
 
 # --- Process Successful Refill ---
-async def process_successful_refill(user_id: int, amount_to_add_eur: Decimal, payment_id: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
+async def process_successful_refill(user_id: int, amount_to_add_eur: Decimal, payment_id: str, context: ContextTypes.DEFAULT_TYPE, send_notification: bool = True) -> bool:
+    """
+    Process a successful refill payment.
+    
+    Args:
+        send_notification: If False, skips sending bot message (for Mini App refills where notification happens in-app)
+    """
     bot = context.bot
     user_lang = 'en'
     conn_lang = None
@@ -907,8 +913,8 @@ async def process_successful_refill(user_id: int, amount_to_add_eur: Decimal, pa
         logger.error(f"Invalid amount_to_add_eur in process_successful_refill: {amount_to_add_eur}")
         return False
 
-    # Use the separate crediting function
-    return await credit_user_balance(user_id, amount_to_add_eur, f"Refill payment {payment_id}", context)
+    # Use the separate crediting function - pass send_notification flag
+    return await credit_user_balance(user_id, amount_to_add_eur, f"Refill payment {payment_id}", context, send_notification=send_notification)
 
 
 # --- HELPER: Finalize Purchase (Send Caption Separately) ---
@@ -1657,8 +1663,13 @@ async def process_successful_crypto_purchase(user_id: int, basket_snapshot: list
 
 
 # --- NEW: Helper Function to Credit User Balance (Moved from Previous Response) ---
-async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Adds funds to a user's balance and notifies them."""
+async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, context: ContextTypes.DEFAULT_TYPE, send_notification: bool = True) -> bool:
+    """
+    Adds funds to a user's balance and optionally notifies them via bot message.
+    
+    Args:
+        send_notification: If False, skips sending bot message (for Mini App refills)
+    """
     if not isinstance(amount_eur, Decimal) or amount_eur <= Decimal('0.0'):
         logger.error(f"Invalid amount provided to credit_user_balance for user {user_id}: {amount_eur}")
         return False
@@ -1706,51 +1717,54 @@ async def credit_user_balance(user_id: int, amount_eur: Decimal, reason: str, co
              new_value=float(new_balance_decimal)
         )
 
-        # Notify User
-        bot_instance = context.bot if hasattr(context, 'bot') else None
-        if bot_instance:
-            # Get user language for notification - handle None context.user_data
-            lang = "en"  # Default
-            try:
-                if hasattr(context, 'user_data') and context.user_data:
-                    lang = context.user_data.get("lang", "en")
-            except:
-                pass
-            
-            if not lang or lang == "en":  # Fallback: Get from DB if not in context
-                conn_lang = None
+        # Notify User (only if send_notification is True - Mini App refills handle their own notifications)
+        if send_notification:
+            bot_instance = context.bot if hasattr(context, 'bot') else None
+            if bot_instance:
+                # Get user language for notification - handle None context.user_data
+                lang = "en"  # Default
                 try:
-                    conn_lang = get_db_connection()
-                    c_lang = conn_lang.cursor()
-                    c_lang.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
-                    lang_res = c_lang.fetchone()
-                    if lang_res and lang_res['language'] in LANGUAGES: lang = lang_res['language']
-                except Exception as lang_e: logger.warning(f"Could not fetch user lang for credit msg: {lang_e}")
-                finally:
-                     if conn_lang: conn_lang.close()
-            lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
+                    if hasattr(context, 'user_data') and context.user_data:
+                        lang = context.user_data.get("lang", "en")
+                except:
+                    pass
+                
+                if not lang or lang == "en":  # Fallback: Get from DB if not in context
+                    conn_lang = None
+                    try:
+                        conn_lang = get_db_connection()
+                        c_lang = conn_lang.cursor()
+                        c_lang.execute("SELECT language FROM users WHERE user_id = %s", (user_id,))
+                        lang_res = c_lang.fetchone()
+                        if lang_res and lang_res['language'] in LANGUAGES: lang = lang_res['language']
+                    except Exception as lang_e: logger.warning(f"Could not fetch user lang for credit msg: {lang_e}")
+                    finally:
+                         if conn_lang: conn_lang.close()
+                lang_data = LANGUAGES.get(lang, LANGUAGES['en'])
 
 
-            # <<< TODO: Add these messages to LANGUAGES dictionary >>>
-            if "Overpayment" in reason:
-                # Example message key: "credit_overpayment_purchase"
-                notify_msg_template = lang_data.get("credit_overpayment_purchase", "✅ Your purchase was successful! Additionally, an overpayment of {amount} EUR has been credited to your balance. Your new balance is {new_balance} EUR.")
-            elif "Underpayment" in reason:
-                # Example message key: "credit_underpayment_purchase"
-                 notify_msg_template = lang_data.get("credit_underpayment_purchase", "ℹ️ Your purchase failed due to underpayment, but the received amount ({amount} EUR) has been credited to your balance. Your new balance is {new_balance} EUR.")
-            else: # Generic credit (like Refill)
-                # Example message key: "credit_refill"
-                notify_msg_template = lang_data.get("credit_refill", "✅ Your balance has been credited by {amount} EUR. Reason: {reason}. New balance: {new_balance} EUR.")
+                # <<< TODO: Add these messages to LANGUAGES dictionary >>>
+                if "Overpayment" in reason:
+                    # Example message key: "credit_overpayment_purchase"
+                    notify_msg_template = lang_data.get("credit_overpayment_purchase", "✅ Your purchase was successful! Additionally, an overpayment of {amount} EUR has been credited to your balance. Your new balance is {new_balance} EUR.")
+                elif "Underpayment" in reason:
+                    # Example message key: "credit_underpayment_purchase"
+                     notify_msg_template = lang_data.get("credit_underpayment_purchase", "ℹ️ Your purchase failed due to underpayment, but the received amount ({amount} EUR) has been credited to your balance. Your new balance is {new_balance} EUR.")
+                else: # Generic credit (like Refill)
+                    # Example message key: "credit_refill"
+                    notify_msg_template = lang_data.get("credit_refill", "✅ Your balance has been credited by {amount} EUR. Reason: {reason}. New balance: {new_balance} EUR.")
 
-            notify_msg = notify_msg_template.format(
-                amount=format_currency(amount_eur),
-                new_balance=format_currency(new_balance_decimal),
-                reason=reason # Include reason for generic credits
-            )
+                notify_msg = notify_msg_template.format(
+                    amount=format_currency(amount_eur),
+                    new_balance=format_currency(new_balance_decimal),
+                    reason=reason # Include reason for generic credits
+                )
 
-            await send_message_with_retry(bot_instance, user_id, notify_msg, parse_mode=None)
+                await send_message_with_retry(bot_instance, user_id, notify_msg, parse_mode=None)
+            else:
+                 logger.error(f"Could not get bot instance to notify user {user_id} about balance credit.")
         else:
-             logger.error(f"Could not get bot instance to notify user {user_id} about balance credit.")
+            logger.info(f"Skipping bot notification for user {user_id} balance credit (Mini App will notify)")
 
         return True
 

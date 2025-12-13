@@ -482,7 +482,13 @@ async def check_solana_deposits(context):
                             amount_res = c.fetchone()
                             amount_eur = Decimal(str(amount_res['target_eur_amount'])) if amount_res else Decimal("0.0")
                             
-                            await process_successful_refill(user_id, amount_eur, order_id, context)
+                            # Process refill WITHOUT sending bot message (Mini App will notify user)
+                            await process_successful_refill(user_id, amount_eur, order_id, context, send_notification=False)
+                            
+                            # CRITICAL: Update pending_deposits status to 'paid' so Mini App polling detects it
+                            c.execute("UPDATE pending_deposits SET status = 'paid' WHERE payment_id = %s", (order_id,))
+                            conn.commit()
+                            logger.info(f"✅ Refill {order_id}: Updated pending_deposits status to 'paid' for Mini App")
                     else:
                         logger.error(f"Could not find pending_deposit record for solana order {order_id}")
                     
