@@ -474,6 +474,11 @@ async def check_solana_deposits(context):
                             discount_code = deposit_info.get('discount_code')
                             
                             await process_successful_crypto_purchase(user_id, basket_snapshot, discount_code, order_id, context)
+                            
+                            # CRITICAL: Update pending_deposits status to 'confirmed' to prevent reprocessing
+                            c.execute("UPDATE pending_deposits SET status = 'confirmed' WHERE payment_id = %s", (order_id,))
+                            conn.commit()
+                            logger.info(f"✅ Purchase {order_id}: Updated pending_deposits status to 'confirmed'")
                         else:
                             # Refill
                             # We need to calculate EUR amount. Use the stored rate or current rate?
@@ -536,17 +541,22 @@ async def check_solana_deposits(context):
         conn.close()
         
     # RECOVERY: Check for 'paid' wallets that haven't been marked 'swept' (e.g. due to crash)
+    # Only run recovery if no active sweep tasks are pending (wait 5 seconds after main loop)
     if ENABLE_AUTO_SWEEP and ADMIN_WALLET:
         try:
+            await asyncio.sleep(2)  # Wait for concurrent sweeps to complete
             conn = get_db_connection()
             c = conn.cursor()
-            c.execute("SELECT * FROM solana_wallets WHERE status = 'paid'")
+            # Only get wallets that are STILL 'paid' after the main sweep should have completed
+            c.execute("SELECT * FROM solana_wallets WHERE status = 'paid' AND updated_at < NOW() - INTERVAL '10 seconds'")
             paid_wallets = c.fetchall()
             conn.close()
             
-            for wallet in paid_wallets:
-                # Attempt sweep (it will check balance first)
-                asyncio.create_task(sweep_wallet(wallet))
+            if paid_wallets:
+                logger.info(f"🔄 Recovery sweep: Found {len(paid_wallets)} wallets still marked 'paid'")
+                for wallet in paid_wallets:
+                    # Attempt sweep (it will check balance first)
+                    asyncio.create_task(sweep_wallet(wallet))
         except Exception as e:
             logger.error(f"Error in sweep recovery loop: {e}")
 

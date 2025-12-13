@@ -1239,15 +1239,19 @@ def init_db():
             # Add first_name column if it doesn't exist
             try:
                 logger.info(f"🔧 Adding first_name column to users table...")
-                c.execute(f"ALTER TABLE users ADD COLUMN first_name {get_text_type()} DEFAULT NULL")
+                c.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name {get_text_type()} DEFAULT NULL")
                 conn.commit()
-                logger.info(f"✅ first_name column added to users table")
+                logger.info(f"✅ first_name column added/verified in users table")
             except Exception as e:
-                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                err_lower = str(e).lower()
+                if "already exists" in err_lower or "duplicate column" in err_lower or "column \"first_name\" of relation" in err_lower:
                     logger.info(f"✅ first_name column already exists in users table")
                 else:
                     logger.warning(f"⚠️ Could not add first_name column: {e}")
-                conn.rollback()
+                try:
+                    conn.rollback()
+                except:
+                    pass
             
             # Clean up legacy fake usernames (user_123456789 format)
             try:
