@@ -1,0 +1,425 @@
+/* ═══════════════════════════════════════════════════════════════
+   GAMIFICATION ELEMENTS
+   XP, Heat, Achievements, Rankings
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════
+   LAB HEADER
+   ═══════════════════════════════════════════════════════════════ */
+
+.lab-header {
+    position: relative;
+    z-index: 100;
+    background: linear-gradient(180deg, 
+        rgba(26, 26, 26, 0.98) 0%, 
+        rgba(26, 26, 26, 0.9) 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--hazmat-yellow);
+    padding: 12px 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MINI PERIODIC LOGO
+   ═══════════════════════════════════════════════════════════════ */
+
+.logo-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mini-periodic {
+    display: flex;
+    gap: 2px;
+}
+
+.mini-el {
+    width: 28px;
+    height: 32px;
+    background: linear-gradient(180deg, #2a3a2a 0%, #1a2a1a 100%);
+    border: 1px solid #3a5a3a;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1em;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+}
+
+.mini-el.br { color: #A52A2A; }
+.mini-el.ba { color: #2ECC71; }
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-name {
+    font-family: var(--font-display);
+    font-size: 1.1em;
+    color: var(--text-primary);
+    letter-spacing: 2px;
+}
+
+.batch-info {
+    font-family: var(--font-mono);
+    font-size: 0.65em;
+    color: var(--crystal-blue);
+    letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEAT METER (DEA Attention)
+   ═══════════════════════════════════════════════════════════════ */
+
+.heat-meter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    border-radius: 20px;
+}
+
+.heat-icon {
+    font-size: 1em;
+    animation: heatPulse 1s ease-in-out infinite;
+}
+
+@keyframes heatPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.heat-bar {
+    width: 50px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.heat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, 
+        var(--warning-orange) 0%, 
+        var(--danger-red) 100%);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+}
+
+.heat-label {
+    font-family: var(--font-mono);
+    font-size: 0.6em;
+    font-weight: 700;
+    color: var(--danger-red);
+    letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   USER STATS ROW
+   ═══════════════════════════════════════════════════════════════ */
+
+.user-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-avatar {
+    font-size: 1.8em;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-family: var(--font-heading);
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+}
+
+.user-rank {
+    font-family: var(--font-mono);
+    font-size: 0.65em;
+    color: var(--hazmat-yellow);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   XP BAR
+   ═══════════════════════════════════════════════════════════════ */
+
+.xp-section {
+    flex: 1;
+    max-width: 120px;
+}
+
+.xp-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 3px;
+}
+
+.xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, 
+        var(--lab-green) 0%, 
+        var(--toxic-green) 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+    position: relative;
+}
+
+/* Animated shine */
+.xp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.3) 50%, 
+        transparent 100%);
+    animation: xpShine 2s ease-in-out infinite;
+}
+
+@keyframes xpShine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.xp-text {
+    font-family: var(--font-mono);
+    font-size: 0.55em;
+    color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BALANCE DISPLAY
+   ═══════════════════════════════════════════════════════════════ */
+
+.balance-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: rgba(39, 174, 96, 0.1);
+    border: 1px solid rgba(39, 174, 96, 0.3);
+    border-radius: 8px;
+}
+
+.balance-icon {
+    font-size: 1em;
+}
+
+.balance-amount {
+    font-family: var(--font-mono);
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--money-green);
+    text-shadow: 0 0 10px rgba(39, 174, 96, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   QUOTE BANNER
+   ═══════════════════════════════════════════════════════════════ */
+
+.quote-banner {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background: linear-gradient(90deg, 
+        rgba(245, 197, 24, 0.05) 0%, 
+        rgba(245, 197, 24, 0.1) 50%,
+        rgba(245, 197, 24, 0.05) 100%);
+    border-left: 3px solid var(--hazmat-yellow);
+    border-radius: 0 6px 6px 0;
+}
+
+.quote-text {
+    font-family: var(--font-body);
+    font-size: 0.85em;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFILE PAGE
+   ═══════════════════════════════════════════════════════════════ */
+
+.profile-content {
+    padding: 10px;
+}
+
+.profile-card {
+    text-align: center;
+    padding: 25px;
+    background: linear-gradient(160deg, var(--bg-elevated) 0%, var(--bg-surface) 100%);
+    border: 1px solid var(--metal-light);
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+.profile-avatar {
+    font-size: 4em;
+    margin-bottom: 10px;
+}
+
+.profile-name {
+    font-family: var(--font-display);
+    font-size: 1.8em;
+    color: var(--text-primary);
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+}
+
+.profile-rank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.rank-badge {
+    padding: 6px 16px;
+    background: linear-gradient(135deg, var(--hazmat-yellow) 0%, var(--hazmat-yellow-dark) 100%);
+    border-radius: 20px;
+    font-family: var(--font-heading);
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #000;
+    letter-spacing: 2px;
+}
+
+.rank-stars {
+    font-size: 1.2em;
+    letter-spacing: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATS GRID
+   ═══════════════════════════════════════════════════════════════ */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    padding: 15px 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--metal-light);
+    border-radius: 10px;
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 1.4em;
+    font-weight: 700;
+    color: var(--crystal-blue);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.7em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACHIEVEMENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+.achievements-section {
+    background: var(--bg-elevated);
+    border: 1px solid var(--metal-light);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.achievements-section h4 {
+    font-family: var(--font-heading);
+    font-size: 1em;
+    color: var(--hazmat-yellow);
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+}
+
+.achievement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.achievement {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.achievement.unlocked {
+    border-color: rgba(46, 204, 113, 0.3);
+    background: rgba(46, 204, 113, 0.05);
+}
+
+.achievement.locked {
+    opacity: 0.5;
+}
+
+.ach-icon {
+    font-size: 1.2em;
+}
+
+.ach-name {
+    font-family: var(--font-heading);
+    font-size: 0.9em;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+}
+
+.achievement.unlocked .ach-name {
+    color: var(--lab-green);
+}
+
+

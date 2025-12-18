@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Heisenberg's Lab</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/intro.css">
+    <link rel="stylesheet" href="css/rv-interior.css">
+    <link rel="stylesheet" href="css/gamification.css">
+    <link rel="stylesheet" href="css/cards.css">
+    <link rel="stylesheet" href="css/effects.css">
+</head>
+<body>
+    <!-- ═══════════════════════════════════════════════════════════════
+         BREAKING BAD INTRO SEQUENCE
+         ═══════════════════════════════════════════════════════════════ -->
+    <div id="intro-overlay" class="intro-overlay">
+        <!-- Floating chemical formulas -->
+        <div class="formula-container">
+            <span class="formula f1">C₁₀H₁₅N</span>
+            <span class="formula f2">H₂SO₄</span>
+            <span class="formula f3">NaOH</span>
+            <span class="formula f4">HCl</span>
+            <span class="formula f5">CH₃NH₂</span>
+            <span class="formula f6">P₂O₅</span>
+        </div>
+        
+        <!-- Smoke/steam particles -->
+        <div class="smoke-container">
+            <div class="smoke s1"></div>
+            <div class="smoke s2"></div>
+            <div class="smoke s3"></div>
+            <div class="smoke s4"></div>
+            <div class="smoke s5"></div>
+        </div>
+        
+        <!-- Main logo -->
+        <div class="intro-logo">
+            <div class="periodic-element br">
+                <span class="number">35</span>
+                <span class="symbol">Br</span>
+                <span class="name">Bromine</span>
+            </div>
+            <div class="periodic-element ba">
+                <span class="number">56</span>
+                <span class="symbol">Ba</span>
+                <span class="name">Barium</span>
+            </div>
+        </div>
+        
+        <h1 class="intro-title">HEISENBERG'S LAB</h1>
+        <p class="intro-quote">"Chemistry is the study of change."</p>
+        
+        <div class="intro-loader">
+            <div class="loader-bar"></div>
+            <span class="loader-text">COOKING BATCH #4921...</span>
+        </div>
+        
+        <button class="intro-enter" id="enter-btn">
+            <span>⚗️ ENTER THE LAB ⚗️</span>
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MAIN APP (RV LAB INTERIOR)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div id="main-app" class="main-app hidden">
+        
+        <!-- RV Interior Background Layers -->
+        <div class="rv-background">
+            <div class="rv-ceiling"></div>
+            <div class="rv-vent">
+                <div class="vent-steam"></div>
+            </div>
+            <div class="blue-glow"></div>
+            <div class="steam-particles">
+                <div class="steam-particle p1"></div>
+                <div class="steam-particle p2"></div>
+                <div class="steam-particle p3"></div>
+                <div class="steam-particle p4"></div>
+                <div class="steam-particle p5"></div>
+            </div>
+        </div>
+
+        <!-- Main Content Container -->
+        <div class="app-container">
+            
+            <!-- Header with Gamification -->
+            <header class="lab-header">
+                <div class="header-top">
+                    <div class="logo-section">
+                        <div class="mini-periodic">
+                            <div class="mini-el br">Br</div>
+                            <div class="mini-el ba">Ba</div>
+                        </div>
+                        <div class="logo-text">
+                            <span class="brand-name">HEISENBERG'S LAB</span>
+                            <span class="batch-info">Batch #4921 | 99.1% Pure</span>
+                        </div>
+                    </div>
+                    <div class="heat-meter">
+                        <span class="heat-icon">🔥</span>
+                        <div class="heat-bar">
+                            <div class="heat-fill" style="width: 45%"></div>
+                        </div>
+                        <span class="heat-label">DEA</span>
+                    </div>
+                </div>
+                
+                <div class="user-stats">
+                    <div class="user-info">
+                        <span class="user-avatar">👨‍🔬</span>
+                        <div class="user-details">
+                            <span class="username">PINKMAN</span>
+                            <span class="user-rank">LVL 3 • DISTRIBUTOR</span>
+                        </div>
+                    </div>
+                    <div class="xp-section">
+                        <div class="xp-bar">
+                            <div class="xp-fill" style="width: 62%"></div>
+                        </div>
+                        <span class="xp-text">1,247 / 2,000 XP</span>
+                    </div>
+                    <div class="balance-display">
+                        <span class="balance-icon">💰</span>
+                        <span class="balance-amount" id="user-balance">€420.69</span>
+                    </div>
+                </div>
+                
+                <!-- Quote Banner -->
+                <div class="quote-banner">
+                    <span class="quote-text" id="random-quote">"I am the one who knocks."</span>
+                </div>
+            </header>
+
+            <!-- Lab Counter (Decorative) -->
+            <div class="lab-counter">
+                <div class="counter-equipment">
+                    <span class="equipment">🧪</span>
+                    <span class="equipment">⚗️</span>
+                    <span class="equipment">🔬</span>
+                    <span class="equipment crystal">💎</span>
+                    <span class="equipment">🧫</span>
+                    <span class="equipment">⚗️</span>
+                </div>
+                <div class="counter-surface"></div>
+            </div>
+
+            <!-- Content Sections -->
+            <main class="content-area">
+                
+                <!-- LAB Section (Shop) -->
+                <section id="section-lab" class="section active">
+                    <div class="section-header">
+                        <h2>📋 AVAILABLE BATCHES</h2>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-filter="all">ALL</button>
+                            <button class="filter-tab" data-filter="crystal">💎 CRYSTAL</button>
+                            <button class="filter-tab" data-filter="green">🌿 GREEN</button>
+                            <button class="filter-tab" data-filter="pills">💊 PILLS</button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-grid" id="product-grid">
+                        <!-- Products loaded dynamically -->
+                    </div>
+                </section>
+
+                <!-- TURF Section (Map) -->
+                <section id="section-turf" class="section">
+                    <div class="section-header">
+                        <h2>🗺️ DISTRIBUTION TURF</h2>
+                    </div>
+                    <div class="desert-bg">
+                        <div class="map-container">
+                            <p class="coming-soon">Territory map coming soon...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- BARREL Section (Cart) -->
+                <section id="section-barrel" class="section">
+                    <div class="section-header">
+                        <h2>🛢️ YOUR BARREL</h2>
+                        <span class="cart-count" id="cart-count">0 items</span>
+                    </div>
+                    <div class="barrel-room-bg">
+                        <div class="cart-items" id="cart-items">
+                            <div class="empty-cart">
+                                <span class="barrel-icon">🛢️</span>
+                                <p>Your barrel is empty</p>
+                                <p class="sub">"No half measures."</p>
+                            </div>
+                        </div>
+                        <div class="cart-summary" id="cart-summary" style="display: none;">
+                            <div class="summary-row">
+                                <span>Subtotal:</span>
+                                <span id="cart-subtotal">€0.00</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>TOTAL:</span>
+                                <span id="cart-total">€0.00</span>
+                            </div>
+                            <button class="cook-order-btn" id="cook-order-btn">
+                                🚐 COOK THE ORDER 🚐
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PROFILE Section -->
+                <section id="section-profile" class="section">
+                    <div class="section-header">
+                        <h2>👤 COOK PROFILE</h2>
+                    </div>
+                    <div class="profile-content">
+                        <div class="profile-card">
+                            <div class="profile-avatar">👨‍🔬</div>
+                            <h3 class="profile-name">PINKMAN</h3>
+                            <div class="profile-rank">
+                                <span class="rank-badge">DISTRIBUTOR</span>
+                                <span class="rank-stars">⭐⭐⭐☆☆</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="stat-value">12</span>
+                                <span class="stat-label">Total Cooks</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-value">€1,247</span>
+                                <span class="stat-label">Total Spent</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-value">99.1%</span>
+                                <span class="stat-label">Avg Purity</span>
+                            </div>
+                        </div>
+                        
+                        <div class="achievements-section">
+                            <h4>🏆 ACHIEVEMENTS</h4>
+                            <div class="achievement-list">
+                                <div class="achievement unlocked">
+                                    <span class="ach-icon">✅</span>
+                                    <span class="ach-name">First Cook</span>
+                                </div>
+                                <div class="achievement unlocked">
+                                    <span class="ach-icon">✅</span>
+                                    <span class="ach-name">Say My Name</span>
+                                </div>
+                                <div class="achievement locked">
+                                    <span class="ach-icon">🔒</span>
+                                    <span class="ach-name">Empire Builder</span>
+                                </div>
+                                <div class="achievement locked">
+                                    <span class="ach-icon">🔒</span>
+                                    <span class="ach-name">Heisenberg</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- Bottom Equipment (Decorative) -->
+            <div class="bottom-equipment">
+                <span class="barrel">🛢️</span>
+                <span class="barrel">🛢️</span>
+                <span class="hazmat">😷</span>
+                <span class="goggles">🥽</span>
+                <span class="barrel">🛢️</span>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-section="lab">
+                <span class="nav-icon">🔬</span>
+                <span class="nav-label">LAB</span>
+            </div>
+            <div class="nav-item" data-section="turf">
+                <span class="nav-icon">🗺️</span>
+                <span class="nav-label">TURF</span>
+            </div>
+            <div class="nav-item" data-section="barrel">
+                <span class="nav-icon">🛢️</span>
+                <span class="nav-label">BARREL</span>
+                <span class="nav-badge" id="nav-cart-badge" style="display: none;">0</span>
+            </div>
+            <div class="nav-item" data-section="profile">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">PROFILE</span>
+            </div>
+        </nav>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MODALS
+         ═══════════════════════════════════════════════════════════════ -->
+    
+    <!-- Product Detail Modal -->
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-content product-detail-modal">
+            <button class="modal-close" id="modal-close">✕</button>
+            <div class="modal-body" id="modal-body">
+                <!-- Filled dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Overlay -->
+    <div id="success-overlay" class="success-overlay">
+        <div class="success-crystals">💎💎💎💎💎</div>
+        <h2 class="success-title">BATCH DELIVERED</h2>
+        <p class="success-quote">"Yeah, Science, Bitch!"</p>
+        <div class="success-xp">+50 XP</div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/sounds.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+
+

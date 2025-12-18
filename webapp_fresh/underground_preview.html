@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="underground">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>THE VAULT - Underground Theme Preview</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           UNDERGROUND THEME - "THE VAULT" 
+           3D Game UI with depth, layers, and physical interaction
+           ═══════════════════════════════════════════════════════════════ */
+
+        :root {
+            /* Core Palette */
+            --primary: #ff2d55;
+            --primary-dark: #a01030;
+            --primary-glow: rgba(255, 45, 85, 0.5);
+            --neon-cyan: #00f5ff;
+            --neon-yellow: #ffe600;
+            --neon-green: #39ff14;
+            --bg-deep: #050508;
+            --bg-surface: #0c0c12;
+            --bg-elevated: #15151f;
+            --bg-card: #1a1a24;
+            --glass: rgba(20, 20, 30, 0.85);
+            --text-main: #e8e8e8;
+            --text-muted: #888;
+            
+            /* 3D Depth System */
+            --depth-1: 0 2px 4px rgba(0,0,0,0.5);
+            --depth-2: 0 4px 12px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.4);
+            --depth-3: 0 8px 32px rgba(0,0,0,0.7), 0 4px 12px rgba(0,0,0,0.5);
+            --depth-glow: 0 0 40px var(--primary-glow), 0 8px 32px rgba(0,0,0,0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PARALLAX DEPTH LAYERS
+           ═══════════════════════════════════════════════════════════════ */
+
+        .depth-layer-1 {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 45, 85, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 45, 85, 0.02) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+            z-index: -3;
+            animation: gridPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        .depth-layer-2 {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(255, 45, 85, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 245, 255, 0.05) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: -2;
+        }
+
+        .depth-layer-3 {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(
+                ellipse at center,
+                transparent 0%,
+                rgba(0,0,0,0.7) 100%
+            );
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Noise overlay */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.02;
+            pointer-events: none;
+            z-index: 9998;
+            animation: noiseFlicker 0.1s infinite;
+        }
+
+        @keyframes noiseFlicker {
+            0%, 100% { opacity: 0.02; }
+            50% { opacity: 0.03; }
+        }
+
+        /* Scanlines */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.15) 2px,
+                rgba(0, 0, 0, 0.15) 4px
+            );
+            pointer-events: none;
+            z-index: 9997;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MAIN CONTAINER
+           ═══════════════════════════════════════════════════════════════ */
+
+        .app-container {
+            max-width: 430px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HEADER - Floating 3D Panel
+           ═══════════════════════════════════════════════════════════════ */
+
+        .header {
+            background: linear-gradient(
+                145deg,
+                rgba(255, 45, 85, 0.08) 0%,
+                var(--glass) 50%,
+                rgba(0, 245, 255, 0.03) 100%
+            );
+            border: 1px solid rgba(255, 45, 85, 0.25);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 15px;
+            position: relative;
+            transform: translateZ(30px);
+            box-shadow: 
+                var(--depth-3),
+                inset 0 1px 0 rgba(255,255,255,0.08),
+                0 0 60px rgba(255, 45, 85, 0.1);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+        }
+
+        /* Animated scan line */
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                var(--neon-cyan) 50%, 
+                transparent 100%
+            );
+            animation: scanLine 3s ease-in-out infinite;
+        }
+
+        @keyframes scanLine {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(80px); opacity: 0; }
+        }
+
+        /* Tech corner brackets */
+        .header::after {
+            content: '';
+            position: absolute;
+            top: 8px; left: 8px; right: 8px; bottom: 8px;
+            border: 1px solid rgba(0, 245, 255, 0.15);
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        .header-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8em;
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: 8px;
+            color: var(--primary);
+            text-shadow: 
+                0 0 20px var(--primary-glow),
+                0 0 40px rgba(255, 45, 85, 0.3);
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        /* Glitch effect */
+        .header-title::before,
+        .header-title::after {
+            content: 'THE VAULT';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+
+        .header-title::before {
+            color: var(--neon-cyan);
+            animation: glitch1 2s infinite linear alternate-reverse;
+            clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+        }
+
+        .header-title::after {
+            color: var(--neon-yellow);
+            animation: glitch2 3s infinite linear alternate-reverse;
+            clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+        }
+
+        @keyframes glitch1 {
+            0%, 90%, 100% { transform: translate(0); }
+            92% { transform: translate(-3px, 1px); }
+            94% { transform: translate(3px, -1px); }
+        }
+
+        @keyframes glitch2 {
+            0%, 85%, 100% { transform: translate(0); }
+            87% { transform: translate(2px, 1px); }
+            89% { transform: translate(-2px, -1px); }
+        }
+
+        .header-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .balance {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 15px rgba(255, 230, 0, 0.5);
+        }
+
+        .balance .currency {
+            font-size: 0.6em;
+            opacity: 0.7;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(57, 255, 20, 0.1);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: statusPulse 1.5s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CATEGORY TABS
+           ═══════════════════════════════════════════════════════════════ */
+
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            padding: 0 15px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .category-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .category-tab:hover {
+            background: rgba(255, 45, 85, 0.1);
+            border-color: rgba(255, 45, 85, 0.3);
+            color: var(--text-main);
+        }
+
+        .category-tab.active {
+            background: linear-gradient(135deg, rgba(255, 45, 85, 0.2) 0%, rgba(255, 45, 85, 0.1) 100%);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 45, 85, 0.2);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PRODUCT GRID
+           ═══════════════════════════════════════════════════════════════ */
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 0 15px;
+            padding-bottom: 120px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PRODUCT CARDS - 3D Interactive
+           ═══════════════════════════════════════════════════════════════ */
+
+        .product-card {
+            background: linear-gradient(
+                160deg,
+                var(--bg-card) 0%,
+                var(--bg-surface) 100%
+            );
+            border: 1px solid rgba(255, 45, 85, 0.15);
+            border-radius: 12px;
+            padding: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+            box-shadow: 
+                var(--depth-2),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+            overflow: hidden;
+        }
+
+        .product-card:hover {
+            border-color: var(--primary);
+            box-shadow: 
+                var(--depth-glow),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .product-card:active {
+            transform: scale(0.97) translateY(2px);
+            box-shadow: var(--depth-1);
+        }
+
+        /* Tech corner decorations */
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 25px; height: 25px;
+            border-top: 2px solid var(--neon-cyan);
+            border-left: 2px solid var(--neon-cyan);
+            opacity: 0.4;
+            transition: opacity 0.3s ease;
+        }
+
+        .product-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 25px; height: 25px;
+            border-bottom: 2px solid var(--primary);
+            border-right: 2px solid var(--primary);
+            opacity: 0.4;
+            transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover::before,
+        .product-card:hover::after {
+            opacity: 0.8;
+        }
+
+        /* Stock LED indicator */
+        .stock-led {
+            position: absolute;
+            top: 12px; right: 12px;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green), 0 0 16px var(--neon-green);
+            animation: ledBlink 2s infinite;
+        }
+
+        .stock-led.low {
+            background: var(--neon-yellow);
+            box-shadow: 0 0 8px var(--neon-yellow), 0 0 16px var(--neon-yellow);
+        }
+
+        .stock-led.out {
+            background: #ff3333;
+            box-shadow: 0 0 8px #ff3333;
+            animation: none;
+            opacity: 0.5;
+        }
+
+        @keyframes ledBlink {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0.4; }
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Holographic shimmer */
+        .product-image::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.05) 50%,
+                transparent 70%
+            );
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .product-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .product-weight {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-price {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 10px rgba(255, 230, 0, 0.4);
+        }
+
+        .product-stock {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        /* Contraband watermark */
+        .contraband-tag {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            font-family: 'Orbitron', monospace;
+            font-size: 0.6em;
+            color: var(--primary);
+            opacity: 0;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            border: 1px solid var(--primary);
+            padding: 3px 10px;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover .contraband-tag {
+            opacity: 0.3;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ACTION BUTTONS - 3D Physical Press
+           ═══════════════════════════════════════════════════════════════ */
+
+        .action-btn {
+            background: linear-gradient(
+                180deg,
+                rgba(255, 45, 85, 0.95) 0%,
+                var(--primary-dark) 100%
+            );
+            border: none;
+            border-radius: 10px;
+            padding: 14px 28px;
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            position: relative;
+            transform: translateY(0);
+            transition: all 0.15s ease;
+            box-shadow: 
+                0 6px 0 var(--primary-dark),
+                0 8px 20px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.25);
+            overflow: hidden;
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(
+                180deg,
+                rgba(255, 70, 110, 1) 0%,
+                rgba(180, 30, 60, 1) 100%
+            );
+            box-shadow: 
+                0 6px 0 var(--primary-dark),
+                0 12px 30px rgba(255, 45, 85, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 2px 0 var(--primary-dark),
+                0 4px 10px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+
+        /* Shine sweep on hover */
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255,255,255,0.25) 50%,
+                transparent 100%
+            );
+            transition: left 0.5s ease;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Secondary button style */
+        .action-btn.secondary {
+            background: linear-gradient(
+                180deg,
+                rgba(60, 60, 70, 0.95) 0%,
+                rgba(40, 40, 50, 1) 100%
+            );
+            box-shadow: 
+                0 6px 0 #1a1a20,
+                0 8px 20px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .action-btn.secondary:hover {
+            background: linear-gradient(
+                180deg,
+                rgba(80, 80, 90, 1) 0%,
+                rgba(50, 50, 60, 1) 100%
+            );
+        }
+
+        .action-btn.secondary:active {
+            box-shadow: 
+                0 2px 0 #1a1a20,
+                0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           BOTTOM NAVIGATION - Floating 3D HUD
+           ═══════════════════════════════════════════════════════════════ */
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 30px);
+            max-width: 400px;
+            background: linear-gradient(
+                180deg,
+                rgba(25, 25, 35, 0.98) 0%,
+                rgba(15, 15, 20, 0.99) 100%
+            );
+            border: 2px solid rgba(255, 45, 85, 0.35);
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            z-index: 1000;
+            box-shadow: 
+                0 -10px 40px rgba(0,0,0,0.8),
+                0 0 60px rgba(255, 45, 85, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+            backdrop-filter: blur(30px);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 20px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .nav-icon {
+            font-size: 1.6em;
+            margin-bottom: 4px;
+            filter: grayscale(100%) brightness(0.5);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .nav-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .nav-item:hover .nav-icon {
+            transform: scale(1.2) translateY(-3px);
+            filter: grayscale(0%) brightness(1.1);
+        }
+
+        .nav-item:hover .nav-label {
+            color: var(--text-main);
+        }
+
+        .nav-item.active .nav-icon {
+            filter: grayscale(0%) brightness(1.3);
+            transform: scale(1.3) translateY(-5px);
+            animation: iconFloat 2s ease-in-out infinite;
+        }
+
+        .nav-item.active .nav-label {
+            color: var(--primary);
+        }
+
+        @keyframes iconFloat {
+            0%, 100% { transform: scale(1.3) translateY(-5px); }
+            50% { transform: scale(1.3) translateY(-10px); }
+        }
+
+        /* Active indicator glow bar */
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 35px; height: 3px;
+            background: var(--primary);
+            border-radius: 3px;
+            box-shadow: 0 0 15px var(--primary), 0 0 30px var(--primary);
+        }
+
+        /* Cart badge */
+        .cart-badge {
+            position: absolute;
+            top: 2px; right: 10px;
+            min-width: 18px; height: 18px;
+            background: var(--primary);
+            border-radius: 10px;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.65em;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            box-shadow: 0 0 10px var(--primary);
+            animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes badgePop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SURVEILLANCE STAMP
+           ═══════════════════════════════════════════════════════════════ */
+
+        .surveillance-stamp {
+            position: fixed;
+            bottom: 100px;
+            right: 15px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7em;
+            color: var(--primary);
+            opacity: 0.6;
+            z-index: 999;
+            text-shadow: 0 0 5px var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rec-dot {
+            width: 8px; height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: recBlink 1s infinite;
+        }
+
+        @keyframes recBlink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.2; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           THEME SWITCHER
+           ═══════════════════════════════════════════════════════════════ */
+
+        .theme-switcher {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+            z-index: 1001;
+        }
+
+        .theme-btn {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .theme-btn.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .theme-btn.gta {
+            background: linear-gradient(135deg, #1a3d1a 0%, #0d1f0d 100%);
+        }
+
+        .theme-btn.underground {
+            background: linear-gradient(135deg, #3d1a1a 0%, #1f0d0d 100%);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MODAL EXAMPLE
+           ═══════════════════════════════════════════════════════════════ */
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 5, 8, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(
+                160deg,
+                var(--bg-elevated) 0%,
+                var(--bg-surface) 100%
+            );
+            border: 2px solid rgba(255, 45, 85, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 350px;
+            box-shadow: var(--depth-glow);
+            animation: modalSlam 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+        }
+
+        @keyframes modalSlam {
+            0% { 
+                opacity: 0; 
+                transform: scale(0.7) translateY(-50px) rotateX(20deg); 
+            }
+            60% { 
+                transform: scale(1.05) translateY(5px) rotateX(-3deg); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1) translateY(0) rotateX(0); 
+            }
+        }
+
+        .modal-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.4em;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .modal-text {
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MISSION COMPLETE OVERLAY
+           ═══════════════════════════════════════════════════════════════ */
+
+        .mission-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(255, 45, 85, 0.2) 0%,
+                rgba(5, 5, 8, 0.98) 70%
+            );
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .mission-overlay.active {
+            display: flex;
+        }
+
+        .mission-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5em;
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 
+                0 0 30px var(--primary),
+                0 0 60px var(--primary-glow),
+                4px 4px 0 rgba(0,0,0,0.8);
+            animation: missionSlam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+            letter-spacing: 5px;
+        }
+
+        .mission-sub {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.2em;
+            color: var(--text-muted);
+            margin-top: 15px;
+            animation: missionFade 0.5s ease 0.3s both;
+        }
+
+        @keyframes missionSlam {
+            0% { transform: scale(3) rotate(-5deg); opacity: 0; }
+            50% { transform: scale(0.9) rotate(2deg); }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+
+        @keyframes missionFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Button container in modal */
+        .demo-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 15px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Depth layers for parallax -->
+    <div class="depth-layer-1"></div>
+    <div class="depth-layer-2"></div>
+    <div class="depth-layer-3"></div>
+    <div class="noise-overlay"></div>
+    <div class="scanlines"></div>
+
+    <!-- Theme switcher -->
+    <div class="theme-switcher">
+        <div class="theme-btn gta" onclick="alert('Switch to GTA theme')" title="GTA Theme">🌴</div>
+        <div class="theme-btn underground active" onclick="alert('Already on Underground theme')" title="Underground Theme">💀</div>
+    </div>
+
+    <!-- Main container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">THE VAULT</div>
+            <div class="header-stats">
+                <div class="balance">
+                    <span class="currency">€</span>124.50
+                </div>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    ONLINE
+                </div>
+            </div>
+        </div>
+
+        <!-- Category tabs -->
+        <div class="category-tabs">
+            <div class="category-tab active">All</div>
+            <div class="category-tab">🌿 Green</div>
+            <div class="category-tab">💊 Pills</div>
+            <div class="category-tab">🍄 Shrooms</div>
+            <div class="category-tab">❄️ Snow</div>
+        </div>
+
+        <!-- Demo buttons -->
+        <div class="demo-buttons">
+            <button class="action-btn" onclick="showModal()">OPEN MODAL</button>
+            <button class="action-btn secondary" onclick="showMission()">MISSION COMPLETE</button>
+        </div>
+
+        <!-- Product grid -->
+        <div class="product-grid">
+            
+            <!-- Product 1 -->
+            <div class="product-card" onclick="cardClick(this)">
+                <div class="stock-led"></div>
+                <div class="contraband-tag">CONTRABAND</div>
+                <div class="product-image">🌿</div>
+                <div class="product-name">Green Haze</div>
+                <div class="product-weight">1g Premium</div>
+                <div class="product-footer">
+                    <div class="product-price">€20</div>
+                    <div class="product-stock">12 left</div>
+                </div>
+            </div>
+
+            <!-- Product 2 -->
+            <div class="product-card" onclick="cardClick(this)">
+                <div class="stock-led"></div>
+                <div class="contraband-tag">CONTRABAND</div>
+                <div class="product-image">💊</div>
+                <div class="product-name">Blue Dream</div>
+                <div class="product-weight">5 pills</div>
+                <div class="product-footer">
+                    <div class="product-price">€35</div>
+                    <div class="product-stock">8 left</div>
+                </div>
+            </div>
+
+            <!-- Product 3 -->
+            <div class="product-card" onclick="cardClick(this)">
+                <div class="stock-led low"></div>
+                <div class="contraband-tag">CONTRABAND</div>
+                <div class="product-image">🍄</div>
+                <div class="product-name">Magic Caps</div>
+                <div class="product-weight">3.5g Dried</div>
+                <div class="product-footer">
+                    <div class="product-price">€50</div>
+                    <div class="product-stock">3 left</div>
+                </div>
+            </div>
+
+            <!-- Product 4 -->
+            <div class="product-card" onclick="cardClick(this)">
+                <div class="stock-led out"></div>
+                <div class="contraband-tag">CONTRABAND</div>
+                <div class="product-image" style="opacity: 0.4;">❄️</div>
+                <div class="product-name" style="opacity: 0.5;">Pure Snow</div>
+                <div class="product-weight" style="opacity: 0.5;">0.5g</div>
+                <div class="product-footer">
+                    <div class="product-price" style="opacity: 0.5;">€80</div>
+                    <div class="product-stock" style="color: #ff3333;">SOLD OUT</div>
+                </div>
+            </div>
+
+            <!-- Product 5 -->
+            <div class="product-card" onclick="cardClick(this)">
+                <div class="stock-led"></div>
+                <div class="contraband-tag">CONTRABAND</div>
+                <div class="product-image">🔮</div>
+                <div class="product-name">Crystal Clear</div>
+                <div class="product-weight">0.25g</div>
+                <div class="product-footer">
+                    <div class="product-price">€45</div>
+                    <div class="product-stock">6 left</div>
+                </div>
+            </div>
+
+            <!-- Product 6 -->
+            <div class="product-card" onclick="cardClick(this)">
+                <div class="stock-led"></div>
+                <div class="contraband-tag">CONTRABAND</div>
+                <div class="product-image">🧪</div>
+                <div class="product-name">Lab Special</div>
+                <div class="product-weight">2 tabs</div>
+                <div class="product-footer">
+                    <div class="product-price">€25</div>
+                    <div class="product-stock">15 left</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Surveillance stamp -->
+    <div class="surveillance-stamp">
+        <div class="rec-dot"></div>
+        <span id="timestamp">CAM-07 2025-12-17 00:00:00</span>
+    </div>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Shop</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">🗺️</span>
+            <span class="nav-label">Map</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">🛒</span>
+            <span class="nav-label">Cart</span>
+            <span class="cart-badge">2</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">👤</span>
+            <span class="nav-label">Profile</span>
+        </div>
+    </nav>
+
+    <!-- Modal overlay -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <div class="modal-title">⚠️ CONFIRM ORDER</div>
+            <div class="modal-text">
+                You are about to add <strong>Green Haze (1g)</strong> to your cart for <strong>€20.00</strong>
+            </div>
+            <div class="modal-buttons">
+                <button class="action-btn secondary" onclick="hideModal()">CANCEL</button>
+                <button class="action-btn" onclick="hideModal(); showMission()">CONFIRM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission complete overlay -->
+    <div class="mission-overlay" id="mission">
+        <div class="mission-text">DEAL SECURED</div>
+        <div class="mission-sub">+1 item added to cart</div>
+    </div>
+
+    <script>
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const ts = now.toISOString().replace('T', ' ').split('.')[0];
+            document.getElementById('timestamp').textContent = `CAM-07 ${ts}`;
+        }
+        updateTimestamp();
+        setInterval(updateTimestamp, 1000);
+
+        // 3D card tilt effect
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = (y - centerY) / 15;
+                const rotateY = (centerX - x) / 15;
+                
+                card.style.transform = `
+                    perspective(800px)
+                    rotateX(${-rotateX}deg)
+                    rotateY(${rotateY}deg)
+                    scale(1.03)
+                `;
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale(1)';
+            });
+        });
+
+        // Nav item click
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Category tab click
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Card click feedback
+        function cardClick(card) {
+            card.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                card.style.transform = '';
+            }, 150);
+        }
+
+        // Modal functions
+        function showModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function hideModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // Mission complete
+        function showMission() {
+            const overlay = document.getElementById('mission');
+            overlay.classList.add('active');
+            setTimeout(() => {
+                overlay.classList.remove('active');
+            }, 2000);
+        }
+
+        // Parallax on scroll
+        const container = document.querySelector('.app-container');
+        const layer1 = document.querySelector('.depth-layer-1');
+        
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            layer1.style.transform = `translateY(${scrollY * 0.05}px)`;
+        });
+    </script>
+</body>
+</html>
+
+
